@@ -1,93 +1,373 @@
-# SuperCrytpo
+# SuperCrypto - RWA双币模型系统
 
+<div align="center">
 
+![Vyper](https://img.shields.io/badge/Vyper-0.3.9-blue)
+![Ape](https://img.shields.io/badge/Ape-Latest-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-## Getting started
+**基于现实固定资产的双币模型DeFi系统**
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+[功能特性](#-功能特性) • [快速开始](#-快速开始) • [架构设计](#-架构设计) • [使用指南](#-使用指南)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+</div>
 
-## Add your files
+---
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## 🌟 项目概述
+
+SuperCrypto是一个创新的RWA（Real World Assets）双币模型系统，将现实世界的固定资产（如房地产、债券、基础设施等）代币化，并通过智能合约实现：
+
+- **权益代币（RWA Asset Token）**：代表固定资产所有权，与资产收益率挂钩
+- **平台代币（Platform Token）**：用于生态治理、手续费折扣、质押挖矿
+
+## ✨ 功能特性
+
+### 🏦 核心功能
+
+#### 1. RWA资产代币化
+- ✅ 固定资产映射为ERC20代币
+- ✅ 资产估值管理与更新
+- ✅ IPFS文档存储（法律文件、审计报告）
+- ✅ KYC合规验证
+- ✅ 锁定期管理
+
+#### 2. 认购系统
+- ✅ 多档位认购（不同锁定期对应不同收益率）
+- ✅ 灵活支付方式（ETH/USDT/USDC）
+- ✅ 自动收益分配
+- ✅ 提前赎回机制（支付罚金）
+- ✅ 平台代币奖励
+
+#### 3. 平台代币生态
+- ✅ 质押挖矿（灵活锁定期）
+- ✅ DAO治理投票
+- ✅ 手续费折扣体系
+- ✅ 通缩机制（回购销毁）
+
+## 🏗️ 架构设计
 
 ```
-cd existing_repo
-git remote add origin http://YOUR_SERVER_HOST/rex/supercrytpo.git
-git branch -M main
-git push -uf origin main
+┌─────────────────────────────────────────────────┐
+│                  前端应用层                        │
+│   用户界面 | 资产展示 | 认购面板 | 个人中心        │
+└─────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────┐
+│              智能合约层（Vyper）                    │
+│                                                   │
+│  ┌─────────────────┐  ┌──────────────────┐       │
+│  │ RWAAssetToken   │  │ PlatformToken    │       │
+│  │ - 资产代币       │  │ - 平台治理代币     │       │
+│  │ - KYC验证        │  │ - 质押挖矿        │       │
+│  │ - 锁定期管理     │  │ - DAO治理         │       │
+│  └─────────────────┘  └──────────────────┘       │
+│              ↓                 ↓                  │
+│       ┌──────────────────────────────┐           │
+│       │   SubscriptionManager        │           │
+│       │   - 认购管理                  │           │
+│       │   - 收益分配                  │           │
+│       │   - 提前赎回                  │           │
+│       └──────────────────────────────┘           │
+└─────────────────────────────────────────────────┘
 ```
 
-## Integrate with your tools
+### 合约说明
 
-- [ ] [Set up project integrations](http://YOUR_SERVER_HOST/rex/supercrytpo/-/settings/integrations)
+| 合约 | 功能 | 文件 |
+|------|------|------|
+| **RWAAssetToken** | 权益代币合约 | `contracts/RWAAssetToken.vy` |
+| **PlatformToken** | 平台治理代币 | `contracts/PlatformToken.vy` |
+| **SubscriptionManager** | 认购管理合约 | `contracts/SubscriptionManager.vy` |
 
-## Collaborate with your team
+## 🚀 快速开始
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### 环境要求
 
-## Test and Deploy
+- **Python**: 3.11+
+- **Node.js**: 16+
+- **Ape Framework**: Latest
 
-Use the built-in continuous integration in GitLab.
+### 安装依赖
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+```bash
+# 1. 克隆项目
+git clone <your-repo-url>
+cd SuperCrypto
 
-***
+# 2. 安装Python依赖
+pip install eth-ape
+ape plugins install vyper hardhat
 
-# Editing this README
+# 3. 编译合约
+ape compile
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### 部署合约
 
-## Suggestions for a good README
+#### 本地开发环境
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```bash
+# 1. 启动本地节点
+ape run deploy_rwa_system --network ethereum:local:test
 
-## Name
-Choose a self-explaining name for your project.
+# 或使用Hardhat节点
+npx hardhat node  # 在另一个终端
+ape run deploy_rwa_system --network ethereum:local:hardhat
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+#### 测试网部署
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```bash
+# 设置环境变量
+export WEB3_INFURA_PROJECT_ID="your-infura-id"
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+# 部署到Sepolia测试网
+ape run deploy_rwa_system --network ethereum:sepolia
+```
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+## 📊 认购档位示例
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+系统默认创建三个认购档位：
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+| 档位 | 锁定期 | 年化收益率 | 平台代币奖励 | 提前赎回罚金 |
+|------|--------|-----------|-------------|-------------|
+| **Tier 1** | 3个月 | 6% | 1% | 2% |
+| **Tier 2** | 6个月 | 9% | 1.5% | 3% |
+| **Tier 3** | 12个月 | 12% | 2% | 5% |
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## 💡 使用指南
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### 1. 用户认购流程
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+```python
+from ape import accounts, project
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+# 加载合约
+subscription_manager = project.SubscriptionManager.at("0x...")
+rwa_token = project.RWAAssetToken.at("0x...")
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+# 1. 确保通过KYC验证
+# （由管理员设置）
 
-## License
-For open source projects, say how it is licensed.
+# 2. 选择认购档位并认购
+user = accounts.load("my_account")
+tier_id = 0  # 选择3个月档位
+amount = 10_000 * 10**18  # 认购10,000 USD
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+# 使用ETH认购
+subscription_manager.subscribe(
+    tier_id,
+    amount,
+    sender=user,
+    value=amount
+)
+
+# 3. 获得RWA代币 + 平台代币奖励
+print(f"RWA代币余额: {rwa_token.balanceOf(user.address)}")
+```
+
+### 2. 领取收益
+
+```python
+# 查询可领取收益
+subscription_id = 0
+claimable = subscription_manager.get_claimable_yield(subscription_id)
+
+# 领取收益
+if claimable > 0:
+    subscription_manager.claim_yield(subscription_id, sender=user)
+```
+
+### 3. 到期赎回
+
+```python
+# 查询认购信息
+info = subscription_manager.get_subscription_info(subscription_id)
+unlock_time = info[3]
+
+# 到期后赎回本金+收益
+if block.timestamp >= unlock_time:
+    subscription_manager.redeem(subscription_id, sender=user)
+```
+
+### 4. 提前赎回（支付罚金）
+
+```python
+# 在锁定期内提前赎回
+subscription_manager.early_redeem(subscription_id, sender=user)
+# 将扣除罚金（根据档位设置，如2%-5%）
+```
+
+## 🧪 运行测试
+
+```bash
+# 运行所有测试
+ape test tests/test_rwa_system.py -v
+
+# 运行特定测试
+ape test tests/test_rwa_system.py::test_subscribe -v
+
+# 查看测试覆盖率
+ape test --coverage
+```
+
+## 📈 收益计算公式
+
+### 简单利息计算
+
+```
+预期收益 = 本金 × 年化收益率 × (锁定天数 / 365)
+```
+
+### 示例
+
+用户认购 **$10,000**，选择 **6个月档位**（9% APY）:
+
+```
+预期收益 = 10,000 × 9% × (180 / 365) = $443.84
+```
+
+### 按时间比例领取
+
+用户可以按时间比例提前领取已产生的收益：
+
+```
+已产生收益 = 预期收益 × (已过天数 / 总锁定天数)
+```
+
+## 🔒 安全特性
+
+- ✅ **重入攻击防护**：所有外部调用后更新状态
+- ✅ **访问控制**：基于角色的权限管理
+- ✅ **暂停机制**：紧急情况下可暂停合约
+- ✅ **KYC合规**：强制KYC验证才能交易
+- ✅ **锁定期保护**：防止未到期转账
+
+## 📁 项目结构
+
+```
+SuperCrypto/
+├── contracts/              # 智能合约
+│   ├── RWAAssetToken.vy
+│   ├── PlatformToken.vy
+│   └── SubscriptionManager.vy
+├── scripts/                # 部署脚本
+│   └── deploy_rwa_system.py
+├── tests/                  # 测试文件
+│   └── test_rwa_system.py
+├── deploy/                 # 部署配置
+│   ├── setup_accounts.py
+│   └── rwa_deployment.json
+├── ape-config.yaml         # Ape配置
+└── README.md
+```
+
+## 🛠️ 可用命令
+
+```bash
+# 编译合约
+ape compile
+
+# 部署系统
+ape run deploy_rwa_system --network <network>
+
+# 运行测试
+ape test -v
+
+# 查看网络
+ape networks list
+
+# 账户管理
+ape accounts list
+ape accounts import <alias>
+```
+
+## 🔍 合约交互示例
+
+### 创建资产（管理员）
+
+```python
+rwa_token.create_asset(
+    "Manhattan Luxury Apartment",  # 资产名称
+    "Real Estate",                 # 资产类型
+    5_000_000 * 10**18,           # 总价值
+    5_000_000 * 10**18,           # 代币数量
+    800,                          # 8% APY
+    "QmIPFSHash...",              # IPFS文档
+    sender=admin
+)
+```
+
+### 创建认购档位（管理员）
+
+```python
+subscription_manager.create_tier(
+    365,                    # 12个月锁定
+    1200,                   # 12% APY
+    5000 * 10**18,         # 最小认购5000 USD
+    500_000 * 10**18,      # 最大认购50万 USD
+    5_000_000 * 10**18,    # 总额度500万 USD
+    200,                    # 2% 平台代币奖励
+    500,                    # 5% 提前赎回罚金
+    sender=admin
+)
+```
+
+### 查询用户认购
+
+```python
+# 获取用户所有认购ID
+subscription_ids = subscription_manager.get_user_subscriptions(user.address)
+
+# 查询每个认购详情
+for sub_id in subscription_ids:
+    info = subscription_manager.get_subscription_info(sub_id)
+    print(f"认购ID: {sub_id}")
+    print(f"本金: {info[2] / 10**18}")
+    print(f"解锁时间: {info[3]}")
+```
+
+## 📊 统计数据查询
+
+```python
+stats = subscription_manager.get_statistics()
+print(f"总认购金额: ${stats[0] / 10**18:,.2f}")
+print(f"总支付收益: ${stats[1] / 10**18:,.2f}")
+print(f"平台代币奖励: {stats[2] / 10**18:,.2f}")
+print(f"认购总数: {stats[3]}")
+```
+
+## 🤝 贡献指南
+
+1. Fork 本仓库
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## ⚠️ 免责声明
+
+**本项目仅供学习和开发用途。主网部署前请进行完整的安全审计！**
+
+涉及真实资产的代币化需要遵守相关法律法规，请咨询专业法律顾问。
+
+## 🔗 相关链接
+
+- [Vyper 文档](https://docs.vyperlang.org/)
+- [Ape Framework](https://docs.apeworx.io/)
+- [RWA资产代币化最佳实践](https://ethereum.org/en/developers/)
+
+---
+
+<div align="center">
+
+**Made with ❤️ by SuperCrypto Team**
+
+⭐ 如果觉得有用，请给个星标！
+
+</div>

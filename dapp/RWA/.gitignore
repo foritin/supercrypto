@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Ape
+.build/
+.cache/
+.ape/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 部署文件
+deployed_addresses.json
+uniswap_addresses.json
+
+# 日志
+*.log
+logs/
+
+# 环境变量
+.env
+.env.local
+
+# 测试
+.hypothesis/
+
+# 临时文件
+*.tmp
+*.bak

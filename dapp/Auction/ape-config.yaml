@@ -1,0 +1,47 @@
+name: Auction
+
+# 插件配置
+plugins:
+  - name: vyper
+
+# 编译器配置
+vyper:
+  version: 0.3.10
+  evm_version: shanghai
+
+# 网络配置
+networks:
+  custom:
+    - name: hardhat
+      chain_id: 31337
+      ecosystem: ethereum
+
+ethereum:
+  # 本地开发网络（hardhat节点）
+  local:
+    default_provider: node
+  hardhat:
+    default_provider: node
+  
+  # Sepolia测试网
+  sepolia:
+    default_provider: alchemy
+  
+  # 主网
+  mainnet:
+    default_provider: alchemy
+
+# 节点配置
+node:
+  ethereum:
+    local:
+      uri: http://localhost:8545
+    hardhat:
+      uri: http://localhost:8545
+
+# 测试配置（与 Hardhat 一致）
+test:
+  mnemonic: test test test test test test test test test test test junk  # 助记词
+  hd_path: m/44'/60'/0'/0  # HD 钱包派生路径
+  number_of_accounts: 20   # 生成 20 个账户
+  balance: 10000 ether     # 每个账户 10000 ETH
