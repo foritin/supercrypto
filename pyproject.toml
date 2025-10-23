@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "falib @ git+http://oauth2:***REMOVED***@YOUR_GITLAB_HOST:7002/rex/falib.git@main",
     "ape-vyper>=0.8.9",
     "eth-ape>=0.8.37",
     "loguru>=0.7.3",

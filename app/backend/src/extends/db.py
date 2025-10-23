@@ -108,7 +108,7 @@ class DatabaseAdapter:
             self._my_connection_name = self._unique_connection_name
             self._created_my_connection = True
             await self._initialize_my_connection()
-            self.logger.info(f"✅ 创建独立连接 '{self._my_connection_name}'")
+            self.logger.debug(f"✅ 创建独立连接 '{self._my_connection_name}'")
         
         return self
     
