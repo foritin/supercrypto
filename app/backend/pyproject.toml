@@ -1,0 +1,67 @@
+[project]
+name = "cyproto"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "falib @ git+http://oauth2:***REMOVED***@YOUR_GITLAB_HOST:7002/rex/falib.git@main",
+    "ape-vyper>=0.8.9",
+    "eth-ape>=0.8.37",
+    "loguru>=0.7.3",
+    "playwright>=1.55.0",
+    "tortoise>=0.1.1",
+    "tortoise-orm>=0.21.0",
+    "aerich>=0.9.2",
+    "vyper==0.3.9",
+    "web3>=7.13.0",
+    "jose>=1.0.0",
+    "python-jose>=3.5.0",
+    "passlib>=1.7.4",
+    "uvicorn>=0.38.0",
+    "pyjwt[crypto]>=2.10.1",
+]
+
+[project.optional-dependencies]
+# 数据库驱动 - 根据需要选择安装
+postgresql = ["asyncpg>=0.29.0", "psycopg2-binary>=2.9.0"]
+mysql = ["aiomysql>=0.2.0", "pymysql>=1.1.0"]
+sqlite = ["aiosqlite>=0.19.0"]
+# 安装所有数据库驱动
+all-db = ["asyncpg>=0.29.0", "psycopg2-binary>=2.9.0", "aiomysql>=0.2.0", "pymysql>=1.1.0", "aiosqlite>=0.19.0"]
+
+[tool.aerich]
+tortoise_orm = "src.shared.aerich_redirect.TORTOISE_ORM"
+location = "./migrations"
+src_folder = "./app/backend"
+
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ruff.lint]
+ignore = [
+    "E501", 
+    "PLR0913",
+    "PLR5501",
+    "PLR2004",
+    "PLR0912",
+    "PLR0915",
+    ]  # E501: 行过长, PLR0913: 参数过多
+select = [
+    "E",      # pycodestyle 错误
+    "W",      # pycodestyle 警告
+    "F",      # pyflakes 检查
+    "I",      # isort 导入排序
+    "PL",     # pylint 规则
+    "PLC",    # pylint convention 代码规范
+    "PLE",    # pylint error 错误
+    "PLR",    # pylint refactor 重构建议
+    "PLW",    # pylint warning 警告
+    "D100",   # 公共模块缺少 docstring
+    "D101",   # 公共类缺少 docstring
+    "D102",   # 公共方法缺少 docstring
+    "D103",   # 公共函数缺少 docstring
+]

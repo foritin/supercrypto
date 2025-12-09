@@ -6,7 +6,7 @@ backend_dir = Path(__file__).parent.parent
 src_dir = backend_dir / "src"
 sys.path.insert(0, str(src_dir))
 
-from src.core.config import get_settings
+from src.cores.config import get_settings
 
 def test_compatibility():
     """测试所有大小写兼容性"""

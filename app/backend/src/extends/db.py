@@ -14,7 +14,7 @@ Usage:
         materials = await Material.all()
     
     # 方式 2: 配合元类自动管理（推荐）
-    from app.core.resource_manager import AutoResourceManagementMeta, needs_db
+    from app.cores.resource_manager import AutoResourceManagementMeta, needs_db
     
     class MyService(metaclass=AutoResourceManagementMeta):
         def __init__(self):
@@ -52,7 +52,8 @@ import logging
 import uuid
 from typing import Optional
 from tortoise import Tortoise
-from src.core.config import get_settings
+from src.cores.aerich_redirect import TORTOISE_ORM
+from src.cores.config import get_settings
 
 
 class DatabaseAdapter:
@@ -153,34 +154,7 @@ class DatabaseAdapter:
         """
         try:
             await Tortoise.init(
-                config={
-                    "connections": {
-                        self._my_connection_name: {
-                            "engine": "tortoise.backends.mysql",
-                            "credentials": {
-                                "host": self.settings.DB.HOST,
-                                "port": self.settings.DB.PORT,
-                                "user": self.settings.DB.USER,
-                                "password": self.settings.DB.PASSWORD,
-                                "database": self.settings.DB.DATABASE,
-                                "charset": "utf8mb4",
-                                "minsize": 1,  # 每个实例使用最小连接池
-                                "maxsize": 3,   # 较小的连接池（避免资源过度占用）
-                                "connect_timeout": 10,
-                                "pool_recycle": self.settings.DB.POOL_RECYCLE,
-                                "echo": self.settings.DB.ECHO,
-                            },
-                        }
-                    },
-                    "apps": {
-                        "models": {
-                            "models": ["app.models"],
-                            "default_connection": self._my_connection_name,
-                        }
-                    },
-                    "use_tz": False,
-                    "timezone": "Asia/Shanghai",
-                },
+                config=TORTOISE_ORM,
                 _create_db=False  # 不创建数据库（假设已存在）
             )
             self.logger.info(f"连接 '{self._my_connection_name}' 初始化成功")
