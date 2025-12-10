@@ -23,8 +23,8 @@ interface ITimelock:
 # 导入 Timelock 的数据结构
 # ============================================
 
-enum OperationStatus:
-    NONE
+flag OperationStatus:
+    PENDING
     QUEUED
     EXECUTED
     CANCELLED
@@ -78,7 +78,7 @@ event MaxChangeRateUpdated:
 # 数据结构
 # ============================================
 
-enum ComplianceStatus:
+flag ComplianceStatus:
     COMPLIANT           # 合规
     UNDER_REVIEW        # 审查中
     NON_COMPLIANT       # 不合规
@@ -229,7 +229,7 @@ def register_asset(
     self._when_not_paused()
     
     # 验证时间锁
-    assert self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
     
     # 验证资产不存在
     assert not self.assets[asset_id].is_active, "Asset exists"
@@ -275,7 +275,7 @@ def deactivate_asset(asset_id: bytes32, operation_id: bytes32):
     self._when_not_paused()
     
     # 验证时间锁
-    assert self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
     
     assert self.assets[asset_id].is_active, "Asset not active"
     
@@ -309,7 +309,7 @@ def update_asset_data(
     self._when_not_paused()
     
     # 验证时间锁
-    assert self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
     
     # 验证资产
     asset: AssetData = self.assets[asset_id]
@@ -321,17 +321,17 @@ def update_asset_data(
     if asset.apy > 0:
         apy_change: uint256 = 0
         if new_apy > asset.apy:
-            apy_change = (new_apy - asset.apy) * 10000 / asset.apy
+            apy_change = (new_apy - asset.apy) * 10000 // asset.apy
         else:
-            apy_change = (asset.apy - new_apy) * 10000 / asset.apy
+            apy_change = (asset.apy - new_apy) * 10000 // asset.apy
         assert apy_change <= self.max_change_rate, "APY change too large"
     
     if asset.valuation > 0:
         val_change: uint256 = 0
         if new_valuation > asset.valuation:
-            val_change = (new_valuation - asset.valuation) * 10000 / asset.valuation
+            val_change = (new_valuation - asset.valuation) * 10000 // asset.valuation
         else:
-            val_change = (asset.valuation - new_valuation) * 10000 / asset.valuation
+            val_change = (asset.valuation - new_valuation) * 10000 // asset.valuation
         assert val_change <= self.max_change_rate, "Valuation change too large"
     
     # 更新数据
@@ -377,7 +377,7 @@ def update_compliance_status(
     self._when_not_paused()
     
     # 验证时间锁
-    assert self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
     
     assert self.assets[asset_id].is_active, "Asset not active"
     
@@ -528,7 +528,7 @@ def add_data_provider(provider: address, operation_id: bytes32):
     self._only_owner()
     
     # 验证时间锁
-    assert self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
     
     assert provider != empty(address), "Invalid provider"
     assert not self.data_providers[provider], "Already a provider"
@@ -547,7 +547,7 @@ def remove_data_provider(provider: address, operation_id: bytes32):
     self._only_owner()
     
     # 验证时间锁
-    assert self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
     
     assert self.data_providers[provider], "Not a provider"
     
@@ -579,7 +579,7 @@ def set_max_change_rate(new_rate: uint256, operation_id: bytes32):
     self._only_owner()
     
     # 验证时间锁
-    assert self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
     
     assert new_rate <= 10000, "Rate too high"
     

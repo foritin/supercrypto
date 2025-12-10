@@ -1,4 +1,4 @@
-# @version 0.3.10
+# @version ^0.4.0
 """
 @title Platform Token
 @notice 平台代币，用于质押挖矿和流动性挖矿奖励
@@ -38,7 +38,7 @@ minters: public(HashMap[address, bool])  # 可铸造的合约地址
 MAX_SUPPLY: constant(uint256) = 100_000_000 * 10 ** 18  # 1亿枚
 
 
-@external
+@deploy
 def __init__():
     """
     @notice 初始化Platform Token

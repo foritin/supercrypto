@@ -86,15 +86,13 @@ def refresh_token(token: str) -> dict:
 
 
 def get_db_adapter() -> PostgresqlAdapterSync:
-    return PostgresqlAdapterSync(
-        host=SETTINGS.POSTGRESQL.HOST,
-        port=SETTINGS.POSTGRESQL.PORT,
-        user=SETTINGS.POSTGRESQL.USER,
-        password=SETTINGS.POSTGRESQL.PASSWORD,
-        database=SETTINGS.POSTGRESQL.DATABASE,
-    )
+    return PostgresqlAdapterSync()
 
 
-if __name__ == "__main__":
-    db_adapter = get_db_adapter()
-    print(db_adapter)
+# if __name__ == "__main__":
+#     db_adapter = get_db_adapter()
+#     from src.models import Account
+
+#     with db_adapter as db:
+#         data = db.query(Account.all())
+#     print(data)

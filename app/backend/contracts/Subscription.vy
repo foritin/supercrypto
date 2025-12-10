@@ -1,4 +1,4 @@
-# @version 0.3.10
+# @version ^0.4.0
 """
 @title Subscription Contract (STO Compliant)
 @notice 权益代币认购和赎回合约 - 符合证券法合规要求
@@ -83,7 +83,7 @@ BASIS_POINTS: constant(uint256) = 10000  # 100% = 10000基点
 SECONDS_PER_YEAR: constant(uint256) = 365 * 24 * 3600
 
 
-@external
+@deploy
 def __init__(_usdt: address, _rwaToken: address, _kycManager: address):
     """
     @notice 初始化认购合约（STO版本）
@@ -193,11 +193,11 @@ def subscribe(_amount: uint256, _lockPeriod: uint256):
     # ========== STO 合规检查 ==========
     
     # 1. KYC验证（必须）
-    assert IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
     
     # 2. 合格投资者检查（如果要求）
     if self.requireAccredited:
-        assert IKYCManager(self.kycManager).isAccredited(msg.sender), "Accredited investor required"
+        assert staticcall IKYCManager(self.kycManager).isAccredited(msg.sender), "Accredited investor required"
     
     # 3. 最小投资额检查
     assert _amount >= self.minInvestment, "Below minimum investment"
@@ -207,7 +207,7 @@ def subscribe(_amount: uint256, _lockPeriod: uint256):
         assert _amount <= self.maxInvestment, "Exceeds maximum investment"
     
     # 5. 投资能力检查
-    assert IKYCManager(self.kycManager).canInvest(msg.sender, _amount), "Cannot invest"
+    assert staticcall IKYCManager(self.kycManager).canInvest(msg.sender, _amount), "Cannot invest"
     
     # ===================================
     
@@ -215,24 +215,24 @@ def subscribe(_amount: uint256, _lockPeriod: uint256):
     apy: uint256 = self.lockPeriodAPY[_lockPeriod]
     
     # 从用户转入USDT
-    assert IERC20(self.usdt).transferFrom(msg.sender, self, _amount), "Transfer failed"
+    assert extcall IERC20(self.usdt).transferFrom(msg.sender, self, _amount), "Transfer failed"
     
     # 铸造等量RWA代币给用户（USDT 6位小数 -> RWA 18位小数）
     rwaAmount: uint256 = _amount * 10 ** 12  # 转换精度
-    IRWAToken(self.rwaToken).mint(msg.sender, rwaAmount)
+    extcall IRWAToken(self.rwaToken).mint(msg.sender, rwaAmount)
     
     # 记录认购信息
     subscriptionId: uint256 = self.subscriptionCount[msg.sender]
     redeemTime: uint256 = block.timestamp + _lockPeriod
     
-    self.subscriptions[msg.sender][subscriptionId] = SubscriptionInfo({
-        principal: _amount,
-        lockPeriod: _lockPeriod,
-        subscribeTime: block.timestamp,
-        redeemTime: redeemTime,
-        apy: apy,
-        redeemed: False
-    })
+    self.subscriptions[msg.sender][subscriptionId] = SubscriptionInfo(
+        principal=_amount,
+        lockPeriod=_lockPeriod,
+        subscribeTime=block.timestamp,
+        redeemTime=redeemTime,
+        apy=apy,
+        redeemed=False
+    )
     
     self.subscriptionCount[msg.sender] += 1
     
@@ -249,7 +249,7 @@ def redeem(_subscriptionId: uint256):
     assert _subscriptionId < self.subscriptionCount[msg.sender], "Invalid subscription ID"
     
     # STO合规：确保用户KYC仍然有效
-    assert IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
     
     subscription: SubscriptionInfo = self.subscriptions[msg.sender][_subscriptionId]
     assert not subscription.redeemed, "Already redeemed"
@@ -265,14 +265,14 @@ def redeem(_subscriptionId: uint256):
     total: uint256 = subscription.principal + interest
     
     # 检查合约USDT余额
-    assert IERC20(self.usdt).balanceOf(self) >= total, "Insufficient USDT balance"
+    assert staticcall IERC20(self.usdt).balanceOf(self) >= total, "Insufficient USDT balance"
     
     # 销毁RWA代币
     rwaAmount: uint256 = subscription.principal * 10 ** 12
-    IRWAToken(self.rwaToken).burn(msg.sender, rwaAmount)
+    extcall IRWAToken(self.rwaToken).burn(msg.sender, rwaAmount)
     
     # 转出USDT（本金+利息）
-    assert IERC20(self.usdt).transfer(msg.sender, total), "Transfer failed"
+    assert extcall IERC20(self.usdt).transfer(msg.sender, total), "Transfer failed"
     
     # 标记为已赎回
     self.subscriptions[msg.sender][_subscriptionId].redeemed = True
@@ -291,7 +291,7 @@ def _calculateInterest(_principal: uint256, _lockPeriod: uint256, _apy: uint256)
     @return 利息
     """
     # 利息 = 本金 * APY * 锁定期 / 年秒数 / 基点
-    return _principal * _apy * _lockPeriod / SECONDS_PER_YEAR / BASIS_POINTS
+    return _principal * _apy * _lockPeriod // SECONDS_PER_YEAR // BASIS_POINTS
 
 
 @view
@@ -349,7 +349,7 @@ def emergencyWithdraw(_token: address, _amount: uint256):
     @param _amount 提取数量
     """
     assert msg.sender == self.owner, "Only owner"
-    assert IERC20(_token).transfer(self.owner, _amount), "Transfer failed"
+    assert extcall IERC20(_token).transfer(self.owner, _amount), "Transfer failed"
     log EmergencyWithdraw(_token, _amount)
 
 

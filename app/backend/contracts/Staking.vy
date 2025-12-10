@@ -1,4 +1,4 @@
-# @version 0.3.10
+# @version ^0.4.0
 """
 @title Staking Contract (STO Compliant)
 @notice 权益代币质押挖矿合约 - STO合规版本
@@ -84,7 +84,7 @@ SECONDS_PER_YEAR: constant(uint256) = 365 * 24 * 3600
 SECONDS_PER_DAY: constant(uint256) = 24 * 3600
 
 
-@external
+@deploy
 def __init__(_rwaToken: address, _platformToken: address, _subscription: address, _kycManager: address):
     """
     @notice 初始化质押合约（STO合规版本）
@@ -160,31 +160,31 @@ def stake(_amount: uint256, _subscriptionId: uint256):
     assert _amount > 0, "Amount must be positive"
     
     # STO合规：KYC验证
-    assert IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
     
     # 验证认购信息
-    subCount: uint256 = ISubscription(self.subscription).subscriptionCount(msg.sender)
+    subCount: uint256 = staticcall ISubscription(self.subscription).subscriptionCount(msg.sender)
     assert _subscriptionId < subCount, "Invalid subscription ID"
     
-    subInfo: SubscriptionInfo = ISubscription(self.subscription).subscriptions(msg.sender, _subscriptionId)
+    subInfo: SubscriptionInfo = staticcall ISubscription(self.subscription).subscriptions(msg.sender, _subscriptionId)
     assert not subInfo.redeemed, "Subscription already redeemed"
     assert block.timestamp < subInfo.redeemTime, "Redeem period ended"
     
     # 转入RWA代币
-    assert IERC20(self.rwaToken).transferFrom(msg.sender, self, _amount), "Transfer failed"
+    assert extcall IERC20(self.rwaToken).transferFrom(msg.sender, self, _amount), "Transfer failed"
     
     # 创建质押记录
     stakeId: uint256 = self.stakeCount[msg.sender]
     
-    self.stakes[msg.sender][stakeId] = StakeInfo({
-        amount: _amount,
-        stakeTime: block.timestamp,
-        lastRewardTime: block.timestamp,
-        subscriptionId: _subscriptionId,
-        originalRedeemTime: subInfo.redeemTime,
-        stakeDuration: 0,
-        unstaked: False
-    })
+    self.stakes[msg.sender][stakeId] = StakeInfo(
+        amount=_amount,
+        stakeTime=block.timestamp,
+        lastRewardTime=block.timestamp,
+        subscriptionId=_subscriptionId,
+        originalRedeemTime=subInfo.redeemTime,
+        stakeDuration=0,
+        unstaked=False
+    )
     
     self.stakeCount[msg.sender] += 1
     self.totalStaked += _amount
@@ -202,7 +202,7 @@ def unstake(_stakeId: uint256):
     assert _stakeId < self.stakeCount[msg.sender], "Invalid stake ID"
     
     # STO合规：KYC验证
-    assert IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
     
     stakeInfo: StakeInfo = self.stakes[msg.sender][_stakeId]
     assert not stakeInfo.unstaked, "Already unstaked"
@@ -217,7 +217,7 @@ def unstake(_stakeId: uint256):
     self._claimReward(msg.sender, _stakeId)
     
     # 返还RWA代币
-    assert IERC20(self.rwaToken).transfer(msg.sender, stakeInfo.amount), "Transfer failed"
+    assert extcall IERC20(self.rwaToken).transfer(msg.sender, stakeInfo.amount), "Transfer failed"
     
     # 标记为已解除质押
     self.stakes[msg.sender][_stakeId].unstaked = True
@@ -235,7 +235,7 @@ def claimReward(_stakeId: uint256):
     assert not self.paused, "Contract paused"
     
     # STO合规：KYC验证
-    assert IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
     
     self._claimReward(msg.sender, _stakeId)
 
@@ -257,7 +257,7 @@ def _claimReward(_user: address, _stakeId: uint256):
     
     if reward > 0:
         # 铸造平台代币作为奖励
-        IPlatformToken(self.platformToken).mint(_user, reward)
+        extcall IPlatformToken(self.platformToken).mint(_user, reward)
         
         # 更新上次领取时间
         self.stakes[_user][_stakeId].lastRewardTime = block.timestamp
@@ -284,13 +284,13 @@ def _calculateReward(_user: address, _stakeId: uint256) -> uint256:
         return 0
     
     # 奖励1: APY奖励
-    apyReward: uint256 = stakeInfo.amount * self.stakingAPY * timeDiff / SECONDS_PER_YEAR / BASIS_POINTS
+    apyReward: uint256 = stakeInfo.amount * self.stakingAPY * timeDiff // SECONDS_PER_YEAR // BASIS_POINTS
     
     # 奖励2: 固定每日释放（按质押占比分配）
     dailyReward: uint256 = 0
     if self.totalStaked > 0:
         # 用户在这段时间内应得的固定释放奖励
-        dailyReward = self.dailyEmission * timeDiff * stakeInfo.amount / SECONDS_PER_DAY / self.totalStaked
+        dailyReward = self.dailyEmission * timeDiff * stakeInfo.amount // SECONDS_PER_DAY // self.totalStaked
     
     return apyReward + dailyReward
 

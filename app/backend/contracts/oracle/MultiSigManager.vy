@@ -46,7 +46,7 @@ event RequiredSignaturesChanged:
 # 数据结构
 # ============================================
 
-enum ProposalStatus:
+flag ProposalStatus:
     PENDING      # 待签名
     EXECUTED     # 已执行
     CANCELLED    # 已取消

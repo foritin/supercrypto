@@ -21,13 +21,13 @@ interface IRWAOracle:
 # 数据结构
 # ============================================
 
-enum ComplianceStatus:
+flag ComplianceStatus:
     COMPLIANT
     UNDER_REVIEW
     NON_COMPLIANT
     SUSPENDED
 
-enum DataSource:
+flag DataSource:
     PRIMARY      # 主数据源（可信预言机）
     SECONDARY    # 备用数据源（去中心化预言机）
     AGGREGATED   # 聚合数据
@@ -248,9 +248,9 @@ def aggregate_data(asset_id: bytes32) -> AggregatedData:
     primary_apy: uint256 = 0
     primary_val: uint256 = 0
     
-    if self.primary_oracle.is_data_valid(asset_id):
-        primary_apy = self.primary_oracle.get_apy(asset_id)
-        primary_val = self.primary_oracle.get_valuation(asset_id)
+    if staticcall self.primary_oracle.is_data_valid(asset_id):
+        primary_apy = staticcall self.primary_oracle.get_apy(asset_id)
+        primary_val = staticcall self.primary_oracle.get_valuation(asset_id)
     else:
         use_primary = False
     
@@ -317,8 +317,8 @@ def aggregate_data(asset_id: bytes32) -> AggregatedData:
         return result
     
     # 加权平均：主70% + 次级30%
-    weighted_apy: uint256 = (primary_apy * 7000 + median_apy * 3000) / 10000
-    weighted_val: uint256 = (primary_val * 7000 + median_val * 3000) / 10000
+    weighted_apy: uint256 = (primary_apy * 7000 + median_apy * 3000) // 10000
+    weighted_val: uint256 = (primary_val * 7000 + median_val * 3000) // 10000
     
     result: AggregatedData = AggregatedData(
         apy=weighted_apy,
@@ -352,7 +352,7 @@ def get_aggregated_apy(asset_id: bytes32) -> uint256:
         return cached.apy
     
     # 否则返回主数据源
-    return self.primary_oracle.get_apy(asset_id)
+    return staticcall self.primary_oracle.get_apy(asset_id)
 
 @external
 @view
@@ -369,7 +369,7 @@ def get_aggregated_valuation(asset_id: bytes32) -> uint256:
         return cached.valuation
     
     # 否则返回主数据源
-    return self.primary_oracle.get_valuation(asset_id)
+    return staticcall self.primary_oracle.get_valuation(asset_id)
 
 @external
 @view
@@ -447,9 +447,9 @@ def _calculate_median(values: DynArray[uint256, 50]) -> uint256:
                 sorted_values[j + 1] = temp
     
     # 返回中位数
-    mid: uint256 = n / 2
+    mid: uint256 = n // 2
     if n % 2 == 0:
-        return (sorted_values[mid - 1] + sorted_values[mid]) / 2
+        return (sorted_values[mid - 1] + sorted_values[mid]) // 2
     else:
         return sorted_values[mid]
 
@@ -466,9 +466,9 @@ def _calculate_deviation(value1: uint256, value2: uint256) -> uint256:
         return 0
     
     if value1 > value2:
-        return (value1 - value2) * 10000 / value1
+        return (value1 - value2) * 10000 // value1
     else:
-        return (value2 - value1) * 10000 / value1
+        return (value2 - value1) * 10000 // value1
 
 # ============================================
 # 管理函数

@@ -22,3 +22,9 @@ package-lock.json
 *.log
 *.pid
 .history/*
+
+.agentvibes
+.bmad
+.mcp.json
+bmad-custom-src
+bmad-custom-modules-src

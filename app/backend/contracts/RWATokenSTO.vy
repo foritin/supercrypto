@@ -1,4 +1,4 @@
-# @version 0.3.10
+# @version ^0.4.0
 """
 @title RWA Security Token (STO)
 @notice 符合ERC1404标准的证券型代币 - 真实世界资产代币化
@@ -94,7 +94,7 @@ documentHashes: public(HashMap[String[32], bytes32]) # 文档名 => 哈希
 # 8 = 发行已完成，禁止铸造
 
 
-@external
+@deploy
 def __init__(_kycManager: address):
     """
     @notice 初始化RWA Security Token
@@ -195,6 +195,73 @@ def setDocument(_name: String[32], _uri: String[256], _documentHash: bytes32):
 # ==================== ERC1404 合规检查 ====================
 
 @view
+@internal
+def _detectTransferRestriction(
+    _from: address,
+    _to: address,
+    _value: uint256
+) -> uint8:
+    """
+    @notice 内部函数：检测转账限制（ERC1404核心功能）
+    @param _from 发送方地址
+    @param _to 接收方地址
+    @param _value 转账金额
+    @return 限制代码（0=允许，其他=限制原因）
+    """
+    # 0. 铸造（from = zero address）- 只检查接收方
+    if _from == empty(address):
+        if not staticcall IKYCManager(self.kycManager).isVerified(_to):
+            return 2  # 接收方未通过KYC
+        if staticcall IKYCManager(self.kycManager).isFrozen(_to):
+            return 4  # 接收方账户冻结
+        return 0
+    
+    # 1. 销毁（to = zero address）- 只检查发送方
+    if _to == empty(address):
+        if not staticcall IKYCManager(self.kycManager).isVerified(_from):
+            return 1  # 发送方未通过KYC
+        if staticcall IKYCManager(self.kycManager).isFrozen(_from):
+            return 3  # 发送方账户冻结
+        if self.balanceOf[_from] < _value:
+            return 7  # 余额不足
+        return 0
+    
+    # 2. 检查金额
+    if _value == 0:
+        return 6  # 转账金额为零
+    
+    # 3. 检查发送方KYC
+    if not staticcall IKYCManager(self.kycManager).isVerified(_from):
+        return 1  # 发送方未通过KYC
+    
+    # 4. 检查接收方KYC
+    if not staticcall IKYCManager(self.kycManager).isVerified(_to):
+        return 2  # 接收方未通过KYC
+    
+    # 5. 检查发送方是否冻结
+    if staticcall IKYCManager(self.kycManager).isFrozen(_from):
+        return 3  # 发送方账户冻结
+    
+    # 6. 检查接收方是否冻结
+    if staticcall IKYCManager(self.kycManager).isFrozen(_to):
+        return 4  # 接收方账户冻结
+    
+    # 7. 检查余额
+    if self.balanceOf[_from] < _value:
+        return 7  # 余额不足
+    
+    # 8. 检查投资者上限（仅当接收方首次接收时）
+    if self.balanceOf[_to] == 0:
+        investorCount: uint256 = staticcall IKYCManager(self.kycManager).investorCount()
+        maxInvestors: uint256 = staticcall IKYCManager(self.kycManager).maxInvestors()
+        if investorCount >= maxInvestors:
+            return 5  # 超过投资者上限
+    
+    # 允许转账
+    return 0
+
+
+@view
 @external
 def detectTransferRestriction(
     _from: address,
@@ -208,57 +275,7 @@ def detectTransferRestriction(
     @param _value 转账金额
     @return 限制代码（0=允许，其他=限制原因）
     """
-    # 0. 铸造（from = zero address）- 只检查接收方
-    if _from == empty(address):
-        if not IKYCManager(self.kycManager).isVerified(_to):
-            return 2  # 接收方未通过KYC
-        if IKYCManager(self.kycManager).isFrozen(_to):
-            return 4  # 接收方账户冻结
-        return 0
-    
-    # 1. 销毁（to = zero address）- 只检查发送方
-    if _to == empty(address):
-        if not IKYCManager(self.kycManager).isVerified(_from):
-            return 1  # 发送方未通过KYC
-        if IKYCManager(self.kycManager).isFrozen(_from):
-            return 3  # 发送方账户冻结
-        if self.balanceOf[_from] < _value:
-            return 7  # 余额不足
-        return 0
-    
-    # 2. 检查金额
-    if _value == 0:
-        return 6  # 转账金额为零
-    
-    # 3. 检查发送方KYC
-    if not IKYCManager(self.kycManager).isVerified(_from):
-        return 1  # 发送方未通过KYC
-    
-    # 4. 检查接收方KYC
-    if not IKYCManager(self.kycManager).isVerified(_to):
-        return 2  # 接收方未通过KYC
-    
-    # 5. 检查发送方是否冻结
-    if IKYCManager(self.kycManager).isFrozen(_from):
-        return 3  # 发送方账户冻结
-    
-    # 6. 检查接收方是否冻结
-    if IKYCManager(self.kycManager).isFrozen(_to):
-        return 4  # 接收方账户冻结
-    
-    # 7. 检查余额
-    if self.balanceOf[_from] < _value:
-        return 7  # 余额不足
-    
-    # 8. 检查投资者上限（仅当接收方首次接收时）
-    if self.balanceOf[_to] == 0:
-        investorCount: uint256 = IKYCManager(self.kycManager).investorCount()
-        maxInvestors: uint256 = IKYCManager(self.kycManager).maxInvestors()
-        if investorCount >= maxInvestors:
-            return 5  # 超过投资者上限
-    
-    # 允许转账
-    return 0
+    return self._detectTransferRestriction(_from, _to, _value)
 
 
 @view
@@ -301,7 +318,7 @@ def _checkTransferRestriction(_from: address, _to: address, _value: uint256):
     @param _to 接收方
     @param _value 金额
     """
-    restrictionCode: uint8 = self.detectTransferRestriction(_from, _to, _value)
+    restrictionCode: uint8 = self._detectTransferRestriction(_from, _to, _value)
     assert restrictionCode == 0, "Transfer restricted"
     
     if restrictionCode != 0:
@@ -473,7 +490,7 @@ def canTransfer(_from: address, _to: address, _value: uint256) -> bool:
     @param _value 金额
     @return 是否可以转账
     """
-    return self.detectTransferRestriction(_from, _to, _value) == 0
+    return self._detectTransferRestriction(_from, _to, _value) == 0
 
 
 # ==================== 所有权管理 ====================

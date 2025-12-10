@@ -49,8 +49,8 @@ event DelayChanged:
 # 数据结构
 # ============================================
 
-enum OperationStatus:
-    NONE         # 不存在
+flag OperationStatus:
+    PENDING      # 不存在
     QUEUED       # 已排队
     EXECUTED     # 已执行
     CANCELLED    # 已取消
@@ -62,6 +62,13 @@ struct Operation:
     queued_at: uint256         # 排队时间
     execute_time: uint256      # 可执行时间
     status: OperationStatus    # 状态
+
+# ============================================
+# 常量
+# ============================================
+
+ACTION_CANCEL: constant(bytes32) = keccak256("CANCEL")
+ACTION_SET_DELAY: constant(bytes32) = keccak256("SET_DELAY")
 
 # ============================================
 # 状态变量
@@ -150,8 +157,8 @@ def queue_operation(
     self._when_not_paused()
     
     # 验证提案已获批准
-    assert self.multi_sig_manager.is_proposal_approved(proposal_id), "Proposal not approved"
-    assert self.multi_sig_manager.verify_proposal(proposal_id, target, data_hash), "Invalid proposal"
+    assert staticcall self.multi_sig_manager.is_proposal_approved(proposal_id), "Proposal not approved"
+    assert staticcall self.multi_sig_manager.verify_proposal(proposal_id, target, data_hash), "Invalid proposal"
     
     # 生成操作ID
     operation_id: bytes32 = keccak256(
@@ -164,7 +171,7 @@ def queue_operation(
     )
     
     # 确保不重复
-    assert self.operations[operation_id].status == OperationStatus.NONE, "Operation exists"
+    assert self.operations[operation_id].status == OperationStatus.PENDING, "Operation exists"
     
     # 计算执行时间
     execute_time: uint256 = block.timestamp + self.delay
@@ -196,7 +203,7 @@ def execute_operation(operation_id: bytes32):
     assert block.timestamp >= operation.execute_time, "Too early"
     
     # 再次验证多签提案（防止提案被取消）
-    assert self.multi_sig_manager.verify_proposal(
+    assert staticcall self.multi_sig_manager.verify_proposal(
         operation.proposal_id,
         operation.target,
         operation.data_hash
@@ -206,7 +213,7 @@ def execute_operation(operation_id: bytes32):
     self.operations[operation_id].status = OperationStatus.EXECUTED
     
     # 通知多签管理器
-    self.multi_sig_manager.mark_proposal_executed(operation.proposal_id)
+    extcall self.multi_sig_manager.mark_proposal_executed(operation.proposal_id)
     
     log OperationExecuted(operation_id, msg.sender)
 
@@ -225,13 +232,13 @@ def cancel_operation(operation_id: bytes32, proposal_id: uint256):
     # 验证取消提案
     cancel_data_hash: bytes32 = keccak256(
         concat(
-            convert(operation_id, bytes32),
-            convert(convert("CANCEL", bytes32), bytes32)
+            operation_id,
+            ACTION_CANCEL
         )
     )
     
-    assert self.multi_sig_manager.is_proposal_approved(proposal_id), "Cancel not approved"
-    assert self.multi_sig_manager.verify_proposal(
+    assert staticcall self.multi_sig_manager.is_proposal_approved(proposal_id), "Cancel not approved"
+    assert staticcall self.multi_sig_manager.verify_proposal(
         proposal_id,
         self,
         cancel_data_hash
@@ -258,7 +265,7 @@ def emergency_sign(operation_id: bytes32):
     assert operation.status == OperationStatus.QUEUED, "Not queued"
     
     # 检查是否为签名者（通过多签管理器）
-    signers: DynArray[address, 20] = self.multi_sig_manager.get_signer_list()
+    signers: DynArray[address, 20] = staticcall self.multi_sig_manager.get_signer_list()
     is_signer: bool = False
     for signer: address in signers:
         if signer == msg.sender:
@@ -285,11 +292,11 @@ def emergency_execute(operation_id: bytes32):
     assert operation.status == OperationStatus.QUEUED, "Not queued"
     
     # 检查是否所有签名者都已签名
-    signer_count: uint256 = self.multi_sig_manager.signer_count()
+    signer_count: uint256 = staticcall self.multi_sig_manager.signer_count()
     assert self.emergency_signature_count[operation_id] == signer_count, "Need all signatures"
     
     # 验证所有签名者确实都签了
-    signers: DynArray[address, 20] = self.multi_sig_manager.get_signer_list()
+    signers: DynArray[address, 20] = staticcall self.multi_sig_manager.get_signer_list()
     for signer: address in signers:
         assert self.emergency_signatures[operation_id][signer], "Missing signature"
     
@@ -297,7 +304,7 @@ def emergency_execute(operation_id: bytes32):
     self.operations[operation_id].status = OperationStatus.EXECUTED
     
     # 通知多签管理器
-    self.multi_sig_manager.mark_proposal_executed(operation.proposal_id)
+    extcall self.multi_sig_manager.mark_proposal_executed(operation.proposal_id)
     
     log EmergencyExecuted(operation_id, msg.sender)
 
@@ -392,12 +399,12 @@ def set_delay(new_delay: uint256, proposal_id: uint256):
     delay_data_hash: bytes32 = keccak256(
         concat(
             convert(new_delay, bytes32),
-            convert(convert("SET_DELAY", bytes32), bytes32)
+            ACTION_SET_DELAY
         )
     )
     
-    assert self.multi_sig_manager.is_proposal_approved(proposal_id), "Not approved"
-    assert self.multi_sig_manager.verify_proposal(
+    assert staticcall self.multi_sig_manager.is_proposal_approved(proposal_id), "Not approved"
+    assert staticcall self.multi_sig_manager.verify_proposal(
         proposal_id,
         self,
         delay_data_hash

@@ -27,13 +27,13 @@ interface IRWAOracle:
 # 数据结构
 # ============================================
 
-enum ComplianceStatus:
+flag ComplianceStatus:
     COMPLIANT
     UNDER_REVIEW
     NON_COMPLIANT
     SUSPENDED
 
-enum DataSource:
+flag DataSource:
     PRIMARY
     SECONDARY
     AGGREGATED
@@ -154,16 +154,11 @@ def set_pricing_config(
     
     log PricingConfigUpdated(asset_id, base_price, min_confidence)
 
-@external
+@internal
 @view
-def calculate_token_price(asset_id: bytes32) -> uint256:
+def _calculate_token_price(asset_id: bytes32) -> uint256:
     """
-    @notice 计算代币价格（基于APY和估值）
-    @param asset_id 资产ID
-    @return 价格（USDT，6位小数）
-    
-    @dev 公式：price = base_price * (1 + apy * apy_multiplier) * (valuation / base_valuation) ^ valuation_weight
-         简化实现：price = base_price * (10000 + apy * multiplier / 10000) / 10000
+    @notice 内部：计算代币价格
     """
     config: PricingConfig = self.pricing_configs[asset_id]
     assert config.base_price > 0, "Config not set"
@@ -173,10 +168,10 @@ def calculate_token_price(asset_id: bytes32) -> uint256:
     confidence: uint256 = 0
     
     if self.use_aggregator:
-        apy = self.aggregator.get_aggregated_apy(asset_id)
-        confidence = self.aggregator.get_data_confidence(asset_id)
+        apy = staticcall self.aggregator.get_aggregated_apy(asset_id)
+        confidence = staticcall self.aggregator.get_data_confidence(asset_id)
     else:
-        apy = self.oracle.get_apy(asset_id)
+        apy = staticcall self.oracle.get_apy(asset_id)
         confidence = 10000  # 直接使用预言机时假设100%置信度
     
     # 检查置信度
@@ -184,12 +179,22 @@ def calculate_token_price(asset_id: bytes32) -> uint256:
     
     # 计算价格调整因子
     # adjustment = 10000 + (apy * apy_multiplier / 10000)
-    adjustment: uint256 = 10000 + (apy * config.apy_multiplier / 10000)
+    adjustment: uint256 = 10000 + (apy * config.apy_multiplier // 10000)
     
     # 计算最终价格
-    price: uint256 = config.base_price * adjustment / 10000
+    price: uint256 = config.base_price * adjustment // 10000
     
     return price
+
+@external
+@view
+def calculate_token_price(asset_id: bytes32) -> uint256:
+    """
+    @notice 计算代币价格（基于APY和估值）
+    @param asset_id 资产ID
+    @return 价格（USDT，6位小数）
+    """
+    return self._calculate_token_price(asset_id)
 
 @external
 @view
@@ -205,18 +210,42 @@ def calculate_subscription_amount(
     
     @dev 示例：如果价格是1.1 USDT/token，投入1000 USDT可获得 1000/1.1 = 909.09 tokens
     """
-    price: uint256 = self.calculate_token_price(asset_id)
+    price: uint256 = self._calculate_token_price(asset_id)
     assert price > 0, "Invalid price"
     
     # token_amount = usdt_amount * 10^18 / price
     # 因为USDT是6位小数，token是18位小数
-    token_amount: uint256 = usdt_amount * 10**18 / price
+    token_amount: uint256 = usdt_amount * 10**18 // price
     
     return token_amount
 
 # ============================================
 # 投资验证
 # ============================================
+
+@internal
+@view
+def _validate_investment(asset_id: bytes32, amount: uint256) -> bool:
+    """
+    @notice 内部：验证投资是否符合条件
+    """
+    # 检查数据有效性
+    if not staticcall self.oracle.is_data_valid(asset_id):
+        return False
+    
+    # 检查合规状态
+    compliance: ComplianceStatus = staticcall self.oracle.get_compliance_status(asset_id)
+    if compliance != ComplianceStatus.COMPLIANT:
+        return False
+    
+    # 检查置信度（如果使用聚合器）
+    if self.use_aggregator:
+        config: PricingConfig = self.pricing_configs[asset_id]
+        confidence: uint256 = staticcall self.aggregator.get_data_confidence(asset_id)
+        if confidence < config.min_confidence:
+            return False
+    
+    return True
 
 @external
 @view
@@ -226,29 +255,8 @@ def validate_investment(asset_id: bytes32, amount: uint256) -> bool:
     @param asset_id 资产ID
     @param amount 投资金额（USDT）
     @return 是否有效
-    
-    @dev 检查：
-         1. 数据有效性
-         2. 合规状态
-         3. 置信度
     """
-    # 检查数据有效性
-    if not self.oracle.is_data_valid(asset_id):
-        return False
-    
-    # 检查合规状态
-    compliance: ComplianceStatus = self.oracle.get_compliance_status(asset_id)
-    if compliance != ComplianceStatus.COMPLIANT:
-        return False
-    
-    # 检查置信度（如果使用聚合器）
-    if self.use_aggregator:
-        config: PricingConfig = self.pricing_configs[asset_id]
-        confidence: uint256 = self.aggregator.get_data_confidence(asset_id)
-        if confidence < config.min_confidence:
-            return False
-    
-    return True
+    return self._validate_investment(asset_id, amount)
 
 @external
 def check_and_log_investment(
@@ -263,7 +271,7 @@ def check_and_log_investment(
     @param amount 投资金额
     @return 是否有效
     """
-    is_valid: bool = self.validate_investment(asset_id, amount)
+    is_valid: bool = self._validate_investment(asset_id, amount)
     
     log InvestmentValidated(asset_id, investor, amount, is_valid)
     
@@ -273,6 +281,17 @@ def check_and_log_investment(
 # 数据查询（带示例）
 # ============================================
 
+@internal
+@view
+def _get_asset_apy(asset_id: bytes32) -> uint256:
+    """
+    @notice 内部：获取资产APY
+    """
+    if self.use_aggregator:
+        return staticcall self.aggregator.get_aggregated_apy(asset_id)
+    else:
+        return staticcall self.oracle.get_apy(asset_id)
+
 @external
 @view
 def get_asset_apy(asset_id: bytes32) -> uint256:
@@ -281,10 +300,7 @@ def get_asset_apy(asset_id: bytes32) -> uint256:
     @param asset_id 资产ID
     @return APY（基点）
     """
-    if self.use_aggregator:
-        return self.aggregator.get_aggregated_apy(asset_id)
-    else:
-        return self.oracle.get_apy(asset_id)
+    return self._get_asset_apy(asset_id)
 
 @external
 @view
@@ -295,9 +311,9 @@ def get_asset_valuation(asset_id: bytes32) -> uint256:
     @return 估值（USD，6位小数）
     """
     if self.use_aggregator:
-        return self.aggregator.get_aggregated_valuation(asset_id)
+        return staticcall self.aggregator.get_aggregated_valuation(asset_id)
     else:
-        return self.oracle.get_valuation(asset_id)
+        return staticcall self.oracle.get_valuation(asset_id)
 
 @external
 @view
@@ -312,16 +328,16 @@ def get_full_asset_info(asset_id: bytes32) -> (uint256, uint256, ComplianceStatu
     confidence: uint256 = 0
     
     if self.use_aggregator:
-        apy = self.aggregator.get_aggregated_apy(asset_id)
-        valuation = self.aggregator.get_aggregated_valuation(asset_id)
-        confidence = self.aggregator.get_data_confidence(asset_id)
+        apy = staticcall self.aggregator.get_aggregated_apy(asset_id)
+        valuation = staticcall self.aggregator.get_aggregated_valuation(asset_id)
+        confidence = staticcall self.aggregator.get_data_confidence(asset_id)
     else:
-        apy = self.oracle.get_apy(asset_id)
-        valuation = self.oracle.get_valuation(asset_id)
+        apy = staticcall self.oracle.get_apy(asset_id)
+        valuation = staticcall self.oracle.get_valuation(asset_id)
         confidence = 10000
     
-    compliance: ComplianceStatus = self.oracle.get_compliance_status(asset_id)
-    is_valid: bool = self.oracle.is_data_valid(asset_id)
+    compliance: ComplianceStatus = staticcall self.oracle.get_compliance_status(asset_id)
+    is_valid: bool = staticcall self.oracle.is_data_valid(asset_id)
     
     return (apy, valuation, compliance, confidence, is_valid)
 
@@ -345,12 +361,12 @@ def get_expected_returns(
     
     @dev 公式：returns = investment * (apy / 10000) * (days / 365)
     """
-    apy: uint256 = self.get_asset_apy(asset_id)
+    apy: uint256 = self._get_asset_apy(asset_id)
     
     # 计算年化收益率对应的日收益率
     # daily_rate = apy / 10000 / 365
     # returns = investment * daily_rate * days
-    returns: uint256 = investment_amount * apy * duration_days / (10000 * 365)
+    returns: uint256 = investment_amount * apy * duration_days // (10000 * 365)
     
     return returns
 
@@ -363,8 +379,8 @@ def compare_assets(asset_id1: bytes32, asset_id2: bytes32) -> (uint256, uint256)
     @param asset_id2 资产2 ID
     @return (资产1 APY, 资产2 APY)
     """
-    apy1: uint256 = self.get_asset_apy(asset_id1)
-    apy2: uint256 = self.get_asset_apy(asset_id2)
+    apy1: uint256 = self._get_asset_apy(asset_id1)
+    apy2: uint256 = self._get_asset_apy(asset_id2)
     
     return (apy1, apy2)
 

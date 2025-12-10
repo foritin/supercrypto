@@ -1,4 +1,4 @@
-# @version 0.3.10
+# @version ^0.4.0
 """
 @title Liquidity Mining Contract (STO Compliant)
 @notice 流动性挖矿合约 - STO合规版本
@@ -63,7 +63,7 @@ dailyEmission: public(uint256)     # 每日固定释放量（18位精度）
 SECONDS_PER_DAY: constant(uint256) = 24 * 3600
 
 
-@external
+@deploy
 def __init__(_lpToken: address, _platformToken: address, _kycManager: address):
     """
     @notice 初始化流动性挖矿合约（STO合规版本）
@@ -136,20 +136,20 @@ def stakeLPToken(_amount: uint256):
     
     # STO合规：KYC验证（如果启用）
     if self.requireKYC:
-        assert IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
+        assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
     
     # 转入LP Token
-    assert IERC20(self.lpToken).transferFrom(msg.sender, self, _amount), "Transfer failed"
+    assert extcall IERC20(self.lpToken).transferFrom(msg.sender, self, _amount), "Transfer failed"
     
     # 创建质押记录
     stakeId: uint256 = self.lpStakeCount[msg.sender]
     
-    self.lpStakes[msg.sender][stakeId] = LPStakeInfo({
-        amount: _amount,
-        stakeTime: block.timestamp,
-        lastRewardTime: block.timestamp,
-        unstaked: False
-    })
+    self.lpStakes[msg.sender][stakeId] = LPStakeInfo(
+        amount=_amount,
+        stakeTime=block.timestamp,
+        lastRewardTime=block.timestamp,
+        unstaked=False
+    )
     
     self.lpStakeCount[msg.sender] += 1
     self.totalLPStaked += _amount
@@ -168,7 +168,7 @@ def unstakeLPToken(_stakeId: uint256):
     
     # STO合规：KYC验证（如果启用）
     if self.requireKYC:
-        assert IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
+        assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
     
     stakeInfo: LPStakeInfo = self.lpStakes[msg.sender][_stakeId]
     assert not stakeInfo.unstaked, "Already unstaked"
@@ -177,7 +177,7 @@ def unstakeLPToken(_stakeId: uint256):
     self._claimLPReward(msg.sender, _stakeId)
     
     # 返还LP Token
-    assert IERC20(self.lpToken).transfer(msg.sender, stakeInfo.amount), "Transfer failed"
+    assert extcall IERC20(self.lpToken).transfer(msg.sender, stakeInfo.amount), "Transfer failed"
     
     # 标记为已解除质押
     self.lpStakes[msg.sender][_stakeId].unstaked = True
@@ -196,7 +196,7 @@ def claimLPReward(_stakeId: uint256):
     
     # STO合规：KYC验证（如果启用）
     if self.requireKYC:
-        assert IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
+        assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
     
     self._claimLPReward(msg.sender, _stakeId)
 
@@ -218,7 +218,7 @@ def _claimLPReward(_user: address, _stakeId: uint256):
     
     if reward > 0:
         # 铸造平台代币作为奖励
-        IPlatformToken(self.platformToken).mint(_user, reward)
+        extcall IPlatformToken(self.platformToken).mint(_user, reward)
         
         # 更新上次领取时间
         self.lpStakes[_user][_stakeId].lastRewardTime = block.timestamp
@@ -248,7 +248,7 @@ def _calculateLPReward(_user: address, _stakeId: uint256) -> uint256:
     if self.totalLPStaked == 0:
         return 0
     
-    reward: uint256 = self.dailyEmission * timeDiff * stakeInfo.amount / SECONDS_PER_DAY / self.totalLPStaked
+    reward: uint256 = self.dailyEmission * timeDiff * stakeInfo.amount // SECONDS_PER_DAY // self.totalLPStaked
     
     return reward
 

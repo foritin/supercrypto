@@ -1,4 +1,4 @@
-# @version 0.3.10
+# @version ^0.4.0
 """
 @title KYC/AML Manager
 @notice 管理投资者的KYC验证、白名单和合规状态
@@ -68,7 +68,7 @@ kycExpiryPeriod: public(uint256)   # KYC有效期（秒，0=永久）
 MAX_INVESTOR_LIMIT: constant(uint256) = 2000  # 最大投资者上限
 
 
-@external
+@deploy
 def __init__():
     """
     @notice 初始化KYC管理合约
@@ -179,15 +179,16 @@ def addInvestor(
         expiryTime = block.timestamp + self.kycExpiryPeriod
     
     # 更新投资者信息
-    self.investors[_investor] = InvestorInfo({
-        verified: True,
-        country: _country,
-        accreditedInvestor: _accreditedInvestor,
-        addedTime: block.timestamp if existingInvestor.addedTime == 0 else existingInvestor.addedTime,
-        verificationTime: block.timestamp,
-        expiryTime: expiryTime,
-        frozen: False
-    })
+    addTime: uint256 = block.timestamp if existingInvestor.addedTime == 0 else existingInvestor.addedTime
+    self.investors[_investor] = InvestorInfo(
+        verified=True,
+        country=_country,
+        accreditedInvestor=_accreditedInvestor,
+        addedTime=addTime,
+        verificationTime=block.timestamp,
+        expiryTime=expiryTime,
+        frozen=False
+    )
     
     log InvestorAdded(_investor, _country, _accreditedInvestor, block.timestamp)
 
@@ -257,10 +258,10 @@ def freezeInvestor(_investor: address, _freeze: bool, _reason: String[100]):
 
 
 @view
-@external
-def isVerified(_investor: address) -> bool:
+@internal
+def _isVerified(_investor: address) -> bool:
     """
-    @notice 检查投资者是否通过KYC验证
+    @notice 内部函数：检查投资者是否通过KYC验证
     @param _investor 投资者地址
     @return 是否验证
     """
@@ -282,13 +283,24 @@ def isVerified(_investor: address) -> bool:
 
 @view
 @external
+def isVerified(_investor: address) -> bool:
+    """
+    @notice 检查投资者是否通过KYC验证
+    @param _investor 投资者地址
+    @return 是否验证
+    """
+    return self._isVerified(_investor)
+
+
+@view
+@external
 def isAccredited(_investor: address) -> bool:
     """
     @notice 检查是否为合格投资者
     @param _investor 投资者地址
     @return 是否合格投资者
     """
-    return self.investors[_investor].accreditedInvestor and self.isVerified(_investor)
+    return self.investors[_investor].accreditedInvestor and self._isVerified(_investor)
 
 
 @view
@@ -322,7 +334,7 @@ def canInvest(_investor: address, _amount: uint256) -> bool:
     @param _amount 投资金额（用于未来扩展，当前未使用）
     @return 是否可以投资
     """
-    return self.isVerified(_investor)
+    return self._isVerified(_investor)
 
 
 @view

@@ -31,5 +31,10 @@ async def grant_user_permission(account_address, module=None):
     return route_permissions
 
 
-if __name__ == "__main__":
+def main():
+    """授予用户权限"""
     asyncio.run(grant_user_permission("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"))
+
+
+if __name__ == "__main__":
+    main()

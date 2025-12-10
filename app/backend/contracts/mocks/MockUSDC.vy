@@ -1,5 +1,5 @@
 # MockUSDC.vy
-# @version ^0.3.10
+# @version ^0.4.0
 
 name: public(String[32])
 symbol: public(String[32])
@@ -8,7 +8,7 @@ totalSupply: public(uint256)
 balanceOf: public(HashMap[address, uint256])
 allowance: public(HashMap[address, HashMap[address, uint256]])
 
-@external
+@deploy
 def __init__():
     self.name = "Mock USDC"
     self.symbol = "USDC"

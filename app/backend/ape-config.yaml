@@ -6,27 +6,25 @@ plugins:
 
 # 编译器配置
 vyper:
-  version: 0.3.10
-  evm_version: shanghai
+  version: 0.4.0
+  evm_version: paris
 
 # 网络配置
 networks:
   custom:
-    - name: hardhat
+    - name: local
       chain_id: 31337
       ecosystem: ethereum
 
 ethereum:
-  # 本地开发网络（您的hardhat节点）
+  # 开发网络（远程 hardhat 节点）
   local:
     default_provider: node
-  hardhat:
-    default_provider: node
-  
+
   # Sepolia测试网
   sepolia:
     default_provider: alchemy
-  
+
   # 主网（生产环境）
   mainnet:
     default_provider: alchemy
@@ -35,9 +33,7 @@ ethereum:
 node:
   ethereum:
     local:
-      uri: http://YOUR_DB_HOST:8545
-    hardhat:
-      uri: http://YOUR_DB_HOST:8545
+      uri: http://YOUR_RPC_HOST:8545
 
 # 测试配置（与 Hardhat 一致）
 test:
