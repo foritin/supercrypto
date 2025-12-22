@@ -74,7 +74,8 @@ function FilterPanel({
   };
   onFilterChange: (key: string, value: unknown) => void;
   onReset: () => void;
-  t: (key: string, fallback?: string) => string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: any;
 }) {
   return (
     <div className="mb-6 rounded-xl border border-white/10 bg-white/5 p-4">
@@ -139,7 +140,8 @@ function LogDetailModal({
 }: {
   log: AuditLogResponse;
   onClose: () => void;
-  t: (key: string, fallback?: string) => string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: any;
 }) {
   return (
     <div
@@ -349,7 +351,7 @@ export default function AuditLogsPage() {
   };
 
   return (
-    <RequireAuth requireKyc={false} requireAdmin>
+    <RequireAuth admin>
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 px-6 py-8">
         {/* 页面标题 */}
         <div className="mb-6 flex items-center justify-between">

@@ -130,7 +130,7 @@ export default function AdminDashboardPage() {
   ] : [];
 
   return (
-    <RequireAuth requireKyc={false} requireAdmin>
+    <RequireAuth admin>
       {/* 高级背景 */}
       <PremiumV5Background />
 

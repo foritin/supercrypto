@@ -28,7 +28,8 @@ export const userService = {
     if (!walletAddress) return null
     
     try {
-      const url = 'http://localhost:8000/api/v1/auth/me'
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+      const url = `${baseUrl}/auth/me`
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'X-Wallet-Address': walletAddress,

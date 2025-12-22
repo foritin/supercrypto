@@ -1,0 +1,18 @@
+[Unit]
+Description=SuperCrypto Backend API
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/project/supercrytpo/app/backend
+Environment="PATH=/home/ubuntu/project/supercrytpo/app/backend/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/ubuntu/project/supercrytpo/app/backend/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
