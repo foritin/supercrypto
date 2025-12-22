@@ -18,6 +18,8 @@ const common = {
     submit: "提交",
     refresh: "刷新",
     actions: "操作",
+    prevPage: "上一页",
+    nextPage: "下一页",
     months: "个月",
     days: "天",
     daysLeft: "天剩余",

@@ -18,6 +18,8 @@ const common = {
     submit: "Submit",
     refresh: "Refresh",
     actions: "Actions",
+    prevPage: "Previous",
+    nextPage: "Next",
     months: "months",
     days: "days",
     daysLeft: "days left",

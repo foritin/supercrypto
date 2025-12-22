@@ -331,7 +331,7 @@ export default function AdminDashboardPage() {
                   transition={{ delay: 0.4 }}
                 >
                   <h3 className="text-lg font-semibold text-white mb-5">
-                    奖励池状态
+                    {t("admin.dashboard.rewardsPool.title", "奖励池状态")}
                   </h3>
 
                   {/* 环形进度 */}
@@ -366,7 +366,7 @@ export default function AdminDashboardPage() {
                           {((stats.staking.total_rewards_distributed / (stats.staking.total_rewards_distributed + stats.staking.rewards_pool_remaining)) * 100).toFixed(0)}%
                         </div>
                         <div className="text-xs mt-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
-                          已分发
+                          {t("admin.dashboard.rewardsPool.distributed", "已分发")}
                         </div>
                       </div>
                     </div>
@@ -377,7 +377,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400" />
-                        <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>已分发</span>
+                        <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t("admin.dashboard.rewardsPool.distributed", "已分发")}</span>
                       </div>
                       <span className="text-sm font-medium text-white">
                         {(stats.staking.total_rewards_distributed / 1000000).toFixed(2)}M PLT
@@ -386,7 +386,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(255, 255, 255, 0.15)' }} />
-                        <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>剩余</span>
+                        <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t("admin.dashboard.rewardsPool.remaining", "剩余")}</span>
                       </div>
                       <span className="text-sm font-medium text-white">
                         {(stats.staking.rewards_pool_remaining / 1000000).toFixed(2)}M PLT
@@ -403,7 +403,7 @@ export default function AdminDashboardPage() {
                   transition={{ delay: 0.5 }}
                 >
                   <h3 className="text-lg font-semibold text-white mb-5">
-                    质押周期分布
+                    {t("admin.dashboard.stakingDistribution.title", "质押周期分布")}
                   </h3>
 
                   <div className="space-y-4">
@@ -417,7 +417,7 @@ export default function AdminDashboardPage() {
                         <div key={period}>
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                              {period} 天
+                              {period} {t("admin.dashboard.stakingDistribution.days", "天")}
                             </span>
                             <span className="text-sm font-semibold text-white">
                               {count}
