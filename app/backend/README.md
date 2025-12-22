@@ -13,6 +13,9 @@ SuperCrypto是一个基于FastAPI构建的Web3加密货币管理平台，帮助�
 - **💸 资产操作** - 实时余额查询、转账、交易记录追踪
 - **📊 数据分析** - 交易历史统计、资产汇总、地址活动分析
 - **🔐 安全可靠** - 私钥加密存储、JWT认证、完善的权限控制
+- **🏢 RWA 资产管理** - 实物资产代币化、多合约绑定、价格预言机
+- **📝 KYC 认证** - 用户身份认证、合规审核流程
+- **⚙️ 智能合约管理** - 合约部署追踪、依赖同步、数据库驱动配置
 
 ### 适用场景
 
@@ -106,59 +109,143 @@ python main.py
 
 ## 📖 使用指南
 
-### API端点概览
+### API 架构概览
 
-#### 账户管理 `/api/v1/accounts`
+API v2 采用分层路由结构，按认证级别组织：
 
-```bash
-# 创建账户
-curl -X POST "http://localhost:8000/api/v1/accounts" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-    "private_key": "0x1234...",
-    "tag": "我的主账户",
-    "net_type": "test"
-  }'
-
-# 查询账户列表
-curl "http://localhost:8000/api/v1/accounts?page=1&page_size=10"
-
-# 获取账户详情
-curl "http://localhost:8000/api/v1/accounts/1"
+```
+/api/v1/
+├── /public/*      # 公开接口（无需认证）
+├── /auth/*        # 认证相关
+├── /user/*        # 用户接口（需要 JWT）
+├── /admin/*       # 管理员接口（需要 JWT + 管理员权限）
+└── /dev/*         # 开发工具（仅开发环境）
 ```
 
-#### 钱包管理 `/api/v1/wallets`
+> **详细路由文档**: 参见 [API_ROUTES.md](./API_ROUTES.md)
+
+### API 端点示例
+
+#### 认证 `/api/v1/auth`
 
 ```bash
-# 创建新钱包
-curl -X POST "http://localhost:8000/api/v1/wallets" \
+# 获取 nonce（用于钱包签名）
+curl "http://localhost:8000/api/v1/auth/nonce?address=0x742d35Cc..."
+
+# 钱包登录（获取 JWT）
+curl -X POST "http://localhost:8000/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d '{
-    "network": "ethereum",
-    "tag": "我的ETH钱包"
+    "address": "0x742d35Cc...",
+    "signature": "0x..."
   }'
 
-# 查询钱包余额
-curl "http://localhost:8000/api/v1/wallets/1/balance"
+# 响应包含 access_token，后续请求需携带
+```
 
-# 转账
-curl -X POST "http://localhost:8000/api/v1/wallets/1/transfer" \
+#### 公开接口 `/api/v1/public`
+
+```bash
+# 获取资产列表
+curl "http://localhost:8000/api/v1/public/assets?status=active&page=1&page_size=10"
+
+# 获取资产详情
+curl "http://localhost:8000/api/v1/public/assets/1"
+
+# KYC 状态查询
+curl "http://localhost:8000/api/v1/public/kyc/0x742d35Cc.../status"
+
+# 质押配置
+curl "http://localhost:8000/api/v1/public/staking/config"
+
+# 认购预览（计算收益）
+curl "http://localhost:8000/api/v1/public/subscriptions/preview?asset_id=1&amount=1000&duration_months=12"
+```
+
+#### 用户接口 `/api/v1/user`（需要 JWT）
+
+```bash
+# 所有用户接口需要 Authorization 头
+AUTH_HEADER="Authorization: Bearer <your_jwt_token>"
+
+# 创建认购
+curl -X POST "http://localhost:8000/api/v1/user/subscriptions" \
+  -H "$AUTH_HEADER" \
   -H "Content-Type: application/json" \
   -d '{
-    "to_address": "0x1234567890abcdef1234567890abcdef12345678",
-    "amount": "0.1"
+    "asset_id": 1,
+    "amount": "1000",
+    "duration_months": 12
+  }'
+
+# 我的认购列表
+curl "http://localhost:8000/api/v1/user/subscriptions" -H "$AUTH_HEADER"
+
+# 我的质押列表
+curl "http://localhost:8000/api/v1/user/staking" -H "$AUTH_HEADER"
+
+# 创建质押
+curl -X POST "http://localhost:8000/api/v1/user/staking" \
+  -H "$AUTH_HEADER" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": "1000"}'
+
+# 提交 KYC
+curl -X POST "http://localhost:8000/api/v1/user/kyc/apply" \
+  -H "$AUTH_HEADER" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "full_name": "张三",
+    "id_type": "passport",
+    "id_number": "E12345678"
   }'
 ```
 
-#### 交易管理 `/api/v1/transactions`
+#### 管理员接口 `/api/v1/admin`（需要 JWT + 管理员权限）
 
 ```bash
-# 查询地址交易历史
-curl "http://localhost:8000/api/v1/transactions/address/0x742d35Cc.../history"
+# 管理员接口需要管理员钱包签发的 JWT
+ADMIN_AUTH="Authorization: Bearer <admin_jwt_token>"
 
-# 获取交易统计
-curl "http://localhost:8000/api/v1/transactions/stats?address=0x742d35Cc..."
+# 创建资产
+curl -X POST "http://localhost:8000/api/v1/admin/assets" \
+  -H "$ADMIN_AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Manhattan Apartment",
+    "symbol": "RWA001",
+    "project": "fake",
+    "total_supply": 1000000
+  }'
+
+# 获取可绑定的项目列表
+curl "http://localhost:8000/api/v1/admin/assets/projects/available" \
+  -H "$ADMIN_AUTH"
+
+# 按项目批量绑定合约
+curl -X POST "http://localhost:8000/api/v1/admin/assets/1/bind-project" \
+  -H "$ADMIN_AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{"project": "fake", "set_primary": true}'
+
+# KYC 审核列表
+curl "http://localhost:8000/api/v1/admin/kyc" -H "$ADMIN_AUTH"
+
+# 审核 KYC
+curl -X POST "http://localhost:8000/api/v1/admin/kyc/1/review" \
+  -H "$ADMIN_AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "approve"}'
+```
+
+#### 合约管理 `/api/v1/contracts`
+
+```bash
+# 获取所有合约地址（公开）
+curl "http://localhost:8000/api/v1/contracts/addresses"
+
+# 获取单个合约地址
+curl "http://localhost:8000/api/v1/contracts/Subscription"
 ```
 
 ### 完整API文档
@@ -239,7 +326,14 @@ aerich upgrade
 - [x] 基础账户和钱包管理
 - [x] 多链支持（Ethereum、BSC、Polygon）
 - [x] 交易记录和统计
+- [x] RWA 资产管理 (数据库驱动)
+- [x] KYC 认证流程
+- [x] 智能合约部署追踪
+- [x] 合约依赖同步检测
+- [x] 多合约绑定架构
+- [x] 按项目批量绑定/解绑合约
 - [ ] Redis缓存集成
+- [ ] 价格预言机集成
 - [ ] NFT资产管理
 - [ ] DeFi协议集成（Uniswap、Aave等）
 - [ ] 实时价格订阅

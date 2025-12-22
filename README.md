@@ -1,14 +1,16 @@
-# SuperCrypto - RWA双币模型系统
+# SuperCrypto - RWA 双币模型投资平台
 
 <div align="center">
 
-![Vyper](https://img.shields.io/badge/Vyper-0.3.9-blue)
+![Vyper](https://img.shields.io/badge/Vyper-0.4.0-blue)
 ![Ape](https://img.shields.io/badge/Ape-Latest-green)
+![React](https://img.shields.io/badge/React-18-61DAFB)
+![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-**基于现实固定资产的双币模型DeFi系统**
+**基于真实世界资产的双代币 DeFi 投资平台**
 
-[功能特性](#-功能特性) • [快速开始](#-快速开始) • [架构设计](#-架构设计) • [使用指南](#-使用指南)
+[功能特性](#-功能特性) • [快速开始](#-快速开始) • [架构设计](#️-架构设计) • [合约体系](#-合约体系) • [部署指南](#-部署指南)
 
 </div>
 
@@ -16,373 +18,590 @@
 
 ## 🌟 项目概述
 
-SuperCrypto是一个创新的RWA（Real World Assets）双币模型系统，将现实世界的固定资产（如房地产、债券、基础设施等）代币化，并通过智能合约实现：
+SuperCrypto 是一个 RWA（Real World Assets）代币化投资平台，旨在降低优质固定资产的投资门槛，为加密货币投资者提供稳定、透明的收益渠道。
 
-- **权益代币（RWA Asset Token）**：代表固定资产所有权，与资产收益率挂钩
-- **平台代币（Platform Token）**：用于生态治理、手续费折扣、质押挖矿
+### 双代币经济模型
+
+| 代币          | 名称         | 说明                                                 |
+| ------------- | ------------ | ---------------------------------------------------- |
+| **RWA Token** | 权益凭证代币 | 代表真实世界资产（如房产）的权益，通过 USDT 认购获得 |
+| **PLT Token** | 平台治理代币 | 通过质押挖矿获取，总量 1 亿枚，用于治理和激励        |
+
+### 收益机制
+
+| 锁定期  | APY | 适用场景 |
+| ------- | --- | -------- |
+| 3 个月  | 10% | 灵活投资 |
+| 6 个月  | 12% | 平衡收益 |
+| 12 个月 | 15% | 长期持有 |
+
+---
 
 ## ✨ 功能特性
 
 ### 🏦 核心功能
 
-#### 1. RWA资产代币化
-- ✅ 固定资产映射为ERC20代币
-- ✅ 资产估值管理与更新
-- ✅ IPFS文档存储（法律文件、审计报告）
-- ✅ KYC合规验证
-- ✅ 锁定期管理
+| 模块         | 功能                                                  | 状态      |
+| ------------ | ----------------------------------------------------- | --------- |
+| **钱包连接** | MetaMask 签名登录、多网络切换、账户变更检测           | ✅ 完成   |
+| **KYC 认证** | 身份验证、合规审核、链上 + 后端双重记录               | ✅ 完成   |
+| **资产浏览** | RWA 资产列表、详情、价格历史                          | ✅ 完成   |
+| **认购投资** | 多锁定期选择、收益预览、USDT 支付                     | ✅ 完成   |
+| **投资组合** | 持仓查看、收益统计、赎回操作                          | ✅ 完成   |
+| **质押挖矿** | RWA Token 质押、PLT 奖励                              | 🚧 开发中 |
+| **管理后台** | 资产管理、KYC 审核、**合约监控**                      | ✅ 完成   |
+| **开发工具** | Mock 代币铸造转账、快速 KYC、数据重置 (仅 local/test) | ✅ 完成   |
 
-#### 2. 认购系统
-- ✅ 多档位认购（不同锁定期对应不同收益率）
-- ✅ 灵活支付方式（ETH/USDT/USDC）
-- ✅ 自动收益分配
-- ✅ 提前赎回机制（支付罚金）
-- ✅ 平台代币奖励
+### 🛠️ 开发者工具 (仅 local/test 环境)
 
-#### 3. 平台代币生态
-- ✅ 质押挖矿（灵活锁定期）
-- ✅ DAO治理投票
-- ✅ 手续费折扣体系
-- ✅ 通缩机制（回购销毁）
+| 功能              | 描述                                                                   |
+| ----------------- | ---------------------------------------------------------------------- |
+| **Mock 代币铸造** | Admin 可铸造 MockUSDT/MockUSDC 并转账给指定用户，两步操作：铸造 → 转账 |
+| **快速 KYC**      | 一键通过当前账户的 KYC 认证，同时更新链上和数据库                      |
+| **数据重置**      | 清除测试数据（KYC 记录、交易记录），需输入确认文字                     |
+
+> ⚠️ 这些功能仅在 Admin 菜单下可见，且仅 local/test 环境可用
+
+### 🔐 安全特性
+
+- ✅ **STO 合规** - ERC1404 证券代币标准，KYC/AML 验证
+- ✅ **访问控制** - RBAC 权限管理（user/admin）
+- ✅ **重入防护** - 所有外部调用后更新状态
+- ✅ **暂停机制** - 紧急情况可暂停合约
+- ✅ **多重验证** - 关键操作需 KYC + 钱包签名
+
+---
 
 ## 🏗️ 架构设计
 
+### 系统架构
+
 ```
-┌─────────────────────────────────────────────────┐
-│                  前端应用层                        │
-│   用户界面 | 资产展示 | 认购面板 | 个人中心        │
-└─────────────────────────────────────────────────┘
-                        ↓
-┌─────────────────────────────────────────────────┐
-│              智能合约层（Vyper）                    │
-│                                                   │
-│  ┌─────────────────┐  ┌──────────────────┐       │
-│  │ RWAAssetToken   │  │ PlatformToken    │       │
-│  │ - 资产代币       │  │ - 平台治理代币     │       │
-│  │ - KYC验证        │  │ - 质押挖矿        │       │
-│  │ - 锁定期管理     │  │ - DAO治理         │       │
-│  └─────────────────┘  └──────────────────┘       │
-│              ↓                 ↓                  │
-│       ┌──────────────────────────────┐           │
-│       │   SubscriptionManager        │           │
-│       │   - 认购管理                  │           │
-│       │   - 收益分配                  │           │
-│       │   - 提前赎回                  │           │
-│       └──────────────────────────────┘           │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           系统架构                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                       Frontend (Next.js)                             │  │
+│   │   Next.js 15 + React 19 + TypeScript + Ant Design + Wagmi            │  │
+│   └───────────────────────────────┬─────────────────────────────────────┘  │
+│                                   │                                         │
+│                   ┌───────────────┴───────────────┐                        │
+│                   │                               │                         │
+│                   ▼                               ▼                         │
+│   ┌─────────────────────────────┐   ┌───────────────────────────────────┐  │
+│   │     Backend (FastAPI)       │   │      Blockchain (Ethereum)        │  │
+│   │  Python 3.11+ + Tortoise    │   │   Hardhat / Sepolia / Mainnet     │  │
+│   │  PostgreSQL + Redis         │   │                                   │  │
+│   └──────────────┬──────────────┘   │   ┌───────────────────────────┐   │  │
+│                  │                  │   │    Smart Contracts         │   │  │
+│                  │                  │   │    (Vyper 0.4+)            │   │  │
+│                  ▼                  │   │                            │   │  │
+│   ┌─────────────────────────────┐   │   │  ┌──────────────────────┐  │   │  │
+│   │       PostgreSQL            │   │   │  │ KYCManager           │  │   │  │
+│   │  - Account                  │   │   │  │ RWATokenSTO          │  │   │  │
+│   │  - UserKyc                  │   │   │  │ Subscription         │  │   │  │
+│   │  - Asset                    │◄──┼───│  │ Staking              │  │   │  │
+│   │  - Subscription             │   │   │  │ PlatformToken        │  │   │  │
+│   │  - DeployInfo               │   │   │  │ LiquidityMining      │  │   │  │
+│   │  - ContractBinding          │   │   │  └──────────────────────┘  │   │  │
+│   │  - AuditLog                 │   │   └───────────────────────────┘   │  │
+│   └─────────────────────────────┘   └───────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 合约说明
+### 技术栈
 
-| 合约 | 功能 | 文件 |
-|------|------|------|
-| **RWAAssetToken** | 权益代币合约 | `contracts/RWAAssetToken.vy` |
-| **PlatformToken** | 平台治理代币 | `contracts/PlatformToken.vy` |
-| **SubscriptionManager** | 认购管理合约 | `contracts/SubscriptionManager.vy` |
+| 层级       | 技术                             | 说明                 |
+| ---------- | -------------------------------- | -------------------- |
+| **前端**   | Next.js 15, React 19, TypeScript | App Router + SSR/SSG |
+| **UI**     | Ant Design 5.x, Tailwind CSS     | 组件库 + 样式        |
+| **Web3**   | Wagmi, viem, MetaMask            | 钱包连接 + 交易      |
+| **后端**   | Python 3.11+, FastAPI            | 高性能 API           |
+| **ORM**    | Tortoise ORM, Aerich             | 异步 ORM + 迁移      |
+| **数据库** | PostgreSQL, Redis                | 持久化 + 缓存        |
+| **合约**   | Vyper 0.4+, Ape Framework        | 智能合约开发         |
+| **测试链** | Hardhat, Sepolia                 | 本地 + 测试网        |
+
+---
+
+## 📜 合约体系
+
+### 合约列表
+
+| 合约                | 文件                 | 功能                            | 项目分组 |
+| ------------------- | -------------------- | ------------------------------- | -------- |
+| **KYCManager**      | `KYCManager.vy`      | KYC 验证、投资者管理、合规控制  | common   |
+| **MockUSDT**        | `mocks/MockUSDT.vy`  | 测试用 USDT                     | mock     |
+| **MockUSDC**        | `mocks/MockUSDC.vy`  | 测试用 USDC                     | mock     |
+| **RWATokenSTO**     | `RWATokenSTO.vy`     | RWA 权益代币 (ERC1404 证券代币) | fake     |
+| **PlatformToken**   | `PlatformToken.vy`   | PLT 平台代币 (ERC20)            | fake     |
+| **Subscription**    | `Subscription.vy`    | 认购管理、收益计算、赎回处理    | fake     |
+| **Staking**         | `Staking.vy`         | RWA Token 质押、PLT 奖励分发    | fake     |
+| **LiquidityMining** | `LiquidityMining.vy` | 流动性挖矿奖励                  | fake     |
+
+### 项目分组说明
+
+| 分组       | 说明                      | 合约                                                               |
+| ---------- | ------------------------- | ------------------------------------------------------------------ |
+| **common** | 公共合约，所有项目共享    | KYCManager                                                         |
+| **mock**   | 测试用合约，仅 local 环境 | MockUSDT, MockUSDC                                                 |
+| **fake**   | Fake 项目业务合约         | RWATokenSTO, PlatformToken, Subscription, Staking, LiquidityMining |
+
+### 合约依赖关系
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           合约依赖关系                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   [common]                                                                  │
+│   ┌──────────────┐                                                         │
+│   │  KYCManager  │◄─────────────────────────────────────────┐              │
+│   └──────────────┘                                          │              │
+│          ▲                                                  │              │
+│          │                                                  │              │
+│   [mock] │                                                  │              │
+│   ┌──────────────┐                                          │              │
+│   │   MockUSDT   │────────────┐                             │              │
+│   └──────────────┘            │                             │              │
+│                               │                             │              │
+│   [fake]                      ▼                             │              │
+│   ┌──────────────┐     ┌──────────────┐                     │              │
+│   │ RWATokenSTO  │────>│ Subscription │─────────────────────┤              │
+│   └──────────────┘     └──────────────┘                     │              │
+│          │                                                  │              │
+│          │             ┌──────────────┐                     │              │
+│          └────────────>│   Staking    │─────────────────────┤              │
+│                        └──────────────┘                     │              │
+│   ┌──────────────┐            │                             │              │
+│   │PlatformToken │────────────┼─────────────────────────────┘              │
+│   └──────────────┘            │                                            │
+│          │             ┌──────────────────┐                                │
+│          └────────────>│ LiquidityMining  │                                │
+│                        └──────────────────┘                                │
+│                                                                             │
+│   说明：箭头表示依赖关系，合约通过地址相互引用                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 合约交互机制
+
+**合约通过地址相互引用：**
+
+```vyper
+# 每个合约存储依赖合约的地址
+kycManager: public(address)
+
+# 调用时通过接口调用
+assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender)
+```
+
+**每个合约都有更新依赖的函数：**
+
+```vyper
+@external
+def setKYCManager(_newManager: address):
+    assert msg.sender == self.owner, "Only owner"
+    self.kycManager = _newManager
+
+@external
+def setUSDT(_newUsdt: address):
+    assert msg.sender == self.owner, "Only owner"
+    self.usdt = _newUsdt
+
+@external
+def setRWAToken(_newRwaToken: address):
+    assert msg.sender == self.owner, "Only owner"
+    self.rwaToken = _newRwaToken
+```
+
+### 合约管理系统
+
+系统使用两个核心表来管理合约部署和依赖：
+
+**DeployInfo 表：** 记录合约部署信息
+
+| 字段               | 说明                                                                   |
+| ------------------ | ---------------------------------------------------------------------- |
+| `deploy_step`      | 部署阶段 (0-common-kyc, 1-mock-tokens, 2-fake-tokens, 3-fake-business) |
+| `contract_name`    | 合约名称                                                               |
+| `contract_address` | 合约地址                                                               |
+| `project`          | 项目分组 (common/mock/fake)                                            |
+| `network`          | 网络 (local/sepolia/mainnet)                                           |
+| `is_active`        | 是否为当前活跃版本                                                     |
+| `dependencies`     | 构造函数中绑定的依赖地址 (JSON)                                        |
+
+**ContractBinding 表：** 记录合约依赖绑定关系
+
+| 字段               | 说明                                 |
+| ------------------ | ------------------------------------ |
+| `contract_name`    | 拥有依赖的合约名称 (如 Subscription) |
+| `contract_address` | 拥有依赖的合约地址                   |
+| `dependency_name`  | 被依赖的合约名称 (如 KYCManager)     |
+| `bound_address`    | 当前绑定的依赖合约地址               |
+| `set_function`     | 用于更新此依赖的 set 函数名称        |
+| `network`          | 网络                                 |
+| `last_updated_tx`  | 最后一次更新绑定的交易哈希           |
+
+**依赖检测机制：**
+
+当某个合约（如 KYCManager）重新部署后：
+
+1. `deploy_info` 表新增记录，旧记录 `is_active=false`
+2. `contract_binding` 表中的 `bound_address` 仍为旧地址
+3. 系统检测到 `bound_address` ≠ 最新 `deploy_info.contract_address`
+4. 管理后台显示"需更新"状态（黄色标识）
+5. 管理员通过界面确认并调用 `setXXX` 函数更新绑定
+
+---
+
+## 🔄 KYC 流程详解
+
+### 完整流程图
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           KYC 完整流程                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   用户                      后端                        链上 (KYCManager)    │
+│    │                         │                              │               │
+│    │ 1. 提交 KYC 申请        │                              │               │
+│    │ (身份信息+文件)         │                              │               │
+│    │ ───────────────────────>│                              │               │
+│    │                         │                              │               │
+│    │                         │ 2. 存储到 UserKyc 表         │               │
+│    │                         │ (status = pending)           │               │
+│    │                         │                              │               │
+│    │                         │ 3. 管理员审核                │               │
+│    │                         │ (approve/reject)             │               │
+│    │                         │                              │               │
+│    │                         │ 4. 审核通过后                │               │
+│    │                         │ ─────────────────────────────>│              │
+│    │                         │  调用 addInvestor()          │               │
+│    │                         │                              │               │
+│    │                         │                              │ 5. 记录投资者 │
+│    │                         │                              │ isVerified=✅ │
+│    │                         │                              │               │
+│    │ 6. 用户认购时           │                              │               │
+│    │ ─────────────────────────────────────────────────────>│               │
+│    │  Subscription.subscribe()                              │               │
+│    │                         │                              │ 7. 检查 KYC   │
+│    │                         │                              │ isVerified()  │
+│    │                         │                              │               │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 关键点说明
+
+| 层级                  | 存储内容                     | 用途               |
+| --------------------- | ---------------------------- | ------------------ |
+| **后端 (UserKyc)**    | 用户身份信息、文件、审核记录 | 合规留档、人工审核 |
+| **链上 (KYCManager)** | 验证状态 (isVerified)        | 合约调用时验证     |
+
+**两者需要同步：** 后端审核通过后，需要调用链上 `addInvestor`
+
+---
 
 ## 🚀 快速开始
 
 ### 环境要求
 
 - **Python**: 3.11+
-- **Node.js**: 16+
-- **Ape Framework**: Latest
+- **Node.js**: 18+
+- **PostgreSQL**: 14+
+- **Redis**: 6+ (可选)
 
-### 安装依赖
+### 项目结构
+
+```
+SuperCrypto/
+├── app/
+│   ├── backend/                 # 后端服务
+│   │   ├── contracts/           # Vyper 智能合约
+│   │   ├── scripts/             # 部署脚本
+│   │   │   ├── 0-common-kyc.py      # 公共合约部署
+│   │   │   ├── 1-mock-tokens.py     # Mock 代币部署
+│   │   │   ├── 2-fake-tokens.py     # Fake 项目代币
+│   │   │   ├── 3-fake-business.py   # Fake 项目业务合约
+│   │   │   ├── deploy_project.py    # 一键部署脚本
+│   │   │   └── deploy_utils.py      # 部署工具函数
+│   │   ├── src/                 # Python 源码
+│   │   │   ├── api/             # API 路由
+│   │   │   ├── domains/         # 业务领域 (DDD)
+│   │   │   ├── models/          # 数据模型
+│   │   │   └── shared/          # 共享模块
+│   │   ├── ape-config.yaml      # Ape 配置
+│   │   └── config.local.yaml    # 本地配置
+│   │
+│   └── frontend/
+│       └── nextjs/              # Next.js 前端应用
+│           ├── src/
+│           │   ├── app/         # App Router 页面
+│           │   ├── components/  # React 组件
+│           │   ├── hooks/       # 自定义 Hooks
+│           │   ├── services/    # API 服务
+│           │   ├── providers/   # Context 提供者
+│           │   └── locales/     # 国际化 (模块化)
+│           └── package.json
+│
+├── docs/                        # BMAD 文档
+│   ├── prd.md                   # 产品需求文档
+│   ├── architecture.md          # 架构设计
+│   ├── epics.md                 # 史诗和故事
+│   └── sprint-artifacts/        # Sprint 产物
+│
+└── hardhat/                     # Hardhat 配置
+    └── hardhat.config.ts
+```
+
+### 安装步骤
 
 ```bash
 # 1. 克隆项目
 git clone <your-repo-url>
 cd SuperCrypto
 
-# 2. 安装Python依赖
-pip install eth-ape
-ape plugins install vyper hardhat
+# 2. 后端安装
+cd app/backend
+uv venv && source .venv/bin/activate
+uv pip install -r requirements.txt
 
-# 3. 编译合约
-ape compile
+# 3. 前端安装
+cd ../frontend/nextjs
+npm install
+
+# 4. 启动 Hardhat 节点
+cd ../../../hardhat
+./hardhat-node.sh start-local
+
+# 5. 一键部署合约 (推荐)
+cd ../app/backend
+python scripts/deploy_project.py --project fake --network local
+
+# 6. 设置 Admin KYC
+ape run setup_admin_kyc --network ethereum:local
+
+# 7. 启动后端
+python main.py
+
+# 8. 启动前端 (新终端)
+cd ../frontend/nextjs
+npm run dev
 ```
 
-### 部署合约
+---
 
-#### 本地开发环境
+## 📦 部署指南
+
+### 部署脚本
+
+| 脚本                 | 部署的合约                             | 项目分组 | 依赖         |
+| -------------------- | -------------------------------------- | -------- | ------------ |
+| `0-common-kyc.py`    | KYCManager                             | common   | 无           |
+| `1-mock-tokens.py`   | MockUSDT, MockUSDC                     | mock     | 无           |
+| `2-fake-tokens.py`   | RWATokenSTO, PlatformToken             | fake     | 脚本 0       |
+| `3-fake-business.py` | Subscription, Staking, LiquidityMining | fake     | 脚本 0, 1, 2 |
+| `deploy_project.py`  | 一键部署项目所有合约                   | -        | -            |
+| `setup_admin_kyc.py` | 设置 Admin 链上 KYC                    | -        | 脚本 0       |
+
+### 部署命令
 
 ```bash
-# 1. 启动本地节点
-ape run deploy_rwa_system --network ethereum:local:test
+# 一键部署 fake 项目 (推荐)
+python scripts/deploy_project.py --project fake --network local
 
-# 或使用Hardhat节点
-npx hardhat node  # 在另一个终端
-ape run deploy_rwa_system --network ethereum:local:hardhat
+# 或分步部署
+ape run 0-common-kyc --network ethereum:local
+ape run 1-mock-tokens --network ethereum:local
+ape run 2-fake-tokens --network ethereum:local
+ape run 3-fake-business --network ethereum:local
+
+# 测试网 (Sepolia)
+python scripts/deploy_project.py --project fake --network sepolia
 ```
 
-#### 测试网部署
+### 部署后管理
+
+部署完成后，访问管理后台 `/admin/contracts` 页面：
+
+1. **查看部署状态** - 按项目分组展示所有合约
+2. **检查依赖绑定** - 黄色标识表示需要更新
+3. **更新依赖** - 点击确认按钮调用 set 函数
+4. **清除部署记录** - 按项目分组清除数据库记录
+
+### 部署记录查询
+
+```sql
+-- 查看活跃的部署记录
+SELECT project, deploy_step, contract_name, contract_address, is_active
+FROM deploy_info
+WHERE network = 'local' AND is_active = true
+ORDER BY project, deploy_step;
+
+-- 查看依赖绑定状态
+SELECT contract_name, dependency_name, bound_address, set_function
+FROM contract_binding
+WHERE network = 'local';
+```
+
+---
+
+## 🧪 测试
+
+### 后端测试
 
 ```bash
-# 设置环境变量
-export WEB3_INFURA_PROJECT_ID="your-infura-id"
-
-# 部署到Sepolia测试网
-ape run deploy_rwa_system --network ethereum:sepolia
+cd app/backend
+pytest tests/ -v
 ```
 
-## 📊 认购档位示例
-
-系统默认创建三个认购档位：
-
-| 档位 | 锁定期 | 年化收益率 | 平台代币奖励 | 提前赎回罚金 |
-|------|--------|-----------|-------------|-------------|
-| **Tier 1** | 3个月 | 6% | 1% | 2% |
-| **Tier 2** | 6个月 | 9% | 1.5% | 3% |
-| **Tier 3** | 12个月 | 12% | 2% | 5% |
-
-## 💡 使用指南
-
-### 1. 用户认购流程
-
-```python
-from ape import accounts, project
-
-# 加载合约
-subscription_manager = project.SubscriptionManager.at("0x...")
-rwa_token = project.RWAAssetToken.at("0x...")
-
-# 1. 确保通过KYC验证
-# （由管理员设置）
-
-# 2. 选择认购档位并认购
-user = accounts.load("my_account")
-tier_id = 0  # 选择3个月档位
-amount = 10_000 * 10**18  # 认购10,000 USD
-
-# 使用ETH认购
-subscription_manager.subscribe(
-    tier_id,
-    amount,
-    sender=user,
-    value=amount
-)
-
-# 3. 获得RWA代币 + 平台代币奖励
-print(f"RWA代币余额: {rwa_token.balanceOf(user.address)}")
-```
-
-### 2. 领取收益
-
-```python
-# 查询可领取收益
-subscription_id = 0
-claimable = subscription_manager.get_claimable_yield(subscription_id)
-
-# 领取收益
-if claimable > 0:
-    subscription_manager.claim_yield(subscription_id, sender=user)
-```
-
-### 3. 到期赎回
-
-```python
-# 查询认购信息
-info = subscription_manager.get_subscription_info(subscription_id)
-unlock_time = info[3]
-
-# 到期后赎回本金+收益
-if block.timestamp >= unlock_time:
-    subscription_manager.redeem(subscription_id, sender=user)
-```
-
-### 4. 提前赎回（支付罚金）
-
-```python
-# 在锁定期内提前赎回
-subscription_manager.early_redeem(subscription_id, sender=user)
-# 将扣除罚金（根据档位设置，如2%-5%）
-```
-
-## 🧪 运行测试
+### 前端测试
 
 ```bash
-# 运行所有测试
-ape test tests/test_rwa_system.py -v
-
-# 运行特定测试
-ape test tests/test_rwa_system.py::test_subscribe -v
-
-# 查看测试覆盖率
-ape test --coverage
+cd app/frontend/nextjs
+npm run test
 ```
 
-## 📈 收益计算公式
-
-### 简单利息计算
-
-```
-预期收益 = 本金 × 年化收益率 × (锁定天数 / 365)
-```
-
-### 示例
-
-用户认购 **$10,000**，选择 **6个月档位**（9% APY）:
-
-```
-预期收益 = 10,000 × 9% × (180 / 365) = $443.84
-```
-
-### 按时间比例领取
-
-用户可以按时间比例提前领取已产生的收益：
-
-```
-已产生收益 = 预期收益 × (已过天数 / 总锁定天数)
-```
-
-## 🔒 安全特性
-
-- ✅ **重入攻击防护**：所有外部调用后更新状态
-- ✅ **访问控制**：基于角色的权限管理
-- ✅ **暂停机制**：紧急情况下可暂停合约
-- ✅ **KYC合规**：强制KYC验证才能交易
-- ✅ **锁定期保护**：防止未到期转账
-
-## 📁 项目结构
-
-```
-SuperCrypto/
-├── contracts/              # 智能合约
-│   ├── RWAAssetToken.vy
-│   ├── PlatformToken.vy
-│   └── SubscriptionManager.vy
-├── scripts/                # 部署脚本
-│   └── deploy_rwa_system.py
-├── tests/                  # 测试文件
-│   └── test_rwa_system.py
-├── deploy/                 # 部署配置
-│   ├── setup_accounts.py
-│   └── rwa_deployment.json
-├── ape-config.yaml         # Ape配置
-└── README.md
-```
-
-## 🛠️ 可用命令
+### 合约测试
 
 ```bash
-# 编译合约
-ape compile
-
-# 部署系统
-ape run deploy_rwa_system --network <network>
-
-# 运行测试
-ape test -v
-
-# 查看网络
-ape networks list
-
-# 账户管理
-ape accounts list
-ape accounts import <alias>
+cd app/backend
+ape test tests/ -v
 ```
 
-## 📚 完整文档
+---
 
-详细的技术文档请访问 **[docs 目录](./docs/)**：
+## 📊 API 端点
 
-### 快速导航
+### 认证
 
-| 文档类型 | 链接 | 说明 |
-|---------|------|------|
-| **🏗️ 架构设计** | [01-架构设计](./docs/01-架构设计/) | DApp 架构、前后端分工、私钥管理 |
-| **📜 智能合约** | [02-智能合约](./docs/02-智能合约/) | RWA 代币系统、STO 合规指南 |
-| **🎨 前端开发** | [03-前端开发](./docs/03-前端开发/) | 前端开发指南（规划中） |
-| **🖥️ 后端开发** | [04-后端开发](./docs/04-后端开发/) | 配置系统、API 开发 |
-| **🚀 部署** | [05-部署](./docs/05-部署/) | Hardhat/测试网/主网部署、Fork Uniswap、审计合规、USDT支付、PlatformToken/USDT池 |
-| **🧪 测试** | [06-测试](./docs/06-测试/) | Hardhat/测试网/主网测试、Fork 测试、MockUSDT |
-| **❓ 常见问题** | [98-FAQ](./docs/98-FAQ/) | 开发、测试、部署、合规相关问题解答 |
-| **📖 参考资料** | [99-参考资料](./docs/99-参考资料/) | Uniswap 地址、工具链接 |
+| 方法 | 端点                   | 说明             |
+| ---- | ---------------------- | ---------------- |
+| POST | `/api/v1/auth/token`   | 获取 JWT Token   |
+| POST | `/api/v1/auth/refresh` | 刷新 Token       |
+| GET  | `/api/v1/auth/me`      | 获取当前用户信息 |
 
-### 推荐阅读顺序
+### 资产
 
-1. **了解项目** 📖
-   - 本 README（项目概述）
-   - 了解 RWA 双币模型
+| 方法 | 端点                   | 说明             |
+| ---- | ---------------------- | ---------------- |
+| GET  | `/api/v1/assets`       | 资产列表         |
+| GET  | `/api/v1/assets/{id}`  | 资产详情         |
+| POST | `/api/v1/admin/assets` | 创建资产 (Admin) |
 
-2. **理解架构** 🏗️
-   - [DApp架构与前后端分工](./docs/01-架构设计/DApp架构与前后端分工.md)
-   - 前后端职责、私钥管理
+### 认购
 
-3. **智能合约开发** 📜
-   - [RWA-权益代币系统](./docs/02-智能合约/RWA-权益代币系统.md)
-   - [RWA-STO合规指南](./docs/02-智能合约/RWA-STO合规指南.md)
+| 方法 | 端点                                | 说明         |
+| ---- | ----------------------------------- | ------------ |
+| GET  | `/api/v1/subscriptions`             | 用户认购列表 |
+| POST | `/api/v1/subscriptions`             | 创建认购     |
+| POST | `/api/v1/subscriptions/{id}/redeem` | 赎回         |
+| POST | `/api/v1/subscriptions/preview`     | 预览收益     |
 
-4. **部署** 🚀
-   - [部署指南](./docs/05-部署/部署指南.md)
-   - Hardhat/测试网/主网部署、Fork Uniswap、USDT支付
+### 合约管理 (Admin)
 
-5. **测试** 🧪
-   - [测试指南](./docs/06-测试/)
-   - Hardhat/测试网/主网测试、Fork 测试、MockUSDT
+| 方法   | 端点                                      | 说明                   |
+| ------ | ----------------------------------------- | ---------------------- |
+| GET    | `/api/v1/admin/contracts/status`          | 合约状态（含依赖检测） |
+| POST   | `/api/v1/admin/contracts/confirm-binding` | 确认依赖绑定更新       |
+| DELETE | `/api/v1/admin/contracts/reset`           | 清除部署记录（按项目） |
+| DELETE | `/api/v1/admin/contracts/{project}/reset` | 清除指定项目部署记录   |
 
-6. **上线准备** ⚖️（重要！）
-   - [智能合约审计与合规指南](./docs/05-部署/智能合约审计与合规指南.md)
-   - 预算规划、时间线、检查清单
+### KYC
 
-7. **遇到问题？** ❓
-   - [FAQ 常见问题](./docs/98-FAQ/FAQ.md) - 快速查找解答
+| 方法 | 端点                       | 说明             |
+| ---- | -------------------------- | ---------------- |
+| GET  | `/api/v1/kyc/status`       | 用户 KYC 状态    |
+| POST | `/api/v1/kyc/apply`        | 提交 KYC 申请    |
+| POST | `/api/v1/kyc/admin/review` | 审核 KYC (Admin) |
 
-## 🔍 合约交互示例
+### 开发者工具 (仅 local/test 环境)
 
-### 创建资产（管理员）
+| 方法 | 端点                           | 说明                             |
+| ---- | ------------------------------ | -------------------------------- |
+| GET  | `/api/v1/dev/reset/info`       | 获取可重置数据统计               |
+| POST | `/api/v1/dev/reset`            | 重置测试数据                     |
+| GET  | `/api/v1/dev/environment`      | 获取环境信息                     |
+| GET  | `/api/v1/dev/token-recipients` | 获取可接收代币的用户列表 (Admin) |
+
+---
+
+## 🔧 配置
+
+### 环境变量
+
+```yaml
+# config.local.yaml
+environment: "local"
+debug: true
+
+db:
+  backend: "postgresql"
+
+postgresql:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "your-password"
+  database: "rwa"
+
+crypto:
+  mainnet_url: "http://127.0.0.1:8545"
+```
+
+### Ape 配置
+
+```yaml
+# ape-config.yaml
+name: RWA
+
+vyper:
+  version: 0.4.0
+
+node:
+  ethereum:
+    local:
+      uri: http://127.0.0.1:8545
+```
+
+### 添加新项目
+
+在 `app/backend/src/domains/contract/service.py` 中添加项目配置：
 
 ```python
-rwa_token.create_asset(
-    "Manhattan Luxury Apartment",  # 资产名称
-    "Real Estate",                 # 资产类型
-    5_000_000 * 10**18,           # 总价值
-    5_000_000 * 10**18,           # 代币数量
-    800,                          # 8% APY
-    "QmIPFSHash...",              # IPFS文档
-    sender=admin
-)
+PROJECT_CONFIG = {
+    "common": {...},
+    "mock": {...},
+    "fake": {...},
+    # 添加新项目
+    "newproject": {
+        "label": "新项目名称",
+        "description": "项目描述",
+        "color": "purple",
+        "order": 3,
+    },
+}
 ```
 
-### 创建认购档位（管理员）
+然后创建对应的部署脚本 `2-newproject-tokens.py`、`3-newproject-business.py` 等。
 
-```python
-subscription_manager.create_tier(
-    365,                    # 12个月锁定
-    1200,                   # 12% APY
-    5000 * 10**18,         # 最小认购5000 USD
-    500_000 * 10**18,      # 最大认购50万 USD
-    5_000_000 * 10**18,    # 总额度500万 USD
-    200,                    # 2% 平台代币奖励
-    500,                    # 5% 提前赎回罚金
-    sender=admin
-)
-```
+---
 
-### 查询用户认购
+## 📚 文档
 
-```python
-# 获取用户所有认购ID
-subscription_ids = subscription_manager.get_user_subscriptions(user.address)
+| 文档        | 链接                                                                 | 说明         |
+| ----------- | -------------------------------------------------------------------- | ------------ |
+| 产品需求    | [docs/prd.md](./docs/prd.md)                                         | PRD 完整需求 |
+| 架构设计    | [docs/architecture.md](./docs/architecture.md)                       | 技术架构决策 |
+| Epic 分解   | [docs/epics.md](./docs/epics.md)                                     | 故事和任务   |
+| UX 设计     | [docs/ux-design-specification.md](./docs/ux-design-specification.md) | 界面设计规范 |
+| Sprint 状态 | [docs/sprint-artifacts/](./docs/sprint-artifacts/)                   | 开发进度追踪 |
 
-# 查询每个认购详情
-for sub_id in subscription_ids:
-    info = subscription_manager.get_subscription_info(sub_id)
-    print(f"认购ID: {sub_id}")
-    print(f"本金: {info[2] / 10**18}")
-    print(f"解锁时间: {info[3]}")
-```
-
-## 📊 统计数据查询
-
-```python
-stats = subscription_manager.get_statistics()
-print(f"总认购金额: ${stats[0] / 10**18:,.2f}")
-print(f"总支付收益: ${stats[1] / 10**18:,.2f}")
-print(f"平台代币奖励: {stats[2] / 10**18:,.2f}")
-print(f"认购总数: {stats[3]}")
-```
+---
 
 ## 🤝 贡献指南
 
@@ -392,9 +611,13 @@ print(f"认购总数: {stats[3]}")
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启 Pull Request
 
+---
+
 ## 📄 许可证
 
 本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+---
 
 ## ⚠️ 免责声明
 
@@ -402,11 +625,15 @@ print(f"认购总数: {stats[3]}")
 
 涉及真实资产的代币化需要遵守相关法律法规，请咨询专业法律顾问。
 
+---
+
 ## 🔗 相关链接
 
 - [Vyper 文档](https://docs.vyperlang.org/)
 - [Ape Framework](https://docs.apeworx.io/)
-- [RWA资产代币化最佳实践](https://ethereum.org/en/developers/)
+- [FastAPI 文档](https://fastapi.tiangolo.com/)
+- [Wagmi 文档](https://wagmi.sh/)
+- [Ant Design](https://ant.design/)
 
 ---
 

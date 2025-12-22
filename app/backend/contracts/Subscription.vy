@@ -179,6 +179,28 @@ def setKYCManager(_newManager: address):
 
 
 @external
+def setUSDT(_newUsdt: address):
+    """
+    @notice 更新USDT代币地址
+    @param _newUsdt 新USDT代币地址
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _newUsdt != empty(address), "Invalid address"
+    self.usdt = _newUsdt
+
+
+@external
+def setRWAToken(_newRwaToken: address):
+    """
+    @notice 更新RWA代币地址
+    @param _newRwaToken 新RWA代币地址
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _newRwaToken != empty(address), "Invalid address"
+    self.rwaToken = _newRwaToken
+
+
+@external
 def subscribe(_amount: uint256, _lockPeriod: uint256):
     """
     @notice 认购权益代币（STO合规版本）

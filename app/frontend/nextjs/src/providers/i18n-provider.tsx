@@ -1,0 +1,84 @@
+"use client";
+
+import { type ReactNode } from "react";
+import i18n from "i18next";
+import { I18nextProvider, initReactI18next } from "react-i18next";
+import LanguageDetector from "i18next-browser-languagedetector";
+
+// 导入翻译文件
+import enCommon from "@/locales/en-US/common";
+import enHome from "@/locales/en-US/home";
+import enAssets from "@/locales/en-US/assets";
+import enAdmin from "@/locales/en-US/admin";
+import enDev from "@/locales/en-US/dev";
+import enWallet from "@/locales/en-US/wallet";
+import enKyc from "@/locales/en-US/kyc";
+import enLayout from "@/locales/en-US/layout";
+import enPortfolio from "@/locales/en-US/portfolio";
+import enSubscription from "@/locales/en-US/subscription";
+
+import zhCommon from "@/locales/zh-CN/common";
+import zhHome from "@/locales/zh-CN/home";
+import zhAssets from "@/locales/zh-CN/assets";
+import zhAdmin from "@/locales/zh-CN/admin";
+import zhDev from "@/locales/zh-CN/dev";
+import zhWallet from "@/locales/zh-CN/wallet";
+import zhKyc from "@/locales/zh-CN/kyc";
+import zhLayout from "@/locales/zh-CN/layout";
+import zhPortfolio from "@/locales/zh-CN/portfolio";
+import zhSubscription from "@/locales/zh-CN/subscription";
+
+// 合并翻译
+const resources = {
+  "en-US": {
+    translation: {
+      ...enCommon,
+      ...enHome,
+      ...enAssets,
+      ...enAdmin,
+      ...enDev,
+      ...enWallet,
+      ...enKyc,
+      ...enLayout,
+      ...enPortfolio,
+      ...enSubscription,
+    },
+  },
+  "zh-CN": {
+    translation: {
+      ...zhCommon,
+      ...zhHome,
+      ...zhAssets,
+      ...zhAdmin,
+      ...zhDev,
+      ...zhWallet,
+      ...zhKyc,
+      ...zhLayout,
+      ...zhPortfolio,
+      ...zhSubscription,
+    },
+  },
+};
+
+// 初始化 i18n
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources,
+    fallbackLng: "en-US",
+    supportedLngs: ["en-US", "zh-CN", "en", "zh"],
+    interpolation: {
+      escapeValue: false,
+    },
+    detection: {
+      order: ["localStorage", "navigator"],
+      caches: ["localStorage"],
+    },
+  });
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
+}
+
+export { i18n };

@@ -150,6 +150,39 @@ def setKYCManager(_newManager: address):
 
 
 @external
+def setRWAToken(_newRwaToken: address):
+    """
+    @notice 更新RWA代币地址
+    @param _newRwaToken 新RWA代币地址
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _newRwaToken != empty(address), "Invalid address"
+    self.rwaToken = _newRwaToken
+
+
+@external
+def setPlatformToken(_newPlatformToken: address):
+    """
+    @notice 更新平台代币地址
+    @param _newPlatformToken 新平台代币地址
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _newPlatformToken != empty(address), "Invalid address"
+    self.platformToken = _newPlatformToken
+
+
+@external
+def setSubscription(_newSubscription: address):
+    """
+    @notice 更新认购合约地址
+    @param _newSubscription 新认购合约地址
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _newSubscription != empty(address), "Invalid address"
+    self.subscription = _newSubscription
+
+
+@external
 def stake(_amount: uint256, _subscriptionId: uint256):
     """
     @notice 质押RWA代币（STO合规版本）

@@ -21,6 +21,7 @@ dependencies = [
     "uvicorn>=0.38.0",
     "pyjwt[crypto]>=2.10.1",
     "python-jwt>=4.1.0",
+    "python-multipart>=0.0.20",
 ]
 
 [project.optional-dependencies]

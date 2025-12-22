@@ -126,6 +126,17 @@ def setKYCManager(_newManager: address):
 
 
 @external
+def setPlatformToken(_newPlatformToken: address):
+    """
+    @notice 更新平台代币地址
+    @param _newPlatformToken 新平台代币地址
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _newPlatformToken != empty(address), "Invalid address"
+    self.platformToken = _newPlatformToken
+
+
+@external
 def stakeLPToken(_amount: uint256):
     """
     @notice 质押LP Token（STO合规版本）

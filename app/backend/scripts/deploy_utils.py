@@ -10,7 +10,7 @@ from typing import Any
 
 from ape import accounts, networks
 
-from src.models import Account, DeployInfo
+from src.models import Account, ContractBinding, DeployInfo, get_set_function
 from src.shared.dependencies import get_db_adapter
 
 # ============================================
@@ -23,15 +23,12 @@ def parse_deploy_args() -> argparse.Namespace:
     解析部署脚本的命令行参数
 
     注意：网络通过 ape 的 --network 参数传递，如：
-        ape run 1_deploy_mocks --network ethereum:dev -- --force
+        ape run 0-common-kyc --network ethereum:local
 
     Returns:
-        包含 force 参数的命名空间
+        命名空间
     """
     parser = argparse.ArgumentParser(description="合约部署脚本")
-    parser.add_argument(
-        "--force", "-f", action="store_true", help="强制重新部署（即使已存在）"
-    )
     # 忽略 ape 传入的其他参数
     args, _ = parser.parse_known_args()
     return args
@@ -116,6 +113,7 @@ def save_deployment(
     contract_address: str,
     network: str,
     deployer_address: str,
+    project: str = "fake",
     tx_hash: str = None,
     dependencies: dict = None,
     contract_version: str = "1.0.0",
@@ -129,6 +127,7 @@ def save_deployment(
         contract_address: 合约地址
         network: 网络名称
         deployer_address: 部署者地址
+        project: 项目标识 (common, mock, rwa, ...)
         tx_hash: 交易哈希（可选）
         dependencies: 依赖的合约地址（可选）
         contract_version: 合约版本（默认 1.0.0）
@@ -137,7 +136,17 @@ def save_deployment(
         创建的 DeployInfo 对象
     """
     with get_db() as db:
-        # 先将旧的同名部署标记为非活跃
+        # 先删除旧的非活跃记录（避免唯一约束冲突）
+        db.query(
+            DeployInfo.filter(
+                deploy_step=deploy_step,
+                contract_name=contract_name,
+                network=network,
+                is_active=False,
+            ).delete()
+        )
+
+        # 将当前活跃的部署标记为非活跃
         existing = db.query(
             DeployInfo.filter(
                 deploy_step=deploy_step,
@@ -154,6 +163,7 @@ def save_deployment(
         # 创建新记录 - 使用 Tortoise ORM 的 create 方法
         deploy_info = db.query(
             DeployInfo.create(
+                project=project,
                 deploy_step=deploy_step,
                 contract_name=contract_name,
                 contract_address=contract_address,
@@ -235,46 +245,44 @@ def deploy_contract(
     deployer,
     deploy_step: str,
     network: str,
-    force: bool = False,
+    project: str = "fake",
     dependencies: dict = None,
     **deploy_args,
 ) -> tuple[Any, bool]:
     """
-    通用部署函数：检查 -> 部署 -> 记录
+    通用部署函数：部署 -> 记录
+
+    每次运行都会部署新合约（区块链上是新地址）。
+    旧的部署记录会被标记为 is_active=False。
+    部署后通过 admin/contracts 页面管理依赖绑定。
 
     Args:
         contract_class: Ape 项目中的合约类 (如 project.MockUSDT)
         contract_name: 合约名称 (如 "MockUSDT")
         deployer: 部署账户
-        deploy_step: 部署阶段 (如 "1_mocks")
+        deploy_step: 部署阶段 (如 "0-common-kyc")
         network: 网络名称
-        force: 是否强制重新部署
+        project: 项目标识 (common, mock, fake, ...)
         dependencies: 依赖的合约地址字典
         **deploy_args: 传递给 deploy() 的额外参数
 
     Returns:
         (contract_instance, is_new_deployment)
     """
-    # 1. 检查是否已部署（非强制模式）
-    if not force:
-        existing = check_deployed(deploy_step, contract_name, network)
-        if existing:
-            print(f"⏭️  {contract_name} 已部署，跳过")
-            print(f"   地址: {existing.contract_address}")
-            # 返回已部署的合约实例
-            contract = contract_class.at(existing.contract_address)
-            return contract, False
-    else:
-        print(f"🔄 强制重新部署 {contract_name}...")
-
-    # 2. 执行部署
+    # 1. 执行部署（每次都是新合约）
     print(f"🚀 正在部署 {contract_name}...")
+    print(f"   部署参数: {deploy_args}")
 
     tx_hash = None
     contract = None
 
+    # 从 deploy_args 中提取构造函数参数
+    # ape 的 deploy 方法需要位置参数，不能使用 **kwargs
+    constructor_args = list(deploy_args.values())
+    print(f"   构造函数参数: {constructor_args}")
+
     try:
-        contract = contract_class.deploy(sender=deployer, **deploy_args)
+        contract = contract_class.deploy(*constructor_args, sender=deployer)
         # 获取交易哈希（如果可用）
         if hasattr(contract, "receipt") and contract.receipt:
             tx_hash = str(contract.receipt.txn_hash)
@@ -313,12 +321,89 @@ def deploy_contract(
         contract_address=str(contract.address),
         network=network,
         deployer_address=deployer.address,
+        project=project,
         tx_hash=tx_hash,
         dependencies=dependencies,
     )
 
     print(f"✅ {contract_name} 已部署: {contract.address}")
+
+    # 5. 保存绑定关系
+    if dependencies:
+        save_contract_bindings(
+            contract_name=contract_name,
+            contract_address=str(contract.address),
+            dependencies=dependencies,
+            network=network,
+            tx_hash=tx_hash,
+        )
+
     return contract, True
+
+
+def save_contract_bindings(
+    contract_name: str,
+    contract_address: str,
+    dependencies: dict,
+    network: str,
+    tx_hash: str = None,
+) -> None:
+    """
+    保存合约绑定关系 - 记录部署时使用的依赖地址
+
+    Args:
+        contract_name: 合约名称
+        contract_address: 合约地址
+        dependencies: 依赖的合约地址字典 {"KYCManager": "0x...", "MockUSDT": "0x..."}
+        network: 网络名称
+        tx_hash: 部署交易哈希
+    """
+    with get_db() as db:
+        for dep_name, dep_address in dependencies.items():
+            if not dep_address:
+                continue
+
+            # 获取对应的 set 函数名
+            set_func = get_set_function(contract_name, dep_name)
+
+            # 查找是否已存在绑定记录
+            existing = db.query(
+                ContractBinding.filter(
+                    contract_name=contract_name,
+                    dependency_name=dep_name,
+                    network=network,
+                ).first()
+            )
+
+            if existing:
+                # 更新绑定记录
+                db.query(
+                    ContractBinding.filter(id=existing.id).update(
+                        contract_address=str(contract_address).lower(),
+                        bound_address=str(dep_address).lower(),
+                        set_function=set_func,
+                        last_updated_tx=tx_hash,
+                    )
+                )
+                print(
+                    f"   📝 已更新绑定: {contract_name} -> {dep_name} ({dep_address[:10]}...)"
+                )
+            else:
+                # 创建新绑定记录
+                db.query(
+                    ContractBinding.create(
+                        contract_name=contract_name,
+                        contract_address=str(contract_address).lower(),
+                        dependency_name=dep_name,
+                        bound_address=str(dep_address).lower(),
+                        set_function=set_func,
+                        network=network,
+                        last_updated_tx=tx_hash,
+                    )
+                )
+                print(
+                    f"   ✅ 已创建绑定: {contract_name} -> {dep_name} ({dep_address[:10]}...)"
+                )
 
 
 def require_deployed(

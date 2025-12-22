@@ -13,13 +13,30 @@ class DeployInfo(AbstractModel, TimestampMixin):
     - 检查是否已部署（避免重复部署）
     - 记录部署历史
     - 跨脚本共享合约地址
+    - 按项目分组管理
     """
     
-    # 部署阶段标识
+    # 项目标识（用于分组）
+    project = fields.CharField(
+        max_length=50,
+        index=True,
+        default="rwa",
+        description="项目标识: common, mock, rwa, sto, bond..."
+    )
+    
+    # 合约类型（用于共享规则）
+    contract_type = fields.CharField(
+        max_length=20,
+        index=True,
+        default="exclusive",
+        description="合约类型: common(共享), mock(测试共享), exclusive(独占)"
+    )
+    
+    # 部署阶段标识（保留向后兼容）
     deploy_step = fields.CharField(
         max_length=32, 
         index=True,
-        description="部署阶段: 1_mocks, 2_sto_base, 3_sto_business, 4_oracle"
+        description="部署阶段: 0-common-kyc, 1-mock-tokens, 2-rwa-tokens, ..."
     )
     
     # 合约标识

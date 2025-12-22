@@ -1,0 +1,10 @@
+{
+  "step": "1_mocks",
+  "network": "local",
+  "deployer": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+  "contracts": {
+    "MockUSDT": "0xb09da8a5B236fE0295A345035287e80bb0008290",
+    "MockUSDC": "0x5095d3313C76E8d29163e40a0223A5816a8037D8"
+  }
+}
+

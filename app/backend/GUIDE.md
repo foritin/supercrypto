@@ -126,7 +126,7 @@ app/backend/
 │   ├── api/                         # 🚀 API聚合层
 │   │   └── v1/
 │   │       ├── __init__.py
-│   │       └── router.py           # 聚合所有领域路由
+│   │       └── router.py           # 分层路由聚合（public/user/admin）
 │   │
 │   ├── utils/                       # 🛠️ 工具模块
 │   │   ├── log.py                  # 日志工具
@@ -848,18 +848,44 @@ async def get_wallet_nfts(
     return ApiResponse(data=paginated)
 ```
 
-#### 6. 注册到API路由
+#### 6. 注册到API路由（v2 分层结构）
+
+新版路由采用分层结构，按认证级别组织：
 
 ```python
 # src/api/v1/router.py
-from src.domains.nft.routes import router as nft_router
+from fastapi import APIRouter, Depends
+from src.shared.security import require_user, require_admin
 
-api_router.include_router(
-    nft_router,
-    prefix="/nfts",
-    tags=["NFT管理"]
+# 1. 公开路由（无需认证）
+public_router = APIRouter(prefix="/public", tags=["公开接口"])
+
+# 2. 用户路由（需要 JWT）
+user_router = APIRouter(
+    prefix="/user",
+    tags=["用户接口"],
+    dependencies=[Depends(require_user)],  # 路由级别注入认证
 )
+
+# 3. 管理员路由（需要 JWT + 管理员权限）
+admin_router = APIRouter(
+    prefix="/admin",
+    tags=["管理员接口"],
+    dependencies=[Depends(require_admin)],
+)
+
+# 注册领域路由时，根据认证需求选择父路由
+# 公开接口
+public_router.include_router(nft_public_router, prefix="/nfts", tags=["NFT-公开"])
+
+# 用户接口
+user_router.include_router(nft_user_router, prefix="/nfts", tags=["NFT-用户"])
+
+# 管理员接口
+admin_router.include_router(nft_admin_router, prefix="/nfts", tags=["NFT-管理员"])
 ```
+
+**注意**: 详细路由结构请参考 [API_ROUTES.md](./API_ROUTES.md)
 
 #### 7. 生成数据库迁移
 

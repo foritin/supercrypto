@@ -1,21 +1,23 @@
 """
 Transaction领域 - API路由
+管理员级别接口，用于交易记录管理
 """
-from typing import Dict, Optional
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query, status
 
 from src.domains.transaction.schemas import (
     TransactionCreate,
-    TransactionUpdate,
-    TransactionResponse,
     TransactionListQuery,
-    TransactionStats
+    TransactionResponse,
+    TransactionStats,
+    TransactionUpdate,
 )
 from src.domains.transaction.services import TransactionService
 from src.shared.schemas.base import ApiResponse, PaginatedResponse
-# from src.shared.dependencies import get_current_user
 
-router = APIRouter()
+# 管理员路由（认证由 api/v1/router.py 的 admin_router 统一注入）
+admin_router = APIRouter()
 
 
 def get_transaction_service() -> TransactionService:
@@ -23,7 +25,7 @@ def get_transaction_service() -> TransactionService:
     return TransactionService()
 
 
-@router.post(
+@admin_router.post(
     "/",
     response_model=ApiResponse[TransactionResponse],
     status_code=status.HTTP_201_CREATED,
@@ -54,7 +56,7 @@ async def record_transaction(
     )
 
 
-@router.get(
+@admin_router.get(
     "/{tx_id}",
     response_model=ApiResponse[TransactionResponse],
     summary="获取交易详情",
@@ -75,7 +77,7 @@ async def get_transaction(
     return ApiResponse(data=tx)
 
 
-@router.get(
+@admin_router.get(
     "/hash/{tx_hash}",
     response_model=ApiResponse[TransactionResponse],
     summary="根据哈希查询交易",
@@ -102,7 +104,7 @@ async def get_transaction_by_hash(
     return ApiResponse(data=tx)
 
 
-@router.get(
+@admin_router.get(
     "/",
     response_model=ApiResponse[PaginatedResponse[TransactionResponse]],
     summary="查询交易列表",
@@ -161,7 +163,7 @@ async def list_transactions(
     return ApiResponse(data=paginated)
 
 
-@router.get(
+@admin_router.get(
     "/address/{address}/history",
     response_model=ApiResponse[PaginatedResponse[TransactionResponse]],
     summary="查询地址交易历史",
@@ -197,7 +199,7 @@ async def get_address_transactions(
     return ApiResponse(data=paginated)
 
 
-@router.get(
+@admin_router.get(
     "/wallet/{wallet_id}/history",
     response_model=ApiResponse[PaginatedResponse[TransactionResponse]],
     summary="查询钱包交易历史",
@@ -233,7 +235,7 @@ async def get_wallet_transactions(
     return ApiResponse(data=paginated)
 
 
-@router.get(
+@admin_router.get(
     "/stats",
     response_model=ApiResponse[TransactionStats],
     summary="获取交易统计",
@@ -256,7 +258,79 @@ async def get_transaction_stats(
     return ApiResponse(data=stats)
 
 
-@router.put(
+@admin_router.get(
+    "/export",
+    summary="导出交易记录",
+    description="导出交易记录为 CSV 格式"
+)
+async def export_transactions(
+    address: Optional[str] = Query(None, description="按地址筛选"),
+    status: Optional[str] = Query(None, description="按状态筛选"),
+    tx_type: Optional[str] = Query(None, description="按类型筛选"),
+    format: str = Query("csv", description="导出格式 (csv)"),
+    service: TransactionService = Depends(get_transaction_service)
+):
+    """
+    导出交易记录
+    
+    - **address**: 地址筛选（可选）
+    - **status**: 状态筛选（可选）
+    - **tx_type**: 类型筛选（可选）
+    - **format**: 导出格式，目前仅支持 csv
+    
+    返回 CSV 文件
+    """
+    from fastapi.responses import StreamingResponse
+    import csv
+    import io
+    
+    # 获取所有交易
+    query = TransactionListQuery(
+        address=address,
+        status=status,
+        tx_type=tx_type,
+        page=1,
+        page_size=10000  # 最大导出数量
+    )
+    transactions, _, _ = await service.list_transactions(query)
+    
+    # 生成 CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # 写入表头
+    writer.writerow([
+        'ID', 'Time', 'Type', 'From', 'To', 'Amount', 
+        'Network', 'Status', 'Tx Hash', 'Block Number'
+    ])
+    
+    # 写入数据
+    for tx in transactions:
+        writer.writerow([
+            tx.id,
+            tx.created_at.isoformat() if tx.created_at else '',
+            tx.tx_type,
+            tx.from_address,
+            tx.to_address,
+            tx.amount,
+            tx.network,
+            tx.status,
+            tx.tx_hash,
+            tx.block_number or ''
+        ])
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=transactions.csv"
+        }
+    )
+
+
+@admin_router.put(
     "/{tx_id}",
     response_model=ApiResponse[TransactionResponse],
     summary="更新交易信息",

@@ -1,0 +1,170 @@
+/**
+ * API 路径常量
+ *
+ * 路由结构：
+ * - /public/*    无需认证的公开接口
+ * - /auth/*      认证相关
+ * - /user/*      已登录用户接口
+ * - /admin/*     管理员接口
+ * - /dev/*       开发工具
+ */
+
+// ============================================================================
+// 公开接口 (无需认证)
+// ============================================================================
+
+export const PUBLIC_PATHS = {
+  // 资产
+  ASSETS: '/public/assets',
+  ASSET_DETAIL: (id: number) => `/public/assets/${id}`,
+  ASSET_BY_SYMBOL: (symbol: string) => `/public/assets/symbol/${symbol}`,
+  ASSET_PRICE_HISTORY: (id: number, limit = 50) =>
+    `/public/assets/${id}/price-history?limit=${limit}`,
+  ASSET_MEDIA: (id: number) => `/public/assets/${id}/media`,
+
+  // 合约
+  CONTRACTS: '/public/contracts',
+  CONTRACT_ADDRESSES: '/public/contracts/addresses',
+  CONTRACT_SUBSCRIPTION: '/public/contracts/subscription',
+  CONTRACT_BY_NAME: (name: string) => `/public/contracts/${name}`,
+
+  // 认购 - 预览
+  SUBSCRIPTION_PREVIEW: '/public/subscriptions/preview',
+
+  // 质押 - 公开配置
+  STAKING_CONFIG: '/public/staking/config',
+  STAKING_LIMIT: '/public/staking/limit',
+  STAKING_PLT_TOKEN: '/public/staking/plt-token',
+
+  // KYC - 状态查询
+  KYC_STATUS: (address: string) => `/public/kyc/status/${address}`,
+} as const
+
+// ============================================================================
+// 认证接口
+// ============================================================================
+
+export const AUTH_PATHS = {
+  LOGIN: '/auth/token',
+  REFRESH: '/auth/refresh',
+  LOGOUT: '/auth/logout',
+  ME: '/auth/me',
+} as const
+
+// ============================================================================
+// 用户接口 (需要 JWT 认证)
+// ============================================================================
+
+export const USER_PATHS = {
+  // 认购
+  SUBSCRIPTIONS: '/user/subscriptions',
+  SUBSCRIPTION_DETAIL: (id: number) => `/user/subscriptions/${id}`,
+  SUBSCRIPTION_STATS: '/user/subscriptions/stats',
+  SUBSCRIPTION_REDEEM: (id: number) => `/user/subscriptions/${id}/redeem`,
+
+  // 质押
+  STAKING: '/user/staking',
+  STAKING_PREVIEW: '/user/staking/preview',
+  STAKING_DETAIL: (id: number) => `/user/staking/${id}`,
+  STAKING_STATS: '/user/staking/stats',
+  STAKING_UNSTAKE: (id: number) => `/user/staking/${id}/unstake`,
+  STAKING_CLAIM: (id: number) => `/user/staking/${id}/claim`,
+
+  // KYC
+  KYC_UPLOAD: '/user/kyc/upload-document',
+  KYC_APPLY: '/user/kyc/apply',
+} as const
+
+// ============================================================================
+// 管理员接口 (需要管理员权限)
+// ============================================================================
+
+export const ADMIN_PATHS = {
+  // 资产管理
+  ASSETS: '/admin/assets',
+  ASSET_DETAIL: (id: number) => `/admin/assets/${id}`,
+  ASSET_STATUS: (id: number) => `/admin/assets/${id}/status`,
+  ASSET_PRICE: (id: number, price: number, source = 'manual') =>
+    `/admin/assets/${id}/price?price=${price}&source=${source}`,
+  ASSET_PROJECTS: '/admin/assets/projects/available',
+  ASSET_BIND_PROJECT: (id: number) => `/admin/assets/${id}/bind-project`,
+  ASSET_UNBIND: (id: number) => `/admin/assets/${id}/unbind`,
+
+  // 合约管理
+  CONTRACTS: '/admin/contracts',
+  CONTRACT_STATUS: '/admin/contracts/status',
+  CONTRACT_STATUS_ENHANCED: '/admin/contracts/status/enhanced',
+  CONTRACT_AVAILABLE: '/admin/contracts/available',
+  CONTRACT_CONFIRM_BINDING: '/admin/contracts/confirm-binding',
+  CONTRACT_DEPENDENCIES: (name: string) => `/admin/contracts/${name}/dependencies`,
+  CONTRACT_UPDATE_ADDRESS: '/admin/contracts/update-address',
+  CONTRACT_RESET_PROJECT: (project: string) => `/admin/contracts/reset/${project}`,
+  CONTRACT_RESET_ALL: '/admin/contracts/reset-all',
+
+  // 平台统计
+  STATS: '/admin/stats',
+  STATS_TVL: '/admin/stats/tvl',
+  STATS_USERS: '/admin/stats/users',
+  STATS_STAKING: '/admin/stats/staking',
+  AUDIT_LOGS: '/admin/stats/audit-logs',
+  AUDIT_LOG_DETAIL: (id: number) => `/admin/stats/audit-logs/${id}`,
+
+  // KYC 管理
+  KYC_LIST: '/admin/kyc/',
+  KYC_DETAIL: (id: number) => `/admin/kyc/${id}`,
+  KYC_REVIEW: (id: number) => `/admin/kyc/${id}/review`,
+  KYC_RETRY_SYNC: (id: number) => `/admin/kyc/${id}/retry-sync`,
+  KYC_CONTRACT_STATUS: (address: string) => `/admin/kyc/contract-status/${address}`,
+  KYC_STATS: '/admin/kyc/stats',
+  KYC_PENDING: '/admin/kyc/pending',
+  KYC_FAILED_SYNC: '/admin/kyc/failed-sync',
+  KYC_REJECT_REASONS: '/admin/kyc/reject-reasons',
+  KYC_CONTRACT_COMPARISON: (id: number) => `/admin/kyc/${id}/contract-comparison`,
+
+  // 会话管理
+  AUTH_SESSIONS: '/admin/auth/sessions',
+  AUTH_USER_SESSIONS: (address: string) => `/admin/auth/sessions/${address}`,
+  AUTH_REVOKE_SESSION: (address: string) => `/admin/auth/sessions/${address}/revoke`,
+
+  // 账户管理
+  ACCOUNTS: '/admin/accounts',
+  ACCOUNT_DETAIL: (id: number) => `/admin/accounts/${id}`,
+  ACCOUNT_LOGIN: (id: number) => `/admin/accounts/${id}/login`,
+
+  // 交易管理
+  TRANSACTIONS: '/admin/transactions',
+  TRANSACTION_DETAIL: (id: number) => `/admin/transactions/${id}`,
+  TRANSACTION_BY_HASH: (hash: string) => `/admin/transactions/hash/${hash}`,
+  TRANSACTION_ADDRESS_HISTORY: (address: string) => `/admin/transactions/address/${address}/history`,
+  TRANSACTION_WALLET_HISTORY: (walletId: number) => `/admin/transactions/wallet/${walletId}/history`,
+  TRANSACTION_STATS: '/admin/transactions/stats',
+  TRANSACTION_EXPORT: '/admin/transactions/export',
+} as const
+
+// ============================================================================
+// 开发工具 (仅开发环境)
+// ============================================================================
+
+export const DEV_PATHS = {
+  RESET_INFO: '/dev/reset/info',
+  RESET_DATA: '/dev/reset',
+  ENVIRONMENT: '/dev/environment',
+  TOKEN_RECIPIENTS: '/dev/token-recipients',
+
+  // KYC 开发工具
+  KYC_QUICK_APPROVE: (address: string) => `/kyc/dev/quick-approve/${address}`,
+  KYC_RESET: (address: string) => `/kyc/dev/reset/${address}`,
+} as const
+
+// ============================================================================
+// 聚合导出
+// ============================================================================
+
+export const API_PATHS = {
+  PUBLIC: PUBLIC_PATHS,
+  AUTH: AUTH_PATHS,
+  USER: USER_PATHS,
+  ADMIN: ADMIN_PATHS,
+  DEV: DEV_PATHS,
+} as const
+

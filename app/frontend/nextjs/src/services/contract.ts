@@ -1,0 +1,326 @@
+/**
+ * Contract API Service
+ * 合约相关 API
+ */
+import { api } from "@/services/api";
+// API.ResponseData 类型已在 types/api.d.ts 中全局声明
+
+// 合约地址响应
+export interface ContractAddresses {
+  mock_usdt: string | null;
+  mock_usdc: string | null;
+  kyc_manager: string | null;
+  rwa_token: string | null;
+  platform_token: string | null;
+  subscription: string | null;
+  staking: string | null;
+  liquidity_mining: string | null;
+  network: string;
+}
+
+// 认购合约参数
+export interface SubscriptionParams {
+  min_investment: number;
+  max_investment: number;
+  require_accredited: boolean;
+  paused: boolean;
+  apy_1m: number;
+  apy_3m: number;
+  apy_6m: number;
+  apy_12m: number;
+}
+
+// 认购合约信息
+export interface SubscriptionContractInfo {
+  address: string;
+  params: SubscriptionParams;
+  usdt_address: string;
+  rwa_token_address: string;
+  kyc_manager_address: string;
+}
+
+// 单个合约地址
+export interface ContractAddress {
+  name: string;
+  address: string | null;
+  deploy_step: string;
+  network: string;
+}
+
+export const contractService = {
+  /**
+   * 获取所有合约地址
+   */
+  async getAddresses(): Promise<ContractAddresses> {
+    const response = await api.get<API.ResponseData<ContractAddresses>>(
+      "/contracts/addresses"
+    );
+    return response.object as ContractAddresses;
+  },
+
+  /**
+   * 获取认购合约信息
+   */
+  async getSubscriptionContract(): Promise<SubscriptionContractInfo | null> {
+    const response = await api.get<API.ResponseData<SubscriptionContractInfo>>(
+      "/contracts/subscription"
+    );
+    return response.object;
+  },
+
+  /**
+   * 获取单个合约地址
+   */
+  async getContractAddress(
+    contractName: string,
+    deployStep?: string
+  ): Promise<ContractAddress> {
+    const params = deployStep ? `?deploy_step=${deployStep}` : "";
+    const response = await api.get<API.ResponseData<ContractAddress>>(
+      `/contracts/${contractName}${params}`
+    );
+    return response.object as ContractAddress;
+  },
+};
+
+// Subscription 合约 ABI (关键函数)
+export const SUBSCRIPTION_ABI = [
+  // 读取函数
+  "function minInvestment() view returns (uint256)",
+  "function maxInvestment() view returns (uint256)",
+  "function requireAccredited() view returns (bool)",
+  "function paused() view returns (bool)",
+  "function lockPeriodAPY(uint256 lockPeriod) view returns (uint256)",
+  "function subscriptionCount(address user) view returns (uint256)",
+  "function getSubscription(address user, uint256 subscriptionId) view returns ((uint256 principal, uint256 lockPeriod, uint256 subscribeTime, uint256 redeemTime, uint256 apy, bool redeemed))",
+  "function calculateInterest(uint256 principal, uint256 lockPeriod, uint256 apy) view returns (uint256)",
+  "function getLockPeriods() view returns (uint256[4])",
+
+  // 写入函数
+  "function subscribe(uint256 amount, uint256 lockPeriod)",
+  "function redeem(uint256 subscriptionId)",
+
+  // 事件
+  "event Subscribe(address indexed user, uint256 amount, uint256 lockPeriod, uint256 redeemTime, uint256 apy)",
+  "event Redeem(address indexed user, uint256 principal, uint256 interest, uint256 total)",
+] as const;
+
+// ERC20 ABI (USDT/USDC)
+export const ERC20_ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address account) view returns (uint256)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function transfer(address to, uint256 amount) returns (bool)",
+  "function transferFrom(address from, address to, uint256 amount) returns (bool)",
+  // Mock token mint
+  "function mint(address to, uint256 amount)",
+] as const;
+
+// 锁定期常量 (秒)
+export const LOCK_PERIODS = {
+  "1": 30 * 24 * 3600, // 30 days
+  "3": 90 * 24 * 3600, // 90 days
+  "6": 180 * 24 * 3600, // 180 days
+  "12": 360 * 24 * 3600, // 360 days
+} as const;
+
+// 将月份转换为秒
+export function monthsToSeconds(months: number): number {
+  const mapping: Record<number, number> = {
+    1: LOCK_PERIODS["1"],
+    3: LOCK_PERIODS["3"],
+    6: LOCK_PERIODS["6"],
+    12: LOCK_PERIODS["12"],
+  };
+  return mapping[months] || LOCK_PERIODS["3"];
+}
+
+// 基点转换为百分比
+export function basisPointsToPercent(bp: number): number {
+  return bp / 100;
+}
+
+// USDT 金额转换 (6 decimals)
+export function formatUSDTAmount(amount: number): bigint {
+  return BigInt(Math.floor(amount * 1e6));
+}
+
+// 从链上读取的 USDT 金额转换
+export function parseUSDTAmount(amount: bigint): number {
+  return Number(amount) / 1e6;
+}
+
+// ============ 管理员 API ============
+
+// 依赖状态
+export interface DependencyStatusItem {
+  dependency_name: string;
+  set_function: string;
+  status: "synced" | "needs_update" | "not_deployed";
+  current_address: string | null;
+  latest_address: string | null;
+  last_synced_at: string | null;
+}
+
+// 合约状态（增强版）
+export interface ContractStatusItem {
+  name: string;
+  project: string; // 项目分组，从后端获取
+  address: string | null;
+  deploy_step: string;
+  deployed: boolean;
+  deployed_at: string | null;
+  dependency_status: "synced" | "needs_update" | "not_deployed";
+  dependencies: DependencyStatusItem[];
+  set_functions: string[];
+}
+
+// 项目配置
+export interface ProjectInfo {
+  name: string;
+  label: string;
+  description: string;
+  color: string;
+  order: number;
+}
+
+export interface ContractStatusList {
+  contracts: ContractStatusItem[];
+  projects: ProjectInfo[]; // 项目列表
+  network: string;
+  needs_update_count: number;
+}
+
+// 类型别名
+export type ContractStatusResponse = ContractStatusList;
+
+// 合约依赖
+export interface ContractDependency {
+  contract_name: string;
+  depends_on: string[];
+  set_functions: string[];
+}
+
+// 更新地址请求
+export interface UpdateContractAddressRequest {
+  target_contract: string;
+  set_function: string;
+  new_address: string;
+}
+
+// 更新地址响应
+export interface UpdateContractAddressResponse {
+  target_contract: string;
+  target_address: string;
+  function_name: string;
+  function_args: string[];
+  abi: string;
+}
+
+// 确认同步请求
+export interface ConfirmSyncRequest {
+  contract_name: string;
+  dependency_name: string;
+  tx_hash: string;
+  new_address: string;
+}
+
+// 清除部署请求
+export interface ResetDeployRequest {
+  confirm: string;
+}
+
+export const contractAdminService = {
+  /**
+   * 获取增强版合约状态（管理员）
+   * 包含依赖检测结果
+   */
+  async getContractStatus(): Promise<ContractStatusList> {
+    const response = await api.get<API.ResponseData<ContractStatusList>>(
+      "/admin/contracts/status-enhanced"
+    );
+    return response.object as ContractStatusList;
+  },
+
+  /**
+   * 获取合约依赖关系（管理员）
+   */
+  async getContractDependencies(
+    contractName: string
+  ): Promise<ContractDependency> {
+    const response = await api.get<API.ResponseData<ContractDependency>>(
+      `/admin/contracts/dependencies/${contractName}`
+    );
+    return response.object as ContractDependency;
+  },
+
+  /**
+   * 更新合约地址（管理员）
+   * 返回需要调用的合约函数信息
+   */
+  async updateContractAddress(
+    request: UpdateContractAddressRequest
+  ): Promise<UpdateContractAddressResponse> {
+    const response = await api.post<
+      API.ResponseData<UpdateContractAddressResponse>
+    >("/admin/contracts/update-address", request);
+    return response.object as UpdateContractAddressResponse;
+  },
+
+  /**
+   * 确认绑定更新完成（管理员）
+   * 前端完成链上调用后，调用此接口更新绑定记录
+   */
+  async confirmBinding(request: ConfirmSyncRequest): Promise<void> {
+    await api.post("/admin/contracts/confirm-binding", request);
+  },
+
+  /**
+   * 按项目清除部署记录（管理员）
+   * 危险操作，需要输入 RESET 确认
+   */
+  async resetProjectDeployments(
+    project: "common" | "mock" | "fake",
+    confirm: string
+  ): Promise<{ deleted_count: number; project: string; network: string }> {
+    const response = await api.delete<
+      API.ResponseData<{
+        deleted_count: number;
+        project: string;
+        network: string;
+      }>
+    >(`/admin/contracts/reset/${project}`, { confirm });
+    return response.object as {
+      deleted_count: number;
+      project: string;
+      network: string;
+    };
+  },
+
+  /**
+   * 清除所有部署记录（管理员）
+   * 危险操作，需要输入 RESET 确认
+   */
+  async resetAllDeployments(
+    confirm: string
+  ): Promise<{ deleted_count: number; network: string }> {
+    const response = await api.delete<
+      API.ResponseData<{ deleted_count: number; network: string }>
+    >("/admin/contracts/reset", { confirm });
+    return response.object as { deleted_count: number; network: string };
+  },
+};
+
+// 合约 set 函数 ABI
+export const CONTRACT_SET_ABIS: Record<string, string[]> = {
+  setKYCManager: ["function setKYCManager(address _newManager)"],
+  setUSDT: ["function setUSDT(address _newUsdt)"],
+  setRWAToken: ["function setRWAToken(address _newRwaToken)"],
+  setPlatformToken: ["function setPlatformToken(address _newPlatformToken)"],
+  setSubscription: ["function setSubscription(address _newSubscription)"],
+  setLPToken: ["function setLPToken(address _lpToken)"],
+};

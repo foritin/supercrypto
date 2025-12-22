@@ -1,86 +1,87 @@
 """
-Account领域 - Schema定义
+Account 领域 - Schema 定义
 数据传输对象（DTO）
 """
-from typing import Optional
-from pydantic import BaseModel, Field, field_validator
+
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 from src.shared.schemas.base import IDMixin, TimestampMixin
 
 
 class AccountBase(BaseModel):
-    """账户基础Schema"""
+    """账户基础 Schema"""
+
     address: str = Field(..., max_length=128, description="钱包地址")
     tag: Optional[str] = Field(None, max_length=255, description="标签")
     net_type: str = Field(default="local", description="网络类型: local/test/main")
-    
-    @field_validator('net_type')
+
+    @field_validator("net_type")
     @classmethod
     def validate_net_type(cls, v: str) -> str:
         """验证网络类型"""
-        if v not in ['local', 'test', 'main']:
-            raise ValueError('net_type必须是: local, test, main 之一')
+        if v not in ["local", "test", "main"]:
+            raise ValueError("net_type必须是: local, test, main 之一")
         return v
-    
-    @field_validator('address')
+
+    @field_validator("address")
     @classmethod
     def validate_address(cls, v: str) -> str:
         """验证地址格式（简单验证）"""
         if not v or len(v) < 10:
-            raise ValueError('Invalid address format')
+            raise ValueError("Invalid address format")
         return v
 
 
 class AccountCreate(AccountBase):
-    """创建账户请求Schema"""
+    """创建账户请求 Schema"""
+
     private_key: str = Field(..., max_length=256, description="私钥")
-    
-    @field_validator('private_key')
+
+    @field_validator("private_key")
     @classmethod
     def validate_private_key(cls, v: str) -> str:
         """验证私钥格式"""
         if not v or len(v) < 10:
-            raise ValueError('Invalid private key format')
+            raise ValueError("Invalid private key format")
         return v
-    
+
     class Config:
         json_schema_extra = {
             "example": {
                 "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
                 "private_key": "0x0123456789abcdef...",
                 "tag": "我的主钱包",
-                "net_type": "test"
+                "net_type": "test",
             }
         }
 
 
 class AccountUpdate(BaseModel):
-    """更新账户请求Schema"""
+    """更新账户请求 Schema"""
+
     tag: Optional[str] = Field(None, max_length=255, description="标签")
     net_type: Optional[str] = Field(None, description="网络类型")
-    
-    @field_validator('net_type')
+
+    @field_validator("net_type")
     @classmethod
     def validate_net_type(cls, v: Optional[str]) -> Optional[str]:
         """验证网络类型"""
-        if v is not None and v not in ['local', 'test', 'main']:
-            raise ValueError('net_type必须是: local, test, main 之一')
+        if v is not None and v not in ["local", "test", "main"]:
+            raise ValueError("net_type必须是: local, test, main 之一")
         return v
-    
+
     class Config:
-        json_schema_extra = {
-            "example": {
-                "tag": "更新后的标签",
-                "net_type": "main"
-            }
-        }
+        json_schema_extra = {"example": {"tag": "更新后的标签", "net_type": "main"}}
 
 
 class AccountResponse(AccountBase, IDMixin, TimestampMixin):
-    """账户响应Schema（不包含私钥）"""
+    """账户响应 Schema（不包含私钥）"""
+
     last_login_dt: Optional[datetime] = Field(None, description="最后登录时间(UTC)")
-    
+
     class Config:
         from_attributes = True  # 支持从ORM模型转换
         json_schema_extra = {
@@ -91,16 +92,17 @@ class AccountResponse(AccountBase, IDMixin, TimestampMixin):
                 "net_type": "test",
                 "last_login_dt": "2025-11-16T10:00:00Z",
                 "created_at": "2025-11-01T08:00:00Z",
-                "updated_at": "2025-11-16T10:00:00Z"
+                "updated_at": "2025-11-16T10:00:00Z",
             }
         }
 
 
 class AccountWithBalance(AccountResponse):
-    """带余额的账户响应Schema"""
+    """带余额的账户响应 Schema"""
+
     balance: str = Field(description="账户余额（字符串格式保证精度）")
     balance_usd: Optional[str] = Field(None, description="美元价值")
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -113,32 +115,16 @@ class AccountWithBalance(AccountResponse):
                 "balance_usd": "3750.25",
                 "last_login_dt": "2025-11-16T10:00:00Z",
                 "created_at": "2025-11-01T08:00:00Z",
-                "updated_at": "2025-11-16T10:00:00Z"
+                "updated_at": "2025-11-16T10:00:00Z",
             }
         }
 
 
 class AccountListQuery(BaseModel):
     """账户列表查询参数"""
+
     net_type: Optional[str] = Field(None, description="网络类型过滤")
     tag: Optional[str] = Field(None, description="标签过滤（模糊搜索）")
     address: Optional[str] = Field(None, description="地址过滤（模糊搜索）")
     page: int = Field(default=1, ge=1, description="页码")
     page_size: int = Field(default=10, ge=1, le=100, description="每页数量")
-
-class AccountJWTToken(BaseModel):
-    """账户access token"""
-    address: str = Field(..., description="账户地址")
-    signature: str = Field(..., description="签名")
-    expires_in_mins: Optional[int] = Field(None, description="令牌过期时间")
-
-class AccountJWTTokenResponse(BaseModel):
-    """账户access token响应"""
-    access_token: str = Field(..., description="访问令牌")
-    refresh_token: str = Field(..., description="刷新令牌")
-    token_type: str = Field(..., description="令牌类型")
-    expires_in_mins: int = Field(..., description="令牌过期时间")
-
-class RefreshTokenRequest(BaseModel):
-    """刷新token请求"""
-    refresh_token: str = Field(..., description="刷新令牌")
