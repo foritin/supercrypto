@@ -505,14 +505,13 @@ def receiveMigration(oldContract: address):
         count: uint256 = staticcall old.getStakeCount(user)
         self.stakeCount[user] = count
 
-        # 迁移每个用户的质押记录（使用 while 循环，因为 range 需要编译时常量）
-        i: uint256 = 0
-        for j: uint256 in range(1000):  # 最大1000个质押记录
+        # 迁移每个用户的质押记录
+        # 注意：使用足够大的范围（10000）以确保覆盖所有记录
+        for i: uint256 in range(10000):
             if i >= count:
                 break
             stake: StakeInfo = staticcall old.getStake(user, i)
             self.stakes[user][i] = stake
-            i += 1
 
         # 添加到用户列表
         self.userList.append(user)

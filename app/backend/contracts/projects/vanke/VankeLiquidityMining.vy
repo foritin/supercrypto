@@ -430,13 +430,12 @@ def receiveMigration(oldContract: address):
         self.lpStakeCount[user] = count
 
         # 迁移每个用户的LP质押记录
-        i: uint256 = 0
-        for j: uint256 in range(1000):  # 最大1000个质押记录
+        # 注意：使用足够大的范围（10000）以确保覆盖所有记录
+        for i: uint256 in range(10000):
             if i >= count:
                 break
             stake: LPStakeInfo = staticcall old.getLPStake(user, i)
             self.lpStakes[user][i] = stake
-            i += 1
 
         # 添加到用户列表
         self.userList.append(user)
