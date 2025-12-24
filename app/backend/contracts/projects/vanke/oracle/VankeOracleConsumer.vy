@@ -97,10 +97,10 @@ event Migrated:
 owner: public(address)
 
 # 数据聚合器
-aggregator: public(IDataAggregator)
+_aggregator: IDataAggregator
 
 # RWA预言机（直接访问）
-oracle: public(IRWAOracle)
+_oracle: IRWAOracle
 
 # 定价配置 asset_id => PricingConfig
 pricing_configs: public(HashMap[bytes32, PricingConfig])
@@ -129,8 +129,8 @@ def __init__(aggregator_addr: address, oracle_addr: address):
     assert oracle_addr != empty(address), "Invalid oracle"
     
     self.owner = msg.sender
-    self.aggregator = IDataAggregator(aggregator_addr)
-    self.oracle = IRWAOracle(oracle_addr)
+    self._aggregator = IDataAggregator(aggregator_addr)
+    self._oracle = IRWAOracle(oracle_addr)
     self.use_aggregator = True
 
 # ============================================
@@ -199,10 +199,10 @@ def _calculate_token_price(asset_id: bytes32) -> uint256:
     confidence: uint256 = 0
     
     if self.use_aggregator:
-        apy = staticcall self.aggregator.get_aggregated_apy(asset_id)
-        confidence = staticcall self.aggregator.get_data_confidence(asset_id)
+        apy = staticcall self._aggregator.get_aggregated_apy(asset_id)
+        confidence = staticcall self._aggregator.get_data_confidence(asset_id)
     else:
-        apy = staticcall self.oracle.get_apy(asset_id)
+        apy = staticcall self._oracle.get_apy(asset_id)
         confidence = 10000  # 直接使用预言机时假设100%置信度
     
     # 检查置信度
@@ -261,18 +261,18 @@ def _validate_investment(asset_id: bytes32, amount: uint256) -> bool:
     @notice 内部：验证投资是否符合条件
     """
     # 检查数据有效性
-    if not staticcall self.oracle.is_data_valid(asset_id):
+    if not staticcall self._oracle.is_data_valid(asset_id):
         return False
     
     # 检查合规状态
-    compliance: ComplianceStatus = staticcall self.oracle.get_compliance_status(asset_id)
+    compliance: ComplianceStatus = staticcall self._oracle.get_compliance_status(asset_id)
     if compliance != ComplianceStatus.COMPLIANT:
         return False
     
     # 检查置信度（如果使用聚合器）
     if self.use_aggregator:
         config: PricingConfig = self.pricing_configs[asset_id]
-        confidence: uint256 = staticcall self.aggregator.get_data_confidence(asset_id)
+        confidence: uint256 = staticcall self._aggregator.get_data_confidence(asset_id)
         if confidence < config.min_confidence:
             return False
     
@@ -319,9 +319,9 @@ def _get_asset_apy(asset_id: bytes32) -> uint256:
     @notice 内部：获取资产APY
     """
     if self.use_aggregator:
-        return staticcall self.aggregator.get_aggregated_apy(asset_id)
+        return staticcall self._aggregator.get_aggregated_apy(asset_id)
     else:
-        return staticcall self.oracle.get_apy(asset_id)
+        return staticcall self._oracle.get_apy(asset_id)
 
 @external
 @view
@@ -342,9 +342,9 @@ def get_asset_valuation(asset_id: bytes32) -> uint256:
     @return 估值（USD，6位小数）
     """
     if self.use_aggregator:
-        return staticcall self.aggregator.get_aggregated_valuation(asset_id)
+        return staticcall self._aggregator.get_aggregated_valuation(asset_id)
     else:
-        return staticcall self.oracle.get_valuation(asset_id)
+        return staticcall self._oracle.get_valuation(asset_id)
 
 @external
 @view
@@ -359,16 +359,16 @@ def get_full_asset_info(asset_id: bytes32) -> (uint256, uint256, ComplianceStatu
     confidence: uint256 = 0
     
     if self.use_aggregator:
-        apy = staticcall self.aggregator.get_aggregated_apy(asset_id)
-        valuation = staticcall self.aggregator.get_aggregated_valuation(asset_id)
-        confidence = staticcall self.aggregator.get_data_confidence(asset_id)
+        apy = staticcall self._aggregator.get_aggregated_apy(asset_id)
+        valuation = staticcall self._aggregator.get_aggregated_valuation(asset_id)
+        confidence = staticcall self._aggregator.get_data_confidence(asset_id)
     else:
-        apy = staticcall self.oracle.get_apy(asset_id)
-        valuation = staticcall self.oracle.get_valuation(asset_id)
+        apy = staticcall self._oracle.get_apy(asset_id)
+        valuation = staticcall self._oracle.get_valuation(asset_id)
         confidence = 10000
     
-    compliance: ComplianceStatus = staticcall self.oracle.get_compliance_status(asset_id)
-    is_valid: bool = staticcall self.oracle.is_data_valid(asset_id)
+    compliance: ComplianceStatus = staticcall self._oracle.get_compliance_status(asset_id)
+    is_valid: bool = staticcall self._oracle.is_data_valid(asset_id)
     
     return (apy, valuation, compliance, confidence, is_valid)
 
@@ -435,7 +435,7 @@ def set_aggregator(new_aggregator: address):
     """
     self._only_owner()
     assert new_aggregator != empty(address), "Invalid aggregator"
-    self.aggregator = IDataAggregator(new_aggregator)
+    self._aggregator = IDataAggregator(new_aggregator)
 
 @external
 def set_oracle(new_oracle: address):
@@ -445,7 +445,7 @@ def set_oracle(new_oracle: address):
     """
     self._only_owner()
     assert new_oracle != empty(address), "Invalid oracle"
-    self.oracle = IRWAOracle(new_oracle)
+    self._oracle = IRWAOracle(new_oracle)
 
 @external
 def transfer_ownership(new_owner: address):
@@ -467,7 +467,7 @@ def getDependencies() -> address[2]:
     @return [aggregator, oracle] 依赖合约地址数组
     @dev OracleConsumer 依赖 DataAggregator 和 RWAOracle
     """
-    return [self.aggregator.address, self.oracle.address]
+    return [self._aggregator.address, self._oracle.address]
 
 
 @external
@@ -478,8 +478,8 @@ def checkDependenciesBound() -> bool:
     @dev DataAggregator 和 RWAOracle 必须都已配置
     """
     return (
-        self.aggregator.address != empty(address) and
-        self.oracle.address != empty(address)
+        self._aggregator.address != empty(address) and
+        self._oracle.address != empty(address)
     )
 
 
@@ -513,6 +513,26 @@ def isMigrated() -> bool:
     @return True 如果已迁移到新合约
     """
     return self.migrated
+
+
+@external
+@view
+def aggregator() -> address:
+    """
+    @notice 获取数据聚合器地址（用于迁移）
+    @return 数据聚合器合约地址
+    """
+    return self._aggregator.address
+
+
+@external
+@view
+def oracle() -> address:
+    """
+    @notice 获取预言机地址（用于迁移）
+    @return 预言机合约地址
+    """
+    return self._oracle.address
 
 
 @external
@@ -553,11 +573,11 @@ def receiveMigration(oldContract: address):
 
     # 迁移聚合器地址（需要重新转换为接口类型）
     aggregator_addr: address = staticcall old.aggregator()
-    self.aggregator = IDataAggregator(aggregator_addr)
+    self._aggregator = IDataAggregator(aggregator_addr)
 
     # 迁移预言机地址（需要重新转换为接口类型）
     oracle_addr: address = staticcall old.oracle()
-    self.oracle = IRWAOracle(oracle_addr)
+    self._oracle = IRWAOracle(oracle_addr)
 
     # 迁移定价配置
     asset_ids: DynArray[bytes32, 100] = staticcall old.getConfigAssetList()

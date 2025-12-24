@@ -139,10 +139,10 @@ struct HistoricalData:
 owner: public(address)
 
 # 多签管理合约
-multi_sig_manager: public(IMultiSigManager)
+_multi_sig_manager: IMultiSigManager
 
 # 时间锁合约
-timelock: public(ITimelock)
+_timelock: ITimelock
 
 # 资产数据 asset_id => AssetData
 assets: public(HashMap[bytes32, AssetData])
@@ -200,8 +200,8 @@ def __init__(multi_sig_addr: address, timelock_addr: address):
     assert timelock_addr != empty(address), "Invalid timelock"
     
     self.owner = msg.sender
-    self.multi_sig_manager = IMultiSigManager(multi_sig_addr)
-    self.timelock = ITimelock(timelock_addr)
+    self._multi_sig_manager = IMultiSigManager(multi_sig_addr)
+    self._timelock = ITimelock(timelock_addr)
     
     self.max_change_rate = DEFAULT_MAX_CHANGE_RATE
     self.data_validity_period = DEFAULT_VALIDITY_PERIOD
@@ -257,7 +257,7 @@ def register_asset(
     self._when_not_paused()
     
     # 验证时间锁
-    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self._timelock.is_operation_ready(operation_id), "Operation not ready"
     
     # 验证资产不存在
     assert not self.assets[asset_id].is_active, "Asset exists"
@@ -303,7 +303,7 @@ def deactivate_asset(asset_id: bytes32, operation_id: bytes32):
     self._when_not_paused()
     
     # 验证时间锁
-    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self._timelock.is_operation_ready(operation_id), "Operation not ready"
     
     assert self.assets[asset_id].is_active, "Asset not active"
     
@@ -337,7 +337,7 @@ def update_asset_data(
     self._when_not_paused()
     
     # 验证时间锁
-    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self._timelock.is_operation_ready(operation_id), "Operation not ready"
     
     # 验证资产
     asset: AssetData = self.assets[asset_id]
@@ -405,7 +405,7 @@ def update_compliance_status(
     self._when_not_paused()
     
     # 验证时间锁
-    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self._timelock.is_operation_ready(operation_id), "Operation not ready"
     
     assert self.assets[asset_id].is_active, "Asset not active"
     
@@ -556,7 +556,7 @@ def add_data_provider(provider: address, operation_id: bytes32):
     self._only_owner()
     
     # 验证时间锁
-    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self._timelock.is_operation_ready(operation_id), "Operation not ready"
     
     assert provider != empty(address), "Invalid provider"
     assert not self.data_providers[provider], "Already a provider"
@@ -578,7 +578,7 @@ def remove_data_provider(provider: address, operation_id: bytes32):
     self._only_owner()
     
     # 验证时间锁
-    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self._timelock.is_operation_ready(operation_id), "Operation not ready"
     
     assert self.data_providers[provider], "Not a provider"
     
@@ -610,7 +610,7 @@ def set_max_change_rate(new_rate: uint256, operation_id: bytes32):
     self._only_owner()
     
     # 验证时间锁
-    assert staticcall self.timelock.is_operation_ready(operation_id), "Operation not ready"
+    assert staticcall self._timelock.is_operation_ready(operation_id), "Operation not ready"
     
     assert new_rate <= 10000, "Rate too high"
     
@@ -668,7 +668,7 @@ def getDependencies() -> address[2]:
     @return [multi_sig_manager, timelock] 依赖合约地址数组
     @dev RWAOracle 依赖 MultiSigManager 和 Timelock
     """
-    return [self.multi_sig_manager.address, self.timelock.address]
+    return [self._multi_sig_manager.address, self._timelock.address]
 
 
 @external
@@ -679,8 +679,8 @@ def checkDependenciesBound() -> bool:
     @dev MultiSigManager 和 Timelock 必须都已配置
     """
     return (
-        self.multi_sig_manager.address != empty(address) and
-        self.timelock.address != empty(address)
+        self._multi_sig_manager.address != empty(address) and
+        self._timelock.address != empty(address)
     )
 
 
@@ -714,6 +714,26 @@ def isMigrated() -> bool:
     @return True 如果已迁移到新合约
     """
     return self.migrated
+
+
+@external
+@view
+def multi_sig_manager() -> address:
+    """
+    @notice 获取多签管理器地址（用于迁移）
+    @return 多签管理器合约地址
+    """
+    return self._multi_sig_manager.address
+
+
+@external
+@view
+def timelock() -> address:
+    """
+    @notice 获取时间锁地址（用于迁移）
+    @return 时间锁合约地址
+    """
+    return self._timelock.address
 
 
 @external
@@ -780,8 +800,8 @@ def receiveMigration(oldContract: address):
     # 迁移多签管理器和时间锁地址
     multi_sig_addr: address = staticcall old.multi_sig_manager()
     timelock_addr: address = staticcall old.timelock()
-    self.multi_sig_manager = IMultiSigManager(multi_sig_addr)
-    self.timelock = ITimelock(timelock_addr)
+    self._multi_sig_manager = IMultiSigManager(multi_sig_addr)
+    self._timelock = ITimelock(timelock_addr)
 
     # 迁移资产数据
     asset_ids: DynArray[bytes32, 1000] = staticcall old.get_all_asset_ids()

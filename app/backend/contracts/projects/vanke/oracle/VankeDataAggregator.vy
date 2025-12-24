@@ -111,7 +111,7 @@ event Migrated:
 owner: public(address)
 
 # 主预言机（可信源）
-primary_oracle: public(IRWAOracle)
+_primary_oracle: IRWAOracle
 
 # 次级预言机列表（去中心化源）
 secondary_oracles: public(HashMap[address, bool])
@@ -168,7 +168,7 @@ def __init__(primary_oracle_addr: address):
     assert primary_oracle_addr != empty(address), "Invalid primary oracle"
     
     self.owner = msg.sender
-    self.primary_oracle = IRWAOracle(primary_oracle_addr)
+    self._primary_oracle = IRWAOracle(primary_oracle_addr)
     
     self.cache_validity = DEFAULT_CACHE_VALIDITY
     self.deviation_threshold = DEFAULT_DEVIATION_THRESHOLD
@@ -276,9 +276,9 @@ def aggregate_data(asset_id: bytes32) -> AggregatedData:
     primary_apy: uint256 = 0
     primary_val: uint256 = 0
     
-    if staticcall self.primary_oracle.is_data_valid(asset_id):
-        primary_apy = staticcall self.primary_oracle.get_apy(asset_id)
-        primary_val = staticcall self.primary_oracle.get_valuation(asset_id)
+    if staticcall self._primary_oracle.is_data_valid(asset_id):
+        primary_apy = staticcall self._primary_oracle.get_apy(asset_id)
+        primary_val = staticcall self._primary_oracle.get_valuation(asset_id)
     else:
         use_primary = False
     
@@ -416,7 +416,7 @@ def get_aggregated_apy(asset_id: bytes32) -> uint256:
         return cached.apy
     
     # 否则返回主数据源
-    return staticcall self.primary_oracle.get_apy(asset_id)
+    return staticcall self._primary_oracle.get_apy(asset_id)
 
 @external
 @view
@@ -433,7 +433,7 @@ def get_aggregated_valuation(asset_id: bytes32) -> uint256:
         return cached.valuation
     
     # 否则返回主数据源
-    return staticcall self.primary_oracle.get_valuation(asset_id)
+    return staticcall self._primary_oracle.get_valuation(asset_id)
 
 @external
 @view
@@ -657,7 +657,7 @@ def getDependencies() -> address[1]:
     @return [primary_oracle] 主预言机合约地址
     @dev DataAggregator 依赖 RWAOracle
     """
-    return [self.primary_oracle.address]
+    return [self._primary_oracle.address]
 
 
 @external
@@ -667,17 +667,17 @@ def checkDependenciesBound() -> bool:
     @return True 如果所有依赖已配置（非零地址）
     @dev RWAOracle 必须已配置
     """
-    return self.primary_oracle.address != empty(address)
+    return self._primary_oracle.address != empty(address)
 
 
 @external
 @view
-def primary_oracle_addr() -> address:
+def primary_oracle() -> address:
     """
     @notice 获取主预言机地址（用于迁移）
     @return 主预言机合约地址
     """
-    return self.primary_oracle.address
+    return self._primary_oracle.address
 
 
 # ==================== 合约迁移功能 ====================
@@ -766,7 +766,7 @@ def receiveMigration(oldContract: address):
 
     # 迁移主预言机地址（需要重新转换为接口类型）
     primary_oracle_addr: address = staticcall old.primary_oracle()
-    self.primary_oracle = IRWAOracle(primary_oracle_addr)
+    self._primary_oracle = IRWAOracle(primary_oracle_addr)
 
     # 迁移次级预言机列表
     secondary_oracles: DynArray[address, 50] = staticcall old.getSecondaryOracleList()

@@ -98,7 +98,7 @@ ACTION_SET_DELAY: constant(bytes32) = keccak256("SET_DELAY")
 owner: public(address)
 
 # 多签管理合约
-multi_sig_manager: public(IMultiSigManager)
+_multi_sig_manager: IMultiSigManager
 
 # 延迟时间（24小时 = 86400秒）
 delay: public(uint256)
@@ -135,15 +135,15 @@ MAX_DELAY: constant(uint256) = 604800
 # ============================================
 
 @deploy
-def __init__(multi_sig_manager_addr: address):
+def __init__(_multi_sig_manager_addr: address):
     """
     @notice 初始化时间锁合约
-    @param multi_sig_manager_addr 多签管理合约地址
+    @param _multi_sig_manager_addr 多签管理合约地址
     """
-    assert multi_sig_manager_addr != empty(address), "Invalid multisig"
+    assert _multi_sig_manager_addr != empty(address), "Invalid multisig"
     
     self.owner = msg.sender
-    self.multi_sig_manager = IMultiSigManager(multi_sig_manager_addr)
+    self._multi_sig_manager = IMultiSigManager(_multi_sig_manager_addr)
     self.delay = MIN_DELAY  # 默认24小时
     self.paused = False
 
@@ -183,8 +183,8 @@ def queue_operation(
     self._when_not_paused()
     
     # 验证提案已获批准
-    assert staticcall self.multi_sig_manager.is_proposal_approved(proposal_id), "Proposal not approved"
-    assert staticcall self.multi_sig_manager.verify_proposal(proposal_id, target, data_hash), "Invalid proposal"
+    assert staticcall self._multi_sig_manager.is_proposal_approved(proposal_id), "Proposal not approved"
+    assert staticcall self._multi_sig_manager.verify_proposal(proposal_id, target, data_hash), "Invalid proposal"
     
     # 生成操作ID
     operation_id: bytes32 = keccak256(
@@ -232,7 +232,7 @@ def execute_operation(operation_id: bytes32):
     assert block.timestamp >= operation.execute_time, "Too early"
     
     # 再次验证多签提案（防止提案被取消）
-    assert staticcall self.multi_sig_manager.verify_proposal(
+    assert staticcall self._multi_sig_manager.verify_proposal(
         operation.proposal_id,
         operation.target,
         operation.data_hash
@@ -242,7 +242,7 @@ def execute_operation(operation_id: bytes32):
     self.operations[operation_id].status = OperationStatus.EXECUTED
     
     # 通知多签管理器
-    extcall self.multi_sig_manager.mark_proposal_executed(operation.proposal_id)
+    extcall self._multi_sig_manager.mark_proposal_executed(operation.proposal_id)
     
     log OperationExecuted(operation_id, msg.sender)
 
@@ -266,8 +266,8 @@ def cancel_operation(operation_id: bytes32, proposal_id: uint256):
         )
     )
     
-    assert staticcall self.multi_sig_manager.is_proposal_approved(proposal_id), "Cancel not approved"
-    assert staticcall self.multi_sig_manager.verify_proposal(
+    assert staticcall self._multi_sig_manager.is_proposal_approved(proposal_id), "Cancel not approved"
+    assert staticcall self._multi_sig_manager.verify_proposal(
         proposal_id,
         self,
         cancel_data_hash
@@ -294,7 +294,7 @@ def emergency_sign(operation_id: bytes32):
     assert operation.status == OperationStatus.QUEUED, "Not queued"
     
     # 检查是否为签名者（通过多签管理器）
-    signers: DynArray[address, 20] = staticcall self.multi_sig_manager.get_signer_list()
+    signers: DynArray[address, 20] = staticcall self._multi_sig_manager.get_signer_list()
     is_signer: bool = False
     for signer: address in signers:
         if signer == msg.sender:
@@ -321,11 +321,11 @@ def emergency_execute(operation_id: bytes32):
     assert operation.status == OperationStatus.QUEUED, "Not queued"
     
     # 检查是否所有签名者都已签名
-    signer_count: uint256 = staticcall self.multi_sig_manager.signer_count()
+    signer_count: uint256 = staticcall self._multi_sig_manager.signer_count()
     assert self.emergency_signature_count[operation_id] == signer_count, "Need all signatures"
     
     # 验证所有签名者确实都签了
-    signers: DynArray[address, 20] = staticcall self.multi_sig_manager.get_signer_list()
+    signers: DynArray[address, 20] = staticcall self._multi_sig_manager.get_signer_list()
     for signer: address in signers:
         assert self.emergency_signatures[operation_id][signer], "Missing signature"
     
@@ -333,7 +333,7 @@ def emergency_execute(operation_id: bytes32):
     self.operations[operation_id].status = OperationStatus.EXECUTED
     
     # 通知多签管理器
-    extcall self.multi_sig_manager.mark_proposal_executed(operation.proposal_id)
+    extcall self._multi_sig_manager.mark_proposal_executed(operation.proposal_id)
     
     log EmergencyExecuted(operation_id, msg.sender)
 
@@ -432,8 +432,8 @@ def set_delay(new_delay: uint256, proposal_id: uint256):
         )
     )
     
-    assert staticcall self.multi_sig_manager.is_proposal_approved(proposal_id), "Not approved"
-    assert staticcall self.multi_sig_manager.verify_proposal(
+    assert staticcall self._multi_sig_manager.is_proposal_approved(proposal_id), "Not approved"
+    assert staticcall self._multi_sig_manager.verify_proposal(
         proposal_id,
         self,
         delay_data_hash
@@ -477,10 +477,10 @@ def transfer_ownership(new_owner: address):
 def getDependencies() -> address:
     """
     @notice 获取合约依赖地址
-    @return multi_sig_manager 多签管理合约地址
+    @return _multi_sig_manager 多签管理合约地址
     @dev Timelock 依赖 MultiSigManager
     """
-    return self.multi_sig_manager.address
+    return self._multi_sig_manager.address
 
 
 @external
@@ -490,7 +490,7 @@ def checkDependenciesBound() -> bool:
     @return True 如果所有依赖已配置（非零地址）
     @dev MultiSigManager 必须已配置
     """
-    return self.multi_sig_manager.address != empty(address)
+    return self._multi_sig_manager.address != empty(address)
 
 
 # ==================== 合约迁移功能 ====================
@@ -527,6 +527,16 @@ def isMigrated() -> bool:
 
 @external
 @view
+def multi_sig_manager() -> address:
+    """
+    @notice 获取多签管理器地址（用于迁移）
+    @return 多签管理器合约地址
+    """
+    return self._multi_sig_manager.address
+
+
+@external
+@view
 def getOperationIds() -> DynArray[bytes32, 1000]:
     """
     @notice 获取操作ID列表（用于迁移）
@@ -542,7 +552,7 @@ def getSignerList() -> DynArray[address, 20]:
     @notice 获取签名者列表（用于迁移）
     @return 签名者地址动态数组
     """
-    return staticcall self.multi_sig_manager.get_signer_list()
+    return staticcall self._multi_sig_manager.get_signer_list()
 
 
 @external
@@ -563,7 +573,7 @@ def receiveMigration(oldContract: address):
 
     # 迁移多签管理器地址（需要重新转换为接口类型）
     multi_sig_addr: address = staticcall old.multi_sig_manager()
-    self.multi_sig_manager = IMultiSigManager(multi_sig_addr)
+    self._multi_sig_manager = IMultiSigManager(multi_sig_addr)
 
     # 迁移操作
     operation_ids: DynArray[bytes32, 1000] = staticcall old.getOperationIds()
