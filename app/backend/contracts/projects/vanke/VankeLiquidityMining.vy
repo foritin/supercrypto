@@ -170,6 +170,7 @@ def stakeLPToken(_amount: uint256):
     @notice 质押LP Token（STO合规版本）
     @param _amount 质押数量
     """
+    assert not self.migrated, "Contract migrated, use new contract"
     assert not self.paused, "Contract paused"
     assert _amount > 0, "Amount must be positive"
     
@@ -206,6 +207,7 @@ def unstakeLPToken(_stakeId: uint256):
     @notice 解除LP Token质押（STO合规版本）
     @param _stakeId 质押ID
     """
+    assert not self.migrated, "Contract migrated, use new contract"
     assert not self.paused, "Contract paused"
     assert _stakeId < self.lpStakeCount[msg.sender], "Invalid stake ID"
     
@@ -235,6 +237,7 @@ def claimLPReward(_stakeId: uint256):
     @notice 领取LP挖矿奖励（STO合规版本）
     @param _stakeId 质押ID
     """
+    assert not self.migrated, "Contract migrated, use new contract"
     assert not self.paused, "Contract paused"
     
     # STO合规：KYC验证（如果启用）

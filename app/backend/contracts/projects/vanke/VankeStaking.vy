@@ -218,6 +218,7 @@ def stake(_amount: uint256, _subscriptionId: uint256):
     @param _amount 质押数量
     @param _subscriptionId 关联的认购ID
     """
+    assert not self.migrated, "Contract migrated, use new contract"
     assert not self.paused, "Contract paused"
     assert _amount > 0, "Amount must be positive"
     
@@ -264,6 +265,7 @@ def unstake(_stakeId: uint256):
     @notice 解除质押（STO合规版本）
     @param _stakeId 质押ID
     """
+    assert not self.migrated, "Contract migrated, use new contract"
     assert not self.paused, "Contract paused"
     assert _stakeId < self.stakeCount[msg.sender], "Invalid stake ID"
     
@@ -298,6 +300,7 @@ def claimReward(_stakeId: uint256):
     @notice 领取奖励（STO合规版本）
     @param _stakeId 质押ID
     """
+    assert not self.migrated, "Contract migrated, use new contract"
     assert not self.paused, "Contract paused"
     
     # STO合规：KYC验证

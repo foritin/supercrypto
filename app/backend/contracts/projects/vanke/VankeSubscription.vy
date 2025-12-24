@@ -237,6 +237,7 @@ def subscribe(_amount: uint256, _lockPeriod: uint256):
     @param _amount USDT数量（6位小数）
     @param _lockPeriod 锁定期（秒）
     """
+    assert not self.migrated, "Contract migrated, use new contract"
     assert not self.paused, "Contract paused"
     assert _amount > 0, "Amount must be positive"
     assert _lockPeriod == LOCK_1_MONTH or _lockPeriod == LOCK_3_MONTHS or \
@@ -301,6 +302,7 @@ def redeem(_subscriptionId: uint256):
     @notice 赎回权益代币（STO合规版本）
     @param _subscriptionId 认购ID
     """
+    assert not self.migrated, "Contract migrated, use new contract"
     assert not self.paused, "Contract paused"
     assert _subscriptionId < self.subscriptionCount[msg.sender], "Invalid subscription ID"
     
