@@ -26,6 +26,10 @@ interface IRWATokenMigration:
     def getBurnerList() -> DynArray[address, 100]: view
     def getDocumentList() -> DynArray[String[32], 50]: view
     def getDocument(name: String[32]) -> (String[256], bytes32): view
+    def getAccountList() -> DynArray[address, 5000]: view
+    def getAllowanceList() -> DynArray[address, 10000]: view
+    def getBalanceOf(_account: address) -> uint256: view
+    def getAllowance(_owner: address, _spender: address) -> uint256: view
     def receiveMigration(oldContract: address): nonpayable
     def isMigrated() -> bool: view
 
@@ -116,11 +120,62 @@ documentHashes: public(HashMap[String[32], bytes32]) # 文档名 => 哈希
 # 迁移状态
 migrated: public(bool)
 
+# 为迁移添加的账户列表（追踪所有有余额或授权的账户）
+accountList: public(DynArray[address, 5000])
+
+# 为迁移添加的授权对列表（追踪所有有授权的账户对）
+# 结构: [owner1, spender1, owner2, spender2, ...]
+allowanceList: public(DynArray[address, 10000])
+
 # 迁移事件
 event Migrated:
     oldContract: indexed(address)
     newContract: indexed(address)
     timestamp: uint256
+
+
+# ==================== 内部辅助函数 ====================
+
+@internal
+def _trackAccount(_account: address):
+    """
+    @notice 内部：将账户添加到追踪列表（如果尚未存在）
+    @param _account 账户地址
+    @dev 用于迁移时追踪所有活跃账户
+    """
+    # 检查账户是否已在列表中
+    for account: address in self.accountList:
+        if account == _account:
+            return
+
+    # 如果余额非零或有授权记录，添加到列表
+    if self.balanceOf[_account] > 0:
+        self.accountList.append(_account)
+
+
+@internal
+def _trackAllowance(_owner: address, _spender: address):
+    """
+    @notice 内部：追踪授权对（用于迁移）
+    @param _owner 所有者地址
+    @param _spender 授权者地址
+    @dev 用于迁移时追踪所有活跃授权
+    """
+    # 检查授权对是否已在列表中
+    found: bool = False
+    idx: uint256 = 0
+    for account: address in self.allowanceList:
+        if idx % 2 == 0 and idx + 1 < len(self.allowanceList):
+            # 这是一个owner位置，检查下一个是否是spender
+            if account == _owner and self.allowanceList[idx + 1] == _spender:
+                found = True
+                break
+        idx += 1
+
+    # 如果未找到，添加新的授权对
+    if not found:
+        self.allowanceList.append(_owner)
+        self.allowanceList.append(_spender)
 
 
 @deploy
@@ -396,13 +451,16 @@ def mint(_to: address, _amount: uint256):
     """
     assert self.minters[msg.sender], "Not authorized minter"
     assert not self.issuanceFinished, "Issuance finished"
-    
+
     # STO合规检查
     self._checkTransferRestriction(empty(address), _to, _amount)
-    
+
     self.totalSupply += _amount
     self.balanceOf[_to] += _amount
-    
+
+    # 维护迁移账户列表
+    self._trackAccount(_to)
+
     log Transfer(empty(address), _to, _amount)
 
 
@@ -436,12 +494,16 @@ def transfer(_to: address, _amount: uint256) -> bool:
     """
     # STO合规检查
     self._checkTransferRestriction(msg.sender, _to, _amount)
-    
+
     assert self.balanceOf[msg.sender] >= _amount, "Insufficient balance"
-    
+
     self.balanceOf[msg.sender] -= _amount
     self.balanceOf[_to] += _amount
-    
+
+    # 维护迁移账户列表
+    self._trackAccount(_to)
+    self._trackAccount(msg.sender)
+
     log Transfer(msg.sender, _to, _amount)
     return True
 
@@ -455,6 +517,13 @@ def approve(_spender: address, _amount: uint256) -> bool:
     @return 是否成功
     """
     self.allowance[msg.sender][_spender] = _amount
+
+    # 维护迁移列表
+    self._trackAccount(msg.sender)
+    self._trackAccount(_spender)
+    if _amount > 0:
+        self._trackAllowance(msg.sender, _spender)
+
     log Approval(msg.sender, _spender, _amount)
     return True
 
@@ -470,14 +539,19 @@ def transferFrom(_from: address, _to: address, _amount: uint256) -> bool:
     """
     # STO合规检查
     self._checkTransferRestriction(_from, _to, _amount)
-    
+
     assert self.balanceOf[_from] >= _amount, "Insufficient balance"
     assert self.allowance[_from][msg.sender] >= _amount, "Insufficient allowance"
-    
+
     self.balanceOf[_from] -= _amount
     self.balanceOf[_to] += _amount
     self.allowance[_from][msg.sender] -= _amount
-    
+
+    # 维护迁移账户列表
+    self._trackAccount(_from)
+    self._trackAccount(_to)
+    self._trackAccount(msg.sender)
+
     log Transfer(_from, _to, _amount)
     return True
 
@@ -589,6 +663,53 @@ def checkDependenciesBound() -> bool:
     return self.kycManager != empty(address)
 
 
+# ==================== 迁移辅助getter函数 ====================
+
+@external
+@view
+def getAccountList() -> DynArray[address, 5000]:
+    """
+    @notice 获取账户列表（用于迁移）
+    @return 账户地址动态数组
+    @dev 包含所有有余额或授权的账户
+    """
+    return self.accountList
+
+
+@external
+@view
+def getBalanceOf(_account: address) -> uint256:
+    """
+    @notice 获取账户余额（用于迁移）
+    @param _account 账户地址
+    @return 余额
+    """
+    return self.balanceOf[_account]
+
+
+@external
+@view
+def getAllowance(_owner: address, _spender: address) -> uint256:
+    """
+    @notice 获取授权额度（用于迁移）
+    @param _owner 所有者地址
+    @param _spender 授权者地址
+    @return 授权额度
+    """
+    return self.allowance[_owner][_spender]
+
+
+@external
+@view
+def getAllowanceList() -> DynArray[address, 10000]:
+    """
+    @notice 获取授权对列表（用于迁移）
+    @return 授权对地址动态数组 [owner1, spender1, owner2, spender2, ...]
+    @dev 包含所有有授权的账户对
+    """
+    return self.allowanceList
+
+
 # ==================== 所有权管理 ====================
 
 @external
@@ -655,8 +776,27 @@ def receiveMigration(oldContract: address):
     self.transferAgent = staticcall old.transferAgent()
     self.issuanceFinished = staticcall old.issuanceFinished()
 
-    # 注意：balanceOf 和 allowance 是 HashMap，无法直接遍历
-    # 实际部署时应该维护一个账户列表，或通过其他方式迁移
+    # 迁移用户余额
+    accounts: DynArray[address, 5000] = staticcall old.getAccountList()
+    for account: address in accounts:
+        balance: uint256 = staticcall old.getBalanceOf(account)
+        if balance > 0:
+            self.balanceOf[account] = balance
+            self.accountList.append(account)
+
+    # 迁移授权（通过allowanceList追踪 - O(n)复杂度）
+    allowance_pairs: DynArray[address, 10000] = staticcall old.getAllowanceList()
+    idx: uint256 = 0
+    for addr: address in allowance_pairs:
+        if idx % 2 == 0 and idx + 1 < len(allowance_pairs):
+            owner: address = addr
+            spender: address = allowance_pairs[idx + 1]
+            allowance_amount: uint256 = staticcall old.getAllowance(owner, spender)
+            if allowance_amount > 0:
+                self.allowance[owner][spender] = allowance_amount
+                self.allowanceList.append(owner)
+                self.allowanceList.append(spender)
+        idx += 1
 
     # 迁移 minters
     minters_list: DynArray[address, 100] = staticcall old.getMinterList()
