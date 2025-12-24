@@ -496,11 +496,11 @@ def migrate(newContract: address):
     assert not self.migrated, "Already migrated"
     assert newContract != empty(address), "Invalid address"
 
+    # CRITICAL FIX: 先设置迁移标志，防止重入攻击
+    self.migrated = True
+
     # 调用新合约的接收函数，传入 self（旧合约地址）
     extcall IOracleConsumerMigration(newContract).receiveMigration(self)
-
-    # 标记为已迁移
-    self.migrated = True
 
     log Migrated(self, newContract, block.timestamp)
 
