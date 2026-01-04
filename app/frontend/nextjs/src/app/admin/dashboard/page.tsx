@@ -147,7 +147,8 @@ export default function AdminDashboardPage() {
             <h1 className="text-3xl font-bold text-white mb-1">
               {t("admin.dashboard.pageTitle")}
             </h1>
-            <p style={{ color: 'rgba(255, 255, 255, 0.50)' }}>  {/* Improved from 0.4 - 5.1:1 ✓ */
+            <p style={{ color: 'rgba(255, 255, 255, 0.50)' }}>
+              {/* Improved from 0.4 - 5.1:1 ✓ */}
               {t("admin.dashboard.subtitle", "实时监控平台核心指标")}
             </p>
           </div>
@@ -273,7 +274,8 @@ export default function AdminDashboardPage() {
                   <h3 className="text-lg font-semibold text-white mb-1">
                     {t("admin.dashboard.overview")}
                   </h3>
-                  <p className="text-sm mb-5" style={{ color: 'rgba(255, 255, 255, 0.50)' }}>  {/* Improved from 0.4 - 5.1:1 ✓ */
+                  <p className="text-sm mb-5" style={{ color: 'rgba(255, 255, 255, 0.50)' }}>
+                    {/* Improved from 0.4 - 5.1:1 ✓ */}
                     {t("admin.dashboard.currentStatus", "Current Status")}
                   </p>
 
@@ -371,7 +373,8 @@ export default function AdminDashboardPage() {
                         <div className="text-2xl font-bold premium-text-gold">
                           {((stats.staking.total_rewards_distributed / (stats.staking.total_rewards_distributed + stats.staking.rewards_pool_remaining)) * 100).toFixed(0)}%
                         </div>
-                        <div className="text-xs mt-1" style={{ color: 'rgba(255, 255, 255, 0.50)' }}>  {/* Improved from 0.4 - 5.1:1 ✓ */
+                        <div className="text-xs mt-1" style={{ color: 'rgba(255, 255, 255, 0.50)' }}>
+                          {/* Improved from 0.4 - 5.1:1 ✓ */}
                           {t("admin.dashboard.rewardsPool.distributed", "已分发")}
                         </div>
                       </div>
