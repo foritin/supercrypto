@@ -7,6 +7,7 @@ import { Footer } from "./footer";
 import { ContentWrapper } from "./content-wrapper";
 import { PageSkeleton } from "./page-skeleton";
 import { Web3Background } from "./web3-background";
+import { TriggeredLightFlow } from "./TriggeredLightFlow";
 import type { ReactNode } from "react";
 
 const { Content } = Layout;
@@ -18,6 +19,7 @@ const { Content } = Layout;
  * - Header 和 Footer 立即渲染（不需要等待任何数据）
  * - Content 区域通过 Suspense 边界包裹，配合页面的 loading.tsx 显示骨架屏
  * - Web3Background 在 Layout 层渲染一次，切换页面不重新初始化
+ * - TriggeredLightFlow 仅在页面初次加载时短暂显示，避免误导用户
  * - 这样用户能更快看到页面框架，减少感知等待时间
  */
 export function MainLayout({ children }: { children: ReactNode }) {
@@ -33,6 +35,9 @@ export function MainLayout({ children }: { children: ReactNode }) {
 
       {/* Header 立即渲染 */}
       <Header />
+
+      {/* 触发式光流 - 仅在页面加载时显示一次 */}
+      <TriggeredLightFlow trigger="page-load" duration={2500} />
 
       {/* Content 区域：使用 Suspense 边界，显示骨架屏 */}
       <Content style={{ padding: "24px" }}>

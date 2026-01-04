@@ -131,13 +131,20 @@ export function Header() {
         alignItems: "center",
         justifyContent: "space-between",
         padding: "0 24px",
-        background: "rgba(17, 25, 22, 0.9)",
-        backdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+        // 独立半透明背景 - 与内容区清晰分离
+        background: "rgba(10, 10, 15, 0.96)",
+        backdropFilter: "blur(20px) saturate(180%)",
         position: "sticky",
         top: 0,
         zIndex: 100,
         height: 64,
+        borderBottom: "none",
+        // 清晰的青色发光底线 + 深阴影分离
+        boxShadow: `
+          0 8px 32px rgba(0, 0, 0, 0.4),
+          inset 0 -1px 0 rgba(0, 212, 170, 0.6),
+          0 2px 0 rgba(0, 212, 170, 0.3)
+        `,
       }}
     >
       <Space size="large" align="center">
@@ -242,7 +249,7 @@ export function Header() {
         placement="right"
         onClose={() => setMobileMenuOpen(false)}
         open={mobileMenuOpen}
-        width={280}
+        size="default"
         styles={{
           body: { padding: 0 },
           header: { borderBottom: '1px solid rgba(255,255,255,0.1)' },

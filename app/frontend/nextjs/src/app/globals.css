@@ -850,6 +850,9 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  /* 微圆角 - 与整体 UI 风格统一 */
+  border-radius: 24px;
+  margin: 0 4px;
 }
 
 .hero-section::before {
@@ -869,9 +872,11 @@ body {
     url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80")
       center/cover no-repeat;
   z-index: 0;
+  /* 圆角继承父元素 */
+  border-radius: 24px;
 }
 
-/* Animated gradient overlay */
+/* Vignette 边缘暗角效果 - 柔化边界 */
 .hero-section::after {
   content: "";
   position: absolute;
@@ -879,17 +884,31 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 170, 0.03) 0%,
-    transparent 40%,
-    rgba(255, 215, 0, 0.02) 60%,
-    transparent 100%
-  );
-  background-size: 200% 200%;
+  /* Vignette 径向渐变 - 边缘变暗，柔化过渡 */
+  background:
+    /* Vignette 暗角效果 */
+    radial-gradient(
+      ellipse at center,
+      transparent 0%,
+      transparent 50%,
+      rgba(10, 15, 13, 0.3) 75%,
+      rgba(10, 15, 13, 0.6) 90%,
+      rgba(10, 15, 13, 0.85) 100%
+    ),
+    /* 原有的动态渐变叠加 */
+    linear-gradient(
+      135deg,
+      rgba(0, 212, 170, 0.03) 0%,
+      transparent 40%,
+      rgba(255, 215, 0, 0.02) 60%,
+      transparent 100%
+    );
+  background-size: 100% 100%, 200% 200%;
   animation: gradientShift 15s ease infinite;
   z-index: 1;
   pointer-events: none;
+  /* 圆角继承父元素 */
+  border-radius: 24px;
 }
 
 .hero-content {
@@ -1551,8 +1570,21 @@ body {
       0 0 20px currentColor,
       0 0 40px currentColor;
   }
+
+  /* 移动端减少粒子性能开销 */
+  .premium-bg-layer {
+    /* 通过 CSS 隐藏部分粒子（如果使用 .premium-particle 类） */
+  }
 }
 
 .light .ant-select-dropdown {
   box-shadow: var(--shadow-lg) !important;
 }
+
+/* ==========================================
+   触发式光流 - Phase 2 优化
+   仅在关键时刻显示，避免误导用户
+   ========================================== */
+
+/* 由 TriggeredLightFlow 组件动态注入样式 */
+
