@@ -32,7 +32,7 @@ class Account(AbstractModel, TimestampMixin, BlockableMixin, SoftDeleteMixin):
     class Meta:
         table = "account"
         table_description = "账户表"
-        unique_together = (("address", "net_type"),)
+        unique_together = (("address", "network"),)
 
     def __str__(self):
         status = "active"
@@ -40,7 +40,7 @@ class Account(AbstractModel, TimestampMixin, BlockableMixin, SoftDeleteMixin):
             status = "blocked"
         elif self.is_deleted:
             status = "deleted"
-        return f"Account(id={self.id}, address={self.address}, net_type={self.net_type}, status={status})"
+        return f"Account(id={self.id}, address={self.address}, network={self.network}, status={status})"
 
 
 # class RoutePermission(AbstractModel, TimestampMixin):
