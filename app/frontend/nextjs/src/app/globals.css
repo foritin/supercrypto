@@ -153,18 +153,31 @@ body {
   color: var(--text-primary) !important;
 }
 
-/* Cards - Glassmorphism */
+/* Cards - Glassmorphism (统一阴影系统) */
 .ant-card {
   background: var(--bg-card) !important;
   border: 1px solid var(--border-color) !important;
   border-radius: 16px !important;
-  transition: all 0.3s ease;
+  /* 统一的多层次深度阴影 */
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 -4px 16px rgba(0, 0, 0, 0.1) inset !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 添加卡片进入动画 */
+  animation: cardFadeInUp 0.5s ease-out;
 }
 
 .ant-card.ant-card-hoverable:hover {
-  transform: translateY(-4px);
-  border-color: var(--color-primary) !important;
-  box-shadow: var(--shadow-lg), 0 0 30px rgba(0, 212, 170, 0.15);
+  transform: translateY(-6px);
+  border-color: rgba(0, 212, 170, 0.3) !important;
+  /* 统一的 hover 阴影 - 增强深度 + 青色光晕 */
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(0, 212, 170, 0.2) inset,
+    0 -6px 24px rgba(0, 0, 0, 0.15) inset,
+    0 0 40px rgba(0, 212, 170, 0.12),
+    0 0 80px rgba(0, 212, 170, 0.06) !important;
 }
 
 .ant-card-head {
@@ -228,13 +241,13 @@ body {
       0 0 20px rgba(0, 212, 170, 0.8),
       0 0 40px rgba(0, 212, 170, 0.6),
       0 0 80px rgba(0, 212, 170, 0.4);
-    transform: scale(1.02);
+    transform: scale(1.01);
   }
 }
 
-/* Primary Hover - 强烈的上浮 + 光晕爆炸 */
+/* Primary Hover - 更温和的上浮 + 光晕增强 */
 .ant-btn-primary:hover {
-  transform: translateY(-4px) scale(1.05);
+  transform: translateY(-3px) scale(1.02);
   box-shadow:
     0 0 25px rgba(0, 212, 170, 1),
     0 0 50px rgba(0, 212, 170, 0.8),
@@ -290,13 +303,13 @@ body {
   background: var(--bg-elevated) !important;
   border-color: var(--border-color-light) !important;
   color: var(--text-primary) !important;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ant-btn-default:hover {
   border-color: var(--color-primary) !important;
   color: var(--color-primary) !important;
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.01);
   box-shadow:
     0 0 15px rgba(0, 212, 170, 0.4),
     0 0 30px rgba(0, 212, 170, 0.2),
@@ -304,7 +317,7 @@ body {
 }
 
 .ant-btn-default:active {
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1);
 }
 
 .ant-btn-text {
@@ -762,6 +775,18 @@ body {
   }
 }
 
+/* 卡片进入动画 - 专用于卡片元素 */
+@keyframes cardFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes glow {
   0%,
   100% {
@@ -964,15 +989,25 @@ body {
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 20px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 统一的多层次深度阴影 */
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 -4px 16px rgba(0, 0, 0, 0.1) inset !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 添加卡片进入动画 */
+  animation: cardFadeInUp 0.5s ease-out;
 }
 
 .glass-card-enhanced:hover {
   border-color: rgba(0, 212, 170, 0.25) !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 212, 170, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  /* 统一的 hover 阴影 - 与 .ant-card.ant-card-hoverable 一致 */
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(0, 212, 170, 0.2) inset,
+    0 -6px 24px rgba(0, 0, 0, 0.15) inset,
+    0 0 40px rgba(0, 212, 170, 0.12),
+    0 0 80px rgba(0, 212, 170, 0.06) !important;
   transform: translateY(-6px);
 }
 
