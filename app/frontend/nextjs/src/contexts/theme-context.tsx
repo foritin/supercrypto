@@ -36,17 +36,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true);
 
-    // 从 localStorage 读取保存的主题
+    // 从 localStorage 读取保存的主题，如果没有则默认深色
     const savedTheme = localStorage.getItem('theme') as Theme | null;
     if (savedTheme) {
       setThemeState(savedTheme);
-    } else {
-      // 检测系统主题偏好
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
-      setThemeState(systemTheme);
     }
+    // 默认使用深色主题，不再检测系统偏好
   }, []);
 
   useEffect(() => {
