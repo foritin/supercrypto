@@ -58,7 +58,7 @@ export function ClientLoading({ children }: ClientLoadingProps) {
                 <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
               </svg>
             </div>
-            <h1 className="loader-brand">SuperCrypto</h1>
+            <h1 className="loader-brand">ApprovePlatform</h1>
             <div className="loader-spinner">
               <div className="spinner-ring" />
             </div>

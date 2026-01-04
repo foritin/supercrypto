@@ -14,7 +14,7 @@ import { InstallMetaMaskModal } from '@/components/web3/install-metamask-modal'
 const { Text } = Typography
 
 // 签名登录的固定消息
-const SIGN_MESSAGE = 'Sign in to SuperCrypto'
+const SIGN_MESSAGE = 'ApprovePlatformAccess'
 
 // Extend Window interface for ethereum
 declare global {
@@ -95,8 +95,8 @@ export function WalletConnect() {
       // 请求用户签名
       const signature = await signMessageAsync({ message: SIGN_MESSAGE })
       
-      // 调用后端登录接口
-      await login(address, signature)
+      // 调用后端登录接口（传递当前网络信息）
+      await login(address, signature, chain?.id, chain?.name)
       
       setIsAuthenticated(true)
       message.success(t('wallet.loginSuccess'))
@@ -116,7 +116,7 @@ export function WalletConnect() {
       setIsLoggingIn(false)
       isSigningRef.current = false
     }
-  }, [address, signMessageAsync, disconnect, t])
+  }, [address, chain?.id, chain?.name, signMessageAsync, disconnect, t])
 
   // 钱包连接后自动签名登录
   useEffect(() => {

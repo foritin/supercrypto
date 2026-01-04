@@ -60,3 +60,6 @@ async def downgrade(db: BaseDBAsyncClient) -> str:
         ALTER TABLE "user_kyc" DROP COLUMN IF EXISTS "id_number_hash";
         ALTER TABLE "user_kyc" DROP COLUMN IF EXISTS "id_type";
         """
+
+
+MODELS_STATE = "eJyrVoovyElMTs3Iz0lJLVKyUigpKk2tBQBeDQg5"

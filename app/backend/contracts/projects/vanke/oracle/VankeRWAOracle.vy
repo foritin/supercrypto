@@ -8,20 +8,20 @@
 """
 
 # 合约迁移接口
-interface IRWAOracleMigration:
+interface IMigration:
     def owner() -> address: view
     def paused() -> bool: view
     def max_change_rate() -> uint256: view
     def data_validity_period() -> uint256: view
-    def getAssetData(_assetId: bytes32) -> AssetData: view
-    def get_all_asset_ids() -> DynArray[bytes32, 1000]: view
-    def getHistoricalCount(_assetId: bytes32) -> uint256: view
-    def getHistoricalData(_assetId: bytes32, _index: uint256) -> HistoricalData: view
-    def getDataProviders() -> DynArray[address, 100]: view
+    def get_asset_data(_assetId: bytes32) -> AssetData: view
+    def get_asset_list() -> DynArray[bytes32, 1000]: view
+    def get_historical_count(_assetId: bytes32) -> uint256: view
+    def get_historical_data(_assetId: bytes32, _index: uint256) -> HistoricalData: view
+    def get_data_providers() -> DynArray[address, 100]: view
     def multi_sig_manager() -> address: view
     def timelock() -> address: view
-    def receiveMigration(oldContract: address): nonpayable
-    def isMigrated() -> bool: view
+    def receive_migration(oldContract: address): nonpayable
+    def is_migrated() -> bool: view
 
 # ============================================
 # 接口定义
@@ -66,7 +66,7 @@ event AssetDataUpdated:
 
 event AssetRegistered:
     asset_id: indexed(bytes32)
-    asset_name: String[100]
+    asset_name: String[150]
     registered_by: indexed(address)
 
 event AssetDeactivated:
@@ -108,7 +108,7 @@ flag ComplianceStatus:
 
 struct AssetData:
     # 基础信息
-    asset_name: String[100]      # 资产名称
+    asset_name: String[150]      # 资产名称
     is_active: bool              # 是否激活
     
     # 财务数据
@@ -172,6 +172,12 @@ data_validity_period: public(uint256)
 # 合约暂停状态
 paused: public(bool)
 
+# 多签管理合约（用于迁移获取地址）
+_multi_sig_manager_addr: public(address)
+
+# 时间锁合约（用于迁移获取地址）
+_timelock_addr: public(address)
+
 # ============================================
 # 常量
 # ============================================
@@ -198,15 +204,17 @@ def __init__(multi_sig_addr: address, timelock_addr: address):
     """
     assert multi_sig_addr != empty(address), "Invalid multisig"
     assert timelock_addr != empty(address), "Invalid timelock"
-    
+
     self.owner = msg.sender
     self._multi_sig_manager = IMultiSigManager(multi_sig_addr)
     self._timelock = ITimelock(timelock_addr)
-    
+    self._multi_sig_manager_addr = multi_sig_addr
+    self._timelock_addr = timelock_addr
+
     self.max_change_rate = DEFAULT_MAX_CHANGE_RATE
     self.data_validity_period = DEFAULT_VALIDITY_PERIOD
     self.paused = False
-    
+
     # 添加部署者为初始数据提供者
     self.data_providers[msg.sender] = True
     log DataProviderAdded(msg.sender, msg.sender)
@@ -240,7 +248,7 @@ def _when_not_paused():
 @external
 def register_asset(
     asset_id: bytes32,
-    asset_name: String[100],
+    asset_name: String[150],
     initial_apy: uint256,
     initial_valuation: uint256,
     operation_id: bytes32
@@ -662,53 +670,51 @@ def transfer_ownership(new_owner: address):
 # ==================== 依赖查询功能 ====================
 
 @external
-def getDependencies() -> address[2]:
+@view
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖地址
-    @return [multi_sig_manager, timelock] 依赖合约地址数组
-    @dev RWAOracle 依赖 MultiSigManager 和 Timelock
+    @notice 获取合约依赖（必须依赖 + 可选依赖）
+    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
+    @dev 必须依赖: MultiSigManager, Timelock
+    @dev 无可选依赖
     """
-    return [self._multi_sig_manager.address, self._timelock.address]
+    required: DynArray[String[50], 10] = []
+    optional: DynArray[String[50], 10] = []
 
+    # 检查必须依赖
+    if self._multi_sig_manager_addr == empty(address):
+        required.append("MultiSigManager")
+    if self._timelock_addr == empty(address):
+        required.append("Timelock")
 
-@external
-def checkDependenciesBound() -> bool:
-    """
-    @notice 检查依赖是否已绑定
-    @return True 如果所有依赖已配置（非零地址）
-    @dev MultiSigManager 和 Timelock 必须都已配置
-    """
-    return (
-        self._multi_sig_manager.address != empty(address) and
-        self._timelock.address != empty(address)
-    )
+    return required, optional
 
 
 # ==================== 合约迁移功能 ====================
 
 @external
-def migrate(newContract: address):
+def migrate(new_contract: address):
     """
     @notice 迁移所有状态到新合约
-    @param newContract 新合约地址（必须实现 receiveMigration 接口）
+    @param new_contract 新合约地址（必须实现 receive_migration 接口）
     @dev 迁移后设置 migrated 标志，不自动暂停
     """
     assert msg.sender == self.owner, "Only owner"
     assert not self.migrated, "Already migrated"
-    assert newContract != empty(address), "Invalid address"
+    assert new_contract != empty(address), "Invalid address"
 
     # CRITICAL FIX: 先设置迁移标志，防止重入攻击
     self.migrated = True
 
     # 调用新合约的接收函数，传入 self（旧合约地址）
-    extcall IRWAOracleMigration(newContract).receiveMigration(self)
+    extcall IMigration(new_contract).receive_migration(self)
 
-    log Migrated(self, newContract, block.timestamp)
+    log Migrated(self, new_contract, block.timestamp)
 
 
 @external
 @view
-def isMigrated() -> bool:
+def is_migrated() -> bool:
     """
     @notice 检查合约是否已迁移
     @return True 如果已迁移到新合约
@@ -723,7 +729,7 @@ def multi_sig_manager() -> address:
     @notice 获取多签管理器地址（用于迁移）
     @return 多签管理器合约地址
     """
-    return self._multi_sig_manager.address
+    return self._multi_sig_manager_addr
 
 
 @external
@@ -733,34 +739,34 @@ def timelock() -> address:
     @notice 获取时间锁地址（用于迁移）
     @return 时间锁合约地址
     """
-    return self._timelock.address
+    return self._timelock_addr
 
 
 @external
 @view
-def getAssetData(_assetId: bytes32) -> AssetData:
+def get_raw_asset_data(_asset_id: bytes32) -> AssetData:
     """
-    @notice 获取资产数据（用于迁移）
-    @param _assetId 资产ID
+    @notice 获取原始资产数据（用于迁移，不验证active状态）
+    @param _asset_id 资产ID
     @return 资产数据
     """
-    return self.assets[_assetId]
+    return self.assets[_asset_id]
 
 
 @external
 @view
-def getHistoricalCount(_assetId: bytes32) -> uint256:
+def get_historical_count(_asset_id: bytes32) -> uint256:
     """
     @notice 获取历史数据数量（用于迁移）
-    @param _assetId 资产ID
+    @param _asset_id 资产ID
     @return 历史数据数量
     """
-    return self.historical_count[_assetId]
+    return self.historical_count[_asset_id]
 
 
 @external
 @view
-def getDataProviders() -> DynArray[address, 100]:
+def get_data_providers() -> DynArray[address, 100]:
     """
     @notice 获取数据提供者列表（用于迁移）
     @return 数据提供者地址动态数组
@@ -770,26 +776,26 @@ def getDataProviders() -> DynArray[address, 100]:
 
 @external
 @view
-def getHistoricalData(_assetId: bytes32, _index: uint256) -> HistoricalData:
+def get_raw_historical_data(_asset_id: bytes32, _index: uint256) -> HistoricalData:
     """
-    @notice 获取指定索引的历史数据（用于迁移）
-    @param _assetId 资产ID
+    @notice 获取原始历史数据（用于迁移，不验证active状态）
+    @param _asset_id 资产ID
     @param _index 索引
     @return 历史数据
     """
-    return self.historical_data[_assetId][_index]
+    return self.historical_data[_asset_id][_index]
 
 
 @external
-def receiveMigration(oldContract: address):
+def receive_migration(old_contract: address):
     """
     @notice 从旧合约接收迁移状态
-    @param oldContract 旧合约地址
+    @param old_contract 旧合约地址
     @dev 只有旧合约可以调用此函数
     """
-    assert msg.sender == oldContract, "Only old contract"
+    assert msg.sender == old_contract, "Only old contract"
 
-    old: IRWAOracleMigration = IRWAOracleMigration(oldContract)
+    old: IMigration = IMigration(old_contract)
 
     # 迁移基本状态变量
     self.owner = staticcall old.owner()
@@ -802,25 +808,27 @@ def receiveMigration(oldContract: address):
     timelock_addr: address = staticcall old.timelock()
     self._multi_sig_manager = IMultiSigManager(multi_sig_addr)
     self._timelock = ITimelock(timelock_addr)
+    self._multi_sig_manager_addr = multi_sig_addr
+    self._timelock_addr = timelock_addr
 
     # 迁移资产数据
-    asset_ids: DynArray[bytes32, 1000] = staticcall old.get_all_asset_ids()
+    asset_ids: DynArray[bytes32, 1000] = staticcall old.get_asset_list()
     for asset_id: bytes32 in asset_ids:
-        asset_data: AssetData = staticcall old.getAssetData(asset_id)
+        asset_data: AssetData = staticcall old.get_asset_data(asset_id)
         self.assets[asset_id] = asset_data
         self.asset_ids.append(asset_id)
 
         # 迁移历史数据
-        hist_count: uint256 = staticcall old.getHistoricalCount(asset_id)
+        hist_count: uint256 = staticcall old.get_historical_count(asset_id)
         self.historical_count[asset_id] = hist_count
         for i: uint256 in range(100):  # 最大100条历史记录
             if i >= hist_count:
                 break
-            hist_data: HistoricalData = staticcall old.getHistoricalData(asset_id, i)
+            hist_data: HistoricalData = staticcall old.get_historical_data(asset_id, i)
             self.historical_data[asset_id][i] = hist_data
 
     # 迁移数据提供者
-    providers: DynArray[address, 100] = staticcall old.getDataProviders()
+    providers: DynArray[address, 100] = staticcall old.get_data_providers()
     for provider: address in providers:
         self.data_providers[provider] = True
         self.dataProviderList.append(provider)

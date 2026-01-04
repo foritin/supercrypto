@@ -26,9 +26,9 @@ import {
   PlatformStatsResponse,
 } from "@/services/admin";
 import { RequireAuth } from "@/components/auth";
-import { PremiumV5Background } from "@/components/layout/PremiumV5Background";
+import { V6Background } from "@/components/layout/V6Background";
 import { V6StatCard } from "@/components/dashboard/V6StatCard";
-import { PremiumV5Chart } from "@/components/dashboard/PremiumV5Chart";
+import { V6Chart } from "@/components/dashboard/V6Chart";
 import { V6ActivityList } from "@/components/dashboard/V6ActivityList";
 
 // 主仪表盘页面
@@ -132,7 +132,7 @@ export default function AdminDashboardPage() {
   return (
     <RequireAuth admin>
       {/* 高级背景 */}
-      <PremiumV5Background />
+      <V6Background />
 
       <div className="min-h-screen relative px-6 py-8 max-w-[1600px] mx-auto">
         {/* 页面标题 */}
@@ -240,7 +240,7 @@ export default function AdminDashboardPage() {
               {/* 左侧 - 2列 */}
               <div className="lg:col-span-2 space-y-6">
                 {/* 图表 */}
-                <PremiumV5Chart
+                <V6Chart
                   title={t("admin.dashboard.chart.title", "数据趋势")}
                   subtitle={t("admin.dashboard.chart.subtitle", "TVL 与质押金额变化")}
                   data={chartData}

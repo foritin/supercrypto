@@ -2,61 +2,10 @@
 审计日志 (Audit Log) 数据模型
 记录所有管理员操作
 """
-from enum import Enum
 from tortoise import fields
+
 from src.models.base import AbstractModel, TimestampMixin
-
-
-class AuditAction(str, Enum):
-    """审计操作类型"""
-    # KYC 相关
-    KYC_APPROVE = "kyc_approve"
-    KYC_REJECT = "kyc_reject"
-    KYC_RESET = "kyc_reset"
-    
-    # 资产管理
-    ASSET_CREATE = "asset_create"
-    ASSET_UPDATE = "asset_update"
-    ASSET_PAUSE = "asset_pause"
-    ASSET_RESUME = "asset_resume"
-    ASSET_DELETE = "asset_delete"
-    
-    # 合约绑定
-    CONTRACT_BIND = "contract_bind"
-    CONTRACT_UNBIND = "contract_unbind"
-    CONTRACT_UPDATE = "contract_update"
-    CONTRACT_RESET = "contract_reset"
-    
-    # 质押挖矿
-    STAKING_CONFIG_UPDATE = "staking_config_update"
-    STAKING_PAUSE = "staking_pause"
-    STAKING_RESUME = "staking_resume"
-    
-    # 代币管理
-    TOKEN_AIRDROP = "token_airdrop"
-    TOKEN_MINT = "token_mint"
-    
-    # 预言机
-    ORACLE_PRICE_UPDATE = "oracle_price_update"
-    
-    # 紧急控制
-    EMERGENCY_PAUSE = "emergency_pause"
-    EMERGENCY_UNPAUSE = "emergency_unpause"
-    BLACKLIST_ADD = "blacklist_add"
-    BLACKLIST_REMOVE = "blacklist_remove"
-    ACCOUNT_FREEZE = "account_freeze"
-    ACCOUNT_UNFREEZE = "account_unfreeze"
-    
-    # 会话管理
-    USER_SESSION_REVOKE = "user_session_revoke"
-    
-    # 开发工具
-    DEV_QUICK_KYC = "dev_quick_kyc"
-    DEV_MINT_TOKEN = "dev_mint_token"
-    DEV_RESET_DATA = "dev_reset_data"
-    
-    # 其他
-    OTHER = "other"
+from src.shared.schemas.enums import AuditAction
 
 
 class AuditLog(AbstractModel, TimestampMixin):

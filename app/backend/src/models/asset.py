@@ -1,27 +1,12 @@
 """
 RWA 资产模型
 """
-from enum import Enum
 from decimal import Decimal
+
 from tortoise import fields
+
 from src.models.base import AbstractModel, TimestampMixin
-
-
-class AssetStatus(str, Enum):
-    """资产状态枚举"""
-    ACTIVE = "active"         # 可认购
-    PAUSED = "paused"         # 已暂停
-    SOLD_OUT = "sold_out"     # 已售罄
-    CLOSED = "closed"         # 已关闭
-
-
-class AssetType(str, Enum):
-    """资产类型枚举"""
-    REAL_ESTATE = "real_estate"   # 房地产
-    BOND = "bond"                 # 债券
-    COMMODITY = "commodity"       # 大宗商品
-    EQUITY = "equity"             # 股权
-    OTHER = "other"               # 其他
+from src.shared.schemas.enums import AssetStatus, AssetType
 
 
 class Asset(AbstractModel, TimestampMixin):

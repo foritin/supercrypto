@@ -310,7 +310,7 @@ cat config.local.yaml
 **Q: RPC节点连接超时**
 ```bash
 # 使用公共RPC节点或配置自己的节点
-# 编辑 src/domains/wallet/blockchain.py
+# 编辑 src/services/wallet/blockchain.py
 # 修改 rpc_urls 配置
 ```
 

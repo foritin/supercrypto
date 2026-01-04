@@ -10,7 +10,7 @@
  */
 
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios'
-import { getJwtToken, getWalletAddress, clearAuthData } from '@/utils/auth'
+import { getJwtToken, clearAuthData } from '@/utils/auth'
 import { refreshAccessToken } from '@/services/auth'
 
 // API Base URL - can be configured via environment
@@ -84,11 +84,6 @@ axiosInstance.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`
       }
-
-      const walletAddress = getWalletAddress()
-      if (walletAddress) {
-        config.headers['X-Wallet-Address'] = walletAddress.toLowerCase()
-      }
     }
     return config
   },
@@ -116,10 +111,10 @@ axiosInstance.interceptors.response.use(
     
     // 401 Unauthorized - try refresh token
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
-      // Don't retry for auth endpoints
-      const isAuthEndpoint = originalRequest.url?.includes('/auth/token') || 
-                             originalRequest.url?.includes('/auth/refresh') ||
-                             originalRequest.url?.includes('/auth/logout')
+      // Don't retry for public auth endpoints
+      const isAuthEndpoint = originalRequest.url?.includes('/public/auth/token') || 
+                             originalRequest.url?.includes('/public/auth/refresh') ||
+                             originalRequest.url?.includes('/public/auth/logout')
       
       if (isAuthEndpoint) {
         handleLogout('认证失败，请重新连接钱包')

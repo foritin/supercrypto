@@ -29,15 +29,14 @@ export const userService = {
     
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
-      const url = `${baseUrl}/auth/me`
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'X-Wallet-Address': walletAddress,
-      }
+      const url = `${baseUrl}/user/auth/me`
       
       const token = localStorage.getItem('supercrypto-jwt')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
+      if (!token) return null
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       }
       
       const response = await fetch(url, {

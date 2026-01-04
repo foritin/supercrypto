@@ -39,7 +39,7 @@ export function Footer() {
           </Link>
         </Flex>
         <Text type="secondary" style={{ fontSize: 12 }}>
-          © {currentYear ?? '2025'} SuperCrypto. {t('footer.rights')}
+          © {currentYear ?? '2025'} ApprovePlatform. {t('footer.rights')}
         </Text>
       </Flex>
     </AntFooter>

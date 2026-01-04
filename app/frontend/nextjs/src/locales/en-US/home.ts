@@ -19,7 +19,7 @@ const home = {
       apy: "Max APY",
     },
     features: {
-      title: "Why Choose SuperCrypto",
+      title: "Why Choose ApprovePlatform",
       subtitle: "Built on blockchain technology with security, transparency, and high yields at its core",
       security: {
         title: "Bank-Grade Security",

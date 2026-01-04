@@ -1,5 +1,9 @@
 name: RWA
 
+compile:
+  output_extra:
+    - ABI
+
 # 插件配置
 plugins:
   - name: vyper
@@ -12,13 +16,13 @@ vyper:
 # 网络配置
 networks:
   custom:
-    - name: local
+    - name: hardhat
       chain_id: 31337
       ecosystem: ethereum
 
 ethereum:
   # 开发网络（远程 hardhat 节点）
-  local:
+  hardhat:
     default_provider: node
 
   # Sepolia测试网
@@ -32,15 +36,15 @@ ethereum:
 # 节点配置
 node:
   ethereum:
-    local:
+    hardhat:
       uri: http://YOUR_RPC_HOST:8545
 
 # 测试配置（与 Hardhat 一致）
 test:
-  mnemonic: test test test test test test test test test test test junk  # 助记词
-  hd_path: m/44'/60'/0'/0  # HD 钱包派生路径
-  number_of_accounts: 20   # 生成 20 个账户
-  balance: 10000 ether     # 每个账户 10000 ETH
+  mnemonic: test test test test test test test test test test test junk # 助记词
+  hd_path: m/44'/60'/0'/0 # HD 钱包派生路径
+  number_of_accounts: 20 # 生成 20 个账户
+  balance: 10000 ether # 每个账户 10000 ETH
 
 # 依赖（如果需要）
 dependencies:

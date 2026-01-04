@@ -1,27 +1,13 @@
 """
 Staking (质押挖矿) 数据模型
 """
-from enum import Enum
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from datetime import datetime, timezone, timedelta
+
 from tortoise import fields
+
 from src.models.base import AbstractModel, TimestampMixin
-
-
-class StakingStatus(str, Enum):
-    """质押状态"""
-    ACTIVE = "active"           # 质押中
-    MATURED = "matured"         # 已到期（可解押）
-    UNSTAKED = "unstaked"       # 已解押
-    CANCELLED = "cancelled"     # 已取消
-
-
-class StakingPeriod(int, Enum):
-    """质押周期（天）"""
-    DAYS_15 = 15
-    DAYS_30 = 30
-    DAYS_45 = 45
-    DAYS_60 = 60
+from src.shared.schemas.enums import StakingPeriod, StakingStatus
 
 
 # 质押周期对应的奖励倍数

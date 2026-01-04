@@ -1,7 +1,10 @@
 /**
  * 开发者工具 API Service
+ * 
+ * 路由：/dev/* (仅开发环境)
  */
 import { api } from '@/services/api'
+import { DEV_PATHS } from '@/constants/api-paths'
 // API.ResponseData 类型已在 types/api.d.ts 中全局声明
 
 export interface ResetableDataInfo {
@@ -39,7 +42,7 @@ export const devToolsService = {
    * 获取可重置数据的统计信息
    */
   async getResetInfo(): Promise<ResetableDataInfo> {
-    const response = await api.get<API.ResponseData<ResetableDataInfo>>('/dev/reset/info')
+    const response = await api.get<API.ResponseData<ResetableDataInfo>>(DEV_PATHS.RESET_INFO)
     return response.object!
   },
 
@@ -47,7 +50,7 @@ export const devToolsService = {
    * 重置测试数据
    */
   async resetData(request: DataResetRequest): Promise<DataResetResponse> {
-    const response = await api.post<API.ResponseData<DataResetResponse>>('/dev/reset', request)
+    const response = await api.post<API.ResponseData<DataResetResponse>>(DEV_PATHS.RESET_DATA, request)
     return response.object!
   },
 
@@ -55,7 +58,7 @@ export const devToolsService = {
    * 获取环境信息
    */
   async getEnvironment(): Promise<EnvironmentInfo> {
-    const response = await api.get<API.ResponseData<EnvironmentInfo>>('/dev/environment')
+    const response = await api.get<API.ResponseData<EnvironmentInfo>>(DEV_PATHS.ENVIRONMENT)
     return response.object!
   },
 
@@ -63,7 +66,7 @@ export const devToolsService = {
    * 获取可接收代币的用户列表
    */
   async getTokenRecipients(): Promise<TokenRecipient[]> {
-    const response = await api.get<API.ResponseData<TokenRecipient>>('/dev/token-recipients')
+    const response = await api.get<API.ResponseData<TokenRecipient>>(DEV_PATHS.TOKEN_RECIPIENTS)
     return response.list || []
   },
 }

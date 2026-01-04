@@ -19,7 +19,7 @@ const home = {
       apy: "最高年化",
     },
     features: {
-      title: "为什么选择 SuperCrypto",
+      title: "为什么选择 ApprovePlatform",
       subtitle: "基于区块链技术构建，以安全、透明和高收益为核心",
       security: {
         title: "银行级安全",

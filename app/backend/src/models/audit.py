@@ -7,68 +7,10 @@
 - 合约操作（部署、调用、管理员操作等）
 - 资产操作（充值、提现、转账等）
 """
-from enum import Enum
 from tortoise import fields
+
 from src.models.base import AbstractModel, get_utc_time
-
-
-class AuditCategory(str, Enum):
-    """审计类别枚举"""
-    ACCOUNT = "account"              # 账户相关
-    PERMISSION = "permission"        # 权限相关
-    CONTRACT = "contract"            # 合约相关
-    ASSET = "asset"                  # 资产相关
-    AUTH = "auth"                    # 认证相关
-    SYSTEM = "system"                # 系统操作
-
-
-class AuditAction(str, Enum):
-    """审计操作类型枚举 - 可扩展"""
-    
-    # 账户操作
-    ACCOUNT_CREATE = "account.create"
-    ACCOUNT_UPDATE = "account.update"
-    ACCOUNT_DELETE = "account.delete"
-    ACCOUNT_BLOCK = "account.block"
-    ACCOUNT_UNBLOCK = "account.unblock"
-    ACCOUNT_RESTORE = "account.restore"
-    
-    # 权限操作
-    PERMISSION_GRANT = "permission.grant"
-    PERMISSION_REVOKE = "permission.revoke"
-    
-    # 认证操作
-    AUTH_LOGIN = "auth.login"
-    AUTH_LOGOUT = "auth.logout"
-    AUTH_LOGIN_FAILED = "auth.login_failed"
-    AUTH_PASSWORD_CHANGE = "auth.password_change"
-    
-    # 合约操作
-    CONTRACT_DEPLOY = "contract.deploy"
-    CONTRACT_CALL = "contract.call"
-    CONTRACT_ADMIN_ADD = "contract.admin_add"
-    CONTRACT_ADMIN_REMOVE = "contract.admin_remove"
-    CONTRACT_UPGRADE = "contract.upgrade"
-    CONTRACT_PAUSE = "contract.pause"
-    CONTRACT_UNPAUSE = "contract.unpause"
-    
-    # 资产操作
-    ASSET_DEPOSIT = "asset.deposit"
-    ASSET_WITHDRAW = "asset.withdraw"
-    ASSET_TRANSFER = "asset.transfer"
-    ASSET_APPROVE = "asset.approve"
-    
-    # 系统操作
-    SYSTEM_CONFIG_UPDATE = "system.config_update"
-    SYSTEM_MAINTENANCE = "system.maintenance"
-
-
-class AuditStatus(str, Enum):
-    """操作结果状态"""
-    SUCCESS = "success"      # 成功
-    FAILED = "failed"        # 失败
-    PENDING = "pending"      # 待处理
-    REVERTED = "reverted"    # 已回滚
+from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
 
 
 class AuditLog(AbstractModel):

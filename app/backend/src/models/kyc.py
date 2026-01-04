@@ -2,44 +2,21 @@
 KYC 认证模型
 """
 
-from enum import Enum
-
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-
-
-class KycStatus(str, Enum):
-    """KYC 状态枚举"""
-
-    NOT_STARTED = "not_started"  # 未开始
-    PENDING = "pending"  # 审核中
-    APPROVED = "approved"  # 已通过
-    REJECTED = "rejected"  # 已拒绝
-
-
-class OnChainSyncStatus(str, Enum):
-    """链上同步状态枚举 (ADR-3: 合约调用失败处理)"""
-
-    NOT_REQUIRED = "not_required"  # main 环境，不需要同步
-    PENDING = "pending"  # 待同步
-    SYNCED = "synced"  # 已同步
-    FAILED = "failed"  # 同步失败，需重试
-
-
-class IdType(str, Enum):
-    """证件类型枚举"""
-
-    ID_CARD = "id_card"  # 身份证
-    PASSPORT = "passport"  # 护照
-    DRIVER_LICENSE = "driver_license"  # 驾照
+from src.shared.schemas.enums import IdType, KycStatus, OnChainSyncStatus, WalletType
 
 
 class UserKyc(AbstractModel, TimestampMixin):
     """用户 KYC 认证表"""
 
-    wallet_address = fields.CharField(max_length=42, description="钱包地址 (小写)")
-    environment = fields.CharField(max_length=10, description="环境 (local/test/main)")
+    wallet_address = fields.CharField(
+        max_length=42, unique=True, description="钱包地址 (小写)"
+    )
+    wallet = fields.CharEnumField(
+        WalletType, max_length=20, default=WalletType.LOCAL, description="钱包类型"
+    )
     status = fields.CharEnumField(
         KycStatus, max_length=20, default=KycStatus.NOT_STARTED, description="KYC 状态"
     )
@@ -108,10 +85,8 @@ class UserKyc(AbstractModel, TimestampMixin):
     class Meta:
         table = "user_kyc"
         table_description = "用户 KYC 认证表"
-        unique_together = [("wallet_address", "environment")]
         indexes = [
             ("status",),
-            ("environment", "status"),
         ]
 
     def __str__(self):

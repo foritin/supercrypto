@@ -43,7 +43,7 @@ const common = {
     sessionRevoked: "You have been logged out by an administrator",
   },
   footer: {
-    copyright: "© {{year}} SuperCrypto. All rights reserved.",
+    copyright: "© {{year}} ApprovePlatform. All rights reserved.",
     terms: "Terms of Service",
     privacy: "Privacy Policy",
   },

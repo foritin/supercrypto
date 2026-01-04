@@ -2,8 +2,10 @@
 SuperCrypto API - FastAPI应用主入口
 """
 
+import traceback
 from contextlib import asynccontextmanager
 
+from falib.adapter.scheduler import SchedulerService
 from falib.utils.config import SETTINGS
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,8 +13,10 @@ from fastapi.responses import JSONResponse
 from tortoise import Tortoise
 
 from src.api.v1.router import api_router
+from src.models import Account
 from src.shared.aerich_redirect import TORTOISE_ORM
-from src.shared.exceptions import BusinessException
+from src.shared.common.exceptions import BusinessException
+from src.shared.middleware import AuthStateMiddleware
 
 settings = SETTINGS
 
@@ -31,6 +35,16 @@ async def lifespan(app: FastAPI):
     # 初始化Tortoise ORM
     await Tortoise.init(config=TORTOISE_ORM)
     print("✅ Database connected")
+    await SchedulerService.start()
+    print("✅ Scheduler started")
+
+    print("🔄 Scheduling tasks...")
+    # await SchedulerService.schedule_task(
+    #     my_task,
+    #     "cyclic",
+    #     interval=60
+    # )
+    print("✅ Task scheduled")
 
     # 生成数据库表（开发环境）
     if settings.debug:
@@ -43,6 +57,9 @@ async def lifespan(app: FastAPI):
     print("🛑 Shutting down SuperCrypto API...")
     await Tortoise.close_connections()
     print("✅ Database connections closed")
+    print("🛑 Scheduler stopped")
+    await SchedulerService.stop()
+    print("✅ Scheduler stopped")
 
 
 # 创建FastAPI应用
@@ -65,6 +82,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 认证状态中间件 - 解析 JWT 并注入到 request.state
+
+
+app.add_middleware(AuthStateMiddleware)
 
 
 # 全局异常处理
@@ -94,7 +116,6 @@ async def global_exception_handler(request: Request, exc: Exception):
     捕获未处理的异常
     """
     print(f"❌ Unhandled exception: {exc}")
-    import traceback
 
     traceback.print_exc()
 
@@ -124,7 +145,6 @@ async def health():
     db_status = "ok"
     try:
         # 简单的数据库连接检查
-        from src.models import Account
 
         await Account.all().limit(1)
     except Exception as e:

@@ -13,25 +13,25 @@ interface IKYCManager:
     def maxInvestors() -> uint256: view
 
 # 合约迁移接口
-interface IRWATokenMigration:
+interface IMigration:
     def owner() -> address: view
     def name() -> String[32]: view
     def symbol() -> String[8]: view
     def decimals() -> uint8: view
     def totalSupply() -> uint256: view
-    def kycManager() -> address: view
-    def transferAgent() -> address: view
-    def issuanceFinished() -> bool: view
-    def getMinterList() -> DynArray[address, 100]: view
-    def getBurnerList() -> DynArray[address, 100]: view
-    def getDocumentList() -> DynArray[String[32], 50]: view
-    def getDocument(name: String[32]) -> (String[256], bytes32): view
-    def getAccountList() -> DynArray[address, 5000]: view
-    def getAllowanceList() -> DynArray[address, 10000]: view
-    def getBalanceOf(_account: address) -> uint256: view
-    def getAllowance(_owner: address, _spender: address) -> uint256: view
-    def receiveMigration(oldContract: address): nonpayable
-    def isMigrated() -> bool: view
+    def kyc_manager() -> address: view
+    def transfer_agent() -> address: view
+    def issuance_finished() -> bool: view
+    def get_minter_list() -> DynArray[address, 100]: view
+    def get_burner_list() -> DynArray[address, 100]: view
+    def get_document_list() -> DynArray[String[32], 50]: view
+    def get_document(name: String[32]) -> (String[256], bytes32): view
+    def get_account_list() -> DynArray[address, 5000]: view
+    def get_allowance_list() -> DynArray[address, 10000]: view
+    def get_balance_of(_account: address) -> uint256: view
+    def get_allowance(_owner: address, _spender: address) -> uint256: view
+    def receive_migration(oldContract: address): nonpayable
+    def is_migrated() -> bool: view
 
 # ERC20 事件
 event Transfer:
@@ -95,9 +95,9 @@ minters: public(HashMap[address, bool])
 burners: public(HashMap[address, bool])
 
 # STO 特定变量
-kycManager: public(address)         # KYC管理合约地址
-transferAgent: public(address)      # 转让代理（监管角色）
-issuanceFinished: public(bool)      # 是否完成发行
+kyc_manager: public(address)         # KYC管理合约地址
+transfer_agent: public(address)      # 转让代理（监管角色）
+issuance_finished: public(bool)      # 是否完成发行
 
 # 文档管理（关联法律文件）
 documents: public(HashMap[String[32], String[256]])  # 文档名 => URI
@@ -179,19 +179,19 @@ def _trackAllowance(_owner: address, _spender: address):
 
 
 @deploy
-def __init__(_kycManager: address):
+def __init__(_kyc_manager: address):
     """
     @notice 初始化RWA Security Token
-    @param _kycManager KYC管理合约地址
+    @param _kyc_manager KYC管理合约地址
     """
     self.name = "RWA Security Token"
     self.symbol = "RWASTO"
     self.decimals = 18
     self.totalSupply = 0
     self.owner = msg.sender
-    self.transferAgent = msg.sender
-    self.kycManager = _kycManager
-    self.issuanceFinished = False
+    self.transfer_agent = msg.sender
+    self.kyc_manager = _kyc_manager
+    self.issuance_finished = False
 
 
 # ==================== 管理功能 ====================
@@ -243,56 +243,56 @@ def setBurner(_burner: address, _enabled: bool):
 
 
 @external
-def setKYCManager(_newManager: address):
+def set_kyc_manager(_new_manager: address):
     """
     @notice 更新KYC管理合约地址
-    @param _newManager 新KYC管理合约地址（允许零地址用于初始化）
+    @param _new_manager 新KYC管理合约地址（允许零地址用于初始化）
     """
     assert msg.sender == self.owner, "Only owner"
 
-    oldManager: address = self.kycManager
-    self.kycManager = _newManager
+    old_manager: address = self.kyc_manager
+    self.kyc_manager = _new_manager
 
-    log KYCManagerUpdated(oldManager, _newManager)
+    log KYCManagerUpdated(old_manager, _new_manager)
 
 
 @external
-def setTransferAgent(_newAgent: address):
+def set_transfer_agent(_new_agent: address):
     """
     @notice 设置转让代理
-    @param _newAgent 新转让代理地址
+    @param _new_agent 新转让代理地址
     """
     assert msg.sender == self.owner, "Only owner"
-    assert _newAgent != empty(address), "Invalid address"
-    
-    oldAgent: address = self.transferAgent
-    self.transferAgent = _newAgent
-    
-    log TransferAgentUpdated(oldAgent, _newAgent)
+    assert _new_agent != empty(address), "Invalid address"
+
+    old_agent: address = self.transfer_agent
+    self.transfer_agent = _new_agent
+
+    log TransferAgentUpdated(old_agent, _new_agent)
 
 
 @external
-def finishIssuance():
+def finish_issuance():
     """
     @notice 完成代币发行（之后禁止铸造）
     """
     assert msg.sender == self.owner, "Only owner"
-    assert not self.issuanceFinished, "Already finished"
-    self.issuanceFinished = True
+    assert not self.issuance_finished, "Already finished"
+    self.issuance_finished = True
 
 
 @external
-def setDocument(_name: String[32], _uri: String[256], _documentHash: bytes32):
+def set_document(_name: String[32], _uri: String[256], _document_hash: bytes32):
     """
     @notice 设置法律文档（招股书、年报等）
     @param _name 文档名称
     @param _uri 文档URI（IPFS/HTTP）
-    @param _documentHash 文档哈希（SHA256）
+    @param _document_hash 文档哈希（SHA256）
     """
     assert msg.sender == self.owner, "Only owner"
 
     self.documents[_name] = _uri
-    self.documentHashes[_name] = _documentHash
+    self.documentHashes[_name] = _document_hash
 
     # 维护迁移列表
     # 检查是否已在列表中
@@ -304,7 +304,7 @@ def setDocument(_name: String[32], _uri: String[256], _documentHash: bytes32):
     if not found:
         self.documentList.append(_name)
 
-    log DocumentUpdated(_name, _uri, _documentHash)
+    log DocumentUpdated(_name, _uri, _document_hash)
 
 
 # ==================== ERC1404 合规检查 ====================
@@ -325,17 +325,17 @@ def _detectTransferRestriction(
     """
     # 0. 铸造（from = zero address）- 只检查接收方
     if _from == empty(address):
-        if not staticcall IKYCManager(self.kycManager).isVerified(_to):
+        if not staticcall IKYCManager(self.kyc_manager).isVerified(_to):
             return 2  # 接收方未通过KYC
-        if staticcall IKYCManager(self.kycManager).isFrozen(_to):
+        if staticcall IKYCManager(self.kyc_manager).isFrozen(_to):
             return 4  # 接收方账户冻结
         return 0
-    
+
     # 1. 销毁（to = zero address）- 只检查发送方
     if _to == empty(address):
-        if not staticcall IKYCManager(self.kycManager).isVerified(_from):
+        if not staticcall IKYCManager(self.kyc_manager).isVerified(_from):
             return 1  # 发送方未通过KYC
-        if staticcall IKYCManager(self.kycManager).isFrozen(_from):
+        if staticcall IKYCManager(self.kyc_manager).isFrozen(_from):
             return 3  # 发送方账户冻结
         if self.balanceOf[_from] < _value:
             return 7  # 余额不足
@@ -344,31 +344,31 @@ def _detectTransferRestriction(
     # 2. 检查金额
     if _value == 0:
         return 6  # 转账金额为零
-    
+
     # 3. 检查发送方KYC
-    if not staticcall IKYCManager(self.kycManager).isVerified(_from):
+    if not staticcall IKYCManager(self.kyc_manager).isVerified(_from):
         return 1  # 发送方未通过KYC
-    
+
     # 4. 检查接收方KYC
-    if not staticcall IKYCManager(self.kycManager).isVerified(_to):
+    if not staticcall IKYCManager(self.kyc_manager).isVerified(_to):
         return 2  # 接收方未通过KYC
-    
+
     # 5. 检查发送方是否冻结
-    if staticcall IKYCManager(self.kycManager).isFrozen(_from):
+    if staticcall IKYCManager(self.kyc_manager).isFrozen(_from):
         return 3  # 发送方账户冻结
-    
+
     # 6. 检查接收方是否冻结
-    if staticcall IKYCManager(self.kycManager).isFrozen(_to):
+    if staticcall IKYCManager(self.kyc_manager).isFrozen(_to):
         return 4  # 接收方账户冻结
-    
+
     # 7. 检查余额
     if self.balanceOf[_from] < _value:
         return 7  # 余额不足
-    
+
     # 8. 检查投资者上限（仅当接收方首次接收时）
     if self.balanceOf[_to] == 0:
-        investorCount: uint256 = staticcall IKYCManager(self.kycManager).investorCount()
-        maxInvestors: uint256 = staticcall IKYCManager(self.kycManager).maxInvestors()
+        investorCount: uint256 = staticcall IKYCManager(self.kyc_manager).investorCount()
+        maxInvestors: uint256 = staticcall IKYCManager(self.kyc_manager).maxInvestors()
         if investorCount >= maxInvestors:
             return 5  # 超过投资者上限
     
@@ -450,7 +450,7 @@ def mint(_to: address, _amount: uint256):
     @param _amount 铸造数量
     """
     assert self.minters[msg.sender], "Not authorized minter"
-    assert not self.issuanceFinished, "Issuance finished"
+    assert not self.issuance_finished, "Issuance finished"
 
     # STO合规检查
     self._checkTransferRestriction(empty(address), _to, _amount)
@@ -472,15 +472,15 @@ def burn(_from: address, _amount: uint256):
     @param _amount 销毁数量
     """
     assert self.burners[msg.sender], "Not authorized burner"
-    
+
     # STO合规检查
     self._checkTransferRestriction(_from, empty(address), _amount)
-    
+
     assert self.balanceOf[_from] >= _amount, "Insufficient balance"
-    
+
     self.balanceOf[_from] -= _amount
     self.totalSupply -= _amount
-    
+
     log Transfer(_from, empty(address), _amount)
 
 
@@ -573,7 +573,7 @@ def forceTransfer(
     @param _reason 原因
     @dev 用于法院命令、监管没收等场景
     """
-    assert msg.sender == self.transferAgent, "Only transfer agent"
+    assert msg.sender == self.transfer_agent, "Only transfer agent"
     assert self.balanceOf[_from] >= _amount, "Insufficient balance"
     
     self.balanceOf[_from] -= _amount
@@ -591,7 +591,7 @@ def forceBurn(_from: address, _amount: uint256, _reason: String[100]):
     @param _amount 金额
     @param _reason 原因
     """
-    assert msg.sender == self.transferAgent, "Only transfer agent"
+    assert msg.sender == self.transfer_agent, "Only transfer agent"
     assert self.balanceOf[_from] >= _amount, "Insufficient balance"
     
     self.balanceOf[_from] -= _amount
@@ -605,7 +605,7 @@ def forceBurn(_from: address, _amount: uint256, _reason: String[100]):
 
 @view
 @external
-def getDocument(_name: String[32]) -> (String[256], bytes32):
+def get_document(_name: String[32]) -> (String[256], bytes32):
     """
     @notice 获取文档信息
     @param _name 文档名称
@@ -629,45 +629,47 @@ def canTransfer(_from: address, _to: address, _value: uint256) -> bool:
 
 @view
 @external
-def getKYCManager() -> (address, bool):
+def get_kyc_manager() -> (address, bool):
     """
     @notice 获取KYC管理合约地址及配置状态
     @return (KYC管理合约地址, 是否已配置)
     @dev 零地址表示未配置
     """
-    is_configured: bool = self.kycManager != empty(address)
-    return (self.kycManager, is_configured)
+    is_configured: bool = self.kyc_manager != empty(address)
+    return (self.kyc_manager, is_configured)
 
 
 # ==================== 依赖查询功能 ====================
 
 @external
 @view
-def getDependencies() -> address[1]:
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖地址
-    @return [kycManager] KYC管理合约地址
-    @dev RWATokenSTO 依赖 KYCManager 进行投资者验证
+    @notice 获取合约依赖（必须依赖 + 可选依赖）
+    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
+    @dev 必须依赖: DefaultKYCManager
+    @dev 可选依赖: VankeRWAOracle (如果设置了预言机)
+    @dev 空数组表示无对应类型的依赖
     """
-    return [self.kycManager]
+    required: DynArray[String[50], 10] = []
+    optional: DynArray[String[50], 10] = []
 
+    # 必须依赖
+    if self.kyc_manager == empty(address):
+        required.append("DefaultKYCManager")
 
-@external
-@view
-def checkDependenciesBound() -> bool:
-    """
-    @notice 检查依赖是否已绑定
-    @return True 如果所有依赖已配置（非零地址）
-    @dev KYCManager 必须已配置
-    """
-    return self.kycManager != empty(address)
+    # 可选依赖 - 预言机（需要检查是否有对应的状态变量）
+    # 注意：VankeRWAToken本身不直接持有oracle地址，oracle是通过外部调用使用的
+    # 所以optional始终为空，这里仅作为示例展示结构
+
+    return required, optional
 
 
 # ==================== 迁移辅助getter函数 ====================
 
 @external
 @view
-def getAccountList() -> DynArray[address, 5000]:
+def get_account_list() -> DynArray[address, 5000]:
     """
     @notice 获取账户列表（用于迁移）
     @return 账户地址动态数组
@@ -678,7 +680,7 @@ def getAccountList() -> DynArray[address, 5000]:
 
 @external
 @view
-def getBalanceOf(_account: address) -> uint256:
+def get_balance_of(_account: address) -> uint256:
     """
     @notice 获取账户余额（用于迁移）
     @param _account 账户地址
@@ -689,7 +691,7 @@ def getBalanceOf(_account: address) -> uint256:
 
 @external
 @view
-def getAllowance(_owner: address, _spender: address) -> uint256:
+def get_allowance(_owner: address, _spender: address) -> uint256:
     """
     @notice 获取授权额度（用于迁移）
     @param _owner 所有者地址
@@ -701,7 +703,7 @@ def getAllowance(_owner: address, _spender: address) -> uint256:
 
 @external
 @view
-def getAllowanceList() -> DynArray[address, 10000]:
+def get_allowance_list() -> DynArray[address, 10000]:
     """
     @notice 获取授权对列表（用于迁移）
     @return 授权对地址动态数组 [owner1, spender1, owner2, spender2, ...]
@@ -713,41 +715,41 @@ def getAllowanceList() -> DynArray[address, 10000]:
 # ==================== 所有权管理 ====================
 
 @external
-def transferOwnership(_newOwner: address):
+def transfer_ownership(_new_owner: address):
     """
     @notice 转移所有权
-    @param _newOwner 新所有者地址
+    @param _new_owner 新所有者地址
     """
     assert msg.sender == self.owner, "Only owner"
-    assert _newOwner != empty(address), "Invalid address"
-    self.owner = _newOwner
+    assert _new_owner != empty(address), "Invalid address"
+    self.owner = _new_owner
 
 
 # ==================== 合约迁移功能 ====================
 
 @external
-def migrate(newContract: address):
+def migrate(new_contract: address):
     """
     @notice 迁移所有状态到新合约
-    @param newContract 新合约地址（必须实现 receiveMigration 接口）
+    @param new_contract 新合约地址（必须实现 receive_migration 接口）
     @dev 迁移后设置 migrated 标志，不自动暂停
     """
     assert msg.sender == self.owner, "Only owner"
     assert not self.migrated, "Already migrated"
-    assert newContract != empty(address), "Invalid address"
+    assert new_contract != empty(address), "Invalid address"
 
     # CRITICAL FIX: 先设置迁移标志，防止重入攻击
     self.migrated = True
 
     # 调用新合约的接收函数，传入 self（旧合约地址）
-    extcall IRWATokenMigration(newContract).receiveMigration(self)
+    extcall IMigration(new_contract).receive_migration(self)
 
-    log Migrated(self, newContract, block.timestamp)
+    log Migrated(self, new_contract, block.timestamp)
 
 
 @external
 @view
-def isMigrated() -> bool:
+def is_migrated() -> bool:
     """
     @notice 检查合约是否已迁移
     @return True 如果已迁移到新合约
@@ -756,15 +758,15 @@ def isMigrated() -> bool:
 
 
 @external
-def receiveMigration(oldContract: address):
+def receive_migration(old_contract: address):
     """
     @notice 从旧合约接收迁移状态
-    @param oldContract 旧合约地址
+    @param old_contract 旧合约地址
     @dev 只有旧合约可以调用此函数
     """
-    assert msg.sender == oldContract, "Only old contract"
+    assert msg.sender == old_contract, "Only old contract"
 
-    old: IRWATokenMigration = IRWATokenMigration(oldContract)
+    old: IMigration = IMigration(old_contract)
 
     # 迁移基本状态变量
     self.owner = staticcall old.owner()
@@ -772,26 +774,26 @@ def receiveMigration(oldContract: address):
     self.symbol = staticcall old.symbol()
     self.decimals = staticcall old.decimals()
     self.totalSupply = staticcall old.totalSupply()
-    self.kycManager = staticcall old.kycManager()
-    self.transferAgent = staticcall old.transferAgent()
-    self.issuanceFinished = staticcall old.issuanceFinished()
+    self.kyc_manager = staticcall old.kyc_manager()
+    self.transfer_agent = staticcall old.transfer_agent()
+    self.issuance_finished = staticcall old.issuance_finished()
 
     # 迁移用户余额
-    accounts: DynArray[address, 5000] = staticcall old.getAccountList()
+    accounts: DynArray[address, 5000] = staticcall old.get_account_list()
     for account: address in accounts:
-        balance: uint256 = staticcall old.getBalanceOf(account)
+        balance: uint256 = staticcall old.get_balance_of(account)
         if balance > 0:
             self.balanceOf[account] = balance
             self.accountList.append(account)
 
     # 迁移授权（通过allowanceList追踪 - O(n)复杂度）
-    allowance_pairs: DynArray[address, 10000] = staticcall old.getAllowanceList()
+    allowance_pairs: DynArray[address, 10000] = staticcall old.get_allowance_list()
     idx: uint256 = 0
     for addr: address in allowance_pairs:
         if idx % 2 == 0 and idx + 1 < len(allowance_pairs):
             owner: address = addr
             spender: address = allowance_pairs[idx + 1]
-            allowance_amount: uint256 = staticcall old.getAllowance(owner, spender)
+            allowance_amount: uint256 = staticcall old.get_allowance(owner, spender)
             if allowance_amount > 0:
                 self.allowance[owner][spender] = allowance_amount
                 self.allowanceList.append(owner)
@@ -799,21 +801,21 @@ def receiveMigration(oldContract: address):
         idx += 1
 
     # 迁移 minters
-    minters_list: DynArray[address, 100] = staticcall old.getMinterList()
+    minters_list: DynArray[address, 100] = staticcall old.get_minter_list()
     for minter: address in minters_list:
         self.minters[minter] = True
 
     # 迁移 burners
-    burners_list: DynArray[address, 100] = staticcall old.getBurnerList()
+    burners_list: DynArray[address, 100] = staticcall old.get_burner_list()
     for burner: address in burners_list:
         self.burners[burner] = True
 
     # 迁移文档
-    doc_names: DynArray[String[32], 50] = staticcall old.getDocumentList()
+    doc_names: DynArray[String[32], 50] = staticcall old.get_document_list()
     for doc_name: String[32] in doc_names:
         uri: String[256] = empty(String[256])
         doc_hash: bytes32 = empty(bytes32)
-        uri, doc_hash = staticcall old.getDocument(doc_name)
+        uri, doc_hash = staticcall old.get_document(doc_name)
         self.documents[doc_name] = uri
         self.documentHashes[doc_name] = doc_hash
 

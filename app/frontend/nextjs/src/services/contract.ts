@@ -1,8 +1,13 @@
 /**
  * Contract API Service
  * 合约相关 API
+ *
+ * 路由变更：
+ * - 公开接口：/public/contracts/*
+ * - 管理员接口：/admin/contracts/*
  */
 import { api } from "@/services/api";
+import { PUBLIC_PATHS, ADMIN_PATHS } from "@/constants/api-paths";
 // API.ResponseData 类型已在 types/api.d.ts 中全局声明
 
 // 合约地址响应
@@ -53,7 +58,7 @@ export const contractService = {
    */
   async getAddresses(): Promise<ContractAddresses> {
     const response = await api.get<API.ResponseData<ContractAddresses>>(
-      "/contracts/addresses"
+      PUBLIC_PATHS.CONTRACT_ADDRESSES
     );
     return response.object as ContractAddresses;
   },
@@ -63,7 +68,7 @@ export const contractService = {
    */
   async getSubscriptionContract(): Promise<SubscriptionContractInfo | null> {
     const response = await api.get<API.ResponseData<SubscriptionContractInfo>>(
-      "/contracts/subscription"
+      PUBLIC_PATHS.CONTRACT_SUBSCRIPTION
     );
     return response.object;
   },
@@ -77,7 +82,7 @@ export const contractService = {
   ): Promise<ContractAddress> {
     const params = deployStep ? `?deploy_step=${deployStep}` : "";
     const response = await api.get<API.ResponseData<ContractAddress>>(
-      `/contracts/${contractName}${params}`
+      `${PUBLIC_PATHS.CONTRACT_BY_NAME(contractName)}${params}`
     );
     return response.object as ContractAddress;
   },
@@ -241,7 +246,7 @@ export const contractAdminService = {
    */
   async getContractStatus(): Promise<ContractStatusList> {
     const response = await api.get<API.ResponseData<ContractStatusList>>(
-      "/admin/contracts/status-enhanced"
+      ADMIN_PATHS.CONTRACT_STATUS_ENHANCED
     );
     return response.object as ContractStatusList;
   },
@@ -253,7 +258,7 @@ export const contractAdminService = {
     contractName: string
   ): Promise<ContractDependency> {
     const response = await api.get<API.ResponseData<ContractDependency>>(
-      `/admin/contracts/dependencies/${contractName}`
+      ADMIN_PATHS.CONTRACT_DEPENDENCIES(contractName)
     );
     return response.object as ContractDependency;
   },
@@ -267,7 +272,7 @@ export const contractAdminService = {
   ): Promise<UpdateContractAddressResponse> {
     const response = await api.post<
       API.ResponseData<UpdateContractAddressResponse>
-    >("/admin/contracts/update-address", request);
+    >(ADMIN_PATHS.CONTRACT_UPDATE_ADDRESS, request);
     return response.object as UpdateContractAddressResponse;
   },
 
@@ -276,7 +281,7 @@ export const contractAdminService = {
    * 前端完成链上调用后，调用此接口更新绑定记录
    */
   async confirmBinding(request: ConfirmSyncRequest): Promise<void> {
-    await api.post("/admin/contracts/confirm-binding", request);
+    await api.post(ADMIN_PATHS.CONTRACT_CONFIRM_BINDING, request);
   },
 
   /**
@@ -293,7 +298,7 @@ export const contractAdminService = {
         project: string;
         network: string;
       }>
-    >(`/admin/contracts/reset/${project}`, { confirm });
+    >(ADMIN_PATHS.CONTRACT_RESET_PROJECT(project), { confirm });
     return response.object as {
       deleted_count: number;
       project: string;
@@ -310,7 +315,7 @@ export const contractAdminService = {
   ): Promise<{ deleted_count: number; network: string }> {
     const response = await api.delete<
       API.ResponseData<{ deleted_count: number; network: string }>
-    >("/admin/contracts/reset", { confirm });
+    >(ADMIN_PATHS.CONTRACT_RESET_ALL, { confirm });
     return response.object as { deleted_count: number; network: string };
   },
 };

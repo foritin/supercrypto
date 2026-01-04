@@ -82,57 +82,64 @@ app/backend/
 │
 ├── src/                             # 源代码根目录
 │   │
-│   ├── cores/                       # 🔧 核心基础设施
-│   │   ├── config.py               # 配置管理（Pydantic Settings）
-│   │   ├── security.py             # JWT、加密、哈希
-│   │   ├── exceptions.py           # 业务异常定义
-│   │   └── aerich_redirect.py      # Aerich配置重定向
-│   │
 │   ├── models/                      # 📦 ORM模型层（Tortoise ORM统一入口）
-│   │   ├── __init__.py             # 导出所有模型
+│   │   ├── __init__.py             # 导出所有模型和枚举
 │   │   ├── base.py                 # AbstractModel, TimestampMixin
 │   │   ├── account.py              # 账户模型
 │   │   ├── wallet.py               # 钱包模型
-│   │   └── transaction.py          # 交易模型
+│   │   ├── transaction.py          # 交易模型
+│   │   ├── asset.py                # RWA资产模型
+│   │   ├── kyc.py                  # KYC认证模型
+│   │   ├── staking.py              # 质押模型
+│   │   └── subscription.py         # 认购模型
 │   │
-│   ├── shared/                      # 🌐 共享组件
-│   │   ├── schemas/                # 共享Schema
+│   ├── shared/                      # 🌐 共享组件（模块化设计）
+│   │   │
+│   │   ├── common/                 # 📦 通用基础模块
+│   │   │   ├── __init__.py         # 统一导出
+│   │   │   ├── exceptions.py       # 业务异常类
+│   │   │   ├── utils.py            # 通用工具函数
+│   │   │   └── adapters.py         # DB/Redis 适配器依赖
+│   │   │
+│   │   ├── security/               # 🔐 安全认证模块
+│   │   │   ├── __init__.py         # 统一导出
+│   │   │   ├── jwt.py              # JWT 令牌工具（无外部依赖）
+│   │   │   ├── wallet.py           # 钱包签名验证
+│   │   │   ├── deps.py             # FastAPI 权限依赖
+│   │   │   └── exceptions.py       # 认证异常类
+│   │   │
+│   │   ├── schemas/                # 📝 共享Schema
 │   │   │   ├── base.py             # ApiResponse, PaginatedResponse
-│   │   │   └── common.py           # 分页、排序等通用Schema
-│   │   ├── dependencies.py         # 通用依赖注入
-│   │   └── utils.py                # 工具函数
+│   │   │   ├── common.py           # 分页、排序等
+│   │   │   ├── mixins.py           # Schema Mixins
+│   │   │   └── enums/              # 枚举定义
+│   │   │
+│   │   ├── middleware/             # 🔄 中间件
+│   │   │   └── auth.py             # 认证状态中间件
+│   │   │
+│   │   └── services/               # 🛠️ 共享服务
+│   │       ├── lock_service.py     # 分布式锁
+│   │       └── minio_service.py    # MinIO 存储
 │   │
-│   ├── domains/                     # 🎯 业务领域层
-│   │   │
+│   ├── services/                     # 🎯 业务服务层
 │   │   ├── account/                # 账户领域
-│   │   │   ├── schemas.py          # AccountCreate, AccountResponse等DTO
-│   │   │   ├── repositories.py     # 数据访问层（CRUD操作）
-│   │   │   ├── services.py         # 业务逻辑层（用例编排）
-│   │   │   └── routes.py           # FastAPI路由（HTTP接口）
-│   │   │
 │   │   ├── wallet/                 # 钱包领域
-│   │   │   ├── schemas.py          # WalletCreate, WalletResponse等
-│   │   │   ├── repositories.py     # 钱包数据访问
-│   │   │   ├── services.py         # 钱包业务逻辑
-│   │   │   ├── routes.py           # 钱包API路由
-│   │   │   └── blockchain.py       # 🔗 区块链适配器（Web3集成）
-│   │   │
-│   │   └── transaction/            # 交易领域
-│   │       ├── schemas.py          # TransactionCreate, TransactionResponse等
-│   │       ├── repositories.py     # 交易数据访问
-│   │       ├── services.py         # 交易业务逻辑
-│   │       └── routes.py           # 交易API路由
+│   │   ├── transaction/            # 交易领域
+│   │   ├── auth/                   # 认证领域
+│   │   ├── admin/                  # 管理员领域
+│   │   ├── asset/                  # RWA资产领域
+│   │   ├── kyc/                    # KYC认证领域
+│   │   ├── staking/                # 质押领域
+│   │   ├── subscription/           # 认购领域
+│   │   ├── contract/               # 合约管理领域
+│   │   └── dev/                    # 开发工具领域
 │   │
 │   ├── api/                         # 🚀 API聚合层
 │   │   └── v1/
-│   │       ├── __init__.py
 │   │       └── router.py           # 分层路由聚合（public/user/admin）
 │   │
-│   ├── utils/                       # 🛠️ 工具模块
-│   │   ├── log.py                  # 日志工具
-│   │   └── tools.py                # 通用工具
-│   │
-│   └── db.py                        # 数据库配置（Tortoise ORM）
+│   └── utils/                       # 🛠️ 工具模块
+│       └── tools.py                # 通用工具
 │
 ├── migrations/                      # 📁 数据库迁移文件
 │   └── models/
@@ -152,7 +159,7 @@ app/backend/
 | `cores/` | 全局核心功能 | 配置、安全、异常 |
 | `models/` | ORM模型定义 | 数据库表映射 |
 | `shared/` | 跨领域共享组件 | 通用Schema、依赖注入 |
-| `domains/` | 业务领域 | 账户、钱包、交易 |
+| `services/` | 业务领域 | 账户、钱包、交易 |
 | `api/` | API路由聚合 | 版本管理、路由注册 |
 
 ---
@@ -161,7 +168,7 @@ app/backend/
 
 ### 1. 表现层 (Presentation Layer)
 
-**文件**: `domains/{domain}/routes.py`
+**文件**: `services/{domain}/routes.py`
 
 **职责**:
 - 定义HTTP端点
@@ -172,10 +179,10 @@ app/backend/
 **示例**:
 
 ```python
-# src/domains/account/routes.py
+# src/services/account/routes.py
 from fastapi import APIRouter, Depends
-from src.domains.account.schemas import AccountCreate, AccountResponse
-from src.domains.account.services import AccountService
+from src.services.account.schemas import AccountCreate, AccountResponse
+from src.services.account.services import AccountService
 from src.shared.schemas.base import ApiResponse
 
 router = APIRouter()
@@ -192,7 +199,7 @@ async def create_account(
 
 ### 2. 业务逻辑层 (Service Layer)
 
-**文件**: `domains/{domain}/services.py`
+**文件**: `services/{domain}/services.py`
 
 **职责**:
 - 实现业务用例
@@ -204,9 +211,9 @@ async def create_account(
 **示例**:
 
 ```python
-# src/domains/account/services.py
-from src.domains.account.repositories import AccountRepository
-from src.domains.account.schemas import AccountCreate, AccountResponse
+# src/services/account/services.py
+from src.services.account.repositories import AccountRepository
+from src.services.account.schemas import AccountCreate, AccountResponse
 from src.cores.exceptions import ConflictException
 
 class AccountService:
@@ -240,7 +247,7 @@ class AccountService:
 
 ### 3. 数据访问层 (Repository Layer)
 
-**文件**: `domains/{domain}/repositories.py`
+**文件**: `services/{domain}/repositories.py`
 
 **职责**:
 - 封装所有数据库操作
@@ -251,7 +258,7 @@ class AccountService:
 **示例**:
 
 ```python
-# src/domains/account/repositories.py
+# src/services/account/repositories.py
 from typing import Optional, List, Tuple
 from src.models.account import Account
 from src.cores.exceptions import NotFoundException
@@ -365,7 +372,7 @@ Content-Type: application/json
 #### 2. FastAPI路由层 (routes.py)
 
 ```python
-# src/domains/wallet/routes.py
+# src/services/wallet/routes.py
 
 @router.post("/", response_model=ApiResponse[WalletResponse])
 async def create_wallet(
@@ -385,7 +392,7 @@ async def create_wallet(
 #### 3. 业务逻辑层 (services.py)
 
 ```python
-# src/domains/wallet/services.py
+# src/services/wallet/services.py
 
 class WalletService:
     async def create_wallet(self, data: WalletCreate) -> WalletResponse:
@@ -423,7 +430,7 @@ class WalletService:
 #### 4. 数据访问层 (repositories.py)
 
 ```python
-# src/domains/wallet/repositories.py
+# src/services/wallet/repositories.py
 
 class WalletRepository:
     async def create(
@@ -693,7 +700,7 @@ __all__ = ["...", "NFT"]
 #### 2. 创建领域目录和Schema
 
 ```python
-# src/domains/nft/schemas.py
+# src/services/nft/schemas.py
 from pydantic import BaseModel, Field
 from src.shared.schemas.base import IDMixin, TimestampMixin
 
@@ -720,7 +727,7 @@ class NFTResponse(NFTBase, IDMixin, TimestampMixin):
 #### 3. 创建Repository
 
 ```python
-# src/domains/nft/repositories.py
+# src/services/nft/repositories.py
 from typing import Optional, List, Tuple
 from src.models.nft import NFT
 from src.cores.exceptions import NotFoundException
@@ -751,9 +758,9 @@ class NFTRepository:
 #### 4. 创建Service
 
 ```python
-# src/domains/nft/services.py
-from src.domains.nft.repositories import NFTRepository
-from src.domains.nft.schemas import NFTCreate, NFTResponse
+# src/services/nft/services.py
+from src.services.nft.repositories import NFTRepository
+from src.services.nft.schemas import NFTCreate, NFTResponse
 
 class NFTService:
     def __init__(self, repo: NFTRepository = None):
@@ -804,10 +811,10 @@ class NFTService:
 #### 5. 创建Routes
 
 ```python
-# src/domains/nft/routes.py
+# src/services/nft/routes.py
 from fastapi import APIRouter, Depends, Query
-from src.domains.nft.schemas import NFTCreate, NFTResponse
-from src.domains.nft.services import NFTService
+from src.services.nft.schemas import NFTCreate, NFTResponse
+from src.services.nft.services import NFTService
 from src.shared.schemas.base import ApiResponse, PaginatedResponse
 
 router = APIRouter()
@@ -1084,8 +1091,8 @@ def get_settings() -> Settings:
 # tests/test_account_service.py
 import pytest
 from unittest.mock import Mock, AsyncMock
-from src.domains.account.services import AccountService
-from src.domains.account.schemas import AccountCreate
+from src.services.account.services import AccountService
+from src.services.account.schemas import AccountCreate
 from src.cores.exceptions import ConflictException
 
 @pytest.fixture
@@ -1338,7 +1345,7 @@ server {
 
 ### Q: 如何添加新的区块链网络？
 
-修改`src/domains/wallet/blockchain.py`：
+修改`src/services/wallet/blockchain.py`：
 
 ```python
 def get_blockchain_adapter(network: str) -> EthereumAdapter:

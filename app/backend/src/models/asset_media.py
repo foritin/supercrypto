@@ -1,19 +1,10 @@
 """
 资产媒体模型 - 支持多图片、文档、平面图等
 """
-from enum import Enum
 from tortoise import fields
+
 from src.models.base import AbstractModel, TimestampMixin
-
-
-class MediaType(str, Enum):
-    """媒体类型枚举"""
-    IMAGE = "image"               # 普通图片（房产照片等）
-    COVER = "cover"               # 封面图
-    FLOOR_PLAN = "floor_plan"     # 平面图
-    EVALUATION = "evaluation"     # 评估报告
-    DOCUMENT = "document"         # 其他文档
-    VIDEO = "video"               # 视频
+from src.shared.schemas.enums import MediaType
 
 
 class AssetMedia(AbstractModel, TimestampMixin):

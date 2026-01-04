@@ -58,10 +58,10 @@ def transfer(_to: address, _amount: uint256) -> bool:
     @return 是否成功
     """
     assert self.balanceOf[msg.sender] >= _amount, "Insufficient balance"
-    
+
     self.balanceOf[msg.sender] -= _amount
     self.balanceOf[_to] += _amount
-    
+
     log Transfer(msg.sender, _to, _amount)
     return True
 
@@ -90,11 +90,11 @@ def transferFrom(_from: address, _to: address, _amount: uint256) -> bool:
     """
     assert self.balanceOf[_from] >= _amount, "Insufficient balance"
     assert self.allowance[_from][msg.sender] >= _amount, "Insufficient allowance"
-    
+
     self.balanceOf[_from] -= _amount
     self.balanceOf[_to] += _amount
     self.allowance[_from][msg.sender] -= _amount
-    
+
     log Transfer(_from, _to, _amount)
     return True
 
@@ -106,9 +106,36 @@ def burn(_amount: uint256):
     @param _amount 销毁数量
     """
     assert self.balanceOf[msg.sender] >= _amount, "Insufficient balance"
-    
+
     self.balanceOf[msg.sender] -= _amount
     self.totalSupply -= _amount
-    
+
     log Transfer(msg.sender, empty(address), _amount)
+
+
+# ==================== 依赖查询功能 ====================
+
+@external
+@view
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
+    """
+    @notice 获取合约依赖（必须依赖 + 可选依赖）
+    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
+    @dev Mock USDT 是独立测试合约，无依赖
+    @dev 两个数组都为空
+    """
+    required: DynArray[String[50], 10] = []
+    optional: DynArray[String[50], 10] = []
+    return required, optional
+
+
+@external
+@view
+def is_migrated() -> bool:
+    """
+    @notice 检查合约是否已迁移（Mock合约不支持迁移）
+    @return False（Mock合约始终返回False）
+    @dev 这是测试合约，不支持迁移功能
+    """
+    return False
 

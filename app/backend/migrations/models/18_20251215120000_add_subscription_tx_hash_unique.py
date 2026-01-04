@@ -21,3 +21,6 @@ async def upgrade(db: BaseDBAsyncClient) -> str:
 async def downgrade(db: BaseDBAsyncClient) -> str:
     return """
         DROP INDEX IF EXISTS idx_subscription_tx_hash_env_unique;"""
+
+
+MODELS_STATE = "eJyrVoovyElMTs3Iz0lJLVKyUigpKk2tBQBeDQg5"

@@ -8,17 +8,17 @@
 """
 
 # 合约迁移接口
-interface IMultiSigManagerMigration:
+interface IMigration:
     def owner() -> address: view
     def required_signatures() -> uint256: view
     def signer_count() -> uint256: view
     def proposal_counter() -> uint256: view
     def paused() -> bool: view
-    def getProposal(_proposalId: uint256) -> Proposal: view
+    def get_proposal(_proposalId: uint256) -> Proposal: view
     def has_signed(_proposalId: uint256, _signer: address) -> bool: view
     def get_signer_list() -> DynArray[address, 20]: view
-    def receiveMigration(oldContract: address): nonpayable
-    def isMigrated() -> bool: view
+    def receive_migration(oldContract: address): nonpayable
+    def is_migrated() -> bool: view
 
 # ============================================
 # 事件定义
@@ -454,52 +454,43 @@ def transfer_ownership(new_owner: address):
 
 @external
 @view
-def getDependencies() -> address:
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖地址
-    @return 零地址（核心合约无外部依赖）
-    @dev MultiSigManager 是预言机系统核心合约，不依赖其他合约
-    @dev Vyper 0.4.0 不支持空数组，返回单个零地址表示无依赖
+    @notice 获取合约依赖（必须依赖 + 可选依赖）
+    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
+    @dev MultiSigManager 是预言机系统核心合约，无依赖
+    @dev 两个数组都为空
     """
-    return empty(address)
-
-
-@external
-@view
-def checkDependenciesBound() -> bool:
-    """
-    @notice 检查依赖是否已绑定
-    @return True（核心合约始终返回True）
-    @dev MultiSigManager 是核心合约，无需配置外部依赖
-    """
-    return True
+    required: DynArray[String[50], 10] = []
+    optional: DynArray[String[50], 10] = []
+    return required, optional
 
 
 # ==================== 合约迁移功能 ====================
 
 @external
-def migrate(newContract: address):
+def migrate(new_contract: address):
     """
     @notice 迁移所有状态到新合约
-    @param newContract 新合约地址（必须实现 receiveMigration 接口）
+    @param new_contract 新合约地址（必须实现 receive_migration 接口）
     @dev 迁移后设置 migrated 标志，不自动暂停
     """
     assert msg.sender == self.owner, "Only owner"
     assert not self.migrated, "Already migrated"
-    assert newContract != empty(address), "Invalid address"
+    assert new_contract != empty(address), "Invalid address"
 
     # CRITICAL FIX: 先设置迁移标志，防止重入攻击
     self.migrated = True
 
     # 调用新合约的接收函数，传入 self（旧合约地址）
-    extcall IMultiSigManagerMigration(newContract).receiveMigration(self)
+    extcall IMigration(new_contract).receive_migration(self)
 
-    log Migrated(self, newContract, block.timestamp)
+    log Migrated(self, new_contract, block.timestamp)
 
 
 @external
 @view
-def isMigrated() -> bool:
+def is_migrated() -> bool:
     """
     @notice 检查合约是否已迁移
     @return True 如果已迁移到新合约
@@ -509,25 +500,25 @@ def isMigrated() -> bool:
 
 @external
 @view
-def getProposal(_proposalId: uint256) -> Proposal:
+def get_proposal(_proposal_id: uint256) -> Proposal:
     """
     @notice 获取提案信息（用于迁移）
-    @param _proposalId 提案ID
+    @param _proposal_id 提案ID
     @return 提案信息
     """
-    return self.proposals[_proposalId]
+    return self.proposals[_proposal_id]
 
 
 @external
-def receiveMigration(oldContract: address):
+def receive_migration(old_contract: address):
     """
     @notice 从旧合约接收迁移状态
-    @param oldContract 旧合约地址
+    @param old_contract 旧合约地址
     @dev 只有旧合约可以调用此函数
     """
-    assert msg.sender == oldContract, "Only old contract"
+    assert msg.sender == old_contract, "Only old contract"
 
-    old: IMultiSigManagerMigration = IMultiSigManagerMigration(oldContract)
+    old: IMigration = IMigration(old_contract)
 
     # 迁移基本状态变量
     self.owner = staticcall old.owner()
@@ -547,7 +538,7 @@ def receiveMigration(oldContract: address):
     for j: uint256 in range(1000):  # 最大1000个提案
         if i >= self.proposal_counter:
             break
-        proposal: Proposal = staticcall old.getProposal(i)
+        proposal: Proposal = staticcall old.get_proposal(i)
         self.proposals[i] = proposal
 
         # 迁移提案签名记录

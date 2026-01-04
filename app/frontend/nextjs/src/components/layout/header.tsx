@@ -190,7 +190,7 @@ export function Header() {
               fontWeight: 700,
             }}
           >
-            {isHydrated ? t("header.title") : "SuperCrypto"}
+            {isHydrated ? t("header.title") : "ApprovePlatform"}
           </Title>
         </Link>
 

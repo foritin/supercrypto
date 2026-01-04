@@ -13,13 +13,13 @@ interface ITimelockMigration:
     def delay() -> uint256: view
     def paused() -> bool: view
     def multi_sig_manager() -> address: view
-    def getOperation(_operationId: bytes32) -> Operation: view
-    def getOperationIds() -> DynArray[bytes32, 1000]: view
-    def getEmergencySignatureCount(_operationId: bytes32) -> uint256: view
+    def get_operation(_operationId: bytes32) -> Operation: view
+    def get_operation_ids() -> DynArray[bytes32, 1000]: view
+    def get_emergency_signature_count(_operationId: bytes32) -> uint256: view
     def has_emergency_signed(_operationId: bytes32, _signer: address) -> bool: view
-    def getSignerList() -> DynArray[address, 20]: view
-    def receiveMigration(oldContract: address): nonpayable
-    def isMigrated() -> bool: view
+    def get_signer_list() -> DynArray[address, 20]: view
+    def receive_migration(oldContract: address): nonpayable
+    def is_migrated() -> bool: view
 
 # ============================================
 # 接口定义
@@ -474,50 +474,49 @@ def transfer_ownership(new_owner: address):
 # ==================== 依赖查询功能 ====================
 
 @external
-def getDependencies() -> address:
+@view
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖地址
-    @return _multi_sig_manager 多签管理合约地址
-    @dev Timelock 依赖 MultiSigManager
+    @notice 获取合约依赖（必须依赖 + 可选依赖）
+    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
+    @dev 必须依赖: MultiSigManager
+    @dev 无可选依赖
     """
-    return self._multi_sig_manager.address
+    required: DynArray[String[50], 10] = []
+    optional: DynArray[String[50], 10] = []
 
+    # 检查必须依赖
+    if self._multi_sig_manager.address == empty(address):
+        required.append("MultiSigManager")
 
-@external
-def checkDependenciesBound() -> bool:
-    """
-    @notice 检查依赖是否已绑定
-    @return True 如果所有依赖已配置（非零地址）
-    @dev MultiSigManager 必须已配置
-    """
-    return self._multi_sig_manager.address != empty(address)
+    return required, optional
 
 
 # ==================== 合约迁移功能 ====================
 
 @external
-def migrate(newContract: address):
+def migrate(new_contract: address):
     """
     @notice 迁移所有状态到新合约
-    @param newContract 新合约地址（必须实现 receiveMigration 接口）
+    @param new_contract 新合约地址（必须实现 receive_migration 接口）
     @dev 迁移后设置 migrated 标志，不自动暂停
     """
     assert msg.sender == self.owner, "Only owner"
     assert not self.migrated, "Already migrated"
-    assert newContract != empty(address), "Invalid address"
+    assert new_contract != empty(address), "Invalid address"
 
     # CRITICAL FIX: 先设置迁移标志，防止重入攻击
     self.migrated = True
 
     # 调用新合约的接收函数，传入 self（旧合约地址）
-    extcall ITimelockMigration(newContract).receiveMigration(self)
+    extcall ITimelockMigration(new_contract).receive_migration(self)
 
-    log Migrated(self, newContract, block.timestamp)
+    log Migrated(self, new_contract, block.timestamp)
 
 
 @external
 @view
-def isMigrated() -> bool:
+def is_migrated() -> bool:
     """
     @notice 检查合约是否已迁移
     @return True 如果已迁移到新合约
@@ -537,7 +536,7 @@ def multi_sig_manager() -> address:
 
 @external
 @view
-def getOperationIds() -> DynArray[bytes32, 1000]:
+def get_operation_ids() -> DynArray[bytes32, 1000]:
     """
     @notice 获取操作ID列表（用于迁移）
     @return 操作ID动态数组
@@ -547,7 +546,7 @@ def getOperationIds() -> DynArray[bytes32, 1000]:
 
 @external
 @view
-def getSignerList() -> DynArray[address, 20]:
+def get_signer_list() -> DynArray[address, 20]:
     """
     @notice 获取签名者列表（用于迁移）
     @return 签名者地址动态数组
@@ -556,7 +555,7 @@ def getSignerList() -> DynArray[address, 20]:
 
 
 @external
-def receiveMigration(oldContract: address):
+def receive_migration(oldContract: address):
     """
     @notice 从旧合约接收迁移状态
     @param oldContract 旧合约地址
@@ -576,16 +575,16 @@ def receiveMigration(oldContract: address):
     self._multi_sig_manager = IMultiSigManager(multi_sig_addr)
 
     # 迁移操作
-    operation_ids: DynArray[bytes32, 1000] = staticcall old.getOperationIds()
+    operation_ids: DynArray[bytes32, 1000] = staticcall old.get_operation_ids()
     for operation_id: bytes32 in operation_ids:
-        operation: Operation = staticcall old.getOperation(operation_id)
+        operation: Operation = staticcall old.get_operation(operation_id)
         self.operations[operation_id] = operation
         self.operationIds.append(operation_id)
 
         # 迁移紧急签名记录
-        sig_count: uint256 = staticcall old.getEmergencySignatureCount(operation_id)
+        sig_count: uint256 = staticcall old.get_emergency_signature_count(operation_id)
         if sig_count > 0:
-            signers: DynArray[address, 20] = staticcall old.getSignerList()
+            signers: DynArray[address, 20] = staticcall old.get_signer_list()
             for signer: address in signers:
                 has_signed: bool = staticcall old.has_emergency_signed(operation_id, signer)
                 if has_signed:

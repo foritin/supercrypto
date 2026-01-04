@@ -5,21 +5,21 @@
 @dev STO合规的核心组件 - 符合证券法要求
 """
 
-# 合约迁移接口
-interface IKYCManagerMigration:
+# 合约迁移接口（统一使用 IMigration）
+interface IMigration:
     def owner() -> address: view
-    def transferAgent() -> address: view
-    def investorCount() -> uint256: view
-    def accreditedInvestorCount() -> uint256: view
-    def maxInvestors() -> uint256: view
-    def kycExpiryPeriod() -> uint256: view
-    def getInvestorInfo(_investor: address) -> InvestorInfo: view
-    def getUserList() -> DynArray[address, 2000]: view
-    def getBlockedCountryCount() -> uint256: view
-    def getBlockedCountryAt(_index: uint256) -> String[2]: view
-    def isCountryBlocked(_country: String[2]) -> bool: view
-    def receiveMigration(oldContract: address): nonpayable
-    def isMigrated() -> bool: view
+    def transfer_agent() -> address: view
+    def investor_count() -> uint256: view
+    def accredited_investor_count() -> uint256: view
+    def max_investors() -> uint256: view
+    def kyc_expiry_period() -> uint256: view
+    def get_investor_info(_investor: address) -> InvestorInfo: view
+    def get_user_list() -> DynArray[address, 2000]: view
+    def get_blocked_country_count() -> uint256: view
+    def get_blocked_country_at(_index: uint256) -> String[2]: view
+    def is_country_blocked(_country: String[2]) -> bool: view
+    def receive_migration(oldContract: address): nonpayable
+    def is_migrated() -> bool: view
 
 # 事件
 event InvestorAdded:
@@ -418,25 +418,16 @@ def transferOwnership(_newOwner: address):
 
 @external
 @view
-def getDependencies() -> address:
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖地址
-    @return 零地址（核心合约无外部依赖）
-    @dev KYCManager 是核心合约，不依赖其他合约
-    @dev Vyper 0.4.0 不支持空数组，返回单个零地址表示无依赖
+    @notice 获取合约依赖（必须依赖 + 可选依赖）
+    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
+    @dev KYCManager 是核心合约，无依赖
+    @dev 两个数组都为空
     """
-    return empty(address)
-
-
-@external
-@view
-def checkDependenciesBound() -> bool:
-    """
-    @notice 检查依赖是否已绑定
-    @return True（核心合约始终返回True）
-    @dev KYCManager 是核心合约，无需配置外部依赖
-    """
-    return True
+    required: DynArray[String[50], 10] = []
+    optional: DynArray[String[50], 10] = []
+    return required, optional
 
 
 # ==================== 合约迁移功能 ====================
@@ -456,14 +447,14 @@ def migrate(newContract: address):
     self.migrated = True
 
     # 调用新合约的接收函数，传入 self（旧合约地址）
-    extcall IKYCManagerMigration(newContract).receiveMigration(self)
+    extcall IMigration(newContract).receive_migration(self)
 
     log Migrated(self, newContract, block.timestamp)
 
 
 @external
 @view
-def isMigrated() -> bool:
+def is_migrated() -> bool:
     """
     @notice 检查合约是否已迁移
     @return True 如果已迁移到新合约
@@ -472,7 +463,7 @@ def isMigrated() -> bool:
 
 
 @external
-def receiveMigration(oldContract: address):
+def receive_migration(oldContract: address):
     """
     @notice 从旧合约接收迁移状态
     @param oldContract 旧合约地址
@@ -480,36 +471,36 @@ def receiveMigration(oldContract: address):
     """
     assert msg.sender == oldContract, "Only old contract"
 
-    old: IKYCManagerMigration = IKYCManagerMigration(oldContract)
+    old: IMigration = IMigration(oldContract)
 
     # 迁移基本状态变量
     self.owner = staticcall old.owner()
-    self.transferAgent = staticcall old.transferAgent()
-    self.investorCount = staticcall old.investorCount()
-    self.accreditedInvestorCount = staticcall old.accreditedInvestorCount()
-    self.maxInvestors = staticcall old.maxInvestors()
-    self.kycExpiryPeriod = staticcall old.kycExpiryPeriod()
+    self.transferAgent = staticcall old.transfer_agent()
+    self.investorCount = staticcall old.investor_count()
+    self.accreditedInvestorCount = staticcall old.accredited_investor_count()
+    self.maxInvestors = staticcall old.max_investors()
+    self.kycExpiryPeriod = staticcall old.kyc_expiry_period()
 
     # 迁移投资者信息
-    users: DynArray[address, 2000] = staticcall old.getUserList()
+    users: DynArray[address, 2000] = staticcall old.get_user_list()
     for user: address in users:
-        info: InvestorInfo = staticcall old.getInvestorInfo(user)
+        info: InvestorInfo = staticcall old.get_investor_info(user)
         self.investors[user] = info
         self.userList.append(user)
 
     # 迁移国家黑名单
-    countryCount: uint256 = staticcall old.getBlockedCountryCount()
+    countryCount: uint256 = staticcall old.get_blocked_country_count()
     for i: uint256 in range(300):  # 最大300个国家
         if i >= countryCount:
             break
-        country: String[2] = staticcall old.getBlockedCountryAt(i)
+        country: String[2] = staticcall old.get_blocked_country_at(i)
         self.blockedCountries[country] = True
         self.blockedCountriesList.append(country)
 
 
 @external
 @view
-def getUserList() -> DynArray[address, 2000]:
+def get_user_list() -> DynArray[address, 2000]:
     """
     @notice 获取用户列表（用于迁移）
     @return 用户地址动态数组
@@ -519,7 +510,7 @@ def getUserList() -> DynArray[address, 2000]:
 
 @external
 @view
-def getBlockedCountryCount() -> uint256:
+def get_blocked_country_count() -> uint256:
     """
     @notice 获取被阻止国家数量（用于迁移）
     @return 国家数量
@@ -529,7 +520,7 @@ def getBlockedCountryCount() -> uint256:
 
 @external
 @view
-def getBlockedCountryAt(_index: uint256) -> String[2]:
+def get_blocked_country_at(_index: uint256) -> String[2]:
     """
     @notice 获取指定索引的被阻止国家（用于迁移）
     @param _index 索引
@@ -541,7 +532,7 @@ def getBlockedCountryAt(_index: uint256) -> String[2]:
 
 @external
 @view
-def isCountryBlocked(_country: String[2]) -> bool:
+def is_country_blocked(_country: String[2]) -> bool:
     """
     @notice 检查国家是否被阻止
     @param _country 国家代码

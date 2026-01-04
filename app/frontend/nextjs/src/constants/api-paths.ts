@@ -2,10 +2,9 @@
  * API 路径常量
  *
  * 路由结构：
- * - /public/*    无需认证的公开接口
- * - /auth/*      认证相关
- * - /user/*      已登录用户接口
- * - /admin/*     管理员接口
+ * - /public/*    无需认证的公开接口（包括登录、登出、刷新）
+ * - /user/*      已登录用户接口（需要 JWT）
+ * - /admin/*     管理员接口（需要管理员权限）
  * - /dev/*       开发工具
  */
 
@@ -41,14 +40,16 @@ export const PUBLIC_PATHS = {
 } as const
 
 // ============================================================================
-// 认证接口
+// 认证接口（公开部分在 /public/auth/*，需认证部分在 /user/auth/*）
 // ============================================================================
 
 export const AUTH_PATHS = {
-  LOGIN: '/auth/token',
-  REFRESH: '/auth/refresh',
-  LOGOUT: '/auth/logout',
-  ME: '/auth/me',
+  // 公开接口（无需 JWT）
+  LOGIN: '/public/auth/token',
+  REFRESH: '/public/auth/refresh',
+  LOGOUT: '/public/auth/logout',
+  // 用户接口（需要 JWT）
+  ME: '/user/auth/me',
 } as const
 
 // ============================================================================
@@ -93,13 +94,13 @@ export const ADMIN_PATHS = {
   // 合约管理
   CONTRACTS: '/admin/contracts',
   CONTRACT_STATUS: '/admin/contracts/status',
-  CONTRACT_STATUS_ENHANCED: '/admin/contracts/status/enhanced',
+  CONTRACT_STATUS_ENHANCED: '/admin/contracts/status-enhanced',
   CONTRACT_AVAILABLE: '/admin/contracts/available',
   CONTRACT_CONFIRM_BINDING: '/admin/contracts/confirm-binding',
-  CONTRACT_DEPENDENCIES: (name: string) => `/admin/contracts/${name}/dependencies`,
+  CONTRACT_DEPENDENCIES: (name: string) => `/admin/contracts/dependencies/${name}`,
   CONTRACT_UPDATE_ADDRESS: '/admin/contracts/update-address',
   CONTRACT_RESET_PROJECT: (project: string) => `/admin/contracts/reset/${project}`,
-  CONTRACT_RESET_ALL: '/admin/contracts/reset-all',
+  CONTRACT_RESET_ALL: '/admin/contracts/reset',
 
   // 平台统计
   STATS: '/admin/stats',
@@ -128,8 +129,8 @@ export const ADMIN_PATHS = {
 
   // 账户管理
   ACCOUNTS: '/admin/accounts',
-  ACCOUNT_DETAIL: (id: number) => `/admin/accounts/${id}`,
-  ACCOUNT_LOGIN: (id: number) => `/admin/accounts/${id}/login`,
+  ACCOUNT_BY_ADDRESS: (address: string) => `/admin/accounts/address/${address}`,
+  ACCOUNT_DELETE: (address: string) => `/admin/accounts/address/${address}`,
 
   // 交易管理
   TRANSACTIONS: '/admin/transactions',
