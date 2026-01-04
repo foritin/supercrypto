@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WalletConnect } from "@/components/wallet-connect";
 import { LanguageSwitcher } from "@/components/web3/language-switcher";
+import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import { useCurrentUser } from "@/hooks";
 import type { MenuProps } from "antd";
 
@@ -213,6 +214,7 @@ export function Header() {
       </Space>
 
       <Space size={12}>
+        <ThemeSwitcher />
         <LanguageSwitcher aria-label="切换语言" />
         <WalletConnect />
       </Space>

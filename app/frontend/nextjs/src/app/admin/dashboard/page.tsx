@@ -30,6 +30,7 @@ import { V6Background } from "@/components/layout/V6Background";
 import { V6StatCard } from "@/components/dashboard/V6StatCard";
 import { V6Chart } from "@/components/dashboard/V6Chart";
 import { V6ActivityList } from "@/components/dashboard/V6ActivityList";
+import { DashboardSkeleton } from "@/components/ui/Loading";
 
 // 主仪表盘页面
 export default function AdminDashboardPage() {
@@ -186,18 +187,14 @@ export default function AdminDashboardPage() {
           </motion.div>
         )}
 
-        {/* 加载状态 */}
+        {/* 加载状态 - 使用骨架屏 */}
         {isLoading && !stats && (
           <div
-            className="flex h-64 items-center justify-center"
             role="status"
             aria-live="polite"
             aria-label={t("admin.dashboard.loading", "加载中...")}
           >
-            <div className="relative" aria-hidden="true">
-              <div className="h-12 w-12 animate-spin rounded-full border-2
-                             border-amber-500/20 border-t-amber-500" />
-            </div>
+            <DashboardSkeleton />
           </div>
         )}
 
