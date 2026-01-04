@@ -4,13 +4,13 @@
  * Displays the current KYC status and provides actions
  */
 import { Card, Button, Badge, Space, Flex, Typography, Spin, Alert, Result } from 'antd'
-import { 
-  SafetyCertificateOutlined, 
-  ClockCircleOutlined, 
-  CloseCircleOutlined,
-  ArrowRightOutlined,
-  ReloadOutlined
-} from '@ant-design/icons'
+import {
+  ShieldCheck,
+  Clock,
+  XCircle,
+  ArrowRight,
+  RotateCw
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAccount } from 'wagmi'
 import { useKycStatus, useKycApply, getKycStatusInfo } from '@/hooks/use-kyc-status'
@@ -37,7 +37,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
     return (
       <Card>
         <Result
-          icon={<SafetyCertificateOutlined style={{ color: '#d9d9d9' }} />}
+          icon={<ShieldCheck width={64} height={64} style={{ color: '#d9d9d9' }} aria-hidden="true" />}
           title={t('kyc.connectWalletFirst')}
           subTitle={t('kyc.connectWalletDescription')}
         />
@@ -65,7 +65,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
           type="error"
           message={t('kyc.error.loadFailed')}
           action={
-            <Button size="small" icon={<ReloadOutlined />} onClick={() => refetch()}>
+            <Button size="small" icon={<RotateCw width={14} height={14} aria-hidden="true" />} onClick={() => refetch()}>
               {t('common.retry')}
             </Button>
           }
@@ -95,7 +95,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
         return (
           <Result
             status="success"
-            icon={<SafetyCertificateOutlined style={{ color: '#52c41a' }} />}
+            icon={<ShieldCheck width={64} height={64} style={{ color: '#52c41a' }} aria-hidden="true" />}
             title={t('kyc.approved.title')}
             subTitle={
               <Flex vertical gap={8}>
@@ -116,7 +116,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
       case KycStatus.PENDING:
         return (
           <Result
-            icon={<ClockCircleOutlined style={{ color: '#1677ff' }} />}
+            icon={<Clock width={64} height={64} style={{ color: '#1677ff' }} aria-hidden="true" />}
             title={t('kyc.pending.title')}
             subTitle={
               <Flex vertical gap={8}>
@@ -129,7 +129,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
               </Flex>
             }
             extra={
-              <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
+              <Button icon={<RotateCw width={16} height={16} aria-hidden="true" />} onClick={() => refetch()}>
                 {t('kyc.pending.refresh')}
               </Button>
             }
@@ -140,7 +140,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
         return (
           <Result
             status="error"
-            icon={<CloseCircleOutlined style={{ color: '#ff4d4f' }} />}
+            icon={<XCircle width={64} height={64} style={{ color: '#ff4d4f' }} aria-hidden="true" />}
             title={t('kyc.rejected.title')}
             subTitle={
               <Flex vertical gap={8}>
@@ -167,7 +167,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
       default:
         return (
           <div style={{ textAlign: 'center', padding: '24px 0' }}>
-            <SafetyCertificateOutlined style={{ fontSize: 64, color: '#d9d9d9', marginBottom: 24 }} />
+            <ShieldCheck width={64} height={64} style={{ color: '#d9d9d9', marginBottom: 24 }} aria-hidden="true" />
             <Title level={4}>{t('kyc.notStarted.title')}</Title>
             <Paragraph type="secondary" style={{ maxWidth: 400, margin: '0 auto 24px' }}>
               {t('kyc.notStarted.description')}
@@ -184,7 +184,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
               <Button
                 type="primary"
                 size="large"
-                icon={<ArrowRightOutlined />}
+                icon={<ArrowRight width={16} height={16} aria-hidden="true" />}
                 onClick={handleStartKyc}
                 loading={isApplying}
               >
@@ -200,7 +200,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
     <Card
       title={
         <Space>
-          <SafetyCertificateOutlined />
+          <ShieldCheck width={16} height={16} aria-hidden="true" />
           {t('kyc.title')}
           <Badge status={statusInfo.antdStatus} text={t(statusInfo.label)} />
         </Space>

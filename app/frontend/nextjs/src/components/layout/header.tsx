@@ -213,7 +213,7 @@ export function Header() {
         </button>
       </Space>
 
-      <Space size={12}>
+      <Space size={12} align="center">
         <ThemeSwitcher />
         <LanguageSwitcher aria-label="切换语言" />
         <WalletConnect />

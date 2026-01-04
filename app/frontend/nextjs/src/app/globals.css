@@ -1026,19 +1026,46 @@ body {
 }
 
 /* ============================================
-   Reduced Motion Support
+   Reduced Motion Support - 无障碍优化
    ============================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-float,
-  .animate-float-delayed,
-  .fade-in-stagger > *,
-  .hero-section::after {
-    animation: none;
+  /* 禁用所有 CSS 动画 */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 
+  /* 特定动画类禁用 */
+  .animate-float,
+  .animate-float-delayed,
+  .animate-glow,
+  .animate-pulse,
+  .fade-in-stagger > *,
+  .fade-in-up,
+  .hero-section::after,
+  .cta-section::before {
+    animation: none !important;
+  }
+
+  /* 确保元素可见 */
   .fade-in-stagger > * {
-    opacity: 1;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* 禁用滚动动画 */
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  /* Framer Motion 支持 - 通过 data 属性 */
+  [data-framer-motion] {
+    transition: none !important;
+    animation: none !important;
   }
 }
 

@@ -23,9 +23,10 @@ export function ThemeSwitcher() {
   return (
     <motion.button
       onClick={toggleTheme}
-      className="relative w-10 h-10 rounded-lg bg-white/5 border border-white/10
+      className="relative w-8 h-8 rounded-lg bg-white/5 border border-white/10
                  hover:bg-white/10 transition-colors
-                 focus:outline-none focus:ring-2 focus:ring-[#00d4aa]/50"
+                 focus:outline-none focus:ring-2 focus:ring-[#00d4aa]/50
+                 flex items-center justify-center"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       aria-label={`切换到${theme === 'dark' ? '浅色' : '深色'}模式`}
@@ -37,9 +38,9 @@ export function ThemeSwitcher() {
         transition={{ duration: 0.3, ease: 'easeInOut' }}
       >
         {theme === 'dark' ? (
-          <Moon className="w-5 h-5 text-[#c9a962]" strokeWidth={2} />
+          <Moon className="w-4 h-4 text-[#c9a962]" strokeWidth={2} />
         ) : (
-          <Sun className="w-5 h-5 text-[#00d4aa]" strokeWidth={2} />
+          <Sun className="w-4 h-4 text-[#00d4aa]" strokeWidth={2} />
         )}
       </motion.div>
     </motion.button>

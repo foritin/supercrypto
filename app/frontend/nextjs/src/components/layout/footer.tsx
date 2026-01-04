@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Layout, Typography, Flex } from 'antd'
 import { useTranslation } from 'react-i18next'
-import { GithubOutlined, TwitterOutlined, GlobalOutlined } from '@ant-design/icons'
+import { Github, Twitter, Globe } from 'lucide-react'
 
 const { Footer: AntFooter } = Layout
 const { Text, Link } = Typography
@@ -29,13 +29,13 @@ export function Footer() {
       <Flex vertical gap={8} align="center">
         <Flex gap={24}>
           <Link href="https://github.com" target="_blank" style={{ color: 'var(--text-tertiary)' }}>
-            <GithubOutlined style={{ fontSize: 20 }} />
+            <Github width={20} height={20} aria-hidden="true" />
           </Link>
           <Link href="https://twitter.com" target="_blank" style={{ color: 'var(--text-tertiary)' }}>
-            <TwitterOutlined style={{ fontSize: 20 }} />
+            <Twitter width={20} height={20} aria-hidden="true" />
           </Link>
           <Link href="/" style={{ color: 'var(--text-tertiary)' }}>
-            <GlobalOutlined style={{ fontSize: 20 }} />
+            <Globe width={20} height={20} aria-hidden="true" />
           </Link>
         </Flex>
         <Text type="secondary" style={{ fontSize: 12 }}>

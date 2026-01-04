@@ -19,7 +19,7 @@
  */
 import { ReactNode, useEffect, useState, useMemo, useCallback } from 'react'
 import { Spin, Result, Button, Skeleton, message } from 'antd'
-import { LoadingOutlined, LockOutlined, WalletOutlined, SafetyOutlined } from '@ant-design/icons'
+import { Loader2, Lock, Wallet, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
 import { useCurrentUser, useKycStatus } from '@/hooks'
@@ -193,7 +193,7 @@ export function RequireAuth({
         return (
           <div style={{ maxWidth: 600, margin: '80px auto', padding: '0 24px' }}>
             <Result
-              icon={<WalletOutlined style={{ color: '#00D4AA' }} />}
+              icon={<Wallet width={64} height={64} style={{ color: '#00D4AA' }} aria-hidden="true" />}
               title={t('auth.walletRequired')}
               subTitle={t('auth.walletRequiredDescription')}
               extra={
@@ -209,7 +209,7 @@ export function RequireAuth({
         return (
           <div style={{ maxWidth: 600, margin: '80px auto', padding: '0 24px' }}>
             <Result
-              icon={<SafetyOutlined style={{ color: '#faad14' }} />}
+              icon={<ShieldCheck width={64} height={64} style={{ color: '#faad14' }} aria-hidden="true" />}
               title={t('auth.kycRequired')}
               subTitle={t('auth.kycRequiredDescription')}
               extra={
@@ -226,7 +226,7 @@ export function RequireAuth({
           <div style={{ maxWidth: 600, margin: '80px auto', padding: '0 24px' }}>
             <Result
               status="403"
-              icon={<LockOutlined style={{ color: '#ff4d4f' }} />}
+              icon={<Lock width={64} height={64} style={{ color: '#ff4d4f' }} aria-hidden="true" />}
               title={t('auth.adminRequired')}
               subTitle={t('auth.adminRequiredDescription')}
               extra={
@@ -285,7 +285,7 @@ export function RequireAuth({
         gap: 16,
       }}>
         <Spin 
-          indicator={<LoadingOutlined style={{ fontSize: 32, color: '#00D4AA' }} spin />} 
+          indicator={<Loader2 width={32} height={32} style={{ color: '#00D4AA' }} className="animate-spin" aria-hidden="true" />} 
         />
         <span style={{ color: 'rgba(255, 255, 255, 0.45)' }}>
           {getLoadingMessage()}
@@ -305,7 +305,7 @@ export function RequireAuth({
           alignItems: 'center', 
           minHeight: 400,
         }}>
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 32 }} spin />} />
+          <Spin indicator={<Loader2 width={32} height={32} className="animate-spin" aria-hidden="true" />} />
         </div>
       )
     }

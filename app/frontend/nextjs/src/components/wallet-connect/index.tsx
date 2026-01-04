@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button, Dropdown, Flex, Typography, Spin, message, Skeleton } from 'antd'
-import { WalletOutlined, DownOutlined, DisconnectOutlined, SwapOutlined, LoadingOutlined } from '@ant-design/icons'
+import { Wallet, ChevronDown, LogOut, Repeat, Loader2 } from 'lucide-react'
 import { useAccount, useConnect, useDisconnect, useBalance, useSwitchChain, useSignMessage } from 'wagmi'
 import { useTranslation } from 'react-i18next'
 import { supportedChains } from '@/config/wagmi'
@@ -261,7 +261,7 @@ export function WalletConnect() {
     {
       key: 'network',
       label: t('wallet.switchNetwork'),
-      icon: <SwapOutlined />,
+      icon: <Repeat width={16} height={16} aria-hidden="true" />,
       children: networkMenuItems,
     },
     {
@@ -270,7 +270,7 @@ export function WalletConnect() {
     {
       key: 'disconnect',
       label: t('wallet.disconnect'),
-      icon: <DisconnectOutlined />,
+      icon: <LogOut width={16} height={16} aria-hidden="true" />,
       danger: true,
       onClick: handleDisconnect,
     },
@@ -299,7 +299,7 @@ export function WalletConnect() {
       <>
         <Button
           type="primary"
-          icon={<WalletOutlined />}
+          icon={<Wallet width={16} height={16} aria-hidden="true" />}
           onClick={handleConnect}
           loading={isConnecting}
           style={{
@@ -332,7 +332,7 @@ export function WalletConnect() {
         disabled
       >
         <Flex gap={8} align="center">
-          <LoadingOutlined style={{ color: '#faad14' }} />
+          <Loader2 width={16} height={16} className="animate-spin" style={{ color: '#faad14' }} aria-hidden="true" />
           <Text style={{ color: '#faad14' }}>
             {isSigning ? t('wallet.signing') : t('wallet.loggingIn')}
           </Text>
@@ -392,7 +392,7 @@ export function WalletConnect() {
               {formatTokenBalance(balance?.value, balance?.decimals ?? 18)} {balance?.symbol}
             </Text>
           )}
-          <DownOutlined style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: 10 }} />
+          <ChevronDown width={10} height={10} style={{ color: 'rgba(255, 255, 255, 0.45)' }} aria-hidden="true" />
         </Flex>
       </Button>
     </Dropdown>
