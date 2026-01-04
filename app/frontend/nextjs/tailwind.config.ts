@@ -9,6 +9,15 @@ const config: Config = {
   darkMode: 'class',
   theme: {
     extend: {
+      // 标准化响应式断点
+      screens: {
+        'xs': '480px',   // 小手机横屏
+        'sm': '640px',   // 手机横屏
+        'md': '768px',   // 平板竖屏
+        'lg': '1024px',  // 平板横屏/小桌面
+        'xl': '1280px',  // 桌面
+        '2xl': '1536px', // 大桌面
+      },
       colors: {
         // Web3 深色主题
         primary: {

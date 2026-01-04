@@ -1,19 +1,8 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { Layout, Typography, Space, Menu, Skeleton } from "antd";
-import {
-  ToolOutlined,
-  BankOutlined,
-  HomeOutlined,
-  SettingOutlined,
-  WalletOutlined,
-  ApiOutlined,
-  RocketOutlined,
-  FireOutlined,
-  DashboardOutlined,
-  FileTextOutlined,
-} from "@ant-design/icons";
+import { Layout, Typography, Space, Menu, Skeleton, Drawer } from "antd";
+import { Menu as MenuIcon, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -33,10 +22,13 @@ export function Header() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const { isAdmin, isConnected } = useCurrentUser();
-  
+
   // 用于避免 hydration 不匹配 - i18n 在服务端/客户端可能不同步
   const [isHydrated, setIsHydrated] = useState(false);
-  
+
+  // 移动端菜单状态
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   useEffect(() => {
     setIsHydrated(true);
   }, []);
@@ -55,26 +47,22 @@ export function Header() {
   const menuItems: MenuProps["items"] = useMemo(() => {
     // 在 hydration 前返回空数组，避免服务端/客户端文本不匹配
     if (!isHydrated) return [];
-    
+
     const items: MenuProps["items"] = [
       {
         key: "home",
-        icon: <HomeOutlined aria-hidden="true" />,
         label: <Link href="/">{t("header.nav.home")}</Link>,
       },
       {
         key: "assets",
-        icon: <BankOutlined aria-hidden="true" />,
         label: <Link href="/assets">{t("header.nav.assets")}</Link>,
       },
       {
         key: "portfolio",
-        icon: <WalletOutlined aria-hidden="true" />,
         label: <Link href="/portfolio">{t("header.nav.portfolio")}</Link>,
       },
       {
         key: "staking",
-        icon: <FireOutlined aria-hidden="true" />,
         label: <Link href="/staking">{t("header.nav.staking")}</Link>,
       },
     ];
@@ -84,7 +72,6 @@ export function Header() {
       const adminChildren: MenuProps["items"] = [
         {
           key: "admin-dashboard",
-          icon: <DashboardOutlined aria-hidden="true" />,
           label: (
             <Link href="/admin/dashboard">
               {t("admin.dashboard.title", "数据仪表盘")}
@@ -93,7 +80,6 @@ export function Header() {
         },
         {
           key: "admin-audit-logs",
-          icon: <FileTextOutlined aria-hidden="true" />,
           label: (
             <Link href="/admin/audit-logs">
               {t("admin.auditLogs.title", "审计日志")}
@@ -105,12 +91,10 @@ export function Header() {
         },
         {
           key: "admin-assets",
-          icon: <BankOutlined aria-hidden="true" />,
           label: <Link href="/admin/assets">{t("admin.assets.title")}</Link>,
         },
         {
           key: "admin-contracts",
-          icon: <ApiOutlined aria-hidden="true" />,
           label: (
             <Link href="/admin/contracts">{t("admin.contracts.title")}</Link>
           ),
@@ -179,7 +163,10 @@ export function Header() {
             }}
             aria-hidden="true"
           >
-            <RocketOutlined style={{ fontSize: 20, color: "#0A0F0D" }} />
+            {/* Rocket Icon SVG */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4.5 16.5C3 15 2 13 2 10C2 5.5 5.5 2 10 2C13.5 2 16.5 3.5 18.5 6L13 10L15 12L19.5 8C20.5 10 21 12.5 21 15C21 19 18 22 14 22L11.5 19L13 17.5L4.5 16.5Z" stroke="#0A0F0D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
           <Title
             level={4}
@@ -196,11 +183,13 @@ export function Header() {
           </Title>
         </Link>
 
+        {/* Desktop Menu */}
         {isHydrated ? (
           <Menu
             mode="horizontal"
             selectedKeys={[getSelectedKey()]}
             aria-label="主导航菜单"
+            className="hidden md:flex"
             style={{
               border: "none",
               background: "transparent",
@@ -209,14 +198,67 @@ export function Header() {
             items={menuItems}
           />
         ) : (
-          <Skeleton.Input active style={{ width: 400, height: 40 }} />
+          <Skeleton.Input active style={{ width: 400, height: 40 }} className="hidden md:flex" />
         )}
+
+        {/* Mobile Menu Button */}
+        <button
+          className="md:hidden p-2 text-white hover:text-[#00D4AA] transition-colors"
+          onClick={() => setMobileMenuOpen(true)}
+          aria-label="打开菜单"
+          aria-expanded={mobileMenuOpen}
+        >
+          <MenuIcon className="w-6 h-6" />
+        </button>
       </Space>
 
       <Space size={12}>
         <LanguageSwitcher aria-label="切换语言" />
         <WalletConnect />
       </Space>
+
+      {/* Mobile Drawer Menu */}
+      <Drawer
+        title={
+          <div className="flex items-center gap-2">
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                background: "linear-gradient(135deg, #00D4AA 0%, #00A080 100%)",
+                borderRadius: 8,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4.5 16.5C3 15 2 13 2 10C2 5.5 5.5 2 10 2C13.5 2 16.5 3.5 18.5 6L13 10L15 12L19.5 8C20.5 10 21 12.5 21 15C21 19 18 22 14 22L11.5 19L13 17.5L4.5 16.5Z" stroke="#0A0F0D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <span>{isHydrated ? t("header.title") : "ApprovePlatform"}</span>
+          </div>
+        }
+        placement="right"
+        onClose={() => setMobileMenuOpen(false)}
+        open={mobileMenuOpen}
+        width={280}
+        styles={{
+          body: { padding: 0 },
+          header: { borderBottom: '1px solid rgba(255,255,255,0.1)' },
+        }}
+      >
+        <Menu
+          mode="vertical"
+          selectedKeys={[getSelectedKey()]}
+          items={menuItems}
+          onClick={() => setMobileMenuOpen(false)}
+          style={{
+            border: "none",
+            background: "transparent",
+          }}
+        />
+      </Drawer>
     </AntHeader>
   );
 }
