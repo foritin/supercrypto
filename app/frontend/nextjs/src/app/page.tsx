@@ -23,6 +23,7 @@ import {
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
+import { useScrollReveal, useScrollRevealDelay } from "@/hooks/useScrollReveal";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -31,22 +32,45 @@ export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
 
+  // 滚动动画 hooks
+  const featuresSection = useScrollReveal();
+  const howItWorksSection = useScrollReveal();
+  const ctaSection = useScrollReveal();
+
+  const feature1 = useScrollRevealDelay(100);
+  const feature2 = useScrollRevealDelay(200);
+  const feature3 = useScrollRevealDelay(300);
+
+  const step1 = useScrollRevealDelay(100);
+  const step2 = useScrollRevealDelay(200);
+  const step3 = useScrollRevealDelay(300);
+
   return (
     <>
       {/* Hero Section with Background Image */}
       <section className="hero-section">
-        {/* Animated Background Orbs */}
+        {/* Enhanced Animated Background Orbs - 5 orbs with different colors */}
         <div
           className="bg-orb bg-orb-primary animate-float"
-          style={{ top: "5%", left: "10%" }}
+          style={{ top: "5%", left: "10%", width: "500px", height: "500px" }}
         />
         <div
           className="bg-orb bg-orb-gold animate-float-delayed"
-          style={{ bottom: "15%", right: "5%" }}
+          style={{ bottom: "15%", right: "5%", width: "450px", height: "450px" }}
         />
         <div
           className="bg-orb bg-orb-blue animate-float"
-          style={{ top: "60%", left: "60%", animationDelay: "-10s" }}
+          style={{ top: "60%", left: "60%", animationDelay: "-10s", width: "400px", height: "400px" }}
+        />
+        {/* 新增：紫色光球 */}
+        <div
+          className="bg-orb bg-orb-purple animate-float"
+          style={{ top: "20%", right: "25%", animationDelay: "-5s", width: "350px", height: "350px" }}
+        />
+        {/* 新增：粉色光球 */}
+        <div
+          className="bg-orb bg-orb-pink animate-float-delayed"
+          style={{ bottom: "30%", left: "20%", animationDelay: "-15s", width: "380px", height: "380px" }}
         />
 
         {/* Hero Content */}
@@ -201,7 +225,11 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="section-pattern-bg" style={{ padding: "100px 24px" }}>
+      <section
+        ref={featuresSection.ref as React.RefObject<HTMLDivElement>}
+        className={`section-pattern-bg scroll-reveal ${featuresSection.isVisible ? 'is-visible' : ''}`}
+        style={{ padding: "100px 24px" }}
+      >
         <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative" }}>
           <div
             style={{ textAlign: "center", marginBottom: 72 }}
@@ -234,7 +262,12 @@ export default function HomePage() {
           </div>
 
           <Row gutter={[32, 32]}>
-            <Col xs={24} md={8}>
+            <Col
+              xs={24}
+              md={8}
+              ref={feature1.ref as React.RefObject<HTMLDivElement>}
+              className={`scroll-reveal ${feature1.isVisible ? 'is-visible' : ''}`}
+            >
               <Card
                 hoverable
                 className="glass-card-enhanced"
@@ -260,7 +293,12 @@ export default function HomePage() {
                 </Flex>
               </Card>
             </Col>
-            <Col xs={24} md={8}>
+            <Col
+              xs={24}
+              md={8}
+              ref={feature2.ref as React.RefObject<HTMLDivElement>}
+              className={`scroll-reveal ${feature2.isVisible ? 'is-visible' : ''}`}
+            >
               <Card
                 hoverable
                 className="glass-card-enhanced"
@@ -286,7 +324,12 @@ export default function HomePage() {
                 </Flex>
               </Card>
             </Col>
-            <Col xs={24} md={8}>
+            <Col
+              xs={24}
+              md={8}
+              ref={feature3.ref as React.RefObject<HTMLDivElement>}
+              className={`scroll-reveal ${feature3.isVisible ? 'is-visible' : ''}`}
+            >
               <Card
                 hoverable
                 className="glass-card-enhanced"
@@ -317,7 +360,11 @@ export default function HomePage() {
       </section>
 
       {/* How It Works Section */}
-      <section style={{ padding: "100px 24px" }}>
+      <section
+        ref={howItWorksSection.ref as React.RefObject<HTMLDivElement>}
+        className={`scroll-reveal ${howItWorksSection.isVisible ? 'is-visible' : ''}`}
+        style={{ padding: "100px 24px" }}
+      >
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div
             style={{ textAlign: "center", marginBottom: 72 }}
@@ -372,8 +419,16 @@ export default function HomePage() {
                 descKey: "home.howItWorks.step3.description",
                 color: "#1890ff",
               },
-            ].map((item, index) => (
-              <Col xs={24} md={8} key={item.step}>
+            ].map((item, index) => {
+              const stepRef = index === 0 ? step1 : index === 1 ? step2 : step3;
+              return (
+                <Col
+                  xs={24}
+                  md={8}
+                  key={item.step}
+                  ref={stepRef.ref as React.RefObject<HTMLDivElement>}
+                  className={`scroll-reveal ${stepRef.isVisible ? 'is-visible' : ''}`}
+                >
                 <div style={{ textAlign: "center", position: "relative" }}>
                   {/* Connecting Line */}
                   {index < 2 && (
@@ -447,13 +502,17 @@ export default function HomePage() {
                   </Text>
                 </div>
               </Col>
-            ))}
+              );
+            })}
           </Row>
         </div>
       </section>
 
       {/* Final CTA Section */}
-      <section className="cta-section">
+      <section
+        ref={ctaSection.ref as React.RefObject<HTMLDivElement>}
+        className={`cta-section scroll-reveal ${ctaSection.isVisible ? 'is-visible' : ''}`}
+      >
         <div
           style={{
             maxWidth: 800,
