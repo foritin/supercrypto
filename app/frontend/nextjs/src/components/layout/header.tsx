@@ -59,22 +59,22 @@ export function Header() {
     const items: MenuProps["items"] = [
       {
         key: "home",
-        icon: <HomeOutlined />,
+        icon: <HomeOutlined aria-hidden="true" />,
         label: <Link href="/">{t("header.nav.home")}</Link>,
       },
       {
         key: "assets",
-        icon: <BankOutlined />,
+        icon: <BankOutlined aria-hidden="true" />,
         label: <Link href="/assets">{t("header.nav.assets")}</Link>,
       },
       {
         key: "portfolio",
-        icon: <WalletOutlined />,
+        icon: <WalletOutlined aria-hidden="true" />,
         label: <Link href="/portfolio">{t("header.nav.portfolio")}</Link>,
       },
       {
         key: "staking",
-        icon: <FireOutlined />,
+        icon: <FireOutlined aria-hidden="true" />,
         label: <Link href="/staking">{t("header.nav.staking")}</Link>,
       },
     ];
@@ -84,7 +84,7 @@ export function Header() {
       const adminChildren: MenuProps["items"] = [
         {
           key: "admin-dashboard",
-          icon: <DashboardOutlined />,
+          icon: <DashboardOutlined aria-hidden="true" />,
           label: (
             <Link href="/admin/dashboard">
               {t("admin.dashboard.title", "数据仪表盘")}
@@ -93,7 +93,7 @@ export function Header() {
         },
         {
           key: "admin-audit-logs",
-          icon: <FileTextOutlined />,
+          icon: <FileTextOutlined aria-hidden="true" />,
           label: (
             <Link href="/admin/audit-logs">
               {t("admin.auditLogs.title", "审计日志")}
@@ -105,12 +105,12 @@ export function Header() {
         },
         {
           key: "admin-assets",
-          icon: <BankOutlined />,
+          icon: <BankOutlined aria-hidden="true" />,
           label: <Link href="/admin/assets">{t("admin.assets.title")}</Link>,
         },
         {
           key: "admin-contracts",
-          icon: <ApiOutlined />,
+          icon: <ApiOutlined aria-hidden="true" />,
           label: (
             <Link href="/admin/contracts">{t("admin.contracts.title")}</Link>
           ),
@@ -159,6 +159,7 @@ export function Header() {
       <Space size="large" align="center">
         <Link
           href="/"
+          aria-label={`${isHydrated ? t("header.title") : "ApprovePlatform"} - 首页`}
           style={{
             textDecoration: "none",
             display: "flex",
@@ -176,6 +177,7 @@ export function Header() {
               alignItems: "center",
               justifyContent: "center",
             }}
+            aria-hidden="true"
           >
             <RocketOutlined style={{ fontSize: 20, color: "#0A0F0D" }} />
           </div>
@@ -198,6 +200,7 @@ export function Header() {
           <Menu
             mode="horizontal"
             selectedKeys={[getSelectedKey()]}
+            aria-label="主导航菜单"
             style={{
               border: "none",
               background: "transparent",
@@ -211,7 +214,7 @@ export function Header() {
       </Space>
 
       <Space size={12}>
-        <LanguageSwitcher />
+        <LanguageSwitcher aria-label="切换语言" />
         <WalletConnect />
       </Space>
     </AntHeader>

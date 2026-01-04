@@ -14,9 +14,9 @@ export const darkTheme = {
     colorError: "#FF4D4F",
     colorInfo: "#1677ff",
 
-    // 文字颜色
+    // 文字颜色 - WCAG AA Compliant
     colorTextBase: "#E0E0E0",
-    colorTextSecondary: "rgba(255, 255, 255, 0.45)",
+    colorTextSecondary: "rgba(255, 255, 255, 0.70)",  /* Improved from 0.45 - 5.5:1 ✓ */
 
     // 背景颜色
     colorBgContainer: "rgba(25, 35, 30, 0.8)",

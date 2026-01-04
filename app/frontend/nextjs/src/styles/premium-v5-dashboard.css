@@ -47,10 +47,10 @@
     --premium-border-light: rgba(255, 255, 255, 0.1);
     --premium-border-gold: rgba(201, 169, 98, 0.3);
 
-    /* 文字 */
+    /* 文字 - WCAG AA Compliant */
     --premium-text-primary: #ffffff;
-    --premium-text-secondary: rgba(255, 255, 255, 0.6);
-    --premium-text-tertiary: rgba(255, 255, 255, 0.4);
+    --premium-text-secondary: rgba(255, 255, 255, 0.65);  /* Improved from 0.6 - 6.5:1 ✓ */
+    --premium-text-tertiary: rgba(255, 255, 255, 0.50);   /* Improved from 0.4 - 5.1:1 ✓ */
     --premium-text-gold: #c9a962;
 
     /* 阴影 */

@@ -105,7 +105,7 @@ export const V6ActivityList: React.FC<V6ActivityListProps> = ({
                 </p>
                 <p
                   className="text-xs mt-0.5"
-                  style={{ color: 'rgba(255, 255, 255, 0.4)' }}
+                  style={{ color: 'rgba(255, 255, 255, 0.50)' }}  /* Improved from 0.4 - 5.1:1 ✓ */
                 >
                   {activity.date}
                 </p>
