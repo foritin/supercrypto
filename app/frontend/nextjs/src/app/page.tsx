@@ -27,7 +27,10 @@ import { useScrollReveal, useScrollRevealDelay } from "@/hooks/useScrollReveal";
 import { useMouseParallax } from "@/hooks/useMouseParallax";
 import { useCountUp } from "@/hooks/useCountUp";
 import { useMagneticButton } from "@/hooks/useMagneticButton";
+import { useTypewriter } from "@/hooks/useTypewriter";
 import { RippleButton } from "@/components/ui/RippleButton";
+import { YieldCalculator } from "@/components/calculator/YieldCalculator";
+import { LogoWall } from "@/components/logo-wall/LogoWall";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -60,6 +63,16 @@ export default function HomePage() {
   // Phoenix Prototype: 磁性按钮
   const primaryCtaRef = useMagneticButton({ threshold: 100, strength: 0.3 });
   const secondaryCtaRef = useMagneticButton({ threshold: 100, strength: 0.3 });
+
+  // Phase 11: 打字机效果
+  const { text: dynamicText } = useTypewriter(
+    ['DeFi Yield', 'Staking Rewards', 'Smart Investing'],
+    { typeSpeed: 100, pauseDuration: 2000, loop: true }
+  );
+
+  // Phase 11: 新增 Section 的滚动动画
+  const calculatorSection = useScrollReveal();
+  const ecosystemSection = useScrollReveal();
 
   return (
     <>
@@ -170,7 +183,16 @@ export default function HomePage() {
                   }}
                 >
                   {t("home.title.line1")}{" "}
-                  <span className="gold-text">{t("home.title.highlight")}</span>
+                  <span className="gold-text" style={{ position: 'relative', display: 'inline-block' }}>
+                    {dynamicText}
+                    <span style={{
+                      position: 'absolute',
+                      right: -8,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      animation: 'blink 1s infinite'
+                    }}>|</span>
+                  </span>
                   <br />
                   <span className="glow-text">{t("home.title.line2")}</span>
                 </Title>
@@ -577,6 +599,56 @@ export default function HomePage() {
             })}
           </Row>
         </div>
+      </section>
+
+      {/* Phase 11: Yield Calculator Section */}
+      <section
+        ref={calculatorSection.ref as React.RefObject<HTMLDivElement>}
+        className={`scroll-reveal ${calculatorSection.isVisible ? 'is-visible' : ''}`}
+        style={{ padding: "100px 24px", background: "rgba(0, 212, 170, 0.02)" }}
+      >
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 48 }} className="fade-in-stagger">
+            <Text
+              style={{
+                color: "#FFD700",
+                fontSize: 14,
+                fontWeight: 600,
+                letterSpacing: "2px",
+                textTransform: "uppercase",
+              }}
+            >
+              Calculate Your Earnings
+            </Text>
+            <Title level={2} style={{ marginTop: 16, marginBottom: 16 }}>
+              Yield Calculator
+            </Title>
+            <Paragraph
+              style={{
+                fontSize: 18,
+                color: "rgba(255, 255, 255, 0.65)",
+                maxWidth: 600,
+                margin: "0 auto",
+              }}
+            >
+              See your potential returns with our interactive yield calculator
+            </Paragraph>
+          </div>
+
+          <Row gutter={[32, 32]} justify="center">
+            <Col xs={24} lg={16}>
+              <YieldCalculator />
+            </Col>
+          </Row>
+        </div>
+      </section>
+
+      {/* Phase 11: Ecosystem / Logo Wall Section */}
+      <section
+        ref={ecosystemSection.ref as React.RefObject<HTMLDivElement>}
+        className={`scroll-reveal ${ecosystemSection.isVisible ? 'is-visible' : ''}`}
+      >
+        <LogoWall />
       </section>
 
       {/* Final CTA Section */}
