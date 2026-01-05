@@ -212,7 +212,7 @@ export default function HomePage() {
                 <RippleButton
                   ref={secondaryCtaRef}
                   size="large"
-                  onClick={() => router.push("/assets")}
+                  onClick={() => router.push("/portfolio")}
                   className="magnetic-button"
                   style={{
                     height: 60,
