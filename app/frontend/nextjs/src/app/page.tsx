@@ -186,7 +186,7 @@ export default function HomePage() {
                   Unlock{' '}
                   <span
                     key={animationKey}
-                    className="gold-text typewriter-char"
+                    className="gold-text typewriter-text"
                     style={{
                       display: 'inline-block',
                       minWidth: '220px',
