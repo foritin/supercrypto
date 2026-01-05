@@ -69,6 +69,9 @@ export const useTypewriter = (
       return;
     }
 
+    // 使用 ref 跟踪当前显示的文本，避免闭包问题
+    let currentDisplayText = displayText;
+
     const step = () => {
       const state = stateRef.current;
       const currentWords = wordsRef.current;
@@ -84,12 +87,10 @@ export const useTypewriter = (
       }
 
       if (state.isDeleting) {
-        if (displayText.length > 0) {
-          setDisplayText((prev) => {
-            const newText = currentWord.slice(0, prev.length - 1);
-            timeoutRef.current = setTimeout(step, opts.deleteSpeed);
-            return newText;
-          });
+        if (currentDisplayText.length > 0) {
+          currentDisplayText = currentWord.slice(0, currentDisplayText.length - 1);
+          setDisplayText(currentDisplayText);
+          timeoutRef.current = setTimeout(step, opts.deleteSpeed);
         } else {
           // 删除完成，切换到下一个词
           stateRef.current.isDeleting = false;
@@ -99,12 +100,10 @@ export const useTypewriter = (
         }
       } else {
         // 打字
-        if (displayText.length < currentWord.length) {
-          setDisplayText((prev) => {
-            const newText = currentWord.slice(0, prev.length + 1);
-            timeoutRef.current = setTimeout(step, opts.typeSpeed);
-            return newText;
-          });
+        if (currentDisplayText.length < currentWord.length) {
+          currentDisplayText = currentWord.slice(0, currentDisplayText.length + 1);
+          setDisplayText(currentDisplayText);
+          timeoutRef.current = setTimeout(step, opts.typeSpeed);
         } else {
           // 打字完成，暂停
           if (opts.loop || state.wordIndex < currentWords.length - 1) {
@@ -128,7 +127,7 @@ export const useTypewriter = (
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [displayText, words, enabled, loop]); // 只依赖必要的值
+  }, [words, enabled, loop]); // 移除 displayText，只在 words 改变时重启
 
   return {
     text: displayText,
