@@ -432,7 +432,7 @@ export default function HomePage() {
       {/* How It Works Section */}
       <section
         ref={howItWorksSection.ref as React.RefObject<HTMLDivElement>}
-        className={`scroll-reveal ${howItWorksSection.isVisible ? 'is-visible' : ''}`}
+        className={`hex-pattern-bg scroll-reveal ${howItWorksSection.isVisible ? 'is-visible' : ''}`}
         style={{ padding: "100px 24px" }}
       >
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
