@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, Input, Slider, Typography, Row, Col, Statistic } from 'antd';
-import { TrophyOutlined, DollarOutlined } from '@ant-design/icons';
+import { TrophyOutlined, DollarOutlined, RiseOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -43,56 +43,79 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
 
   return (
     <Card
-      className={`glass-card-enhanced ${className}`}
+      className={className}
       style={{
-        background: 'rgba(26, 26, 46, 0.6)',
+        background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(38, 38, 66, 0.8) 100%)',
         backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        border: '1px solid rgba(0, 212, 170, 0.3)',
+        borderRadius: 16,
+        boxShadow: '0 8px 32px rgba(0, 212, 170, 0.2)',
         ...style,
       }}
     >
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+      {/* 标题区域 */}
+      <div style={{
+        textAlign: 'center',
+        marginBottom: 40,
+        paddingBottom: 20,
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 60,
+          height: 60,
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #00D4AA 0%, #00A08C 100%)',
+          boxShadow: '0 4px 16px rgba(0, 212, 170, 0.4)',
+          marginBottom: 16,
+        }}>
+          <TrophyOutlined style={{ fontSize: 28, color: '#fff' }} />
+        </div>
         <Title
           level={3}
           style={{
             color: '#00D4AA',
             marginBottom: 8,
-            fontSize: 28,
+            fontSize: 24,
             fontWeight: 700,
           }}
         >
-          <TrophyOutlined style={{ marginRight: 12 }} />
           Yield Calculator
         </Title>
-        <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 16 }}>
-          Calculate your potential earnings
+        <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14 }}>
+          Calculate your potential earnings with precision
         </Text>
       </div>
 
-      {/* Principal Input */}
-      <div style={{ marginBottom: 32 }}>
-        <Text
-          style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: 14,
-            fontWeight: 600,
-            display: 'block',
-            marginBottom: 12,
-          }}
-        >
-          Investment Amount (USD)
-        </Text>
+      {/* Investment Amount */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+          <DollarOutlined style={{ color: '#FFD700', marginRight: 8, fontSize: 16 }} />
+          <Text
+            style={{
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: 15,
+              fontWeight: 600,
+            }}
+          >
+            Investment Amount
+          </Text>
+        </div>
         <Input
           type="number"
-          prefix={<DollarOutlined />}
+          prefix="$"
           value={principal}
           onChange={(e) => setPrincipal(Number(e.target.value))}
           style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
             color: '#fff',
-            fontSize: 18,
-            height: 50,
+            fontSize: 20,
+            height: 56,
+            borderRadius: 12,
+            fontWeight: 600,
           }}
           min={0}
           step={100}
@@ -100,28 +123,35 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
       </div>
 
       {/* APY Slider */}
-      <div style={{ marginBottom: 32 }}>
+      <div style={{ marginBottom: 28 }}>
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            marginBottom: 12,
+            alignItems: 'center',
+            marginBottom: 16,
           }}
         >
-          <Text
-            style={{
-              color: 'rgba(255, 255, 255, 0.8)',
-              fontSize: 14,
-              fontWeight: 600,
-            }}
-          >
-            Expected APY
-          </Text>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <RiseOutlined style={{ color: '#FFD700', marginRight: 8, fontSize: 16 }} />
+            <Text
+              style={{
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: 15,
+                fontWeight: 600,
+              }}
+            >
+              Expected APY
+            </Text>
+          </div>
           <Text
             style={{
               color: '#FFD700',
-              fontSize: 16,
+              fontSize: 20,
               fontWeight: 700,
+              background: 'rgba(255, 215, 0, 0.15)',
+              padding: '4px 16px',
+              borderRadius: 20,
             }}
           >
             {apy}%
@@ -132,12 +162,23 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
           max={50}
           value={apy}
           onChange={setApy}
-          trackStyle={{ background: 'linear-gradient(90deg, #FFD700, #FFA500)' }}
+          trackStyle={{
+            background: 'linear-gradient(90deg, #FFD700 0%, #FFA500 100%)',
+            height: 6,
+            borderRadius: 3,
+          }}
+          railStyle={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            height: 6,
+            borderRadius: 3,
+          }}
           handleStyle={{
             borderColor: '#FFD700',
             background: '#FFD700',
+            boxShadow: '0 2px 8px rgba(255, 215, 0, 0.5)',
+            width: 20,
+            height: 20,
           }}
-          style={{ marginTop: 8 }}
         />
       </div>
 
@@ -147,13 +188,14 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            marginBottom: 12,
+            alignItems: 'center',
+            marginBottom: 16,
           }}
         >
           <Text
             style={{
-              color: 'rgba(255, 255, 255, 0.8)',
-              fontSize: 14,
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: 15,
               fontWeight: 600,
             }}
           >
@@ -162,8 +204,11 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
           <Text
             style={{
               color: '#00D4AA',
-              fontSize: 16,
+              fontSize: 20,
               fontWeight: 700,
+              background: 'rgba(0, 212, 170, 0.15)',
+              padding: '4px 16px',
+              borderRadius: 20,
             }}
           >
             {duration} days
@@ -174,72 +219,117 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
           max={365}
           value={duration}
           onChange={setDuration}
-          trackStyle={{ background: 'linear-gradient(90deg, #00D4AA, #00A08C)' }}
+          trackStyle={{
+            background: 'linear-gradient(90deg, #00D4AA 0%, #00A08C 100%)',
+            height: 6,
+            borderRadius: 3,
+          }}
+          railStyle={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            height: 6,
+            borderRadius: 3,
+          }}
           handleStyle={{
             borderColor: '#00D4AA',
             background: '#00D4AA',
+            boxShadow: '0 2px 8px rgba(0, 212, 170, 0.5)',
+            width: 20,
+            height: 20,
           }}
           marks={{
-            30: '30',
-            90: '90',
-            180: '180',
-            365: '365',
+            30: { style: { color: 'rgba(255, 255, 255, 0.5)', fontSize: 12 }, label: '30' },
+            90: { style: { color: 'rgba(255, 255, 255, 0.5)', fontSize: 12 }, label: '90' },
+            180: { style: { color: 'rgba(255, 255, 255, 0.5)', fontSize: 12 }, label: '180' },
+            365: { style: { color: 'rgba(255, 255, 255, 0.5)', fontSize: 12 }, label: '365' },
           }}
-          style={{ marginTop: 8 }}
         />
       </div>
 
       {/* Results */}
       <div
         style={{
-          background: 'rgba(0, 212, 170, 0.1)',
-          borderRadius: 12,
-          padding: '24px',
-          border: '1px solid rgba(0, 212, 170, 0.2)',
+          background: 'linear-gradient(135deg, rgba(0, 212, 170, 0.15) 0%, rgba(0, 160, 140, 0.15) 100%)',
+          borderRadius: 16,
+          padding: '28px',
+          border: '1px solid rgba(0, 212, 170, 0.3)',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
-        <Row gutter={[16, 16]}>
+        {/* 背景装饰 */}
+        <div style={{
+          position: 'absolute',
+          top: -50,
+          right: -50,
+          width: 150,
+          height: 150,
+          background: 'radial-gradient(circle, rgba(0, 212, 170, 0.2) 0%, transparent 70%)',
+          borderRadius: '50%',
+        }} />
+
+        <Row gutter={[24, 24]}>
           <Col xs={24} sm={12}>
-            <Statistic
-              title={<span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Total Value</span>}
-              value={calculateYield.futureValue.toFixed(2)}
-              prefix="$"
-              precision={2}
-              styles={{
-                content: {
-                  color: '#00D4AA',
-                  fontSize: 24,
-                  fontWeight: 700,
-                }
-              }}
-            />
+            <div style={{ textAlign: 'center' }}>
+              <Text style={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: 13,
+                display: 'block',
+                marginBottom: 8,
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+              }}>
+                Total Value
+              </Text>
+              <div style={{
+                fontSize: 32,
+                fontWeight: 700,
+                color: '#00D4AA',
+                textShadow: '0 2px 8px rgba(0, 212, 170, 0.3)',
+              }}>
+                ${calculateYield.futureValue.toFixed(2)}
+              </div>
+            </div>
           </Col>
           <Col xs={24} sm={12}>
-            <Statistic
-              title={<span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Profit</span>}
-              value={calculateYield.profit.toFixed(2)}
-              prefix="$"
-              precision={2}
-              styles={{
-                content: {
-                  color: '#FFD700',
-                  fontSize: 24,
-                  fontWeight: 700,
-                }
-              }}
-            />
+            <div style={{ textAlign: 'center' }}>
+              <Text style={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: 13,
+                display: 'block',
+                marginBottom: 8,
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+              }}>
+                Profit
+              </Text>
+              <div style={{
+                fontSize: 32,
+                fontWeight: 700,
+                color: '#FFD700',
+                textShadow: '0 2px 8px rgba(255, 215, 0, 0.3)',
+              }}>
+                ${calculateYield.profit.toFixed(2)}
+              </div>
+            </div>
           </Col>
           <Col xs={24}>
             <div
               style={{
                 textAlign: 'center',
-                paddingTop: 16,
+                paddingTop: 20,
                 borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                position: 'relative',
+                zIndex: 1,
               }}
             >
-              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14 }}>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 14 }}>
                 Return on Investment (ROI):{' '}
-                <span style={{ color: '#FFD700', fontSize: 18, fontWeight: 700 }}>
+                <span style={{
+                  color: '#FFD700',
+                  fontSize: 22,
+                  fontWeight: 700,
+                  textShadow: '0 2px 8px rgba(255, 215, 0, 0.3)',
+                }}>
                   {calculateYield.roi}%
                 </span>
               </Text>
