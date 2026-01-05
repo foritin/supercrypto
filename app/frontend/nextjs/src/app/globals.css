@@ -139,6 +139,11 @@ body {
   background: transparent !important;
 }
 
+/* 首页的全屏 Hero - 移除 Content 的 padding */
+.ant-layout-content:has(.hero-section) {
+  padding: 0 !important;
+}
+
 .ant-layout-footer {
   background: var(--bg-card) !important;
   border-top: 1px solid var(--border-color);
