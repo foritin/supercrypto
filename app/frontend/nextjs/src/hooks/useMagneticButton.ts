@@ -46,6 +46,9 @@ export const useMagneticButton = (options: UseMagneticButtonOptions = {}) => {
         const moveY = distanceY * magnetStrength;
 
         button.style.transform = `translate(${moveX}px, ${moveY}px)`;
+      } else {
+        // 超出范围时重置位置
+        button.style.transform = 'translate(0, 0)';
       }
     };
 
