@@ -24,6 +24,9 @@ import {
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
 import { useScrollReveal, useScrollRevealDelay } from "@/hooks/useScrollReveal";
+import { useMouseParallax } from "@/hooks/useMouseParallax";
+import { useCountUp } from "@/hooks/useCountUp";
+import { useMagneticButton } from "@/hooks/useMagneticButton";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -45,32 +48,80 @@ export default function HomePage() {
   const step2 = useScrollRevealDelay(200);
   const step3 = useScrollRevealDelay(300);
 
+  // Phoenix Prototype: 视差效果
+  const { offset: parallaxOffset } = useMouseParallax({ intensity: 0.02 });
+
+  // Phoenix Prototype: 数字滚动动画
+  const tvlCount = useCountUp(2500000, { prefix: '$', suffix: '+', decimals: 0 });
+  const usersCount = useCountUp(1200, { suffix: '+', decimals: 0 });
+  const assetsCount = useCountUp(15, { suffix: '+', decimals: 0 });
+
+  // Phoenix Prototype: 磁性按钮
+  const primaryCtaRef = useMagneticButton({ threshold: 100, strength: 0.3 });
+  const secondaryCtaRef = useMagneticButton({ threshold: 100, strength: 0.3 });
+
   return (
     <>
+      {/* Phoenix Prototype: 全局噪点纹理 */}
+      <div className="noise-overlay" />
+
       {/* Hero Section with Background Image */}
       <section className="hero-section">
-        {/* Enhanced Animated Background Orbs - 5 orbs with different colors */}
+        {/* Phoenix Prototype: 视差光球 - 跟随鼠标移动 */}
         <div
-          className="bg-orb bg-orb-primary animate-float"
-          style={{ top: "5%", left: "10%", width: "500px", height: "500px" }}
+          className="bg-orb bg-orb-primary animate-float parallax-orb"
+          style={{
+            top: "5%",
+            left: "10%",
+            width: "500px",
+            height: "500px",
+            transform: `translate(${parallaxOffset.x * 1.2}px, ${parallaxOffset.y * 1.2}px)`
+          }}
         />
         <div
-          className="bg-orb bg-orb-gold animate-float-delayed"
-          style={{ bottom: "15%", right: "5%", width: "450px", height: "450px" }}
+          className="bg-orb bg-orb-gold animate-float-delayed parallax-orb"
+          style={{
+            bottom: "15%",
+            right: "5%",
+            width: "450px",
+            height: "450px",
+            transform: `translate(${parallaxOffset.x * 0.8}px, ${parallaxOffset.y * 0.8}px)`
+          }}
         />
         <div
-          className="bg-orb bg-orb-blue animate-float"
-          style={{ top: "60%", left: "60%", animationDelay: "-10s", width: "400px", height: "400px" }}
+          className="bg-orb bg-orb-blue animate-float parallax-orb"
+          style={{
+            top: "60%",
+            left: "60%",
+            animationDelay: "-10s",
+            width: "400px",
+            height: "400px",
+            transform: `translate(${parallaxOffset.x * 1.5}px, ${parallaxOffset.y * 1.5}px)`
+          }}
         />
         {/* 新增：紫色光球 */}
         <div
-          className="bg-orb bg-orb-purple animate-float"
-          style={{ top: "20%", right: "25%", animationDelay: "-5s", width: "350px", height: "350px" }}
+          className="bg-orb bg-orb-purple animate-float parallax-orb"
+          style={{
+            top: "20%",
+            right: "25%",
+            animationDelay: "-5s",
+            width: "350px",
+            height: "350px",
+            transform: `translate(${parallaxOffset.x * 1.0}px, ${parallaxOffset.y * 1.0}px)`
+          }}
         />
         {/* 新增：粉色光球 */}
         <div
-          className="bg-orb bg-orb-pink animate-float-delayed"
-          style={{ bottom: "30%", left: "20%", animationDelay: "-15s", width: "380px", height: "380px" }}
+          className="bg-orb bg-orb-pink animate-float-delayed parallax-orb"
+          style={{
+            bottom: "30%",
+            left: "20%",
+            animationDelay: "-15s",
+            width: "380px",
+            height: "380px",
+            transform: `translate(${parallaxOffset.x * 0.6}px, ${parallaxOffset.y * 0.6}px)`
+          }}
         />
 
         {/* Hero Content */}
@@ -140,10 +191,12 @@ export default function HomePage() {
               {/* CTA Buttons */}
               <Flex gap={16} wrap="wrap" justify="center">
                 <Button
+                  ref={primaryCtaRef}
                   type="primary"
                   size="large"
                   icon={<RocketOutlined />}
                   onClick={() => router.push("/assets")}
+                  className="magnetic-button"
                   style={{
                     height: 60,
                     padding: "0 48px",
@@ -156,8 +209,10 @@ export default function HomePage() {
                   {t("home.cta.primary")}
                 </Button>
                 <Button
+                  ref={secondaryCtaRef}
                   size="large"
                   onClick={() => router.push("/assets")}
+                  className="magnetic-button"
                   style={{
                     height: 60,
                     padding: "0 48px",
@@ -174,7 +229,7 @@ export default function HomePage() {
               {/* Stats Cards */}
               <Row gutter={[24, 24]} justify="center" style={{ marginTop: 48 }}>
                 <Col>
-                  <div className="stat-card">
+                  <div className="stat-card stat-card-3d">
                     <Text
                       style={{
                         color: "rgba(255, 255, 255, 0.5)",
@@ -185,11 +240,16 @@ export default function HomePage() {
                     >
                       {t("home.stats.tvl")}
                     </Text>
-                    <div className="stat-value">$2.5M+</div>
+                    <div
+                      ref={tvlCount.ref}
+                      className="stat-value stat-value-animated"
+                    >
+                      {tvlCount.count}
+                    </div>
                   </div>
                 </Col>
                 <Col>
-                  <div className="stat-card">
+                  <div className="stat-card stat-card-3d">
                     <Text
                       style={{
                         color: "rgba(255, 255, 255, 0.5)",
@@ -200,11 +260,16 @@ export default function HomePage() {
                     >
                       {t("home.stats.users")}
                     </Text>
-                    <div className="stat-value">1,200+</div>
+                    <div
+                      ref={usersCount.ref}
+                      className="stat-value stat-value-animated"
+                    >
+                      {usersCount.count}
+                    </div>
                   </div>
                 </Col>
                 <Col>
-                  <div className="stat-card">
+                  <div className="stat-card stat-card-3d">
                     <Text
                       style={{
                         color: "rgba(255, 255, 255, 0.5)",
@@ -215,7 +280,12 @@ export default function HomePage() {
                     >
                       {t("home.stats.assets")}
                     </Text>
-                    <div className="stat-value">15+</div>
+                    <div
+                      ref={assetsCount.ref}
+                      className="stat-value stat-value-animated"
+                    >
+                      {assetsCount.count}
+                    </div>
                   </div>
                 </Col>
               </Row>
@@ -227,7 +297,7 @@ export default function HomePage() {
       {/* Features Section */}
       <section
         ref={featuresSection.ref as React.RefObject<HTMLDivElement>}
-        className={`section-pattern-bg scroll-reveal ${featuresSection.isVisible ? 'is-visible' : ''}`}
+        className={`dot-pattern-bg scroll-reveal ${featuresSection.isVisible ? 'is-visible' : ''}`}
         style={{ padding: "100px 24px" }}
       >
         <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative" }}>

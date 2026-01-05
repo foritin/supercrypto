@@ -6,6 +6,14 @@
    Inspired by modern crypto UI design
    ============================================ */
 
+/* ============================================
+   PHOENIX PROTOTYPE - 技术原型增强样式
+   ════════════════════════════════════════════════════════════════
+   目的: 验证视觉增强技术的可行性
+   包含: 噪点纹理、视差动画、3D 效果、数字滚动
+   ════════════════════════════════════════════════════════════════
+   ============================================ */
+
 :root {
   /* Primary Colors - Green Neon */
   --color-primary: #00d4aa;
@@ -1797,4 +1805,199 @@ body {
    ========================================== */
 
 /* 由 TriggeredLightFlow 组件动态注入样式 */
+
+/* ==========================================
+   PHOENIX PROTOTYPE STYLES - 技术原型样式
+   ════════════════════════════════════════════════════════════════
+   验证技术: 噪点纹理、视差、3D、磁性按钮、数字滚动
+   ========================================== */
+
+/* 1. 全局噪点纹理叠加 - 微妙的颗粒感 */
+.noise-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* 2. 点阵图案背景 - 青色点阵 */
+.dot-pattern-bg {
+  background-image: radial-gradient(
+    rgba(0, 212, 170, 0.12) 1.5px,
+    transparent 1.5px
+  );
+  background-size: 24px 24px;
+}
+
+/* 3. Stats Cards 3D 增强效果 */
+.stat-card-3d {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.1s ease-out;
+}
+
+.stat-card-3d::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at var(--glow-x, 50%) var(--glow-y, 50%),
+    rgba(0, 212, 170, 0.15) 0%,
+    transparent 50%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.stat-card-3d:hover::before {
+  opacity: 1;
+}
+
+/* 4. 数字滚动动画增强 */
+.stat-value-animated {
+  position: relative;
+  display: inline-block;
+}
+
+/* 数字滚动时的发光效果 */
+@keyframes countUpGlow {
+  0% {
+    text-shadow: 0 0 20px rgba(0, 212, 170, 0);
+  }
+  50% {
+    text-shadow: 0 0 30px rgba(0, 212, 170, 0.6), 0 0 60px rgba(0, 212, 170, 0.3);
+  }
+  100% {
+    text-shadow: 0 0 20px rgba(0, 212, 170, 0.3);
+  }
+}
+
+.stat-value-animated.counting {
+  animation: countUpGlow 1.5s ease-out;
+}
+
+/* 5. 磁性按钮增强 */
+.magnetic-button {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.magnetic-button:hover {
+  box-shadow:
+    0 0 30px rgba(0, 212, 170, 0.4),
+    0 0 60px rgba(0, 212, 170, 0.2),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* 6. 视差光球效果 */
+.parallax-orb {
+  will-change: transform;
+  transition: transform 0.1s linear;
+}
+
+/* 7. Shimmer 骨架屏效果 */
+.shimmer-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.shimmer-skeleton::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    left: 100%;
+  }
+}
+
+/* 8. 角落装饰元素 */
+.corner-accent {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.corner-accent::before {
+  content: '';
+  position: absolute;
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.4), transparent);
+}
+
+.corner-accent-top-left {
+  top: 20px;
+  left: 20px;
+  border-top: 2px solid rgba(0, 212, 170, 0.3);
+  border-left: 2px solid rgba(0, 212, 170, 0.3);
+}
+
+.corner-accent-top-right {
+  top: 20px;
+  right: 20px;
+  border-top: 2px solid rgba(255, 215, 0, 0.3);
+  border-right: 2px solid rgba(255, 215, 0, 0.3);
+}
+
+/* 9. 响应式 - 移动端禁用高级效果 */
+@media (max-width: 768px) {
+  .noise-overlay {
+    /* 移动端保留噪点，降低透明度 */
+    opacity: 0.01;
+  }
+
+  .stat-card-3d {
+    /* 移动端禁用 3D 效果 */
+    transform: none !important;
+  }
+
+  .magnetic-button {
+    /* 移动端禁用磁性效果 */
+    transform: none !important;
+  }
+
+  .parallax-orb {
+    /* 移动端禁用视差 */
+    transform: none !important;
+  }
+}
+
+/* 10. 性能优化 - prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .noise-overlay,
+  .stat-card-3d::before,
+  .shimmer-skeleton::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .stat-value-animated.counting {
+    animation: none !important;
+  }
+
+  .magnetic-button {
+    transition: none !important;
+  }
+}
+
 
