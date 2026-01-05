@@ -215,7 +215,7 @@ export function Header() {
           left: "50%",
           transform: "translateX(-50%)",
           width: "auto",
-          maxWidth: "calc(100% - 400px)",
+          maxWidth: "calc(100% - 450px)",
         }}
       >
         {isHydrated ? (
@@ -223,6 +223,7 @@ export function Header() {
             mode="horizontal"
             selectedKeys={[getSelectedKey()]}
             aria-label="主导航菜单"
+            overflowedIndicator={null}
             style={{
               border: "none",
               background: "transparent",

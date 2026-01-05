@@ -2560,8 +2560,19 @@ input:focus:not(:focus-visible) {
   padding: 0 24px !important;
 }
 
-/* 确保菜单项不被截断 */
+/* 完全禁用溢出菜单功能 */
+.ant-menu-overflow-item {
+  display: none !important;
+}
+
 .ant-menu-overflow {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+}
+
+/* 确保所有菜单项都显示 */
+.ant-menu-horizontal .ant-menu-item-hidden,
+.ant-menu-horizontal .ant-menu-submenu-hidden {
   display: flex !important;
 }
 
