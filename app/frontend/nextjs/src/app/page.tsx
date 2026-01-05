@@ -56,9 +56,9 @@ export default function HomePage() {
   const { offset: parallaxOffset } = useMouseParallax({ intensity: 0.02 });
 
   // Phoenix Prototype: 数字滚动动画
-  const tvlCount = useCountUp(2500000, { prefix: '$', suffix: '+', decimals: 0 });
-  const usersCount = useCountUp(1200, { suffix: '+', decimals: 0 });
-  const assetsCount = useCountUp(15, { suffix: '+', decimals: 0 });
+  const tvlCount = useCountUp(2500000, { prefix: '$', suffix: '+', decimals: 0, threshold: 0.1 });
+  const usersCount = useCountUp(1200, { suffix: '+', decimals: 0, threshold: 0.1 });
+  const assetsCount = useCountUp(15, { suffix: '+', decimals: 0, threshold: 0.1 });
 
   // Phoenix Prototype: 磁性按钮
   const primaryCtaRef = useMagneticButton({ threshold: 100, strength: 0.3 });
