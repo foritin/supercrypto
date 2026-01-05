@@ -878,7 +878,7 @@ body {
 }
 
 /* ============================================
-   Hero Section with Background Image
+   Hero Section with Video Background
    ============================================ */
 
 .hero-section {
@@ -894,6 +894,40 @@ body {
   margin: 0;
 }
 
+/* 视频背景容器 */
+.hero-video-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* 视频元素 */
+.hero-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+}
+
+/* 视频遮罩层 - 确保文字可读性 */
+.hero-video-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    135deg,
+    rgba(10, 15, 13, 0.75) 0%,
+    rgba(10, 15, 13, 0.85) 100%
+  );
+}
+
+/* 降级方案：如果没有视频支持，使用背景图 */
 .hero-section::before {
   content: "";
   position: absolute;
@@ -911,8 +945,12 @@ body {
     url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80")
       center/cover no-repeat;
   z-index: 0;
-  /* 全屏无圆角 */
-  border-radius: 0;
+  display: none; /* 默认隐藏，有视频时不显示 */
+}
+
+/* 当没有视频元素时显示背景图 */
+.hero-section:not(:has(.hero-video))::before {
+  display: block;
 }
 
 /* Vignette 边缘暗角效果 - 柔化边界 */

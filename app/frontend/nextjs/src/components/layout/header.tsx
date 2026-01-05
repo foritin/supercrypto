@@ -29,8 +29,24 @@ export function Header() {
   // 移动端菜单状态
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // 滚动状态 - 用于 Header 样式变换
+  const [scrolled, setScrolled] = useState(false);
+
   useEffect(() => {
     setIsHydrated(true);
+
+    // 滚动监听器
+    const handleScroll = () => {
+      const offset = window.scrollY;
+      setScrolled(offset > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true } as AddEventListenerOptions);
+    handleScroll(); // 初始检查
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   // Get current path for menu selection
@@ -131,20 +147,18 @@ export function Header() {
         alignItems: "center",
         justifyContent: "space-between",
         padding: "0 24px",
-        // 独立半透明背景 - 与内容区清晰分离
-        background: "rgba(10, 10, 15, 0.96)",
-        backdropFilter: "blur(20px) saturate(180%)",
-        position: "sticky",
+        // 滚动触发的背景变换
+        background: scrolled ? "rgba(26, 26, 46, 0.95)" : "transparent",
+        backdropFilter: scrolled ? "blur(20px)" : "none",
+        position: "fixed",
         top: 0,
+        left: 0,
+        right: 0,
         zIndex: 100,
         height: 64,
-        borderBottom: "none",
-        // 清晰的青色发光底线 + 深阴影分离
-        boxShadow: `
-          0 8px 32px rgba(0, 0, 0, 0.4),
-          inset 0 -1px 0 rgba(0, 212, 170, 0.6),
-          0 2px 0 rgba(0, 212, 170, 0.3)
-        `,
+        borderBottom: scrolled ? "1px solid rgba(0, 212, 170, 0.2)" : "none",
+        boxShadow: scrolled ? "0 4px 20px rgba(0, 0, 0, 0.3)" : "none",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
       <Space size="large" align="center">

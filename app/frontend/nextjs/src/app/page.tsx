@@ -80,8 +80,25 @@ export default function HomePage() {
       {/* Phoenix Prototype: 全局噪点纹理 */}
       <div className="noise-overlay" />
 
-      {/* Hero Section with Background Image */}
+      {/* Hero Section with Video Background */}
       <section className="hero-section">
+        {/* 视频背景 */}
+        <div className="hero-video-container">
+          <video
+            className="hero-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070"
+          >
+            <source src="/1826904-hd_1920_1080_24fps.mp4" type="video/mp4" />
+          </video>
+        </div>
+
+        {/* 视频遮罩层 */}
+        <div className="hero-video-overlay" />
+
         {/* Phoenix Prototype: 视差光球 - 跟随鼠标移动 */}
         <div
           className="bg-orb bg-orb-primary animate-float parallax-orb"
@@ -140,7 +157,13 @@ export default function HomePage() {
         />
 
         {/* Hero Content */}
-        <div className="hero-content fade-in-stagger">
+        <div
+          className="hero-content fade-in-stagger"
+          style={{
+            position: 'relative',
+            zIndex: 2,
+          }}
+        >
           <div
             style={{
               maxWidth: 1200,
