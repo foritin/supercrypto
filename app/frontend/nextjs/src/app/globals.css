@@ -2544,7 +2544,7 @@ input:focus:not(:focus-visible) {
 
 .ant-menu-horizontal .ant-menu-item {
   font-size: 16px !important;
-  padding: 0 24px !important;
+  padding: 0 20px !important;
 }
 
 .ant-menu-horizontal .ant-menu-item a {
@@ -2557,22 +2557,17 @@ input:focus:not(:focus-visible) {
 
 .ant-menu-horizontal .ant-menu-submenu-title {
   font-size: 16px !important;
-  padding: 0 24px !important;
+  padding: 0 20px !important;
 }
 
-/* 完全禁用溢出菜单功能 */
+/* 禁用溢出菜单，显示所有项 */
 .ant-menu-overflow-item {
   display: none !important;
 }
 
-.ant-menu-overflow {
-  display: flex !important;
-  flex-wrap: nowrap !important;
-}
-
-/* 确保所有菜单项都显示 */
-.ant-menu-horizontal .ant-menu-item-hidden,
-.ant-menu-horizontal .ant-menu-submenu-hidden {
-  display: flex !important;
+/* 强制显示被隐藏的菜单项 */
+.ant-menu-item.ant-menu-item-hidden,
+.ant-menu-submenu.ant-menu-submenu-hidden {
+  display: inline-flex !important;
 }
 
