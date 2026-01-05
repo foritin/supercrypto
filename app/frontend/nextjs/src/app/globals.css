@@ -2538,6 +2538,8 @@ input:focus:not(:focus-visible) {
 /* 6. Header 导航菜单样式增强 */
 .ant-menu-horizontal {
   line-height: 80px !important;
+  min-width: auto !important;
+  width: auto !important;
 }
 
 .ant-menu-horizontal .ant-menu-item {
@@ -2556,5 +2558,10 @@ input:focus:not(:focus-visible) {
 .ant-menu-horizontal .ant-menu-submenu-title {
   font-size: 16px !important;
   padding: 0 24px !important;
+}
+
+/* 确保菜单项不被截断 */
+.ant-menu-overflow {
+  display: flex !important;
 }
 

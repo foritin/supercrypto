@@ -214,6 +214,8 @@ export function Header() {
           position: "absolute",
           left: "50%",
           transform: "translateX(-50%)",
+          width: "auto",
+          maxWidth: "calc(100% - 400px)",
         }}
       >
         {isHydrated ? (
@@ -225,6 +227,7 @@ export function Header() {
               border: "none",
               background: "transparent",
               fontSize: 16,
+              minWidth: "auto",
             }}
             items={menuItems}
           />
