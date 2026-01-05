@@ -2535,3 +2535,26 @@ input:focus:not(:focus-visible) {
   }
 }
 
+/* 6. Header 导航菜单样式增强 */
+.ant-menu-horizontal {
+  line-height: 80px !important;
+}
+
+.ant-menu-horizontal .ant-menu-item {
+  font-size: 16px !important;
+  padding: 0 24px !important;
+}
+
+.ant-menu-horizontal .ant-menu-item a {
+  font-size: 16px !important;
+}
+
+.ant-menu-horizontal .ant-menu-submenu {
+  font-size: 16px !important;
+}
+
+.ant-menu-horizontal .ant-menu-submenu-title {
+  font-size: 16px !important;
+  padding: 0 24px !important;
+}
+

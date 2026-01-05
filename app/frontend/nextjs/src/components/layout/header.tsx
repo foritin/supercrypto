@@ -146,7 +146,7 @@ export function Header() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 24px",
+        padding: "0 48px",
         // 滚动触发的背景变换
         background: scrolled ? "rgba(26, 26, 46, 0.95)" : "transparent",
         backdropFilter: scrolled ? "blur(20px)" : "none",
@@ -155,72 +155,80 @@ export function Header() {
         left: 0,
         right: 0,
         zIndex: 100,
-        height: 64,
+        height: 80,
         borderBottom: scrolled ? "1px solid rgba(0, 212, 170, 0.2)" : "none",
         boxShadow: scrolled ? "0 4px 20px rgba(0, 0, 0, 0.3)" : "none",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
-      <Space size="large" align="center">
-        <Link
-          href="/"
-          aria-label={`${isHydrated ? t("header.title") : "ApprovePlatform"} - 首页`}
+      {/* Logo - 左侧 */}
+      <Link
+        href="/"
+        aria-label={`${isHydrated ? t("header.title") : "ApprovePlatform"} - 首页`}
+        style={{
+          textDecoration: "none",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
+        <div
           style={{
-            textDecoration: "none",
+            width: 44,
+            height: 44,
+            background: "linear-gradient(135deg, #00D4AA 0%, #00A080 100%)",
+            borderRadius: 12,
             display: "flex",
             alignItems: "center",
-            gap: 8,
+            justifyContent: "center",
+          }}
+          aria-hidden="true"
+        >
+          {/* Rocket Icon SVG */}
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.5 16.5C3 15 2 13 2 10C2 5.5 5.5 2 10 2C13.5 2 16.5 3.5 18.5 6L13 10L15 12L19.5 8C20.5 10 21 12.5 21 15C21 19 18 22 14 22L11.5 19L13 17.5L4.5 16.5Z" stroke="#0A0F0D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <Title
+          level={3}
+          style={{
+            margin: 0,
+            background: "linear-gradient(135deg, #00D4AA 0%, #33FFCC 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            fontWeight: 700,
+            fontSize: 22,
           }}
         >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              background: "linear-gradient(135deg, #00D4AA 0%, #00A080 100%)",
-              borderRadius: 10,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            aria-hidden="true"
-          >
-            {/* Rocket Icon SVG */}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4.5 16.5C3 15 2 13 2 10C2 5.5 5.5 2 10 2C13.5 2 16.5 3.5 18.5 6L13 10L15 12L19.5 8C20.5 10 21 12.5 21 15C21 19 18 22 14 22L11.5 19L13 17.5L4.5 16.5Z" stroke="#0A0F0D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <Title
-            level={4}
-            style={{
-              margin: 0,
-              background: "linear-gradient(135deg, #00D4AA 0%, #33FFCC 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              fontWeight: 700,
-            }}
-          >
-            {isHydrated ? t("header.title") : "ApprovePlatform"}
-          </Title>
-        </Link>
+          {isHydrated ? t("header.title") : "ApprovePlatform"}
+        </Title>
+      </Link>
 
-        {/* Desktop Menu */}
-        {isHydrated ? (
-          <Menu
-            mode="horizontal"
-            selectedKeys={[getSelectedKey()]}
-            aria-label="主导航菜单"
-            className="hidden md:flex"
-            style={{
-              border: "none",
-              background: "transparent",
-              minWidth: 400,
-            }}
-            items={menuItems}
-          />
-        ) : (
-          <Skeleton.Input active style={{ width: 400, height: 40 }} className="hidden md:flex" />
-        )}
+      {/* Desktop Menu - 居中 */}
+      {isHydrated ? (
+        <Menu
+          mode="horizontal"
+          selectedKeys={[getSelectedKey()]}
+          aria-label="主导航菜单"
+          className="hidden md:flex"
+          style={{
+            border: "none",
+            background: "transparent",
+            flex: 1,
+            justifyContent: "center",
+            fontSize: 16,
+          }}
+          items={menuItems}
+        />
+      ) : (
+        <Skeleton.Input active style={{ width: 400, height: 40 }} className="hidden md:flex" />
+      )}
+
+      {/* 右侧：语言切换 + 钱包连接 + 移动端菜单按钮 */}
+      <Space size={16} align="center">
+        <LanguageSwitcher aria-label="切换语言" />
+        <WalletConnect />
 
         {/* Mobile Menu Button */}
         <button
@@ -231,11 +239,6 @@ export function Header() {
         >
           <MenuIcon className="w-6 h-6" />
         </button>
-      </Space>
-
-      <Space size={12} align="center">
-        <LanguageSwitcher aria-label="切换语言" />
-        <WalletConnect />
       </Space>
 
       {/* Mobile Drawer Menu */}
