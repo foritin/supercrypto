@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
  * ════════════════════════════════════════════════════════════════
@@ -41,6 +41,9 @@ export const useTypewriter = (
   const [isPaused, setIsPaused] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
+  // 使用 useRef 避免依赖数组变化导致 effect 重新执行
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const currentWord = words[wordIndex] || '';
 
   useEffect(() => {
@@ -54,63 +57,73 @@ export const useTypewriter = (
       return;
     }
 
-    // 如果在暂停状态，等待 pauseDuration 后继续
-    if (isPaused) {
-      const pauseTimeout = setTimeout(() => {
-        setIsPaused(false);
-      }, pauseDuration);
-      return () => clearTimeout(pauseTimeout);
-    }
+    const typeNext = () => {
+      // 使用函数式更新获取最新的 displayText
+      setDisplayText((currentText) => {
+        const currentWord = words[wordIndex];
 
-    const timeout = setTimeout(() => {
-      if (isDeleting) {
-        // 删除字符
-        if (displayText.length > 0) {
-          setDisplayText(currentWord.slice(0, displayText.length - 1));
-        } else {
-          // 删除完成，切换到下一个词
-          setIsDeleting(false);
-          if (loop) {
-            setWordIndex((prev) => (prev + 1) % words.length);
-            setIsPaused(true);
+        if (isPaused) {
+          timeoutRef.current = setTimeout(() => {
+            setIsPaused(false);
+            typeNext();
+          }, pauseDuration);
+          return currentText;
+        }
+
+        if (isDeleting) {
+          // 删除字符
+          if (currentText.length > 0) {
+            const newText = currentWord.slice(0, currentText.length - 1);
+            timeoutRef.current = setTimeout(typeNext, deleteSpeed);
+            return newText;
           } else {
-            if (wordIndex >= words.length - 1) {
-              setIsComplete(true);
-            } else {
-              setWordIndex((prev) => prev + 1);
+            // 删除完成，切换到下一个词
+            setIsDeleting(false);
+            if (loop) {
+              setWordIndex((prev) => (prev + 1) % words.length);
               setIsPaused(true);
+              timeoutRef.current = setTimeout(typeNext, 10);
+            } else {
+              if (wordIndex >= words.length - 1) {
+                setIsComplete(true);
+              } else {
+                setWordIndex((prev) => prev + 1);
+                setIsPaused(true);
+                timeoutRef.current = setTimeout(typeNext, 10);
+              }
             }
+            return currentText;
           }
-        }
-      } else {
-        // 打字
-        if (displayText.length < currentWord.length) {
-          setDisplayText(currentWord.slice(0, displayText.length + 1));
         } else {
-          // 打字完成，暂停
-          if (loop || wordIndex < words.length - 1) {
-            setIsPaused(true);
+          // 打字
+          if (currentText.length < currentWord.length) {
+            const newText = currentWord.slice(0, currentText.length + 1);
+            timeoutRef.current = setTimeout(typeNext, typeSpeed);
+            return newText;
           } else {
-            setIsComplete(true);
+            // 打字完成，暂停
+            if (loop || wordIndex < words.length - 1) {
+              setIsPaused(true);
+              timeoutRef.current = setTimeout(typeNext, 10);
+            } else {
+              setIsComplete(true);
+            }
+            return currentText;
           }
         }
-      }
-    }, isDeleting ? deleteSpeed : typeSpeed);
+      });
+    };
 
-    return () => clearTimeout(timeout);
-  }, [
-    displayText,
-    currentWord,
-    wordIndex,
-    isDeleting,
-    isPaused,
-    words,
-    typeSpeed,
-    deleteSpeed,
-    pauseDuration,
-    loop,
-    enabled,
-  ]);
+    typeNext();
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+    // 只依赖这些关键状态，避免 displayText 导致循环
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wordIndex, isDeleting, isPaused, words, typeSpeed, deleteSpeed, pauseDuration, loop, enabled]);
 
   return {
     text: displayText,
