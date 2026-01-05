@@ -182,7 +182,7 @@ export default function HomePage() {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  开启
+                  Unlock{' '}
                   <span className="gold-text" style={{ position: 'relative', display: 'inline-block' }}>
                     {dynamicText}
                     <span style={{
@@ -193,8 +193,7 @@ export default function HomePage() {
                       animation: 'blink 1s infinite'
                     }}>|</span>
                   </span>
-                  <br />
-                  <span className="glow-text">新时代</span>
+                  {' '}On Web3
                 </Title>
               </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * ════════════════════════════════════════════════════════════════
@@ -36,15 +36,27 @@ export const useTypewriter = (
   } = options;
 
   const [displayText, setDisplayText] = useState('');
-  const [wordIndex, setWordIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
-  // 使用 useRef 避免依赖数组变化导致 effect 重新执行
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // 使用 useRef 管理所有不会触发重渲染的状态
+  const stateRef = useRef({
+    wordIndex: 0,
+    isDeleting: false,
+    isPaused: false,
+  });
 
-  const currentWord = words[wordIndex] || '';
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const wordsRef = useRef(words);
+  const optionsRef = useRef({ typeSpeed, deleteSpeed, pauseDuration, loop });
+
+  // 更新 refs
+  useEffect(() => {
+    wordsRef.current = words;
+  }, [words]);
+
+  useEffect(() => {
+    optionsRef.current = { typeSpeed, deleteSpeed, pauseDuration, loop };
+  }, [typeSpeed, deleteSpeed, pauseDuration, loop]);
 
   useEffect(() => {
     if (!enabled || words.length === 0) return;
@@ -52,84 +64,77 @@ export const useTypewriter = (
     // 移动端禁用复杂动画
     const isMobile = window.innerWidth < 768;
     if (isMobile) {
-      setDisplayText(currentWord);
+      setDisplayText(words[0] || '');
       setIsComplete(true);
       return;
     }
 
-    const typeNext = () => {
-      // 使用函数式更新获取最新的 displayText
-      setDisplayText((currentText) => {
-        const currentWord = words[wordIndex];
+    const step = () => {
+      const state = stateRef.current;
+      const currentWords = wordsRef.current;
+      const currentWord = currentWords[state.wordIndex] || '';
+      const opts = optionsRef.current;
 
-        if (isPaused) {
-          timeoutRef.current = setTimeout(() => {
-            setIsPaused(false);
-            typeNext();
-          }, pauseDuration);
-          return currentText;
-        }
+      if (state.isPaused) {
+        timeoutRef.current = setTimeout(() => {
+          stateRef.current.isPaused = false;
+          step();
+        }, opts.pauseDuration);
+        return;
+      }
 
-        if (isDeleting) {
-          // 删除字符
-          if (currentText.length > 0) {
-            const newText = currentWord.slice(0, currentText.length - 1);
-            timeoutRef.current = setTimeout(typeNext, deleteSpeed);
+      if (state.isDeleting) {
+        if (displayText.length > 0) {
+          setDisplayText((prev) => {
+            const newText = currentWord.slice(0, prev.length - 1);
+            timeoutRef.current = setTimeout(step, opts.deleteSpeed);
             return newText;
-          } else {
-            // 删除完成，切换到下一个词
-            setIsDeleting(false);
-            if (loop) {
-              setWordIndex((prev) => (prev + 1) % words.length);
-              setIsPaused(true);
-              timeoutRef.current = setTimeout(typeNext, 10);
-            } else {
-              if (wordIndex >= words.length - 1) {
-                setIsComplete(true);
-              } else {
-                setWordIndex((prev) => prev + 1);
-                setIsPaused(true);
-                timeoutRef.current = setTimeout(typeNext, 10);
-              }
-            }
-            return currentText;
-          }
+          });
         } else {
-          // 打字
-          if (currentText.length < currentWord.length) {
-            const newText = currentWord.slice(0, currentText.length + 1);
-            timeoutRef.current = setTimeout(typeNext, typeSpeed);
+          // 删除完成，切换到下一个词
+          stateRef.current.isDeleting = false;
+          stateRef.current.wordIndex = (state.wordIndex + 1) % currentWords.length;
+          stateRef.current.isPaused = true;
+          timeoutRef.current = setTimeout(step, 10);
+        }
+      } else {
+        // 打字
+        if (displayText.length < currentWord.length) {
+          setDisplayText((prev) => {
+            const newText = currentWord.slice(0, prev.length + 1);
+            timeoutRef.current = setTimeout(step, opts.typeSpeed);
             return newText;
+          });
+        } else {
+          // 打字完成，暂停
+          if (opts.loop || state.wordIndex < currentWords.length - 1) {
+            stateRef.current.isPaused = true;
+            timeoutRef.current = setTimeout(() => {
+              stateRef.current.isPaused = false;
+              stateRef.current.isDeleting = true;
+              step();
+            }, opts.pauseDuration);
           } else {
-            // 打字完成，暂停
-            if (loop || wordIndex < words.length - 1) {
-              setIsPaused(true);
-              timeoutRef.current = setTimeout(typeNext, 10);
-            } else {
-              setIsComplete(true);
-            }
-            return currentText;
+            setIsComplete(true);
           }
         }
-      });
+      }
     };
 
-    typeNext();
+    step();
 
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
     };
-    // 只依赖这些关键状态，避免 displayText 导致循环
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wordIndex, isDeleting, isPaused, words, typeSpeed, deleteSpeed, pauseDuration, loop, enabled]);
+  }, [displayText, words, enabled, loop]); // 只依赖必要的值
 
   return {
     text: displayText,
     isComplete,
-    currentWord,
-    wordIndex,
+    currentWord: words[stateRef.current.wordIndex] || '',
+    wordIndex: stateRef.current.wordIndex,
   };
 };
 
