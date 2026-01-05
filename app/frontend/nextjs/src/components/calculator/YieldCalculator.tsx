@@ -205,10 +205,12 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
               value={calculateYield.futureValue.toFixed(2)}
               prefix="$"
               precision={2}
-              valueStyle={{
-                color: '#00D4AA',
-                fontSize: 24,
-                fontWeight: 700,
+              styles={{
+                content: {
+                  color: '#00D4AA',
+                  fontSize: 24,
+                  fontWeight: 700,
+                }
               }}
             />
           </Col>
@@ -218,10 +220,12 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
               value={calculateYield.profit.toFixed(2)}
               prefix="$"
               precision={2}
-              valueStyle={{
-                color: '#FFD700',
-                fontSize: 24,
-                fontWeight: 700,
+              styles={{
+                content: {
+                  color: '#FFD700',
+                  fontSize: 24,
+                  fontWeight: 700,
+                }
               }}
             />
           </Col>
