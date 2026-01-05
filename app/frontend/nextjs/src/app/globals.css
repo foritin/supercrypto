@@ -2135,6 +2135,102 @@ body {
   .magnetic-button {
     transition: none !important;
   }
+
+  .enhanced-toast {
+    animation: none !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PHASE 8: Enhanced Toast Notifications - 增强型通知动画
+   ════════════════════════════════════════════════════════════════ */
+
+/* Toast 容器样式 */
+.enhanced-toast {
+  animation: toastSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  background: rgba(26, 26, 46, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Toast 滑入动画 */
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Toast 滑出动画 (Ant Design 默认) */
+.ant-message-leave .ant-message-notice-content {
+  animation: toastSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+}
+
+/* Toast 图标动画 */
+.toast-check-icon,
+.toast-cross-icon,
+.toast-warning-icon,
+.toast-info-icon {
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+  animation: toastIconDraw 0.4s ease-out 0.2s forwards;
+}
+
+@keyframes toastIconDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Toast 加载动画 */
+.toast-loading-icon {
+  animation: toastSpin 1s linear infinite;
+}
+
+@keyframes toastSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Toast 悬停效果 */
+.enhanced-toast:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25) !important;
+  transition: all 0.2s ease;
+}
+
+/* Toast 内容样式优化 */
+.enhanced-toast .ant-message-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* 移动端 Toast 优化 */
+@media (max-width: 768px) {
+  .enhanced-toast {
+    max-width: calc(100vw - 32px);
+    margin: 8px;
+  }
 }
 
 

@@ -27,6 +27,7 @@ import { useScrollReveal, useScrollRevealDelay } from "@/hooks/useScrollReveal";
 import { useMouseParallax } from "@/hooks/useMouseParallax";
 import { useCountUp } from "@/hooks/useCountUp";
 import { useMagneticButton } from "@/hooks/useMagneticButton";
+import { RippleButton } from "@/components/ui/RippleButton";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -190,7 +191,7 @@ export default function HomePage() {
 
               {/* CTA Buttons */}
               <Flex gap={16} wrap="wrap" justify="center">
-                <Button
+                <RippleButton
                   ref={primaryCtaRef}
                   type="primary"
                   size="large"
@@ -207,8 +208,8 @@ export default function HomePage() {
                   }}
                 >
                   {t("home.cta.primary")}
-                </Button>
-                <Button
+                </RippleButton>
+                <RippleButton
                   ref={secondaryCtaRef}
                   size="large"
                   onClick={() => router.push("/assets")}
@@ -223,7 +224,7 @@ export default function HomePage() {
                   }}
                 >
                   {t("home.cta.secondary")}
-                </Button>
+                </RippleButton>
               </Flex>
 
               {/* Stats Cards */}
@@ -611,7 +612,7 @@ export default function HomePage() {
           >
             {t("home.finalCta.description")}
           </Paragraph>
-          <Button
+          <RippleButton
             type="primary"
             size="large"
             icon={<RocketOutlined />}
@@ -626,7 +627,7 @@ export default function HomePage() {
             }}
           >
             {t("home.finalCta.button")}
-          </Button>
+          </RippleButton>
         </div>
       </section>
     </>
