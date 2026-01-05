@@ -186,14 +186,13 @@ export default function HomePage() {
                   Unlock{' '}
                   <span
                     key={animationKey}
-                    className="gold-text typewriter-text"
+                    className="gold-text typewriter-char"
                     style={{
                       display: 'inline-block',
-                      minWidth: '220px', // 最小宽度匹配最长词
-                      height: '1.2em', // 固定高度，防止换行
+                      minWidth: '220px',
+                      height: '1.2em',
                       textAlign: 'left',
-                      verticalAlign: 'bottom', // 底部对齐
-                      whiteSpace: 'nowrap', // 强制单行，不换行
+                      verticalAlign: 'bottom',
                     }}
                   >
                     {dynamicText}

@@ -2398,7 +2398,31 @@ input:focus:not(:focus-visible) {
    PHASE 11: Homepage Integration - 首页集成增强
    ════════════════════════════════════════════════════════════════ */
 
-/* 1. 纯 CSS 打字机动画 - GPU 加速，零 JS 干扰 */
+/* 1. 纯 CSS 打字机动画 - 逐字效果（使用时添加 class 'typewriter-char'） */
+.typewriter-char {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 3px solid #FFD700; /* 光标 */
+  animation:
+    typing 2s steps(20, end) forwards,
+    blink-caret 0.75s step-end infinite;
+  will-change: width; /* GPU 加速 */
+}
+
+/* 逐字打字动画 */
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* 光标闪烁 */
+@keyframes blink-caret {
+  from, to { border-color: transparent; }
+  50% { border-color: #FFD700; }
+}
+
+/* 2. 淡入动画（当前使用） */
 .typewriter-text {
   animation: typewriterFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   will-change: opacity, transform; /* 提示浏览器优化 */
@@ -2416,7 +2440,7 @@ input:focus:not(:focus-visible) {
   }
 }
 
-/* 2. 打字机光标闪烁动画（保留但暂时不使用） */
+/* 3. 打字机光标闪烁动画（备用） */
 @keyframes blink {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0; }
