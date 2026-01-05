@@ -21,6 +21,7 @@ interface Ripple {
 export const RippleButton: React.FC<ButtonProps> = ({
   children,
   className = '',
+  onClick: originalOnClick,
   ...props
 }) => {
   const [ripples, setRipples] = useState<Ripple[]>([]);
@@ -38,7 +39,12 @@ export const RippleButton: React.FC<ButtonProps> = ({
     setTimeout(() => {
       setRipples((prev) => prev.filter((r) => r.id !== id));
     }, 600);
-  }, []);
+
+    // 调用原始的 onClick 处理函数
+    if (originalOnClick) {
+      originalOnClick(e);
+    }
+  }, [originalOnClick]);
 
   return (
     <Button
