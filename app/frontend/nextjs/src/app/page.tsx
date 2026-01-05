@@ -65,8 +65,9 @@ export default function HomePage() {
   const secondaryCtaRef = useMagneticButton({ threshold: 100, strength: 0.3 });
 
   // Phase 11: 打字机效果 - 纯 CSS 动画
+  // 优化：使用长度接近的词，减少视觉位移
   const { text: dynamicText, animationKey } = useTypewriter(
-    ['DeFi Yield', 'Staking Rewards', 'Smart Investing'],
+    ['DeFi Strategies', 'Staking Rewards', 'Smart Investing'],
     { wordDuration: 3000, loop: true }
   );
 
