@@ -275,69 +275,6 @@ export default function HomePage() {
                 </RippleButton>
               </Flex>
 
-              {/* Stats Cards */}
-              <Row gutter={[24, 24]} justify="center" style={{ marginTop: 48 }}>
-                <Col>
-                  <div className="stat-card stat-card-3d">
-                    <Text
-                      style={{
-                        color: "rgba(255, 255, 255, 0.5)",
-                        fontSize: 12,
-                        textTransform: "uppercase",
-                        letterSpacing: "1px",
-                      }}
-                    >
-                      {t("home.stats.tvl")}
-                    </Text>
-                    <div
-                      ref={tvlCount.ref}
-                      className="stat-value stat-value-animated"
-                    >
-                      {tvlCount.count}
-                    </div>
-                  </div>
-                </Col>
-                <Col>
-                  <div className="stat-card stat-card-3d">
-                    <Text
-                      style={{
-                        color: "rgba(255, 255, 255, 0.5)",
-                        fontSize: 12,
-                        textTransform: "uppercase",
-                        letterSpacing: "1px",
-                      }}
-                    >
-                      {t("home.stats.users")}
-                    </Text>
-                    <div
-                      ref={usersCount.ref}
-                      className="stat-value stat-value-animated"
-                    >
-                      {usersCount.count}
-                    </div>
-                  </div>
-                </Col>
-                <Col>
-                  <div className="stat-card stat-card-3d">
-                    <Text
-                      style={{
-                        color: "rgba(255, 255, 255, 0.5)",
-                        fontSize: 12,
-                        textTransform: "uppercase",
-                        letterSpacing: "1px",
-                      }}
-                    >
-                      {t("home.stats.assets")}
-                    </Text>
-                    <div
-                      ref={assetsCount.ref}
-                      className="stat-value stat-value-animated"
-                    >
-                      {assetsCount.count}
-                    </div>
-                  </div>
-                </Col>
-              </Row>
             </Flex>
           </div>
         </div>
@@ -675,6 +612,123 @@ export default function HomePage() {
         className={`scroll-reveal ${ecosystemSection.isVisible ? 'is-visible' : ''}`}
       >
         <LogoWall />
+      </section>
+
+      {/* Stats Section - Plain Text Style (Securitize-inspired) */}
+      <section
+        style={{
+          padding: "60px 24px",
+          background: "rgba(10, 15, 13, 0.5)",
+          borderTop: "1px solid rgba(0, 212, 170, 0.1)",
+          borderBottom: "1px solid rgba(0, 212, 170, 0.1)",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1200,
+            margin: "0 auto",
+            display: "flex",
+            justifyContent: "space-around",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 32,
+          }}
+        >
+          {/* TVL Stat */}
+          <div style={{ textAlign: "center" }}>
+            <Text
+              style={{
+                color: "rgba(255, 255, 255, 0.7)",
+                fontSize: 14,
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                marginRight: 8,
+              }}
+            >
+              {t("home.stats.tvl")}:
+            </Text>
+            <Text
+              ref={tvlCount.ref}
+              style={{
+                color: "#00D4AA",
+                fontSize: 24,
+                fontWeight: 700,
+              }}
+            >
+              {tvlCount.count}
+            </Text>
+          </div>
+
+          {/* Separator */}
+          <div
+            style={{
+              width: 1,
+              height: 30,
+              background: "rgba(255, 255, 255, 0.1)",
+            }}
+            className="stats-separator"
+          />
+
+          {/* Users Stat */}
+          <div style={{ textAlign: "center" }}>
+            <Text
+              style={{
+                color: "rgba(255, 255, 255, 0.7)",
+                fontSize: 14,
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                marginRight: 8,
+              }}
+            >
+              {t("home.stats.users")}:
+            </Text>
+            <Text
+              ref={usersCount.ref}
+              style={{
+                color: "#00D4AA",
+                fontSize: 24,
+                fontWeight: 700,
+              }}
+            >
+              {usersCount.count}
+            </Text>
+          </div>
+
+          {/* Separator */}
+          <div
+            style={{
+              width: 1,
+              height: 30,
+              background: "rgba(255, 255, 255, 0.1)",
+            }}
+            className="stats-separator"
+          />
+
+          {/* Assets Stat */}
+          <div style={{ textAlign: "center" }}>
+            <Text
+              style={{
+                color: "rgba(255, 255, 255, 0.7)",
+                fontSize: 14,
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                marginRight: 8,
+              }}
+            >
+              {t("home.stats.assets")}:
+            </Text>
+            <Text
+              ref={assetsCount.ref}
+              style={{
+                color: "#00D4AA",
+                fontSize: 24,
+                fontWeight: 700,
+              }}
+            >
+              {assetsCount.count}
+            </Text>
+          </div>
+        </div>
       </section>
 
       {/* Final CTA Section */}

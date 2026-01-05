@@ -2528,6 +2528,10 @@ input:focus:not(:focus-visible) {
   .gold-text span:last-child {
     animation: none;
   }
-}
 
+  /* 移动端隐藏统计数据的分隔线 */
+  .stats-separator {
+    display: none;
+  }
+}
 
