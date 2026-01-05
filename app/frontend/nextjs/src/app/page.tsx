@@ -64,10 +64,10 @@ export default function HomePage() {
   const primaryCtaRef = useMagneticButton({ threshold: 100, strength: 0.3 });
   const secondaryCtaRef = useMagneticButton({ threshold: 100, strength: 0.3 });
 
-  // Phase 11: 打字机效果
-  const { text: dynamicText } = useTypewriter(
+  // Phase 11: 打字机效果 - 纯 CSS 动画
+  const { text: dynamicText, animationKey } = useTypewriter(
     ['DeFi Yield', 'Staking Rewards', 'Smart Investing'],
-    { typeSpeed: 100, pauseDuration: 2000, loop: true }
+    { wordDuration: 3000, loop: true }
   );
 
   // Phase 11: 新增 Section 的滚动动画
@@ -183,15 +183,16 @@ export default function HomePage() {
                   }}
                 >
                   Unlock{' '}
-                  <span className="gold-text" style={{ position: 'relative', display: 'inline-block' }}>
+                  <span
+                    key={animationKey}
+                    className="gold-text typewriter-text"
+                    style={{
+                      display: 'inline-block',
+                      minWidth: '200px', // 固定宽度避免抖动
+                      textAlign: 'left',
+                    }}
+                  >
                     {dynamicText}
-                    <span style={{
-                      position: 'absolute',
-                      right: -8,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      animation: 'blink 1s infinite'
-                    }}>|</span>
                   </span>
                   {' '}On Web3
                 </Title>
