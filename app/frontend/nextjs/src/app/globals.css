@@ -130,9 +130,10 @@ body {
 }
 
 .ant-layout-header {
-  background: var(--glass-bg) !important;
+  /* 移除 !important 以允许内联样式覆盖 */
+  background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
-  border-bottom: 1px solid var(--glass-border) !important;
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .ant-layout-content {
