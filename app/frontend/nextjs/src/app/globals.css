@@ -2541,12 +2541,18 @@ input:focus:not(:focus-visible) {
 }
 
 .ant-menu-horizontal .ant-menu-item {
-  font-size: 16px !important;
-  padding: 0 20px !important;
+  font-size: 15px !important;
+  padding: 0 16px !important;
 }
 
 .ant-menu-horizontal .ant-menu-submenu-title {
-  font-size: 16px !important;
-  padding: 0 20px !important;
+  font-size: 15px !important;
+  padding: 0 16px !important;
+}
+
+/* 强制显示被隐藏的菜单项 */
+.ant-menu-item-hidden,
+.ant-menu-submenu-hidden {
+  display: inline-flex !important;
 }
 
