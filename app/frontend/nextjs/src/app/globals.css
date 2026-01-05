@@ -2538,8 +2538,6 @@ input:focus:not(:focus-visible) {
 /* 6. Header 导航菜单样式增强 */
 .ant-menu-horizontal {
   line-height: 80px !important;
-  min-width: auto !important;
-  width: auto !important;
 }
 
 .ant-menu-horizontal .ant-menu-item {
@@ -2547,27 +2545,8 @@ input:focus:not(:focus-visible) {
   padding: 0 20px !important;
 }
 
-.ant-menu-horizontal .ant-menu-item a {
-  font-size: 16px !important;
-}
-
-.ant-menu-horizontal .ant-menu-submenu {
-  font-size: 16px !important;
-}
-
 .ant-menu-horizontal .ant-menu-submenu-title {
   font-size: 16px !important;
   padding: 0 20px !important;
-}
-
-/* 禁用溢出菜单，显示所有项 */
-.ant-menu-overflow-item {
-  display: none !important;
-}
-
-/* 强制显示被隐藏的菜单项 */
-.ant-menu-item.ant-menu-item-hidden,
-.ant-menu-submenu.ant-menu-submenu-hidden {
-  display: inline-flex !important;
 }
 
