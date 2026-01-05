@@ -2233,4 +2233,165 @@ body {
   }
 }
 
+/* ════════════════════════════════════════════════════════════════
+   PHASE 10: Performance Optimizations - 性能优化补充
+   ══════════════════════════════════════════════════════════════ */
+
+/* 1. Content Visibility - 优化大量元素渲染 */
+.stats-section,
+.features-grid,
+.how-it-works-steps {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
+
+/* 2. Font Loading Optimization */
+@font-face {
+  font-family: 'Inter';
+  font-display: swap; /* 避免隐形文本 */
+}
+
+/* 3. Image Loading Optimization */
+img,
+video {
+  content-visibility: auto;
+}
+
+img[loading="lazy"] {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+img[loading="lazy"].loaded {
+  opacity: 1;
+}
+
+/* 4. Smooth Scrolling - 原生平滑滚动 */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* 5. Reduce Motion - 全局降级 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 6. GPU Acceleration Hints */
+ gpu-accelerated {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* 7. Text Rendering Optimization */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 8. Container Queries - 未来兼容性 */
+@container (min-width: 700px) {
+  .responsive-container {
+    /* 响应式容器查询 */
+  }
+}
+
+/* 9. Performance Monitoring - 开发环境 */
+/*
+@media (development) {
+  * {
+    outline: 1px solid rgba(255, 0, 0, 0.1);
+  }
+}
+*/
+
+/* 10. Critical CSS Hints - 提示关键路径 */
+.hero-section,
+.above-the-fold {
+  contain: layout style paint;
+}
+
+/* 11. Composite Layer Promotion - 避免重排*/
+.animate-on-scroll,
+.fade-in-element {
+  transform: translateZ(0);
+  will-change: opacity, transform;
+}
+
+/* 12. Selection Styling - 改善选中体验 */
+::selection {
+  background: rgba(0, 212, 170, 0.3);
+  color: #fff;
+}
+
+::-moz-selection {
+  background: rgba(0, 212, 170, 0.3);
+  color: #fff;
+}
+
+/* 13. Focus Visible - 键盘导航优化 */
+:focus-visible {
+  outline: 2px solid #00D4AA;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 移除默认 focus，使用 focus-visible */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+input:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 14. Print Styles - 打印优化 */
+@media print {
+  .noise-overlay,
+  .bg-orb,
+  .magnetic-button,
+  .parallax-orb {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
+
+/* 15. High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .glass-card,
+  .glass-card-enhanced {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 2px solid #000 !important;
+  }
+
+  .stat-value,
+  .hero-title {
+    color: #000 !important;
+  }
+}
+
+/* 16. Dark Mode Optimization */
+@media (prefers-color-scheme: dark) {
+  /* 已经是深色主题，这里确保一致性 */
+  :root {
+    color-scheme: dark;
+  }
+}
+
 
