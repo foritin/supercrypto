@@ -182,7 +182,7 @@ export default function HomePage() {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  {t("home.title.line1")}{" "}
+                  Unlock
                   <span className="gold-text" style={{ position: 'relative', display: 'inline-block' }}>
                     {dynamicText}
                     <span style={{
@@ -194,7 +194,7 @@ export default function HomePage() {
                     }}>|</span>
                   </span>
                   <br />
-                  <span className="glow-text">{t("home.title.line2")}</span>
+                  <span className="glow-text">On Web3</span>
                 </Title>
               </div>
 
