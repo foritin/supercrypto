@@ -161,72 +161,80 @@ export function Header() {
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
-      {/* Logo - 左侧 */}
-      <Link
-        href="/"
-        aria-label={`${isHydrated ? t("header.title") : "ApprovePlatform"} - 首页`}
-        style={{
-          textDecoration: "none",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
-        <div
+      {/* 左侧容器 */}
+      <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+        <Link
+          href="/"
+          aria-label={`${isHydrated ? t("header.title") : "ApprovePlatform"} - 首页`}
           style={{
-            width: 44,
-            height: 44,
-            background: "linear-gradient(135deg, #00D4AA 0%, #00A080 100%)",
-            borderRadius: 12,
+            textDecoration: "none",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-          }}
-          aria-hidden="true"
-        >
-          {/* Rocket Icon SVG */}
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4.5 16.5C3 15 2 13 2 10C2 5.5 5.5 2 10 2C13.5 2 16.5 3.5 18.5 6L13 10L15 12L19.5 8C20.5 10 21 12.5 21 15C21 19 18 22 14 22L11.5 19L13 17.5L4.5 16.5Z" stroke="#0A0F0D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-        <Title
-          level={3}
-          style={{
-            margin: 0,
-            background: "linear-gradient(135deg, #00D4AA 0%, #33FFCC 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-            fontWeight: 700,
-            fontSize: 22,
+            gap: 12,
           }}
         >
-          {isHydrated ? t("header.title") : "ApprovePlatform"}
-        </Title>
-      </Link>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              background: "linear-gradient(135deg, #00D4AA 0%, #00A080 100%)",
+              borderRadius: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            aria-hidden="true"
+          >
+            {/* Rocket Icon SVG */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4.5 16.5C3 15 2 13 2 10C2 5.5 5.5 2 10 2C13.5 2 16.5 3.5 18.5 6L13 10L15 12L19.5 8C20.5 10 21 12.5 21 15C21 19 18 22 14 22L11.5 19L13 17.5L4.5 16.5Z" stroke="#0A0F0D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <Title
+            level={3}
+            style={{
+              margin: 0,
+              background: "linear-gradient(135deg, #00D4AA 0%, #33FFCC 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              fontWeight: 700,
+              fontSize: 22,
+            }}
+          >
+            {isHydrated ? t("header.title") : "ApprovePlatform"}
+          </Title>
+        </Link>
+      </div>
 
-      {/* Desktop Menu - 居中 */}
-      {isHydrated ? (
-        <Menu
-          mode="horizontal"
-          selectedKeys={[getSelectedKey()]}
-          aria-label="主导航菜单"
-          className="hidden md:flex"
-          style={{
-            border: "none",
-            background: "transparent",
-            flex: 1,
-            justifyContent: "center",
-            fontSize: 16,
-          }}
-          items={menuItems}
-        />
-      ) : (
-        <Skeleton.Input active style={{ width: 400, height: 40 }} className="hidden md:flex" />
-      )}
+      {/* Desktop Menu - 绝对居中 */}
+      <div
+        className="hidden md:flex"
+        style={{
+          position: "absolute",
+          left: "50%",
+          transform: "translateX(-50%)",
+        }}
+      >
+        {isHydrated ? (
+          <Menu
+            mode="horizontal"
+            selectedKeys={[getSelectedKey()]}
+            aria-label="主导航菜单"
+            style={{
+              border: "none",
+              background: "transparent",
+              fontSize: 16,
+            }}
+            items={menuItems}
+          />
+        ) : (
+          <Skeleton.Input active style={{ width: 400, height: 40 }} />
+        )}
+      </div>
 
       {/* 右侧：语言切换 + 钱包连接 + 移动端菜单按钮 */}
-      <Space size={16} align="center">
+      <Space size={16} align="center" style={{ marginLeft: "auto" }}>
         <LanguageSwitcher aria-label="切换语言" />
         <WalletConnect />
 
