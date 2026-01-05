@@ -54,13 +54,15 @@ export const useTypewriter = (
       return;
     }
 
-    const timeout = setTimeout(() => {
-      if (isPaused) {
+    // 如果在暂停状态，等待 pauseDuration 后继续
+    if (isPaused) {
+      const pauseTimeout = setTimeout(() => {
         setIsPaused(false);
-        setIsDeleting(true);
-        return;
-      }
+      }, pauseDuration);
+      return () => clearTimeout(pauseTimeout);
+    }
 
+    const timeout = setTimeout(() => {
       if (isDeleting) {
         // 删除字符
         if (displayText.length > 0) {
@@ -94,14 +96,6 @@ export const useTypewriter = (
         }
       }
     }, isDeleting ? deleteSpeed : typeSpeed);
-
-    // 如果暂停，设置额外的延迟
-    if (isPaused) {
-      const pauseTimeout = setTimeout(() => {
-        setIsPaused(false);
-      }, pauseDuration);
-      return () => clearTimeout(pauseTimeout);
-    }
 
     return () => clearTimeout(timeout);
   }, [
