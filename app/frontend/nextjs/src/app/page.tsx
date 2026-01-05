@@ -188,13 +188,11 @@ export default function HomePage() {
                     className="gold-text typewriter-text"
                     style={{
                       display: 'inline-block',
-                      minWidth: '220px', // 固定最小宽度，匹配最长词
-                      maxWidth: '220px', // 固定最大宽度，防止溢出
-                      height: '1.2em', // 固定高度，防止换行抖动
+                      minWidth: '220px', // 最小宽度匹配最长词
+                      height: '1.2em', // 固定高度，防止换行
                       textAlign: 'left',
                       verticalAlign: 'bottom', // 底部对齐
-                      whiteSpace: 'nowrap', // 强制单行
-                      overflow: 'hidden', // 隐藏溢出
+                      whiteSpace: 'nowrap', // 强制单行，不换行
                     }}
                   >
                     {dynamicText}
