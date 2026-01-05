@@ -278,12 +278,14 @@ export default function HomePage() {
               {/* Stats Section - Plain Text Style (Securitize-inspired) */}
               <div
                 style={{
-                  marginTop: 48,
+                  marginTop: 80,
                   display: "flex",
-                  justifyContent: "center",
+                  justifyContent: "space-around",
                   alignItems: "center",
-                  gap: 48,
                   flexWrap: "wrap",
+                  gap: 64,
+                  width: "100%",
+                  maxWidth: 900,
                 }}
               >
                 {/* TVL Stat */}
@@ -291,7 +293,7 @@ export default function HomePage() {
                   <Text
                     style={{
                       color: "rgba(255, 255, 255, 0.7)",
-                      fontSize: 14,
+                      fontSize: 16,
                       textTransform: "uppercase",
                       letterSpacing: "1px",
                       marginRight: 8,
@@ -303,7 +305,7 @@ export default function HomePage() {
                     ref={tvlCount.ref}
                     style={{
                       color: "#00D4AA",
-                      fontSize: 24,
+                      fontSize: 32,
                       fontWeight: 700,
                     }}
                   >
@@ -315,7 +317,7 @@ export default function HomePage() {
                 <div
                   style={{
                     width: 1,
-                    height: 30,
+                    height: 40,
                     background: "rgba(255, 255, 255, 0.1)",
                   }}
                   className="stats-separator"
@@ -326,7 +328,7 @@ export default function HomePage() {
                   <Text
                     style={{
                       color: "rgba(255, 255, 255, 0.7)",
-                      fontSize: 14,
+                      fontSize: 16,
                       textTransform: "uppercase",
                       letterSpacing: "1px",
                       marginRight: 8,
@@ -338,7 +340,7 @@ export default function HomePage() {
                     ref={usersCount.ref}
                     style={{
                       color: "#00D4AA",
-                      fontSize: 24,
+                      fontSize: 32,
                       fontWeight: 700,
                     }}
                   >
@@ -350,7 +352,7 @@ export default function HomePage() {
                 <div
                   style={{
                     width: 1,
-                    height: 30,
+                    height: 40,
                     background: "rgba(255, 255, 255, 0.1)",
                   }}
                   className="stats-separator"
@@ -361,7 +363,7 @@ export default function HomePage() {
                   <Text
                     style={{
                       color: "rgba(255, 255, 255, 0.7)",
-                      fontSize: 14,
+                      fontSize: 16,
                       textTransform: "uppercase",
                       letterSpacing: "1px",
                       marginRight: 8,
@@ -373,7 +375,7 @@ export default function HomePage() {
                     ref={assetsCount.ref}
                     style={{
                       color: "#00D4AA",
-                      fontSize: 24,
+                      fontSize: 32,
                       fontWeight: 700,
                     }}
                   >
