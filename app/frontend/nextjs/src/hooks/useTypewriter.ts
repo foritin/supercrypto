@@ -48,6 +48,7 @@ export const useTypewriter = (
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const wordsRef = useRef(words);
   const optionsRef = useRef({ typeSpeed, deleteSpeed, pauseDuration, loop });
+  const displayTextRef = useRef(''); // 持久化当前显示的文本
 
   // 更新 refs
   useEffect(() => {
@@ -64,13 +65,12 @@ export const useTypewriter = (
     // 移动端禁用复杂动画
     const isMobile = window.innerWidth < 768;
     if (isMobile) {
-      setDisplayText(words[0] || '');
+      const text = words[0] || '';
+      displayTextRef.current = text;
+      setDisplayText(text);
       setIsComplete(true);
       return;
     }
-
-    // 使用 ref 跟踪当前显示的文本，避免闭包问题
-    let currentDisplayText = displayText;
 
     const step = () => {
       const state = stateRef.current;
@@ -87,9 +87,10 @@ export const useTypewriter = (
       }
 
       if (state.isDeleting) {
-        if (currentDisplayText.length > 0) {
-          currentDisplayText = currentWord.slice(0, currentDisplayText.length - 1);
-          setDisplayText(currentDisplayText);
+        if (displayTextRef.current.length > 0) {
+          // 删除最后一个字符
+          displayTextRef.current = displayTextRef.current.slice(0, -1);
+          setDisplayText(displayTextRef.current);
           timeoutRef.current = setTimeout(step, opts.deleteSpeed);
         } else {
           // 删除完成，切换到下一个词
@@ -100,9 +101,10 @@ export const useTypewriter = (
         }
       } else {
         // 打字
-        if (currentDisplayText.length < currentWord.length) {
-          currentDisplayText = currentWord.slice(0, currentDisplayText.length + 1);
-          setDisplayText(currentDisplayText);
+        if (displayTextRef.current.length < currentWord.length) {
+          // 添加下一个字符
+          displayTextRef.current = currentWord.slice(0, displayTextRef.current.length + 1);
+          setDisplayText(displayTextRef.current);
           timeoutRef.current = setTimeout(step, opts.typeSpeed);
         } else {
           // 打字完成，暂停
@@ -127,7 +129,7 @@ export const useTypewriter = (
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [words, enabled, loop]); // 移除 displayText，只在 words 改变时重启
+  }, [words, enabled, loop]); // 只在 words 改变时重启
 
   return {
     text: displayText,
