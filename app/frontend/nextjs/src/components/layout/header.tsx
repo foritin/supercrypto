@@ -143,26 +143,26 @@ export function Header() {
   return (
     <AntHeader
       style={{
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: "1fr auto 1fr",  // 三等分布局，菜单精确居中
         alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 48px",
+        padding: `var(--header-padding-y) var(--header-padding-x)`,
         // 滚动触发的背景变换
-        background: scrolled ? "rgba(26, 26, 46, 0.95)" : "transparent",
-        backdropFilter: scrolled ? "blur(20px)" : "none",
+        background: scrolled ? "var(--header-background-scrolled)" : "var(--header-background)",
+        backdropFilter: scrolled ? "var(--header-backdrop-scrolled)" : "none",
         position: "fixed",
         top: 0,
         left: 0,
         right: 0,
         zIndex: 100,
-        height: 80,
-        borderBottom: scrolled ? "1px solid rgba(0, 212, 170, 0.2)" : "none",
-        boxShadow: scrolled ? "0 4px 20px rgba(0, 0, 0, 0.3)" : "none",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        height: "var(--header-height)",
+        borderBottom: scrolled ? "var(--header-border-scrolled)" : "none",
+        boxShadow: scrolled ? "var(--header-shadow-scrolled)" : "none",
+        transition: "var(--menu-transition)",
       }}
     >
-      {/* 左侧容器 */}
-      <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+      {/* 左侧：Logo - 左对齐 */}
+      <div style={{ display: "flex", alignItems: "center", justifySelf: "start" }}>
         <Link
           href="/"
           aria-label={`${isHydrated ? t("header.title") : "ApprovePlatform"} - 首页`}
@@ -175,10 +175,10 @@ export function Header() {
         >
           <div
             style={{
-              width: 44,
-              height: 44,
+              width: "var(--logo-size)",
+              height: "var(--logo-size)",
               background: "linear-gradient(135deg, #00D4AA 0%, #00A080 100%)",
-              borderRadius: 12,
+              borderRadius: "var(--logo-border-radius)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -199,7 +199,7 @@ export function Header() {
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
               fontWeight: 700,
-              fontSize: 22,
+              fontSize: "var(--logo-title-size)",
             }}
           >
             {isHydrated ? t("header.title") : "ApprovePlatform"}
@@ -207,28 +207,19 @@ export function Header() {
         </Link>
       </div>
 
-      {/* Desktop Menu - 绝对居中 */}
-      <div
-        className="hidden md:flex"
-        style={{
-          position: "absolute",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "auto",
-          maxWidth: "calc(100% - 450px)",
-        }}
-      >
+      {/* 中间：Desktop Menu - 天然居中（1fr auto 1fr 布局） */}
+      <div className="hidden md:flex justify-center">
         {isHydrated ? (
           <Menu
             mode="horizontal"
             selectedKeys={[getSelectedKey()]}
             aria-label="主导航菜单"
-            overflowedIndicator={null}
+            disabledOverflow  // 禁用自动折叠，显示所有菜单项
             style={{
               border: "none",
               background: "transparent",
-              fontSize: 16,
-              minWidth: "auto",
+              fontSize: "var(--menu-font-size)",
+              minWidth: "fit-content",  // 确保菜单宽度适应内容
             }}
             items={menuItems}
           />
@@ -237,8 +228,8 @@ export function Header() {
         )}
       </div>
 
-      {/* 右侧：语言切换 + 钱包连接 + 移动端菜单按钮 */}
-      <Space size={16} align="center" style={{ marginLeft: "auto" }}>
+      {/* 右侧：语言切换 + 钱包连接 + 移动端菜单按钮 - 右对齐 */}
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--header-space)", justifySelf: "end" }}>
         <LanguageSwitcher aria-label="切换语言" />
         <WalletConnect />
 
@@ -251,7 +242,7 @@ export function Header() {
         >
           <MenuIcon className="w-6 h-6" />
         </button>
-      </Space>
+      </div>
 
       {/* Mobile Drawer Menu */}
       <Drawer

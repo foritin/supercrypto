@@ -31,6 +31,50 @@
   --color-warning: #faad14;
   --color-error: #ff4d4f;
   --color-info: #1890ff;
+
+  /* ============================================
+     Header Layout Variables
+     ============================================ */
+
+  /* Header Dimensions */
+  --header-height: 80px;
+  --header-padding-x: 48px;
+  --header-padding-y: 0;
+  --header-background: transparent;
+  --header-background-scrolled: rgba(26, 26, 46, 0.95);
+  --header-backdrop-scrolled: blur(20px);
+  --header-border-scrolled: 1px solid rgba(0, 212, 170, 0.2);
+  --header-shadow-scrolled: 0 4px 20px rgba(0, 0, 0, 0.3);
+
+  /* Logo */
+  --logo-size: 44px;
+  --logo-icon-size: 24px;
+  --logo-title-size: 22px;
+  --logo-border-radius: 12px;
+  --logo-gap: 12px;
+
+  /* Navigation Menu */
+  --menu-font-size: 15px;
+  --menu-item-padding-x: 16px;
+  --menu-item-padding-y: 0;
+  --menu-max-width: 600px;
+  --menu-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Spacing */
+  --header-space: 16px;
+
+  /* Responsive Breakpoints - Mobile */
+  --header-height-mobile: 60px;
+  --header-padding-x-mobile: 24px;
+  --logo-size-mobile: 36px;
+  --logo-title-size-mobile: 18px;
+  --menu-font-size-mobile: 14px;
+
+  /* Responsive Breakpoints - Tablet */
+  --header-height-tablet: 70px;
+  --header-padding-x-tablet: 36px;
+  --logo-size-tablet: 40px;
+  --logo-title-size-tablet: 20px;
 }
 
 /* ============================================
@@ -96,6 +140,31 @@
   --glass-bg: rgba(255, 255, 255, 0.8);       /* White glass */
   --glass-border: rgba(15, 23, 42, 0.1);       /* Slate border */
   --glass-blur: blur(12px);
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS - Header Variables
+   ============================================ */
+
+/* Mobile (< 768px) */
+@media (max-width: 768px) {
+  :root {
+    --header-height: 60px;
+    --header-padding-x: 24px;
+    --logo-size: 36px;
+    --logo-title-size: 18px;
+    --menu-font-size: 14px;
+  }
+}
+
+/* Tablet (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  :root {
+    --header-height: 70px;
+    --header-padding-x: 36px;
+    --logo-size: 40px;
+    --logo-title-size: 20px;
+  }
 }
 
 * {
@@ -2535,24 +2604,13 @@ input:focus:not(:focus-visible) {
   }
 }
 
-/* 6. Header 导航菜单样式增强 */
+/* 6. Header 导航菜单样式增强 - 使用 CSS 变量 */
 .ant-menu-horizontal {
-  line-height: 80px !important;
+  line-height: var(--header-height) !important;
 }
 
-.ant-menu-horizontal .ant-menu-item {
-  font-size: 15px !important;
-  padding: 0 16px !important;
-}
-
+.ant-menu-horizontal .ant-menu-item,
 .ant-menu-horizontal .ant-menu-submenu-title {
-  font-size: 15px !important;
-  padding: 0 16px !important;
+  font-size: var(--menu-font-size) !important;
+  padding: var(--menu-item-padding-y) var(--menu-item-padding-x) !important;
 }
-
-/* 强制显示被隐藏的菜单项 */
-.ant-menu-item-hidden,
-.ant-menu-submenu-hidden {
-  display: inline-flex !important;
-}
-
