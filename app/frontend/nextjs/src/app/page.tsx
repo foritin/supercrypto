@@ -178,13 +178,13 @@ export default function HomePage() {
                 <span
                   style={{
                     display: "inline-block",
-                    padding: "10px 24px",
+                    padding: "12px 28px",
                     background:
                       "linear-gradient(135deg, rgba(0, 212, 170, 0.15) 0%, rgba(0, 160, 128, 0.1) 100%)",
                     border: "1px solid rgba(0, 212, 170, 0.4)",
                     borderRadius: 30,
                     color: "#00D4AA",
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: 600,
                     letterSpacing: "0.5px",
                     boxShadow: "0 0 20px rgba(0, 212, 170, 0.15)",
@@ -199,7 +199,7 @@ export default function HomePage() {
                 <Title
                   level={1}
                   style={{
-                    fontSize: "clamp(40px, 7vw, 80px)",
+                    fontSize: "clamp(48px, 8vw, 96px)",
                     fontWeight: 800,
                     marginBottom: 0,
                     lineHeight: 1.1,
@@ -227,9 +227,9 @@ export default function HomePage() {
               {/* Subtitle */}
               <Paragraph
                 style={{
-                  fontSize: 20,
+                  fontSize: 22,
                   color: "rgba(255, 255, 255, 0.7)",
-                  maxWidth: 700,
+                  maxWidth: 750,
                   margin: "0 auto",
                   lineHeight: 1.6,
                 }}
@@ -247,9 +247,9 @@ export default function HomePage() {
                   onClick={() => router.push("/assets")}
                   className="magnetic-button"
                   style={{
-                    height: 60,
-                    padding: "0 48px",
-                    fontSize: 18,
+                    height: 64,
+                    padding: "0 52px",
+                    fontSize: 20,
                     fontWeight: 600,
                     borderRadius: 14,
                     boxShadow: "0 0 30px rgba(0, 212, 170, 0.3)",
@@ -263,9 +263,9 @@ export default function HomePage() {
                   onClick={() => router.push("/portfolio")}
                   className="magnetic-button"
                   style={{
-                    height: 60,
-                    padding: "0 48px",
-                    fontSize: 18,
+                    height: 64,
+                    padding: "0 52px",
+                    fontSize: 20,
                     borderRadius: 14,
                     background: "rgba(255, 255, 255, 0.05)",
                     borderColor: "rgba(255, 255, 255, 0.2)",
@@ -280,12 +280,12 @@ export default function HomePage() {
                 style={{
                   marginTop: 80,
                   display: "flex",
-                  justifyContent: "space-around",
+                  justifyContent: "center",
                   alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: 64,
+                  flexWrap: "nowrap",  // 禁止换行
+                  gap: 48,
                   width: "100%",
-                  maxWidth: 900,
+                  maxWidth: 1100,  // 增大最大宽度
                 }}
               >
                 {/* TVL Stat */}
@@ -293,10 +293,10 @@ export default function HomePage() {
                   <Text
                     style={{
                       color: "rgba(255, 255, 255, 0.7)",
-                      fontSize: 16,
+                      fontSize: 18,
                       textTransform: "uppercase",
                       letterSpacing: "1px",
-                      marginRight: 8,
+                      marginRight: 10,
                     }}
                   >
                     {t("home.stats.tvl")}:
@@ -305,7 +305,7 @@ export default function HomePage() {
                     ref={tvlCount.ref}
                     style={{
                       color: "#00D4AA",
-                      fontSize: 32,
+                      fontSize: 38,
                       fontWeight: 700,
                     }}
                   >
@@ -317,7 +317,7 @@ export default function HomePage() {
                 <div
                   style={{
                     width: 1,
-                    height: 40,
+                    height: 48,
                     background: "rgba(255, 255, 255, 0.1)",
                   }}
                   className="stats-separator"
@@ -328,10 +328,10 @@ export default function HomePage() {
                   <Text
                     style={{
                       color: "rgba(255, 255, 255, 0.7)",
-                      fontSize: 16,
+                      fontSize: 18,
                       textTransform: "uppercase",
                       letterSpacing: "1px",
-                      marginRight: 8,
+                      marginRight: 10,
                     }}
                   >
                     {t("home.stats.users")}:
@@ -340,7 +340,7 @@ export default function HomePage() {
                     ref={usersCount.ref}
                     style={{
                       color: "#00D4AA",
-                      fontSize: 32,
+                      fontSize: 38,
                       fontWeight: 700,
                     }}
                   >
@@ -352,7 +352,7 @@ export default function HomePage() {
                 <div
                   style={{
                     width: 1,
-                    height: 40,
+                    height: 48,
                     background: "rgba(255, 255, 255, 0.1)",
                   }}
                   className="stats-separator"
@@ -363,10 +363,10 @@ export default function HomePage() {
                   <Text
                     style={{
                       color: "rgba(255, 255, 255, 0.7)",
-                      fontSize: 16,
+                      fontSize: 18,
                       textTransform: "uppercase",
                       letterSpacing: "1px",
-                      marginRight: 8,
+                      marginRight: 10,
                     }}
                   >
                     {t("home.stats.assets")}:
@@ -375,7 +375,7 @@ export default function HomePage() {
                     ref={assetsCount.ref}
                     style={{
                       color: "#00D4AA",
-                      fontSize: 32,
+                      fontSize: 38,
                       fontWeight: 700,
                     }}
                   >
