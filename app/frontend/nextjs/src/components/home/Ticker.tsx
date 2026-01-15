@@ -3,21 +3,24 @@
 import React from "react";
 import Image from "next/image";
 import {
-  SiEthereum,
-  SiChainlink,
-} from "react-icons/si";
+  GlobalOutlined,
+  BlockOutlined,
+  SafetyCertificateOutlined,
+  BankOutlined,
+  RiseOutlined,
+} from "@ant-design/icons";
 
-// 使用 react-icons 模拟合作伙伴 Logo，或者使用文字
+// 使用 Ant Design Icons 模拟合作伙伴 Logo
 // 实际项目中应替换为 SVG/PNG 图片
 
 const PARTNERS = [
-  { name: "Ethereum", icon: <SiEthereum size={32} /> },
-  { name: "Chainlink", icon: <SiChainlink size={32} /> },
-  { name: "Fireblocks", icon: null, text: "Fireblocks" }, // 示例：纯文字
-  { name: "Securitize Markets", icon: null, text: "Securitize Markets" },
+  { name: "Ethereum", icon: <GlobalOutlined style={{ fontSize: 32 }} /> },
+  { name: "Chainlink", icon: <BlockOutlined style={{ fontSize: 32 }} /> },
+  { name: "Fireblocks", icon: <SafetyCertificateOutlined style={{ fontSize: 32 }} />, text: "Fireblocks" },
+  { name: "Securitize Markets", icon: <BankOutlined style={{ fontSize: 32 }} />, text: "Securitize Markets" },
   { name: "BlackRock", icon: null, text: "BlackRock" },
   { name: "Coinbase Institutional", icon: null, text: "Coinbase Institutional" },
-  { name: "Ondo Finance", icon: null, text: "Ondo Finance" },
+  { name: "Ondo Finance", icon: <RiseOutlined style={{ fontSize: 32 }} />, text: "Ondo Finance" },
   { name: "Circle", icon: null, text: "Circle" },
 ];
 
