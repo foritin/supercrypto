@@ -70,6 +70,16 @@ const home = {
       cta: "View All Assets",
       months: "Months",
     },
+    partners: {
+      institutions: {
+        title: "Backed By Leading Institutions",
+        subtitle: "Trusted by the world's largest financial institutions",
+      },
+      blockchains: {
+        title: "Powered By Leading Blockchains",
+        subtitle: "Multi-chain support for maximum flexibility and security",
+      },
+    },
   },
 }
 

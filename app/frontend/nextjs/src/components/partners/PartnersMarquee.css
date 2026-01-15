@@ -1,0 +1,165 @@
+/**
+ * Partners Marquee Styles
+ * 合作伙伴无限滚动墙样式
+ */
+
+.partners-marquee {
+  padding: 48px 0;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.partners-marquee__container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header */
+.partners-marquee__header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 0 24px;
+}
+
+.partners-marquee__title {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0 0 8px 0;
+}
+
+.partners-marquee__subtitle {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Marquee Wrapper - 渐变遮罩 */
+.partners-marquee__wrapper {
+  position: relative;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+}
+
+/* Marquee Track */
+.partners-marquee__track {
+  display: flex;
+  gap: 80px;
+  width: max-content;
+  animation: marquee-scroll var(--marquee-duration, 30s) linear infinite;
+}
+
+.partners-marquee__track.reverse {
+  animation-direction: reverse;
+}
+
+/* Hover 暂停 */
+.partners-marquee__wrapper.pause-on-hover:hover .partners-marquee__track {
+  animation-play-state: paused;
+}
+
+/* 滚动动画 */
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Logo Item */
+.partners-marquee__item {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+}
+
+/* 灰度效果 */
+.partners-marquee__item.grayscale .partners-marquee__logo {
+  filter: grayscale(1) brightness(0.8);
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.partners-marquee__item.grayscale:hover .partners-marquee__logo {
+  filter: grayscale(0) brightness(1);
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* Logo */
+.partners-marquee__logo {
+  height: 32px;
+  width: auto;
+  max-width: 140px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   响应式设计
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .partners-marquee {
+    padding: 40px 0;
+  }
+
+  .partners-marquee__track {
+    gap: 60px;
+  }
+
+  .partners-marquee__logo {
+    height: 28px;
+    max-width: 120px;
+  }
+
+  .partners-marquee__header {
+    margin-bottom: 32px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .partners-marquee {
+    padding: 32px 0;
+  }
+
+  .partners-marquee__track {
+    gap: 40px;
+    --marquee-duration: 20s;
+  }
+
+  .partners-marquee__logo {
+    height: 24px;
+    max-width: 100px;
+  }
+
+  .partners-marquee__title {
+    font-size: 12px;
+  }
+
+  .partners-marquee__header {
+    margin-bottom: 24px;
+  }
+}

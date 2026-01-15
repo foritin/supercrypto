@@ -70,6 +70,16 @@ const home = {
       cta: "查看所有资产",
       months: "个月",
     },
+    partners: {
+      institutions: {
+        title: "领先机构信任背书",
+        subtitle: "受到全球顶级金融机构的信赖与支持",
+      },
+      blockchains: {
+        title: "多链技术支持",
+        subtitle: "跨链部署，灵活安全",
+      },
+    },
   },
 }
 

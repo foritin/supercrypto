@@ -31,6 +31,7 @@ import { useTypewriter } from "@/hooks/useTypewriter";
 import { RippleButton } from "@/components/ui/RippleButton";
 import { YieldCalculator } from "@/components/calculator/YieldCalculator";
 import { LogoWall } from "@/components/logo-wall/LogoWall";
+import { PartnersMarquee, INSTITUTION_PARTNERS, BLOCKCHAIN_PARTNERS } from "@/components/partners";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -331,6 +332,16 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Partners Marquee - 金融机构 */}
+      <PartnersMarquee
+        title={t("home.partners.institutions.title")}
+        subtitle={t("home.partners.institutions.subtitle")}
+        partners={INSTITUTION_PARTNERS}
+        speed={35}
+        grayscale={true}
+        pauseOnHover={true}
+      />
 
       {/* Features Section */}
       <section
@@ -658,12 +669,20 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Phase 11: Ecosystem / Logo Wall Section */}
+      {/* Phase 11: Ecosystem / Logo Wall Section - 区块链生态 */}
       <section
         ref={ecosystemSection.ref as React.RefObject<HTMLDivElement>}
         className={`scroll-reveal ${ecosystemSection.isVisible ? 'is-visible' : ''}`}
       >
-        <LogoWall />
+        <PartnersMarquee
+          title={t("home.partners.blockchains.title")}
+          subtitle={t("home.partners.blockchains.subtitle")}
+          partners={BLOCKCHAIN_PARTNERS}
+          speed={25}
+          direction="right"
+          grayscale={true}
+          pauseOnHover={true}
+        />
       </section>
 
       {/* Final CTA Section */}
