@@ -100,69 +100,17 @@ export default function HomePage() {
         {/* 视频遮罩层 */}
         <div className="hero-video-overlay" />
 
-        {/* Phoenix Prototype: 视差光球 - 跟随鼠标移动 */}
-        <div
-          className="bg-orb bg-orb-primary animate-float parallax-orb"
-          style={{
-            top: "5%",
-            left: "10%",
-            width: "500px",
-            height: "500px",
-            transform: `translate(${parallaxOffset.x * 1.2}px, ${parallaxOffset.y * 1.2}px)`
-          }}
-        />
-        <div
-          className="bg-orb bg-orb-gold animate-float-delayed parallax-orb"
-          style={{
-            bottom: "15%",
-            right: "5%",
-            width: "450px",
-            height: "450px",
-            transform: `translate(${parallaxOffset.x * 0.8}px, ${parallaxOffset.y * 0.8}px)`
-          }}
-        />
-        <div
-          className="bg-orb bg-orb-blue animate-float parallax-orb"
-          style={{
-            top: "60%",
-            left: "60%",
-            animationDelay: "-10s",
-            width: "400px",
-            height: "400px",
-            transform: `translate(${parallaxOffset.x * 1.5}px, ${parallaxOffset.y * 1.5}px)`
-          }}
-        />
-        {/* 新增：紫色光球 */}
-        <div
-          className="bg-orb bg-orb-purple animate-float parallax-orb"
-          style={{
-            top: "20%",
-            right: "25%",
-            animationDelay: "-5s",
-            width: "350px",
-            height: "350px",
-            transform: `translate(${parallaxOffset.x * 1.0}px, ${parallaxOffset.y * 1.0}px)`
-          }}
-        />
-        {/* 新增：粉色光球 */}
-        <div
-          className="bg-orb bg-orb-pink animate-float-delayed parallax-orb"
-          style={{
-            bottom: "30%",
-            left: "20%",
-            animationDelay: "-15s",
-            width: "380px",
-            height: "380px",
-            transform: `translate(${parallaxOffset.x * 0.6}px, ${parallaxOffset.y * 0.6}px)`
-          }}
-        />
-
         {/* Hero Content */}
         <div
-          className="hero-content fade-in-stagger"
+          className="hero-content fade-in-stagger w-full"
           style={{
             position: 'relative',
             zIndex: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            minHeight: '100vh', // 确保占满屏幕高度
+            paddingBottom: '120px', // 为底部的 Ticker 留出空间
           }}
         >
           <div
@@ -388,10 +336,18 @@ export default function HomePage() {
             </Flex>
           </div>
         </div>
-      </section>
 
-      {/* Ticker Section - Institutional Grade Trust */}
-      <Ticker />
+        {/* Ticker Positioned Absolutely at Bottom of Hero */}
+        <div style={{ 
+          position: 'absolute', 
+          bottom: 0, 
+          left: 0, 
+          width: '100%', 
+          zIndex: 10 
+        }}>
+          <Ticker />
+        </div>
+      </section>
 
       {/* Features Section */}
       <section
