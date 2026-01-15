@@ -26,32 +26,32 @@ const PARTNERS = [
 
 export default function Ticker() {
   return (
-    <div className="w-full py-10 border-y border-white/5 relative overflow-hidden bg-[#0a0f0d]/80 backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto px-6 mb-8 text-center">
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-[0.3em]">
-          Trusted by Industry Leaders & Institutions
+    <div className="w-full bg-white py-20 border-b border-gray-100 overflow-hidden relative">
+      <div className="max-w-7xl mx-auto px-6 mb-12 text-center">
+        <p className="text-[#1890ff] font-medium text-sm tracking-wide">
+          Backed By Leading Institutions And Individuals
         </p>
       </div>
-
-      {/* 渐变遮罩 - 增强融合感 */}
-      <div className="absolute left-0 top-0 bottom-0 w-32 z-10 bg-gradient-to-r from-[#0a0f0d] to-transparent pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-32 z-10 bg-gradient-to-l from-[#0a0f0d] to-transparent pointer-events-none" />
       
       {/* 滚动容器 */}
-      <div className="relative w-full flex overflow-hidden group">
+      <div className="relative w-full flex overflow-hidden group max-w-6xl mx-auto">
+        {/* 渐变遮罩 - 增强融合感 */}
+        <div className="absolute left-0 top-0 bottom-0 w-32 z-10 bg-gradient-to-r from-white to-transparent pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-32 z-10 bg-gradient-to-l from-white to-transparent pointer-events-none" />
+
         {/* 滚动轨道 - 需要两份来实现无缝衔接 */}
         <div className="flex animate-scroll whitespace-nowrap hover:[animation-play-state:paused] items-center">
           {PARTNERS.map((partner, index) => (
             <div
               key={`p1-${index}`}
-              className="mx-12 md:mx-20 flex items-center justify-center opacity-30 hover:opacity-100 transition-all duration-500 cursor-pointer grayscale hover:grayscale-0"
+              className="mx-10 md:mx-16 flex items-center justify-center opacity-100 transition-all duration-300 cursor-pointer grayscale hover:grayscale-0"
             >
               {partner.icon ? (
-                <div className="text-white hover:text-[#00D4AA] transition-colors duration-300">
+                <div className="text-black hover:text-[#1890ff] transition-colors duration-300">
                   {partner.icon}
                 </div>
               ) : null}
-              <span className={`text-lg font-medium text-white/60 hover:text-white transition-colors duration-300 ${partner.icon ? 'ml-3' : ''}`}>
+              <span className={`text-2xl font-bold text-black ${partner.icon ? 'ml-3' : ''}`}>
                 {partner.text || partner.name}
               </span>
             </div>
@@ -63,14 +63,14 @@ export default function Ticker() {
           {PARTNERS.map((partner, index) => (
             <div
               key={`p2-${index}`}
-              className="mx-12 md:mx-20 flex items-center justify-center opacity-30 hover:opacity-100 transition-all duration-500 cursor-pointer grayscale hover:grayscale-0"
+              className="mx-10 md:mx-16 flex items-center justify-center opacity-100 transition-all duration-300 cursor-pointer grayscale hover:grayscale-0"
             >
               {partner.icon ? (
-                <div className="text-white hover:text-[#00D4AA] transition-colors duration-300">
+                <div className="text-black hover:text-[#1890ff] transition-colors duration-300">
                   {partner.icon}
                 </div>
               ) : null}
-              <span className={`text-lg font-medium text-white/60 hover:text-white transition-colors duration-300 ${partner.icon ? 'ml-3' : ''}`}>
+              <span className={`text-2xl font-bold text-black ${partner.icon ? 'ml-3' : ''}`}>
                 {partner.text || partner.name}
               </span>
             </div>
