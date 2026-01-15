@@ -16,7 +16,15 @@ from .audit import AuditAction, AuditCategory, AuditStatus
 from .base import NetWork
 
 # 合约相关
-from .contract import ChainID, ContractModule, ContractStatus
+from .contract import (
+    ChainID,
+    ContractRegistryStatus,
+    ContractScope,
+    ContractStatus,
+    ContractType,
+    DependencyType,
+    ProjectReadiness,
+)
 from .kyc import IdType, KycStatus, OnChainSyncStatus, WalletType
 
 # 质押相关
@@ -57,7 +65,11 @@ __all__ = [
     "AuditStatus",
     # Contract
     "ChainID",
-    "ContractModule",
+    "ContractScope",
+    "ContractType",
     "NetWork",
     "ContractStatus",
+    "DependencyType",
+    "ContractRegistryStatus",
+    "ProjectReadiness",
 ]

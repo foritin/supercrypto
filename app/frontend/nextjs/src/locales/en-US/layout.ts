@@ -6,6 +6,7 @@ const layout = {
       assets: "Assets",
       staking: "Staking",
       portfolio: "Portfolio",
+      about: "About",
       help: "Help",
       admin: "Admin",
     },

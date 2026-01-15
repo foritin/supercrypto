@@ -37,7 +37,7 @@
      ============================================ */
 
   /* Header Dimensions */
-  --header-height: 80px;
+  --header-height: 96px;
   --header-padding-x: 48px;
   --header-padding-y: 0;
   --header-background: transparent;
@@ -47,14 +47,14 @@
   --header-shadow-scrolled: 0 4px 20px rgba(0, 0, 0, 0.3);
 
   /* Logo */
-  --logo-size: 44px;
-  --logo-icon-size: 24px;
-  --logo-title-size: 22px;
+  --logo-size: 52px;
+  --logo-icon-size: 28px;
+  --logo-title-size: 26px;
   --logo-border-radius: 12px;
   --logo-gap: 12px;
 
   /* Navigation Menu */
-  --menu-font-size: 17px;
+  --menu-font-size: 18px;
   --menu-item-padding-x: 20px;
   --menu-item-padding-y: 0;
   --menu-max-width: 600px;

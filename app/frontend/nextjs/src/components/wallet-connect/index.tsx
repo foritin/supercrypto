@@ -9,6 +9,7 @@ import { supportedChains } from '@/config/wagmi'
 import { truncateAddress, formatTokenBalance } from '@/utils/format'
 import { clearAuthData, setWalletConnected, setWalletAddress, hasJwtToken, getAddressFromToken } from '@/utils/auth'
 import { logout, login } from '@/services/auth'
+import { userService } from '@/services/user'
 import { InstallMetaMaskModal } from '@/components/web3/install-metamask-modal'
 
 const { Text } = Typography
@@ -51,6 +52,8 @@ export function WalletConnect() {
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   // 是否已认证（有有效的 JWT）
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  // 当前用户信息（从 /api/v1/user/auth/me 获取）
+  const [currentUser, setCurrentUser] = useState<{ is_admin: boolean; tag: string | null; kyc_status: string | null } | null>(null)
   
   // Track previous address for change detection
   const previousAddressRef = useRef<string | undefined>(undefined)
@@ -87,19 +90,32 @@ export function WalletConnect() {
   // 执行签名登录
   const performSignIn = useCallback(async () => {
     if (!address || isSigningRef.current) return
-    
+
     isSigningRef.current = true
     setIsLoggingIn(true)
-    
+
     try {
       // 请求用户签名
       const signature = await signMessageAsync({ message: SIGN_MESSAGE })
-      
+
       // 调用后端登录接口（传递当前网络信息）
       await login(address, signature, chain?.id, chain?.name)
-      
-      setIsAuthenticated(true)
-      message.success(t('wallet.loginSuccess'))
+
+      // 登录成功后，调用 /api/v1/user/auth/me 获取用户信息
+      const user = await userService.getCurrentUser()
+      if (user) {
+        setCurrentUser({
+          is_admin: user.is_admin,
+          tag: user.tag,
+          kyc_status: user.kyc_status,
+        })
+        setIsAuthenticated(true)
+        message.success(t('wallet.loginSuccess'))
+      } else {
+        // 登录成功但获取用户信息失败
+        setIsAuthenticated(false)
+        message.error(t('wallet.error.loginFailed'))
+      }
     } catch (error) {
       // 用户拒绝签名或登录失败
       const err = error as { code?: number; message?: string }
@@ -112,6 +128,7 @@ export function WalletConnect() {
         console.error('Login failed:', error)
       }
       setIsAuthenticated(false)
+      setCurrentUser(null)
     } finally {
       setIsLoggingIn(false)
       isSigningRef.current = false
@@ -137,29 +154,31 @@ export function WalletConnect() {
       })
       wasConnectedRef.current = false
       setIsAuthenticated(false)
+      setCurrentUser(null)
     }
   }, [isConnected, address, isHydrated, checkAuthStatus, performSignIn])
 
   // Detect account changes (Story 1.3) - 切换账户时重新签名登录
   useEffect(() => {
     const previousAddress = previousAddressRef.current
-    
+
     // Only handle account changes (not initial connection or disconnect)
     if (previousAddress && address && previousAddress !== address) {
       // Clear auth data when account changes (JWT is tied to specific address)
       clearAuthData()
       setIsAuthenticated(false)
-      
+      setCurrentUser(null)
+
       // Notify user of account change
-      message.info(t('wallet.accountChanged', { 
-        from: truncateAddress(previousAddress), 
-        to: truncateAddress(address) 
+      message.info(t('wallet.accountChanged', {
+        from: truncateAddress(previousAddress),
+        to: truncateAddress(address)
       }))
-      
+
       // 触发新账户的签名登录
       performSignIn()
     }
-    
+
     // Update ref for next comparison
     previousAddressRef.current = address
   }, [address, t, performSignIn])

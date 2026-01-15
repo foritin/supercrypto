@@ -4,15 +4,27 @@
 
 from enum import Enum
 
+# ===== 合约分类枚举 (双维度) =====
 
-class ContractModule(str, Enum):
-    """合约模块枚举"""
 
-    STABLECOIN = "stablecoin"
-    BUSINESS = "business"
-    ORACLE = "oracle"
-    KYC = "kyc"
-    LP = "lp"
+class ContractScope(str, Enum):
+    """合约作用域枚举 - 维度1"""
+
+    GLOBAL = "global"  # 全局共享合约
+    PROJECT = "project"  # 项目专属合约
+
+
+class ContractType(str, Enum):
+    """合约功能类型枚举 - 维度2"""
+
+    REGISTRY = "registry"  # 注册表 (AddressProvider)
+    KYC = "kyc"  # 身份验证 (KYC)
+    STABLECOIN = "stablecoin"  # 稳定币 (USDT, USDC)
+    GOVERNANCE = "governance"  # 治理 (Timelock, MultiSig)
+    TOKEN = "token"  # 代币 (RWA Token, Platform Token)
+    DEFI = "defi"  # DeFi (Subscription, Staking, Mining)
+    ORACLE = "oracle"  # 预言机 (RWAOracle)
+    UNKNOWN = "unknown"  # 未知
 
 
 class ChainID(int, Enum):
@@ -57,3 +69,34 @@ class ContractStatus(str, Enum):
     PAUSED = "paused"
     DEPRECATED = "deprecated"
     FROZEN = "frozen"
+
+
+# ===== 项目合约注册表枚举 (Epic 10) =====
+
+
+class DependencyType(str, Enum):
+    """依赖类型枚举"""
+
+    PRIMARY = "primary"  # 主合约 - 项目入口
+    REQUIRED = "required"  # 必须依赖 - 核心基础设施
+    BUSINESS = "business"  # 业务合约 - 核心业务逻辑
+    OPTIONAL = "optional"  # 可选依赖 - 增强功能
+
+
+class ContractRegistryStatus(str, Enum):
+    """合约注册表状态枚举"""
+
+    NOT_REGISTERED = "not_registered"  # 未注册
+    REGISTERED = "registered"  # 已注册配置
+    DEPLOYED = "deployed"  # 已部署，依赖未绑定
+    BOUND = "bound"  # 依赖已绑定
+    ACTIVE = "active"  # 已激活使用
+    DEPRECATED = "deprecated"  # 已废弃
+
+
+class ProjectReadiness(str, Enum):
+    """项目就绪状态枚举"""
+
+    NOT_READY = "not_ready"  # 不可用 - 主合约或 REQUIRED 未就绪
+    PARTIALLY_READY = "partially_ready"  # 部分可用 - BUSINESS 部分未就绪
+    FULLY_READY = "fully_ready"  # 完全可用 - 所有必要合约已就绪

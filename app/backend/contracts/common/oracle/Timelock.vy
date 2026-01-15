@@ -138,12 +138,14 @@ MAX_DELAY: constant(uint256) = 604800
 def __init__(_multi_sig_manager_addr: address):
     """
     @notice 初始化时间锁合约
-    @param _multi_sig_manager_addr 多签管理合约地址
+    @param _multi_sig_manager_addr 多签管理合约地址（可为空，后续通过admin配置）
     """
-    assert _multi_sig_manager_addr != empty(address), "Invalid multisig"
-    
     self.owner = msg.sender
-    self._multi_sig_manager = IMultiSigManager(_multi_sig_manager_addr)
+
+    # 如果提供了有效的多签地址，则设置接口
+    if _multi_sig_manager_addr != empty(address):
+        self._multi_sig_manager = IMultiSigManager(_multi_sig_manager_addr)
+
     self.delay = MIN_DELAY  # 默认24小时
     self.paused = False
 
@@ -163,6 +165,12 @@ def _when_not_paused():
     """仅在未暂停时可调用"""
     assert not self.paused, "Contract is paused"
 
+@internal
+@view
+def _require_multisig():
+    """要求多签管理器已设置"""
+    assert self._multi_sig_manager.address != empty(address), "Multisig not configured"
+
 # ============================================
 # 核心功能
 # ============================================
@@ -181,7 +189,8 @@ def queue_operation(
     @return operation_id 操作ID
     """
     self._when_not_paused()
-    
+    self._require_multisig()
+
     # 验证提案已获批准
     assert staticcall self._multi_sig_manager.is_proposal_approved(proposal_id), "Proposal not approved"
     assert staticcall self._multi_sig_manager.verify_proposal(proposal_id, target, data_hash), "Invalid proposal"
@@ -475,21 +484,24 @@ def transfer_ownership(new_owner: address):
 
 @external
 @view
-def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖（必须依赖 + 可选依赖）
-    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
+    @notice 获取合约依赖
+    @return (unbound_required, bound_all, unbound_optional) 未绑定必须依赖、已绑定所有依赖、未绑定可选依赖
     @dev 必须依赖: MultiSigManager
     @dev 无可选依赖
     """
-    required: DynArray[String[50], 10] = []
-    optional: DynArray[String[50], 10] = []
+    unbound_required: DynArray[String[50], 10] = []
+    bound_all: DynArray[String[50], 10] = []
+    unbound_optional: DynArray[String[50], 10] = []
 
     # 检查必须依赖
     if self._multi_sig_manager.address == empty(address):
-        required.append("MultiSigManager")
+        unbound_required.append("MultiSigManager")
+    else:
+        bound_all.append("MultiSigManager")
 
-    return required, optional
+    return unbound_required, bound_all, unbound_optional
 
 
 # ==================== 合约迁移功能 ====================

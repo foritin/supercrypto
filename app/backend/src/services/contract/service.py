@@ -3,32 +3,15 @@ Contract Service
 合约地址服务
 """
 
-from datetime import datetime, timezone
 from typing import Optional
 
 from falib.utils.config import SETTINGS
 
-from src.models.contract_dependency import DEPENDENCY_SET_FUNCTIONS, ContractBinding
-from src.models.deploy import DeployInfo
-from src.services.contract.schemas import (
-    ContractAddressesResponse,
-    ContractDependency,
-    ContractStatus,
-    ContractStatusEnhanced,
-    ContractStatusList,
-    ContractStatusListEnhanced,
-    DependencyStatus,
-    ProjectInfo,
-    SubscriptionContractInfo,
-    SubscriptionParams,
+from src.models.contracts.contract import Contract as ContractModel
+from src.models.contracts.contract_dependency import (
+    ContractDependency as ContractDependencyModel,
 )
-
-# 项目显示配置（用于前端展示，fallback 值）
-# 实际项目信息从数据库读取
-DEFAULT_PROJECT_DISPLAY = {
-    "common": {"label": "公共合约", "color": "blue", "order": 0},
-    "mock": {"label": "Mock 合约", "color": "orange", "order": 1},
-}
+from src.shared.schemas.enums import ContractStatus
 
 
 class ContractService:
@@ -37,95 +20,56 @@ class ContractService:
     def __init__(self, network: Optional[str] = None):
         self.network = SETTINGS.NETWORK
 
-    # ================ 链上方法 ==================
-
     async def get_contract_address(
-        self, deploy_step: str, contract_name: str
+        self, project_name: str, contract_name: str
     ) -> Optional[str]:
         """获取单个合约地址"""
-        info = await DeployInfo.filter(
-            deploy_step=deploy_step,
-            contract_name=contract_name,
+        contract = await ContractModel.filter(
+            project_name=project_name,
+            name=contract_name,
             network=self.network,
-            is_active=True,
+            status=ContractStatus.ACTIVE,
         ).first()
-        return info.contract_address if info else None
+        return contract.address if contract else None
 
-    async def get_all_addresses(self) -> ContractAddressesResponse:
-        """获取所有合约地址"""
-        deploys = await DeployInfo.filter(
-            network=self.network,
-            is_active=True,
-        ).all()
+    async def get_contract_status(self) -> dict:
+        """
+        获取合约状态列表（用于列表视图）
 
-        # 使用合约名称作为键，更灵活地匹配
-        address_map = {d.contract_name: d.contract_address for d in deploys}
+        返回格式与前端 ContractStatusList 接口匹配：
+        {
+            "contracts": [
+                {
+                    "name": "ContractName",
+                    "project": "vanke",
+                    "address": "0x...",
+                    "deploy_step": "step-1",
+                    "deployed": true,
+                    "deployed_at": "2025-01-01T00:00:00",
+                    "dependency_status": "synced" | "needs_update" | "not_deployed",
+                    "dependencies": [...],
+                    "set_functions": [...],
+                    "display_name": "Display Name",  # 可选
+                    "type": "exclusive"  # 可选，从 project 推断
+                }
+            ],
+            "projects": [
+                {"name": "common", "label": "公共合约", "description": "...", "color": "blue", "order": 1},
+                {"name": "vanke", "label": "万科项目", "description": "...", "color": "green", "order": 2},
+                {"name": "mock", "label": "Mock合约", "description": "...", "color": "orange", "order": 3}
+            ],
+            "network": "dev",
+            "needs_update_count": 0
+        }
+        """
+        # 查询所有合约
+        contracts = await ContractModel.all().order_by("name")
 
-        return ContractAddressesResponse(
-            mock_usdt=address_map.get("MockUSDT"),
-            mock_usdc=address_map.get("MockUSDC"),
-            kyc_manager=address_map.get("KYCManager"),
-            rwa_token=address_map.get("RWATokenSTO"),
-            platform_token=address_map.get("PlatformToken"),
-            subscription=address_map.get("Subscription"),
-            staking=address_map.get("Staking"),
-            liquidity_mining=address_map.get("LiquidityMining"),
-            network=self.network,
-        )
+        # 查询所有依赖关系
+        bindings = await ContractDependencyModel.all()
 
-    async def get_subscription_info(self) -> Optional[SubscriptionContractInfo]:
-        """获取认购合约信息（从数据库读取）"""
-        # 一次性查询所有需要的合约
-        contract_names = ["Subscription", "MockUSDT", "RWATokenSTO", "KYCManager"]
-        deploys = await DeployInfo.filter(
-            network=self.network,
-            contract_name__in=contract_names,
-            is_active=True,
-        ).all()
-
-        deploy_map = {d.contract_name: d for d in deploys}
-        subscription = deploy_map.get("Subscription")
-
-        if not subscription:
-            return None
-
-        return SubscriptionContractInfo(
-            address=subscription.contract_address,
-            usdt_address=deploy_map.get("MockUSDT").contract_address
-            if deploy_map.get("MockUSDT")
-            else "",
-            rwa_token_address=deploy_map.get("RWATokenSTO").contract_address
-            if deploy_map.get("RWATokenSTO")
-            else "",
-            kyc_manager_address=deploy_map.get("KYCManager").contract_address
-            if deploy_map.get("KYCManager")
-            else "",
-            params=SubscriptionParams(
-                min_investment=0,
-                max_investment=0,
-                require_accredited=False,
-                paused=False,
-                apy_1m=0,
-                apy_3m=0,
-                apy_6m=0,
-                apy_12m=0,
-            ),
-        )
-
-    async def get_all_contract_status(self) -> ContractStatusList:
-        """获取所有合约的状态（从数据库读取）"""
-        # 查询所有活跃的合约
-        deploys = await DeployInfo.filter(
-            network=self.network,
-            is_active=True,
-        ).all()
-
-        deploy_map = {d.contract_name: d for d in deploys}
-
-        # 查询所有绑定记录
-        bindings = await ContractBinding.filter(
-            network=self.network,
-        ).all()
+        # 构建合约映射 {name: contract}
+        contract_map = {c.name: c for c in contracts}
 
         # 构建绑定映射 {contract_name: [bindings]}
         binding_map = {}
@@ -134,334 +78,254 @@ class ContractService:
                 binding_map[b.contract_name] = []
             binding_map[b.contract_name].append(b)
 
-        contracts = []
-        for deploy in deploys:
-            name = deploy.contract_name
-            contract_bindings = binding_map.get(name, [])
-
-            # 从绑定记录构建依赖地址映射
-            dependencies = {}
-            for binding in contract_bindings:
-                dep_deploy = deploy_map.get(binding.dependency_name)
-                dependencies[binding.dependency_name] = (
-                    dep_deploy.contract_address if dep_deploy else None
-                )
-
-            contracts.append(
-                ContractStatus(
-                    name=name,
-                    address=deploy.contract_address,
-                    deploy_step=deploy.deploy_step,
-                    deployed=True,
-                    deployed_at=deploy.created_at.isoformat()
-                    if deploy.created_at
-                    else None,
-                    dependencies=dependencies,
-                    set_functions=[b.set_function for b in contract_bindings],
-                )
-            )
-
-        return ContractStatusList(
-            contracts=contracts,
-            network=self.network,
-        )
-
-    async def get_contract_dependencies(
-        self, contract_name: str
-    ) -> Optional[ContractDependency]:
-        """获取单个合约的依赖关系（从数据库读取）"""
-        # 查询合约是否存在
-        deploy = await DeployInfo.filter(
-            network=self.network,
-            contract_name=contract_name,
-            is_active=True,
-        ).first()
-
-        if not deploy:
-            return None
-
-        # 查询该合约的绑定记录
-        bindings = await ContractBinding.filter(
-            network=self.network,
-            contract_name=contract_name,
-        ).all()
-
-        return ContractDependency(
-            contract_name=contract_name,
-            depends_on=[b.dependency_name for b in bindings],
-            set_functions=[b.set_function for b in bindings],
-        )
-
-    async def get_contract_status_enhanced(self) -> ContractStatusListEnhanced:
-        """
-        获取增强版合约状态（含依赖检测）
-
-        直接从数据库读取活跃的合约，不再依赖静态配置。
-        检测逻辑（基于地址比较）：
-        1. 查询 deploy_info 表获取活跃合约
-        2. 查询 contract_binding 表获取绑定的依赖地址
-        3. 如果 bound_address ≠ latest_address → needs_update
-        """
-        # 查询所有活跃的合约部署记录
-        deploys = await DeployInfo.filter(
-            network=self.network,
-            is_active=True,
-        ).all()
-
-        deploy_map = {d.contract_name: d for d in deploys}
-
-        # 查询所有绑定记录
-        bindings = await ContractBinding.filter(
-            network=self.network,
-        ).all()
-
-        # 构建绑定映射 {contract_name: [bindings]}
-        binding_map = {}
-        for b in bindings:
-            if b.contract_name not in binding_map:
-                binding_map[b.contract_name] = []
-            binding_map[b.contract_name].append(b)
-
-        contracts = []
-        needs_update_count = 0
-        project_set = set()
-
-        # 遍历数据库中的活跃合约
-        for deploy in deploys:
-            name = deploy.contract_name
-            project_set.add(deploy.project)
-
-            dependencies_status = []
-            contract_needs_update = False
-
-            # 获取该合约的所有绑定记录
-            contract_bindings = binding_map.get(name, [])
-
-            for binding in contract_bindings:
-                dep_name = binding.dependency_name
-                dep_deploy = deploy_map.get(dep_name)
-
-                # 判断状态（基于地址比较）
-                if not dep_deploy:
-                    # 被依赖合约未部署或已失效
-                    status = "not_deployed"
-                else:
-                    # 比较绑定地址和最新地址
-                    bound_addr = binding.bound_address.lower()
-                    latest_addr = dep_deploy.contract_address.lower()
-
-                    if bound_addr != latest_addr:
-                        status = "needs_update"
-                        contract_needs_update = True
-                    else:
-                        status = "synced"
-
-                dependencies_status.append(
-                    DependencyStatus(
-                        dependency_name=dep_name,
-                        set_function=binding.set_function,
-                        status=status,
-                        current_address=binding.bound_address,
-                        latest_address=dep_deploy.contract_address
-                        if dep_deploy
-                        else None,
-                        last_synced_at=binding.last_updated_at.isoformat()
-                        if binding.last_updated_at
-                        else None,
-                    )
-                )
-
-            # 计算总体依赖状态
-            if contract_needs_update:
-                overall_status = "needs_update"
-                needs_update_count += 1
-            else:
-                overall_status = "synced"
-
-            contracts.append(
-                ContractStatusEnhanced(
-                    name=name,
-                    project=deploy.project,
-                    address=deploy.contract_address,
-                    deploy_step=deploy.deploy_step,
-                    deployed=True,
-                    deployed_at=deploy.created_at.isoformat()
-                    if deploy.created_at
-                    else None,
-                    dependency_status=overall_status,
-                    dependencies=dependencies_status,
-                    set_functions=[b.set_function for b in contract_bindings],
-                )
-            )
-
-        # 动态构建项目列表（基于数据库中的实际项目）
-        projects = []
-        for project_name in project_set:
-            display = DEFAULT_PROJECT_DISPLAY.get(project_name, {})
-            projects.append(
-                ProjectInfo(
-                    name=project_name,
-                    label=display.get("label", project_name),
-                    description=display.get("description", ""),
-                    color=display.get("color", "green"),
-                    order=display.get("order", 10),
-                )
-            )
-        projects.sort(key=lambda p: p.order)
-
-        return ContractStatusListEnhanced(
-            contracts=contracts,
-            projects=projects,
-            network=self.network,
-            needs_update_count=needs_update_count,
-        )
-
-    async def get_available_contracts_for_asset(self) -> dict:
-        """
-        获取可用于 Asset 绑定的合约列表
-
-        返回按项目分组的合约，排除 mock 项目（mock 仅用于测试币铸造）
-        """
-        # 查询所有活跃的合约（排除 mock）
-        deploys = (
-            await DeployInfo.filter(
-                network=self.network,
-                is_active=True,
-            )
-            .exclude(project="mock")
-            .all()
-        )
-
-        # 按项目分组
-        projects = {}
-        common_contracts = []
-
-        for deploy in deploys:
-            contract_info = {
-                "name": deploy.contract_name,
-                "address": deploy.contract_address,
-                "deploy_step": deploy.deploy_step,
-            }
-
-            if deploy.project == "common":
-                common_contracts.append(contract_info)
-            else:
-                if deploy.project not in projects:
-                    projects[deploy.project] = {
-                        "name": deploy.project,
-                        "contracts": [],
-                    }
-                projects[deploy.project]["contracts"].append(contract_info)
-
-        return {
-            "projects": list(projects.values()),
-            "common_contracts": common_contracts,
-            "network": self.network,
+        # 合约类型映射：modules -> type
+        module_type_map = {
+            "stablecoin": "mock",
+            "business": "exclusive",
+            "oracle": "common",
+            "kyc": "common",
+            "unknown": "exclusive",
         }
 
-    async def confirm_binding_update(
-        self,
-        contract_name: str,
-        dependency_name: str,
-        new_address: str,
-        tx_hash: str,
-    ) -> bool:
+        # 项目配置（固定）
+        project_configs = {
+            "common": {
+                "name": "common",
+                "label": "公共合约",
+                "description": "所有项目共享的合约",
+                "color": "blue",
+                "order": 1,
+            },
+            "vanke": {
+                "name": "vanke",
+                "label": "万科项目",
+                "description": "万科RWA项目专属合约",
+                "color": "green",
+                "order": 2,
+            },
+            "mock": {
+                "name": "mock",
+                "label": "Mock合约",
+                "description": "测试用Mock合约",
+                "color": "orange",
+                "order": 3,
+            },
+            "fake": {
+                "name": "fake",
+                "label": "测试项目",
+                "description": "测试项目合约",
+                "color": "purple",
+                "order": 4,
+            },
+        }
+
+        # 构建合约列表
+        contract_list = []
+        needs_update_count = 0
+
+        for contract in contracts:
+            # 检查依赖状态
+            contract_bindings = binding_map.get(contract.name, [])
+            has_outdated = False
+
+            dependencies = []
+            for binding in contract_bindings:
+                dep_contract = contract_map.get(binding.dependency_name)
+                if dep_contract and binding.dependency_address:
+                    dep_addr = binding.dependency_address.lower()
+                    latest_addr = dep_contract.address.lower()
+                    dep_status = "needs_update" if dep_addr != latest_addr else "synced"
+                    if dep_status == "needs_update":
+                        has_outdated = True
+                elif dep_contract:
+                    dep_status = "needs_update"
+                    has_outdated = True
+                else:
+                    dep_status = "not_deployed"
+
+                dependencies.append(
+                    {
+                        "dependency_name": binding.dependency_name,
+                        "set_function": DEPENDENCY_SET_FUNCTIONS.get(
+                            (binding.contract_name, binding.dependency_name),
+                            f"set{binding.dependency_name}",
+                        ),
+                        "status": dep_status,
+                        "current_address": binding.dependency_address,
+                        "latest_address": dep_contract.address
+                        if dep_contract
+                        else None,
+                        "last_synced_at": binding.updated_at.isoformat()
+                        if binding.updated_at
+                        else None,
+                    }
+                )
+
+            if has_outdated:
+                needs_update_count += 1
+
+            # 映射 modules 到 type
+            module_value = contract.modules.value if contract.modules else None
+            contract_type = module_type_map.get(module_value, "exclusive")
+
+            # 使用 project_name 或默认值，unknown 映射为 common
+            project_name = contract.project_name or "common"
+            if project_name.lower() == "unknown":
+                project_name = "common"
+
+            # 计算精确的部署状态
+            # - deployed_and_binded: 有地址且所有依赖都已绑定
+            # - deployed_needs_binding: 有地址但有依赖未绑定或需更新
+            # - not_deployed: 无地址
+            if not contract.address:
+                deployment_status = "not_deployed"
+            elif has_outdated or not contract_bindings:
+                deployment_status = "deployed_needs_binding"
+            else:
+                deployment_status = "deployed_and_binded"
+
+            contract_list.append(
+                {
+                    "name": contract.name,
+                    "project": project_name,
+                    "address": contract.address,
+                    "deploy_step": contract.name,  # 暂时使用 name 作为 deploy_step
+                    "deployed": bool(contract.address),
+                    "deployed_at": contract.created_at.isoformat()
+                    if contract.created_at
+                    else None,
+                    "dependency_status": "needs_update" if has_outdated else "synced",
+                    "deployment_status": deployment_status,  # 新增：精确状态
+                    "dependencies": dependencies,
+                    "set_functions": [],  # 可以从 bindings 中提取
+                    "type": contract_type,
+                }
+            )
+
+        return {
+            "contracts": contract_list,
+            "projects": list(project_configs.values()),
+            "network": self.network,
+            "needs_update_count": needs_update_count,
+        }
+
+    async def get_dependency_graph(self) -> dict:
         """
-        确认绑定更新完成
+        获取合约依赖关系图数据
 
-        当管理员通过 MetaMask 调用 set 函数后，更新绑定记录
+        数据来源：仅使用 Contract 和 ContractDependency 两张表
+
+        返回用于前端可视化图的数据结构：
+        {
+            "nodes": [{"id": "ContractName", "label": "...", "type": "...", "address": "...", "status": "...", "project": "..."}],
+            "edges": [{"source": "ContractA", "target": "ContractB", "label": "setFunction", "setFunction": "...", "status": "..."}]
+        }
         """
-        binding = await ContractBinding.filter(
-            contract_name=contract_name,
-            dependency_name=dependency_name,
-            network=self.network,
-        ).first()
+        # 查询所有合约（不过滤 network，获取所有数据）
+        contracts = await ContractModel.all()
 
-        if binding:
-            # 更新绑定记录
-            binding.bound_address = new_address.lower()
-            binding.last_updated_tx = tx_hash
-            binding.last_updated_at = datetime.now(timezone.utc)
-            await binding.save()
-            return True
-        else:
-            # 创建新绑定记录
-            # 首先获取主合约地址
-            contract_deploy = await DeployInfo.filter(
-                contract_name=contract_name,
-                network=self.network,
-                is_active=True,
-            ).first()
+        # 构建合约映射 {name: contract}
+        contract_map = {c.name: c for c in contracts}
 
-            if not contract_deploy:
-                return False
+        # 查询所有绑定记录（包括未绑定的）
+        # 不过滤 contract_address，获取所有记录以显示依赖关系
+        bindings = await ContractDependencyModel.all()
 
+        # 构建绑定映射 {contract_name: [bindings]}
+        binding_map = {}
+        for b in bindings:
+            if b.contract_name not in binding_map:
+                binding_map[b.contract_name] = []
+            binding_map[b.contract_name].append(b)
+
+        # 合约类型映射：modules -> type
+        # stablecoin -> mock, business -> exclusive, oracle/kyc -> common
+        module_type_map = {
+            "stablecoin": "mock",
+            "business": "exclusive",
+            "oracle": "common",
+            "kyc": "common",
+            "unknown": "exclusive",
+        }
+
+        # 构建节点列表
+        nodes = []
+        for contract in contracts:
+            # 检查该合约是否有需要更新的依赖
+            contract_bindings = binding_map.get(contract.name, [])
+            has_outdated = False
+
+            for binding in contract_bindings:
+                dep_contract = contract_map.get(binding.dependency_name)
+                if dep_contract and binding.dependency_address:
+                    # 比较绑定的依赖地址与当前合约地址
+                    dep_addr = binding.dependency_address.lower()
+                    latest_addr = dep_contract.address.lower()
+                    if dep_addr != latest_addr:
+                        has_outdated = True
+                        break
+
+            # 映射 modules 到 type - 处理 None 值
+            module_value = contract.modules.value if contract.modules else None
+            contract_type = module_type_map.get(module_value, "exclusive")
+
+            # 使用 project_name 或默认值
+            project_name = contract.project_name or "unknown"
+
+            nodes.append(
+                {
+                    "id": contract.name,
+                    "label": contract.name,
+                    "type": contract_type,
+                    "module": module_value,  # 保留原始模块类型（kyc, stablecoin, business, oracle）
+                    "address": contract.address,
+                    "status": "needs_update" if has_outdated else "synced",
+                    "project": project_name,
+                    "deployedAt": contract.created_at.isoformat()
+                    if contract.created_at
+                    else None,
+                }
+            )
+
+        # 构建边列表
+        edges = []
+        for binding in bindings:
+            # 获取 set 函数名称
             set_func = DEPENDENCY_SET_FUNCTIONS.get(
-                (contract_name, dependency_name), f"set{dependency_name}"
+                (binding.contract_name, binding.dependency_name),
+                f"set{binding.dependency_name}",
             )
 
-            await ContractBinding.create(
-                contract_name=contract_name,
-                contract_address=contract_deploy.contract_address.lower(),
-                dependency_name=dependency_name,
-                bound_address=new_address.lower(),
-                set_function=set_func,
-                network=self.network,
-                last_updated_tx=tx_hash,
+            # 检查边的状态
+            dep_contract = contract_map.get(binding.dependency_name)
+            if dep_contract and binding.dependency_address:
+                dep_addr = binding.dependency_address.lower()
+                latest_addr = dep_contract.address.lower()
+                edge_status = "needs_update" if dep_addr != latest_addr else "synced"
+            elif dep_contract:
+                # 有合约但没有依赖地址记录
+                edge_status = "needs_update"
+            else:
+                edge_status = "not_deployed"
+
+            edges.append(
+                {
+                    "source": binding.contract_name,
+                    "target": binding.dependency_name,
+                    "label": set_func,
+                    "setFunction": set_func,
+                    "status": edge_status,
+                    "currentAddress": binding.dependency_address,
+                    "latestAddress": dep_contract.address if dep_contract else None,
+                    "isBinded": binding.is_binded,
+                    "isDeployed": binding.is_deployed,
+                }
             )
-            return True
 
-    async def reset_deployments_by_project(self, project: str) -> int:
-        """
-        按项目清除部署记录
-
-        Args:
-            project: 项目标识 (common, mock, fake)
-
-        返回删除的记录数
-        """
-        # 先获取该项目的合约名列表（在软删除之前）
-        deploys = await DeployInfo.filter(
-            network=self.network,
-            project=project,
-            is_active=True,
-        ).all()
-        contract_names = [d.contract_name for d in deploys]
-
-        # 软删除 deploy_info 记录
-        deploy_count = await DeployInfo.filter(
-            network=self.network,
-            project=project,
-            is_active=True,
-        ).update(is_active=False)
-
-        # 删除相关绑定记录
-        if contract_names:
-            await ContractBinding.filter(
-                network=self.network,
-                contract_name__in=contract_names,
-            ).delete()
-
-        return deploy_count
-
-    async def reset_all_deployments(self) -> int:
-        """
-        清除所有部署记录
-
-        返回删除的记录数
-        """
-        # 软删除 deploy_info 记录
-        deploy_count = await DeployInfo.filter(
-            network=self.network,
-            is_active=True,
-        ).update(is_active=False)
-
-        # 删除绑定记录（硬删除，因为合约都没了）
-        await ContractBinding.filter(
-            network=self.network,
-        ).delete()
-
-        return deploy_count
+        return {
+            "nodes": nodes,
+            "edges": edges,
+        }
 
 
 def get_contract_service(network: Optional[str] = None) -> ContractService:

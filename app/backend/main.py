@@ -17,6 +17,7 @@ from src.models import Account
 from src.shared.aerich_redirect import TORTOISE_ORM
 from src.shared.common.exceptions import BusinessException
 from src.shared.middleware import AuthStateMiddleware
+from src.tasks.contract_task import async_chain_contracts_info
 
 settings = SETTINGS
 
@@ -40,9 +41,7 @@ async def lifespan(app: FastAPI):
 
     print("🔄 Scheduling tasks...")
     # await SchedulerService.schedule_task(
-    #     my_task,
-    #     "cyclic",
-    #     interval=60
+    #     async_chain_contracts_info, "cyclic", interval=120
     # )
     print("✅ Task scheduled")
 

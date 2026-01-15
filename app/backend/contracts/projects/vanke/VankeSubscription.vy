@@ -4,6 +4,7 @@
 @notice 权益代币认购和赎回合约 - 符合证券法合规要求
 @dev 使用USDT购买权益代币，支持4种锁定期，动态年化收益率
      添加KYC验证、投资者限制等STO合规功能
+     使用 AddressProvider 模式获取依赖地址
 """
 
 # 接口定义
@@ -21,12 +22,15 @@ interface IKYCManager:
     def isAccredited(_investor: address) -> bool: view
     def canInvest(_investor: address, _amount: uint256) -> bool: view
 
+interface IAddressProvider:
+    def get_usdt() -> address: view
+    def get_kyc_manager() -> address: view
+    def get_vanke_rwa_token() -> address: view
+
 # 合约迁移接口
 interface IMigration:
     def owner() -> address: view
-    def usdt() -> address: view
-    def rwa_token() -> address: view
-    def kyc_manager() -> address: view
+    def ADDRESS_PROVIDER() -> address: view  # 纯 Provider 模式
     def paused() -> bool: view
     def min_investment() -> uint256: view
     def max_investment() -> uint256: view
@@ -79,10 +83,10 @@ struct SubscriptionInfo:
 
 # 状态变量
 owner: public(address)
-usdt: public(address)        # USDT代币地址
-rwa_token: public(address)    # RWA STO代币地址
-kyc_manager: public(address)  # KYC管理合约地址
 paused: public(bool)         # 暂停标志
+
+# AddressProvider (immutable) - 纯 Provider 模式
+ADDRESS_PROVIDER: public(immutable(address))
 
 # STO 合规参数
 min_investment: public(uint256)      # 最小投资额
@@ -114,17 +118,13 @@ SECONDS_PER_YEAR: constant(uint256) = 365 * 24 * 3600
 
 
 @deploy
-def __init__(_usdt: address, _rwa_token: address, _kyc_manager: address):
+def __init__(_address_provider: address):
     """
-    @notice 初始化认购合约（STO版本）
-    @param _usdt USDT代币地址
-    @param _rwa_token RWA STO代币地址
-    @param _kyc_manager KYC管理合约地址
+    @notice 初始化认购合约（纯 Provider 模式）
+    @param _address_provider AddressProvider 合约地址
     """
+    ADDRESS_PROVIDER = _address_provider
     self.owner = msg.sender
-    self.usdt = _usdt
-    self.rwa_token = _rwa_token
-    self.kyc_manager = _kyc_manager
     self.paused = False
 
     # STO 合规默认参数
@@ -137,6 +137,29 @@ def __init__(_usdt: address, _rwa_token: address, _kyc_manager: address):
     self.lock_period_apy[LOCK_3_MONTHS] = 1000    # 10%
     self.lock_period_apy[LOCK_6_MONTHS] = 1200    # 12%
     self.lock_period_apy[LOCK_12_MONTHS] = 1500   # 15%
+
+
+# ==================== Provider 查询 ====================
+
+@view
+@internal
+def _get_usdt() -> address:
+    """@notice 从 AddressProvider 获取 USDT 地址"""
+    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_usdt()
+
+
+@view
+@internal
+def _get_kyc_manager() -> address:
+    """@notice 从 AddressProvider 获取 KYC 管理合约地址"""
+    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_kyc_manager()
+
+
+@view
+@internal
+def _get_rwa_token() -> address:
+    """@notice 从 AddressProvider 获取 Vanke RWA Token 地址"""
+    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_vanke_rwa_token()
 
 
 @external
@@ -205,43 +228,13 @@ def set_require_accredited(_require: bool):
     self.require_accredited = _require
 
 
-@external
-def set_kyc_manager(_new_manager: address):
-    """
-    @notice 更新KYC管理合约地址
-    @param _new_manager 新KYC管理合约地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_manager != empty(address), "Invalid address"
-    self.kyc_manager = _new_manager
-
-
-@external
-def set_usdt(_new_usdt: address):
-    """
-    @notice 更新USDT代币地址
-    @param _new_usdt 新USDT代币地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_usdt != empty(address), "Invalid address"
-    self.usdt = _new_usdt
-
-
-@external
-def set_rwa_token(_new_rwa_token: address):
-    """
-    @notice 更新RWA代币地址
-    @param _new_rwa_token 新RWA代币地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_rwa_token != empty(address), "Invalid address"
-    self.rwa_token = _new_rwa_token
+# 注意: set_kyc_manager, set_usdt, set_rwa_token 已移除 - 纯 Provider 模式下通过 AddressProvider 管理
 
 
 @external
 def subscribe(_amount: uint256, _lock_period: uint256):
     """
-    @notice 认购权益代币（STO合规版本）
+    @notice 认购权益代币（STO合规版本 - 纯 Provider 模式）
     @param _amount USDT数量（6位小数）
     @param _lock_period 锁定期（秒）
     """
@@ -251,14 +244,19 @@ def subscribe(_amount: uint256, _lock_period: uint256):
     assert _lock_period == LOCK_1_MONTH or _lock_period == LOCK_3_MONTHS or \
            _lock_period == LOCK_6_MONTHS or _lock_period == LOCK_12_MONTHS, "Invalid lock period"
 
+    # 从 Provider 获取依赖地址
+    kyc: address = self._get_kyc_manager()
+    usdt: address = self._get_usdt()
+    rwa_token: address = self._get_rwa_token()
+
     # ========== STO 合规检查 ==========
 
     # 1. KYC验证（必须）
-    assert staticcall IKYCManager(self.kyc_manager).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
 
     # 2. 合格投资者检查（如果要求）
     if self.require_accredited:
-        assert staticcall IKYCManager(self.kyc_manager).isAccredited(msg.sender), "Accredited investor required"
+        assert staticcall IKYCManager(kyc).isAccredited(msg.sender), "Accredited investor required"
 
     # 3. 最小投资额检查
     assert _amount >= self.min_investment, "Below minimum investment"
@@ -268,7 +266,7 @@ def subscribe(_amount: uint256, _lock_period: uint256):
         assert _amount <= self.max_investment, "Exceeds maximum investment"
 
     # 5. 投资能力检查
-    assert staticcall IKYCManager(self.kyc_manager).canInvest(msg.sender, _amount), "Cannot invest"
+    assert staticcall IKYCManager(kyc).canInvest(msg.sender, _amount), "Cannot invest"
 
     # ===================================
 
@@ -276,11 +274,11 @@ def subscribe(_amount: uint256, _lock_period: uint256):
     apy: uint256 = self.lock_period_apy[_lock_period]
 
     # 从用户转入USDT
-    assert extcall IERC20(self.usdt).transferFrom(msg.sender, self, _amount), "Transfer failed"
+    assert extcall IERC20(usdt).transferFrom(msg.sender, self, _amount), "Transfer failed"
 
     # 铸造等量RWA代币给用户（USDT 6位小数 -> RWA 18位小数）
     rwa_amount: uint256 = _amount * 10 ** 12  # 转换精度
-    extcall IRWAToken(self.rwa_token).mint(msg.sender, rwa_amount)
+    extcall IRWAToken(rwa_token).mint(msg.sender, rwa_amount)
 
     # 记录认购信息
     subscription_id: uint256 = self.subscriptionCount[msg.sender]
@@ -314,8 +312,13 @@ def redeem(_subscription_id: uint256):
     assert not self.paused, "Contract paused"
     assert _subscription_id < self.subscriptionCount[msg.sender], "Invalid subscription ID"
 
+    # 从 Provider 获取依赖地址
+    kyc: address = self._get_kyc_manager()
+    usdt: address = self._get_usdt()
+    rwa_token: address = self._get_rwa_token()
+
     # STO合规：确保用户KYC仍然有效
-    assert staticcall IKYCManager(self.kyc_manager).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
 
     subscription: SubscriptionInfo = self.subscriptions[msg.sender][_subscription_id]
     assert not subscription.redeemed, "Already redeemed"
@@ -331,14 +334,14 @@ def redeem(_subscription_id: uint256):
     total: uint256 = subscription.principal + interest
 
     # 检查合约USDT余额
-    assert staticcall IERC20(self.usdt).balanceOf(self) >= total, "Insufficient USDT balance"
+    assert staticcall IERC20(usdt).balanceOf(self) >= total, "Insufficient USDT balance"
 
     # 销毁RWA代币
     rwa_amount: uint256 = subscription.principal * 10 ** 12
-    extcall IRWAToken(self.rwa_token).burn(msg.sender, rwa_amount)
+    extcall IRWAToken(rwa_token).burn(msg.sender, rwa_amount)
 
     # 转出USDT（本金+利息）
-    assert extcall IERC20(self.usdt).transfer(msg.sender, total), "Transfer failed"
+    assert extcall IERC20(usdt).transfer(msg.sender, total), "Transfer failed"
 
     # 标记为已赎回
     self.subscriptions[msg.sender][_subscription_id].redeemed = True
@@ -444,26 +447,47 @@ def get_lock_periods() -> uint256[4]:
 
 @external
 @view
-def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖（必须依赖 + 可选依赖）
-    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
-    @dev 必须依赖: USDT (稳定币接口), VankeRWAToken, DefaultKYCManager
-    @dev 无可选依赖
-    @dev USDT可以是MockUSDT或真实USDT合约
+    @notice 获取合约依赖（纯 Provider 模式）
+    @return (unbound_required, bound_all, unbound_optional) 未绑定必须依赖、已绑定所有依赖、未绑定可选依赖
+    @dev 必须依赖: USDT (稳定币接口), VankeRWAToken, KYC
+    @dev 所有依赖通过 AddressProvider 获取
     """
-    required: DynArray[String[50], 10] = []
-    optional: DynArray[String[50], 10] = []
+    unbound_required: DynArray[String[50], 10] = []
+    bound_all: DynArray[String[50], 10] = []
+    unbound_optional: DynArray[String[50], 10] = []
 
-    # 检查必须依赖
-    if self.usdt == empty(address):
-        required.append("USDT")
-    if self.rwa_token == empty(address):
-        required.append("VankeRWAToken")
-    if self.kyc_manager == empty(address):
-        required.append("DefaultKYCManager")
+    # 检查必须依赖（从 Provider 获取）
+    usdt: address = self._get_usdt()
+    if usdt == empty(address):
+        unbound_required.append("USDT")
+    else:
+        bound_all.append("USDT")
 
-    return required, optional
+    rwa_token: address = self._get_rwa_token()
+    if rwa_token == empty(address):
+        unbound_required.append("VankeRWAToken")
+    else:
+        bound_all.append("VankeRWAToken")
+
+    kyc: address = self._get_kyc_manager()
+    if kyc == empty(address):
+        unbound_required.append("KYC")
+    else:
+        bound_all.append("KYC")
+
+    return unbound_required, bound_all, unbound_optional
+
+
+@view
+@external
+def get_address_provider() -> address:
+    """
+    @notice 获取 AddressProvider 地址
+    @return AddressProvider 合约地址
+    """
+    return ADDRESS_PROVIDER
 
 
 # ==================== 合约迁移功能 ====================
@@ -501,9 +525,10 @@ def is_migrated() -> bool:
 @external
 def receive_migration(old_contract: address):
     """
-    @notice 从旧合约接收迁移状态
+    @notice 从旧合约接收迁移状态（纯 Provider 模式）
     @param old_contract 旧合约地址
     @dev 只有旧合约可以调用此函数
+    @dev 注意: usdt, rwa_token, kyc_manager 通过 AddressProvider 获取，不需要迁移
     """
     assert msg.sender == old_contract, "Only old contract"
 
@@ -511,9 +536,7 @@ def receive_migration(old_contract: address):
 
     # 迁移基本状态变量
     self.owner = staticcall old.owner()
-    self.usdt = staticcall old.usdt()
-    self.rwa_token = staticcall old.rwa_token()
-    self.kyc_manager = staticcall old.kyc_manager()
+    # 注意: usdt, rwa_token, kyc_manager 通过 AddressProvider 获取，不需要迁移
     self.paused = staticcall old.paused()
     self.min_investment = staticcall old.min_investment()
     self.max_investment = staticcall old.max_investment()

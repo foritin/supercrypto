@@ -40,7 +40,8 @@ export function MainLayout({ children }: { children: ReactNode }) {
       <TriggeredLightFlow trigger="page-load" duration={2500} />
 
       {/* Content 区域：使用 Suspense 边界，显示骨架屏 */}
-      <Content style={{ padding: "24px" }}>
+      {/* padding-top 需要为固定定位的 Header 留出空间 */}
+      <Content style={{ padding: "24px", paddingTop: "calc(var(--header-height) + 24px)" }}>
         <Suspense fallback={<PageSkeleton variant="list" />}>
           <ContentWrapper>{children}</ContentWrapper>
         </Suspense>

@@ -233,16 +233,17 @@ def maxSupply() -> uint256:
 
 @external
 @view
-def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖（必须依赖 + 可选依赖）
-    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
+    @notice 获取合约依赖
+    @return (unbound_required, bound_all, unbound_optional) 未绑定必须依赖、已绑定所有依赖、未绑定可选依赖
     @dev Platform Token 是独立代币合约，无依赖
-    @dev 两个数组都为空
+    @dev 三个数组都为空
     """
-    required: DynArray[String[50], 10] = []
-    optional: DynArray[String[50], 10] = []
-    return required, optional
+    unbound_required: DynArray[String[50], 10] = []
+    bound_all: DynArray[String[50], 10] = []
+    unbound_optional: DynArray[String[50], 10] = []
+    return unbound_required, bound_all, unbound_optional
 
 
 # ==================== 迁移辅助getter函数 ====================

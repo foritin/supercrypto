@@ -6,6 +6,7 @@ const layout = {
       assets: "资产",
       staking: "质押",
       portfolio: "投资组合",
+      about: "关于",
       help: "帮助",
       admin: "管理",
     },

@@ -122,16 +122,18 @@ use_aggregator: public(bool)
 def __init__(aggregator_addr: address, oracle_addr: address):
     """
     @notice 初始化预言机消费者
-    @param aggregator_addr 数据聚合器地址
-    @param oracle_addr RWA预言机地址
+    @param aggregator_addr 数据聚合器地址（可为空，后续通过admin配置）
+    @param oracle_addr RWA预言机地址（可为空，后续通过admin配置）
     """
-    assert aggregator_addr != empty(address), "Invalid aggregator"
-    assert oracle_addr != empty(address), "Invalid oracle"
-    
     self.owner = msg.sender
-    self._aggregator = IDataAggregator(aggregator_addr)
-    self._oracle = IRWAOracle(oracle_addr)
-    self.use_aggregator = True
+
+    # 如果提供了有效的合约地址，则设置接口
+    if aggregator_addr != empty(address):
+        self._aggregator = IDataAggregator(aggregator_addr)
+    if oracle_addr != empty(address):
+        self._oracle = IRWAOracle(oracle_addr)
+
+    self.use_aggregator = aggregator_addr != empty(address)
 
 # ============================================
 # 修饰器辅助函数
@@ -142,6 +144,12 @@ def __init__(aggregator_addr: address, oracle_addr: address):
 def _only_owner():
     """仅所有者可调用"""
     assert msg.sender == self.owner, "Only owner"
+
+@internal
+@view
+def _require_oracle_or_aggregator():
+    """要求至少配置了一个预言机或聚合器"""
+    assert self._aggregator.address != empty(address) or self._oracle.address != empty(address), "Oracle or aggregator not configured"
 
 # ============================================
 # 定价功能
@@ -191,9 +199,11 @@ def _calculate_token_price(asset_id: bytes32) -> uint256:
     """
     @notice 内部：计算代币价格
     """
+    self._require_oracle_or_aggregator()
+
     config: PricingConfig = self.pricing_configs[asset_id]
     assert config.base_price > 0, "Config not set"
-    
+
     # 获取数据
     apy: uint256 = 0
     confidence: uint256 = 0
@@ -260,6 +270,8 @@ def _validate_investment(asset_id: bytes32, amount: uint256) -> bool:
     """
     @notice 内部：验证投资是否符合条件
     """
+    self._require_oracle_or_aggregator()
+
     # 检查数据有效性
     if not staticcall self._oracle.is_data_valid(asset_id):
         return False
@@ -318,6 +330,8 @@ def _get_asset_apy(asset_id: bytes32) -> uint256:
     """
     @notice 内部：获取资产APY
     """
+    self._require_oracle_or_aggregator()
+
     if self.use_aggregator:
         return staticcall self._aggregator.get_aggregated_apy(asset_id)
     else:
@@ -341,6 +355,8 @@ def get_asset_valuation(asset_id: bytes32) -> uint256:
     @param asset_id 资产ID
     @return 估值（USD，6位小数）
     """
+    self._require_oracle_or_aggregator()
+
     if self.use_aggregator:
         return staticcall self._aggregator.get_aggregated_valuation(asset_id)
     else:
@@ -354,10 +370,12 @@ def get_full_asset_info(asset_id: bytes32) -> (uint256, uint256, ComplianceStatu
     @param asset_id 资产ID
     @return (APY, 估值, 合规状态, 置信度, 数据是否有效)
     """
+    self._require_oracle_or_aggregator()
+
     apy: uint256 = 0
     valuation: uint256 = 0
     confidence: uint256 = 0
-    
+
     if self.use_aggregator:
         apy = staticcall self._aggregator.get_aggregated_apy(asset_id)
         valuation = staticcall self._aggregator.get_aggregated_valuation(asset_id)
@@ -461,26 +479,30 @@ def transfer_ownership(new_owner: address):
 # ==================== 依赖查询功能 ====================
 
 @external
-def getDependencies() -> address[2]:
+@view
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖地址
-    @return [aggregator, oracle] 依赖合约地址数组
-    @dev OracleConsumer 依赖 DataAggregator 和 RWAOracle
+    @notice 获取合约依赖
+    @return (unbound_required, bound_all, unbound_optional) 未绑定必须依赖、已绑定所有依赖、未绑定可选依赖
+    @dev 必须依赖: VankeDataAggregator, CapitalOracle
+    @dev 无可选依赖
     """
-    return [self._aggregator.address, self._oracle.address]
+    unbound_required: DynArray[String[50], 10] = []
+    bound_all: DynArray[String[50], 10] = []
+    unbound_optional: DynArray[String[50], 10] = []
 
+    # 检查必须依赖
+    if self._aggregator.address == empty(address):
+        unbound_required.append("VankeDataAggregator")
+    else:
+        bound_all.append("VankeDataAggregator")
 
-@external
-def checkDependenciesBound() -> bool:
-    """
-    @notice 检查依赖是否已绑定
-    @return True 如果所有依赖已配置（非零地址）
-    @dev DataAggregator 和 RWAOracle 必须都已配置
-    """
-    return (
-        self._aggregator.address != empty(address) and
-        self._oracle.address != empty(address)
-    )
+    if self._oracle.address == empty(address):
+        unbound_required.append("CapitalOracle")
+    else:
+        bound_all.append("CapitalOracle")
+
+    return unbound_required, bound_all, unbound_optional
 
 
 # ==================== 合约迁移功能 ====================

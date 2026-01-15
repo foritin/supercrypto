@@ -163,12 +163,13 @@ DEFAULT_MIN_SECONDARY: constant(uint256) = 3
 def __init__(primary_oracle_addr: address):
     """
     @notice 初始化数据聚合器
-    @param primary_oracle_addr 主预言机地址
+    @param primary_oracle_addr 主预言机地址（可为空，后续通过admin配置）
     """
-    assert primary_oracle_addr != empty(address), "Invalid primary oracle"
-    
     self.owner = msg.sender
-    self._primary_oracle = IRWAOracle(primary_oracle_addr)
+
+    # 如果提供了有效的合约地址，则设置接口
+    if primary_oracle_addr != empty(address):
+        self._primary_oracle = IRWAOracle(primary_oracle_addr)
     
     self.cache_validity = DEFAULT_CACHE_VALIDITY
     self.deviation_threshold = DEFAULT_DEVIATION_THRESHOLD
@@ -191,6 +192,12 @@ def _only_owner():
 def _when_not_paused():
     """仅在未暂停时可调用"""
     assert not self.paused, "Contract is paused"
+
+@internal
+@view
+def _require_primary_oracle():
+    """要求主预言机已设置"""
+    assert self._primary_oracle.address != empty(address), "Primary oracle not configured"
 
 # ============================================
 # 次级预言机管理
@@ -409,12 +416,14 @@ def get_aggregated_apy(asset_id: bytes32) -> uint256:
     @param asset_id 资产ID
     @return APY（基点）
     """
+    self._require_primary_oracle()
+
     cached: AggregatedData = self.aggregated_cache[asset_id]
-    
+
     # 如果缓存有效，返回缓存
     if cached.timestamp > 0 and (block.timestamp - cached.timestamp) < self.cache_validity:
         return cached.apy
-    
+
     # 否则返回主数据源
     return staticcall self._primary_oracle.get_apy(asset_id)
 
@@ -426,12 +435,14 @@ def get_aggregated_valuation(asset_id: bytes32) -> uint256:
     @param asset_id 资产ID
     @return 估值（USD）
     """
+    self._require_primary_oracle()
+
     cached: AggregatedData = self.aggregated_cache[asset_id]
-    
+
     # 如果缓存有效，返回缓存
     if cached.timestamp > 0 and (block.timestamp - cached.timestamp) < self.cache_validity:
         return cached.valuation
-    
+
     # 否则返回主数据源
     return staticcall self._primary_oracle.get_valuation(asset_id)
 
@@ -651,23 +662,25 @@ def transfer_ownership(new_owner: address):
 # ==================== 依赖查询功能 ====================
 
 @external
-def getDependencies() -> address[1]:
+@view
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖地址
-    @return [primary_oracle] 主预言机合约地址
-    @dev DataAggregator 依赖 RWAOracle
+    @notice 获取合约依赖
+    @return (unbound_required, bound_all, unbound_optional) 未绑定必须依赖、已绑定所有依赖、未绑定可选依赖
+    @dev 必须依赖: CapitalOracle
+    @dev 无可选依赖
     """
-    return [self._primary_oracle.address]
+    unbound_required: DynArray[String[50], 10] = []
+    bound_all: DynArray[String[50], 10] = []
+    unbound_optional: DynArray[String[50], 10] = []
 
+    # 检查必须依赖
+    if self._primary_oracle.address == empty(address):
+        unbound_required.append("CapitalOracle")
+    else:
+        bound_all.append("CapitalOracle")
 
-@external
-def checkDependenciesBound() -> bool:
-    """
-    @notice 检查依赖是否已绑定
-    @return True 如果所有依赖已配置（非零地址）
-    @dev RWAOracle 必须已配置
-    """
-    return self._primary_oracle.address != empty(address)
+    return unbound_required, bound_all, unbound_optional
 
 
 @external

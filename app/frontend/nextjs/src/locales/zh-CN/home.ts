@@ -1,6 +1,15 @@
 const home = {
   home: {
     badge: "新一代 RWA 投资平台",
+    heroTitle: {
+      unlock: "解锁",
+      onWeb3: "基于 Web3",
+    },
+    dynamicWords: [
+      "DeFi 策略",
+      "质押奖励",
+      "智能投资",
+    ],
     title: {
       line1: "最快捷的",
       highlight: "方式",

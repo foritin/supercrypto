@@ -10,7 +10,6 @@ from falib.utils.config import SETTINGS
 from fastapi import HTTPException, status
 from starlette.requests import Request
 
-from src.shared.services import session_service
 from src.models.account import Account
 from src.shared.common.exceptions import UnauthorizedException
 from src.shared.security.exceptions import (
@@ -18,6 +17,7 @@ from src.shared.security.exceptions import (
     RefreshTokenExpiredException,
 )
 from src.shared.security.jwt import verify_token
+from src.shared.services import session_service
 
 
 def extract_token_from_header(authorization: Optional[str]) -> str:
@@ -108,7 +108,8 @@ async def require_user(request: Request) -> str:
 
     检查：
     1. 是否已认证（token 有效）
-    2. 会话是否已被撤销
+    2. Token 版本号是否匹配
+    3. 是否在黑名单中
 
     Returns:
         wallet_address: 用户钱包地址
@@ -145,7 +146,39 @@ async def require_user(request: Request) -> str:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-    # 检查是否在黑名单中
+    # 验证 Token 版本号
+    session_id = getattr(request.state, "session_id", None)
+    if session_id:
+        session = await session_service.get_session(wallet_address, session_id)
+
+        # Session 不存在 = 已被登出
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session not found. Please login again.",
+                headers={
+                    "WWW-Authenticate": "Bearer",
+                    "X-Token-Status": "session_not_found",
+                },
+            )
+
+        # 检查版本号是否匹配
+        token_version = getattr(request.state, "token_version", 1)
+        session_version = session.get("token_version", 1)
+
+        if token_version != session_version:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has been invalidated. Please login again.",
+                headers={
+                    "WWW-Authenticate": "Bearer",
+                    "X-Token-Status": "version_mismatch",
+                    "X-Current-Version": str(session_version),
+                    "X-Token-Version": str(token_version),
+                },
+            )
+
+    # 检查是否在黑名单中（管理员封禁）
     if await session_service.is_blacklisted(wallet_address):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -170,8 +203,8 @@ async def require_admin(request: Request) -> str:
     wallet_address = await require_user(request)
 
     # 查询账户并验证管理员权限
-    wallet = SETTINGS.wallet
-    account = await Account.filter(address=wallet_address, net_type=wallet).first()
+    wallet = SETTINGS.NETWORK
+    account = await Account.filter(address=wallet_address, network=wallet).first()
 
     if not account or account.tag != "admin":
         raise HTTPException(

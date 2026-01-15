@@ -8,14 +8,6 @@ from typing import List, Optional, Tuple
 
 from falib.utils.config import SETTINGS
 
-from src.services.asset.schemas import (
-    AssetCreateRequest,
-    AssetDetailResponse,
-    AssetListItem,
-    AssetPriceHistoryItem,
-    AssetUpdateRequest,
-    ProjectContractInfo,
-)
 from src.models.asset import (
     Asset,
     AssetContractBinding,
@@ -23,8 +15,18 @@ from src.models.asset import (
     AssetStatus,
     AssetType,
 )
-from src.models.deploy import DeployInfo
+from src.models.contracts.contract import Contract
+from src.services.asset.schemas import (
+    AssetCreateRequest,
+    AssetDetailResponse,
+    AssetListItem,
+    AssetPriceHistoryItem,
+    AssetUpdateRequest,
+    ContractBindingStatus,
+    ProjectContractInfo,
+)
 from src.shared.common.exceptions import BusinessException
+from src.shared.schemas.enums import ContractScope, ContractStatus
 
 
 class AssetService:
@@ -33,7 +35,7 @@ class AssetService:
     @property
     def environment(self) -> str:
         """获取当前环境"""
-        return SETTINGS.wallet
+        return SETTINGS.NETWORK
 
     async def list_assets(
         self,
@@ -436,12 +438,10 @@ class AssetService:
         Returns:
             项目列表，每个项目包含合约数量和详细合约信息（含绑定状态）
         """
-        from src.services.asset.schemas import ContractBindingStatus
+        # 查询所有活跃的合约 (使用 Contract 模型)
+        contracts = await Contract.filter(status=ContractStatus.ACTIVE).all()
 
-        # 查询所有活跃的部署记录
-        deploy_records = await DeployInfo.filter(is_active=True).all()
-
-        # 查询所有已绑定的 exclusive 合约
+        # 查询所有已绑定的 PROJECT 合约
         all_bindings = await AssetContractBinding.all().prefetch_related("asset")
 
         # 构建已绑定合约的映射 {contract_address: (asset_name, asset_id)}
@@ -451,29 +451,27 @@ class AssetService:
 
         # 按项目分组
         project_map: dict[str, list[ContractBindingStatus]] = {}
-        for record in deploy_records:
-            if record.project not in project_map:
-                project_map[record.project] = []
+        for record in contracts:
+            if record.project_name not in project_map:
+                project_map[record.project_name] = []
 
             # 检查是否可绑定
             is_available = True
             bound_to_asset = None
             bound_to_asset_id = None
 
-            if record.contract_type == "exclusive":
-                # exclusive 合约检查是否已被绑定
-                if record.contract_address in bound_map:
+            # PROJECT scope 合约检查是否已被绑定
+            if record.scope == ContractScope.PROJECT:
+                if record.address in bound_map:
                     is_available = False
-                    bound_to_asset, bound_to_asset_id = bound_map[
-                        record.contract_address
-                    ]
-            # common 和 mock 合约始终可绑定
+                    bound_to_asset, bound_to_asset_id = bound_map[record.address]
+            # GLOBAL scope 合约始终可绑定
 
-            project_map[record.project].append(
+            project_map[record.project_name].append(
                 ContractBindingStatus(
-                    contract_name=record.contract_name,
-                    contract_address=record.contract_address,
-                    contract_type=record.contract_type,
+                    contract_name=record.name,
+                    contract_address=record.address,
+                    contract_type=record.contract_type.value,
                     is_available=is_available,
                     bound_to_asset=bound_to_asset,
                     bound_to_asset_id=bound_to_asset_id,
@@ -514,27 +512,27 @@ class AssetService:
         if not asset:
             raise BusinessException(code=404, message="Asset not found")
 
-        # 查询该项目下所有活跃的合约
-        deploy_records = await DeployInfo.filter(project=project, is_active=True).all()
+        # 查询该项目下所有活跃的合约 (使用 Contract 模型)
+        contracts = await Contract.filter(
+            project_name=project, status=ContractStatus.ACTIVE
+        ).all()
 
-        if not deploy_records:
+        if not contracts:
             raise BusinessException(
                 code=400, message=f"No active contracts found for project '{project}'"
             )
 
         # 如果指定了合约名称，只绑定这些合约
         if contract_names:
-            deploy_records = [
-                r for r in deploy_records if r.contract_name in contract_names
-            ]
-            if not deploy_records:
+            contracts = [r for r in contracts if r.name in contract_names]
+            if not contracts:
                 raise BusinessException(
                     code=400, message="None of the specified contracts found"
                 )
 
-        # 批量检查 exclusive 合约是否已被其他资产绑定
+        # 批量检查 PROJECT scope 合约是否已被其他资产绑定
         exclusive_addresses = [
-            r.contract_address for r in deploy_records if r.contract_type == "exclusive"
+            r.address for r in contracts if r.scope == ContractScope.PROJECT
         ]
         if exclusive_addresses:
             existing_bindings = (
@@ -550,9 +548,9 @@ class AssetService:
                     # 找到对应的合约名称
                     contract_name = next(
                         (
-                            r.contract_name
-                            for r in deploy_records
-                            if r.contract_address == binding.contract_address
+                            r.name
+                            for r in contracts
+                            if r.address == binding.contract_address
                         ),
                         binding.contract_address,
                     )
@@ -563,32 +561,30 @@ class AssetService:
 
         # 批量查询当前资产已存在的绑定
         existing_bindings = await AssetContractBinding.filter(
-            asset=asset, contract_name__in=[r.contract_name for r in deploy_records]
+            asset=asset, contract_name__in=[r.name for r in contracts]
         ).all()
         existing_map = {b.contract_name: b for b in existing_bindings}
 
         # 批量创建/更新绑定
-        for record in deploy_records:
-            # 使用 DeployInfo 中的 contract_type
+        for record in contracts:
+            # 根据 scope 确定 binding_type
             binding_type = (
-                record.contract_type
-                if record.contract_type in ("common", "mock")
-                else "project"
+                "common" if record.scope == ContractScope.GLOBAL else "project"
             )
 
-            existing = existing_map.get(record.contract_name)
+            existing = existing_map.get(record.name)
 
             if existing:
                 # 如果已存在，更新地址和类型
-                existing.contract_address = record.contract_address
+                existing.contract_address = record.address
                 existing.contract_type = binding_type
                 await existing.save()
             else:
                 # 创建新绑定
                 await AssetContractBinding.create(
                     asset=asset,
-                    contract_name=record.contract_name,
-                    contract_address=record.contract_address,
+                    contract_name=record.name,
+                    contract_address=record.address,
                     contract_type=binding_type,
                     is_primary=False,
                 )
@@ -599,12 +595,12 @@ class AssetService:
             await asset.save()
 
         # 如果需要设置主合约
-        if set_primary and deploy_records:
+        if set_primary and contracts:
             # 查找主合约（通常是 Token 合约）
             primary_candidates = ["RWATokenSTO", "STOToken", f"{project.upper()}Token"]
             for candidate in primary_candidates:
-                for record in deploy_records:
-                    if record.contract_name == candidate:
+                for record in contracts:
+                    if record.name == candidate:
                         # 先清除其他主合约标记
                         await AssetContractBinding.filter(
                             asset=asset, is_primary=True
@@ -614,7 +610,7 @@ class AssetService:
                             asset=asset, contract_name=candidate
                         ).update(is_primary=True)
                         # 更新资产的主合约地址
-                        asset.contract_address = record.contract_address
+                        asset.contract_address = record.address
                         await asset.save()
                         break
 
@@ -673,8 +669,8 @@ class AssetService:
         elif project:
             # 解绑指定项目的合约
             # 先获取该项目的合约名称列表
-            deploy_records = await DeployInfo.filter(project=project).all()
-            names_to_unbind = [r.contract_name for r in deploy_records]
+            contracts = await Contract.filter(project_name=project).all()
+            names_to_unbind = [r.name for r in contracts]
 
             if names_to_unbind:
                 await AssetContractBinding.filter(

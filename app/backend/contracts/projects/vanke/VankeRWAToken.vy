@@ -3,6 +3,7 @@
 @title RWA Security Token (STO)
 @notice 符合ERC1404标准的证券型代币 - 真实世界资产代币化
 @dev 基于固定资产的权益代币，价格固定为1 USD，符合证券法合规要求
+     使用 AddressProvider 模式获取依赖地址
 """
 
 # 接口定义
@@ -12,6 +13,9 @@ interface IKYCManager:
     def investorCount() -> uint256: view
     def maxInvestors() -> uint256: view
 
+interface IAddressProvider:
+    def get_kyc_manager() -> address: view
+
 # 合约迁移接口
 interface IMigration:
     def owner() -> address: view
@@ -19,7 +23,7 @@ interface IMigration:
     def symbol() -> String[8]: view
     def decimals() -> uint8: view
     def totalSupply() -> uint256: view
-    def kyc_manager() -> address: view
+    def ADDRESS_PROVIDER() -> address: view  # 纯 Provider 模式
     def transfer_agent() -> address: view
     def issuance_finished() -> bool: view
     def get_minter_list() -> DynArray[address, 100]: view
@@ -62,6 +66,10 @@ event TransferAgentUpdated:
     oldAgent: indexed(address)
     newAgent: indexed(address)
 
+event OracleUpdated:
+    oldOracle: indexed(address)
+    newOracle: indexed(address)
+
 event ForcedTransfer:
     from_addr: indexed(address)
     to_addr: indexed(address)
@@ -94,10 +102,13 @@ owner: public(address)
 minters: public(HashMap[address, bool])
 burners: public(HashMap[address, bool])
 
+# AddressProvider (immutable) - 纯 Provider 模式
+ADDRESS_PROVIDER: public(immutable(address))
+
 # STO 特定变量
-kyc_manager: public(address)         # KYC管理合约地址
 transfer_agent: public(address)      # 转让代理（监管角色）
 issuance_finished: public(bool)      # 是否完成发行
+oracle: public(address)              # 可选：CapitalOracle合约地址（用于价格获取）
 
 # 文档管理（关联法律文件）
 documents: public(HashMap[String[32], String[256]])  # 文档名 => URI
@@ -179,19 +190,31 @@ def _trackAllowance(_owner: address, _spender: address):
 
 
 @deploy
-def __init__(_kyc_manager: address):
+def __init__(_address_provider: address):
     """
-    @notice 初始化RWA Security Token
-    @param _kyc_manager KYC管理合约地址
+    @notice 初始化RWA Security Token (纯 Provider 模式)
+    @param _address_provider AddressProvider 合约地址
     """
+    ADDRESS_PROVIDER = _address_provider
     self.name = "RWA Security Token"
     self.symbol = "RWASTO"
     self.decimals = 18
     self.totalSupply = 0
     self.owner = msg.sender
     self.transfer_agent = msg.sender
-    self.kyc_manager = _kyc_manager
     self.issuance_finished = False
+
+
+# ==================== Provider 查询 ====================
+
+@view
+@internal
+def _get_kyc_manager() -> address:
+    """
+    @notice 从 AddressProvider 获取 KYC 管理合约地址
+    @return KYC 管理合约地址
+    """
+    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_kyc_manager()
 
 
 # ==================== 管理功能 ====================
@@ -242,18 +265,7 @@ def setBurner(_burner: address, _enabled: bool):
             self.burnerList.append(_burner)
 
 
-@external
-def set_kyc_manager(_new_manager: address):
-    """
-    @notice 更新KYC管理合约地址
-    @param _new_manager 新KYC管理合约地址（允许零地址用于初始化）
-    """
-    assert msg.sender == self.owner, "Only owner"
-
-    old_manager: address = self.kyc_manager
-    self.kyc_manager = _new_manager
-
-    log KYCManagerUpdated(old_manager, _new_manager)
+# 注意: set_kyc_manager 已移除 - 纯 Provider 模式下通过 AddressProvider 管理
 
 
 @external
@@ -269,6 +281,20 @@ def set_transfer_agent(_new_agent: address):
     self.transfer_agent = _new_agent
 
     log TransferAgentUpdated(old_agent, _new_agent)
+
+
+@external
+def set_oracle(_oracle: address):
+    """
+    @notice 设置CapitalOracle合约（可选）
+    @param _oracle CapitalOracle合约地址（可为零地址）
+    """
+    assert msg.sender == self.owner, "Only owner"
+
+    old_oracle: address = self.oracle
+    self.oracle = _oracle
+
+    log OracleUpdated(old_oracle, _oracle)
 
 
 @external
@@ -323,19 +349,22 @@ def _detectTransferRestriction(
     @param _value 转账金额
     @return 限制代码（0=允许，其他=限制原因）
     """
+    # 从 Provider 获取 KYC 管理合约地址（缓存避免重复调用）
+    kyc: address = self._get_kyc_manager()
+
     # 0. 铸造（from = zero address）- 只检查接收方
     if _from == empty(address):
-        if not staticcall IKYCManager(self.kyc_manager).isVerified(_to):
+        if not staticcall IKYCManager(kyc).isVerified(_to):
             return 2  # 接收方未通过KYC
-        if staticcall IKYCManager(self.kyc_manager).isFrozen(_to):
+        if staticcall IKYCManager(kyc).isFrozen(_to):
             return 4  # 接收方账户冻结
         return 0
 
     # 1. 销毁（to = zero address）- 只检查发送方
     if _to == empty(address):
-        if not staticcall IKYCManager(self.kyc_manager).isVerified(_from):
+        if not staticcall IKYCManager(kyc).isVerified(_from):
             return 1  # 发送方未通过KYC
-        if staticcall IKYCManager(self.kyc_manager).isFrozen(_from):
+        if staticcall IKYCManager(kyc).isFrozen(_from):
             return 3  # 发送方账户冻结
         if self.balanceOf[_from] < _value:
             return 7  # 余额不足
@@ -346,19 +375,19 @@ def _detectTransferRestriction(
         return 6  # 转账金额为零
 
     # 3. 检查发送方KYC
-    if not staticcall IKYCManager(self.kyc_manager).isVerified(_from):
+    if not staticcall IKYCManager(kyc).isVerified(_from):
         return 1  # 发送方未通过KYC
 
     # 4. 检查接收方KYC
-    if not staticcall IKYCManager(self.kyc_manager).isVerified(_to):
+    if not staticcall IKYCManager(kyc).isVerified(_to):
         return 2  # 接收方未通过KYC
 
     # 5. 检查发送方是否冻结
-    if staticcall IKYCManager(self.kyc_manager).isFrozen(_from):
+    if staticcall IKYCManager(kyc).isFrozen(_from):
         return 3  # 发送方账户冻结
 
     # 6. 检查接收方是否冻结
-    if staticcall IKYCManager(self.kyc_manager).isFrozen(_to):
+    if staticcall IKYCManager(kyc).isFrozen(_to):
         return 4  # 接收方账户冻结
 
     # 7. 检查余额
@@ -367,8 +396,8 @@ def _detectTransferRestriction(
 
     # 8. 检查投资者上限（仅当接收方首次接收时）
     if self.balanceOf[_to] == 0:
-        investorCount: uint256 = staticcall IKYCManager(self.kyc_manager).investorCount()
-        maxInvestors: uint256 = staticcall IKYCManager(self.kyc_manager).maxInvestors()
+        investorCount: uint256 = staticcall IKYCManager(kyc).investorCount()
+        maxInvestors: uint256 = staticcall IKYCManager(kyc).maxInvestors()
         if investorCount >= maxInvestors:
             return 5  # 超过投资者上限
     
@@ -631,38 +660,54 @@ def canTransfer(_from: address, _to: address, _value: uint256) -> bool:
 @external
 def get_kyc_manager() -> (address, bool):
     """
-    @notice 获取KYC管理合约地址及配置状态
+    @notice 获取KYC管理合约地址及配置状态（纯 Provider 模式）
     @return (KYC管理合约地址, 是否已配置)
-    @dev 零地址表示未配置
+    @dev 从 AddressProvider 获取，零地址表示未在 Provider 中注册
     """
-    is_configured: bool = self.kyc_manager != empty(address)
-    return (self.kyc_manager, is_configured)
+    kyc: address = self._get_kyc_manager()
+    is_configured: bool = kyc != empty(address)
+    return (kyc, is_configured)
+
+
+@view
+@external
+def get_address_provider() -> address:
+    """
+    @notice 获取 AddressProvider 地址
+    @return AddressProvider 合约地址
+    """
+    return ADDRESS_PROVIDER
 
 
 # ==================== 依赖查询功能 ====================
 
 @external
 @view
-def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖（必须依赖 + 可选依赖）
-    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
-    @dev 必须依赖: DefaultKYCManager
-    @dev 可选依赖: VankeRWAOracle (如果设置了预言机)
-    @dev 空数组表示无对应类型的依赖
+    @notice 获取合约依赖（纯 Provider 模式）
+    @return (unbound_required, bound_all, unbound_optional) 未绑定必须依赖、已绑定所有依赖、未绑定可选依赖
+    @dev 必须依赖: KYC (通过 AddressProvider)
+    @dev 可选依赖: CapitalOracle (预言机，仍通过 setter)
     """
-    required: DynArray[String[50], 10] = []
-    optional: DynArray[String[50], 10] = []
+    unbound_required: DynArray[String[50], 10] = []
+    bound_all: DynArray[String[50], 10] = []
+    unbound_optional: DynArray[String[50], 10] = []
 
-    # 必须依赖
-    if self.kyc_manager == empty(address):
-        required.append("DefaultKYCManager")
+    # 检查必须依赖（从 Provider 获取）
+    kyc: address = self._get_kyc_manager()
+    if kyc == empty(address):
+        unbound_required.append("KYC")
+    else:
+        bound_all.append("KYC")
 
-    # 可选依赖 - 预言机（需要检查是否有对应的状态变量）
-    # 注意：VankeRWAToken本身不直接持有oracle地址，oracle是通过外部调用使用的
-    # 所以optional始终为空，这里仅作为示例展示结构
+    # 检查可选依赖（仍用 setter 模式）
+    if self.oracle == empty(address):
+        unbound_optional.append("CapitalOracle")
+    else:
+        bound_all.append("CapitalOracle")
 
-    return required, optional
+    return unbound_required, bound_all, unbound_optional
 
 
 # ==================== 迁移辅助getter函数 ====================
@@ -760,9 +805,10 @@ def is_migrated() -> bool:
 @external
 def receive_migration(old_contract: address):
     """
-    @notice 从旧合约接收迁移状态
+    @notice 从旧合约接收迁移状态（纯 Provider 模式）
     @param old_contract 旧合约地址
     @dev 只有旧合约可以调用此函数
+    @dev 注意：KYC Manager 通过 AddressProvider 获取，不需要迁移
     """
     assert msg.sender == old_contract, "Only old contract"
 
@@ -774,7 +820,7 @@ def receive_migration(old_contract: address):
     self.symbol = staticcall old.symbol()
     self.decimals = staticcall old.decimals()
     self.totalSupply = staticcall old.totalSupply()
-    self.kyc_manager = staticcall old.kyc_manager()
+    # 注意: kyc_manager 通过 AddressProvider 获取，不需要迁移
     self.transfer_agent = staticcall old.transfer_agent()
     self.issuance_finished = staticcall old.issuance_finished()
 

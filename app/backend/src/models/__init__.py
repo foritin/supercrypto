@@ -12,15 +12,9 @@ from src.models.asset import Asset, AssetContractBinding, AssetPriceHistory
 from src.models.asset_media import AssetFeatures, AssetMedia
 from src.models.audit_log import AuditLog
 from src.models.base import AbstractModel, TimestampMixin
-from src.models.contract import Contract
-from src.models.contract_dependency import (
-    DEPENDENCY_SET_FUNCTIONS,
-    PRESET_DEPENDENCIES,
-    ContractBinding,
-    ContractDependencySync,  # 别名，兼容旧代码
-    get_set_function,
-)
-from src.models.deploy import DeployInfo
+from src.models.contracts.contract import Contract
+from src.models.contracts.contract_dependency import ContractDependency
+from src.models.contracts.provider_registry import ProviderRegistry
 from src.models.kyc import UserKyc
 from src.models.staking import (
     BASE_DAILY_RATE,
@@ -75,8 +69,6 @@ __all__ = [
     "Wallet",
     # Transaction
     "Transaction",
-    # Deploy
-    "DeployInfo",
     # KYC
     "UserKyc",
     # Asset
@@ -88,11 +80,9 @@ __all__ = [
     # Subscription
     "Subscription",
     # Contract
-    "ContractBinding",
-    "ContractDependencySync",
-    "DEPENDENCY_SET_FUNCTIONS",
-    "get_set_function",
-    "PRESET_DEPENDENCIES",
+    "Contract",
+    "ContractDependency",
+    "ProviderRegistry",
     # Staking
     "StakingRecord",
     "StakingLimit",

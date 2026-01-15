@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { Layout, Typography, Space, Menu, Skeleton, Drawer } from "antd";
+import { SettingOutlined, ToolOutlined } from "@ant-design/icons";
 import { Menu as MenuIcon, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
@@ -55,6 +56,7 @@ export function Header() {
     if (pathname.startsWith("/staking")) return "staking";
     if (pathname.startsWith("/portfolio")) return "portfolio";
     if (pathname.startsWith("/assets")) return "assets";
+    if (pathname.startsWith("/about")) return "about";
     return "home";
   };
 
@@ -80,6 +82,10 @@ export function Header() {
       {
         key: "staking",
         label: <Link href="/staking">{t("header.nav.staking")}</Link>,
+      },
+      {
+        key: "about",
+        label: <Link href="/about">{t("header.nav.about")}</Link>,
       },
     ];
 
@@ -154,7 +160,7 @@ export function Header() {
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 100,
+        zIndex: 2147483647,  /* 最大 32 位整数，确保在所有浏览器扩展之上显示 */
         height: "var(--header-height)",
         borderBottom: scrolled ? "var(--header-border-scrolled)" : "none",
         boxShadow: scrolled ? "var(--header-shadow-scrolled)" : "none",

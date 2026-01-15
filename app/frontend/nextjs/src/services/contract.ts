@@ -161,6 +161,12 @@ export function parseUSDTAmount(amount: bigint): number {
 
 // ============ 管理员 API ============
 
+// 部署状态（三种状态）
+export type DeploymentStatus =
+  | "deployed_and_binded" // 已部署且所有依赖已绑定
+  | "deployed_needs_binding" // 已部署但有依赖未绑定或需更新
+  | "not_deployed"; // 未部署
+
 // 依赖状态
 export interface DependencyStatusItem {
   dependency_name: string;
@@ -169,6 +175,7 @@ export interface DependencyStatusItem {
   current_address: string | null;
   latest_address: string | null;
   last_synced_at: string | null;
+  is_binded?: boolean;
 }
 
 // 合约状态（增强版）
@@ -180,8 +187,11 @@ export interface ContractStatusItem {
   deployed: boolean;
   deployed_at: string | null;
   dependency_status: "synced" | "needs_update" | "not_deployed";
+  deployment_status: DeploymentStatus; // 精确的部署状态
   dependencies: DependencyStatusItem[];
   set_functions: string[];
+  type?: string; // 合约类型：common, mock, exclusive
+  display_name?: string; // 可选的显示名称
 }
 
 // 项目配置
@@ -241,12 +251,12 @@ export interface ResetDeployRequest {
 
 export const contractAdminService = {
   /**
-   * 获取增强版合约状态（管理员）
-   * 包含依赖检测结果
+   * 获取合约状态（管理员）
+   * 包含部署状态、依赖关系和更新检测结果
    */
   async getContractStatus(): Promise<ContractStatusList> {
     const response = await api.get<API.ResponseData<ContractStatusList>>(
-      ADMIN_PATHS.CONTRACT_STATUS_ENHANCED
+      ADMIN_PATHS.CONTRACT_STATUS
     );
     return response.object as ContractStatusList;
   },

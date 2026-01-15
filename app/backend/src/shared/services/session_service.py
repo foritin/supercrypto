@@ -3,6 +3,7 @@ Session Service - Redis-based session management
 
 用于管理用户登录会话，支持：
 - 会话创建和追踪
+- Token 版本号管理
 - 黑名单管理（强制下线）
 - 活跃会话查询
 """
@@ -61,6 +62,9 @@ class SessionService:
             "chain_id": chain_id,
             "chain_name": chain_name or "",
             "network_type": network_type or "unknown",
+            # Token 版本号管理
+            "token_version": 1,
+            "token_version_updated_at": now.isoformat(),
         }
 
         async with RedisAdapter() as redis:
@@ -240,6 +244,90 @@ class SessionService:
         async with RedisAdapter() as redis:
             sessions = await self._scan_user_sessions(redis, wallet_address)
             return [data for _, data in sessions]
+
+    async def clear_user_sessions(self, wallet_address: str) -> int:
+        """
+        清理用户所有会话（用于登出）
+
+        Args:
+            wallet_address: 钱包地址
+
+        Returns:
+            清除的会话数量
+        """
+        wallet_address = wallet_address.lower()
+        cleared_count = 0
+
+        async with RedisAdapter() as redis:
+            # 扫描并删除用户所有会话
+            sessions = await self._scan_user_sessions(redis, wallet_address)
+            for key_str, _ in sessions:
+                deleted = await redis.delete(key_str)
+                if deleted:
+                    cleared_count += 1
+
+        logger.info(f"Cleared {cleared_count} sessions for {wallet_address[:8]}...")
+        return cleared_count
+
+    async def increment_token_version(self, wallet_address: str) -> Tuple[int, int]:
+        """
+        递增用户全局版本号（全设备登出，使所有 token 失效）
+
+        Args:
+            wallet_address: 钱包地址
+
+        Returns:
+            (新版本号, 受影响的 session 数量)
+        """
+        wallet_address = wallet_address.lower()
+        now = datetime.now(timezone.utc)
+
+        async with RedisAdapter() as redis:
+            # 1. 获取当前最大版本号（从任意 session）
+            sessions = await self._scan_user_sessions(redis, wallet_address)
+
+            if not sessions:
+                # 没有活跃 session，版本号从 1 开始
+                new_version = 1
+                affected_count = 0
+            else:
+                # 获取当前最大版本号
+                current_version = 0
+                for _, data in sessions:
+                    version = data.get("token_version", 1)
+                    if version > current_version:
+                        current_version = version
+
+                new_version = current_version + 1
+                affected_count = len(sessions)
+
+                # 2. 更新所有 sessions 的版本号
+                for session_key, data in sessions:
+                    data["token_version"] = new_version
+                    data["token_version_updated_at"] = now.isoformat()
+                    await redis.set_json(session_key, data)
+
+        logger.info(
+            f"Token version incremented to {new_version} for {wallet_address[:8]}..., "
+            f"affected {affected_count} sessions"
+        )
+        return new_version, affected_count
+
+    async def get_token_version(self, wallet_address: str, session_id: str) -> Optional[int]:
+        """
+        获取 session 的 token 版本号
+
+        Args:
+            wallet_address: 钱包地址
+            session_id: 会话ID
+
+        Returns:
+            版本号，如果 session 不存在返回 None
+        """
+        session = await self.get_session(wallet_address, session_id)
+        if session:
+            return session.get("token_version", 1)
+        return None
 
 
 # 全局服务实例

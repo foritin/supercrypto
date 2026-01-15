@@ -50,6 +50,7 @@ class AuthStateMiddleware(BaseHTTPMiddleware):
     - is_authenticated: bool - 是否已认证
     - wallet_address: str | None - 钱包地址（小写）
     - session_id: str | None - 会话 ID
+    - token_version: int | None - Token 版本号
     - token_status: str | None - token 状态 (valid/expired/invalid)
     """
 
@@ -59,6 +60,7 @@ class AuthStateMiddleware(BaseHTTPMiddleware):
         request.state.is_authenticated = False
         request.state.wallet_address = None
         request.state.session_id = None
+        request.state.token_version = None
         request.state.token_status = None  # None / "valid" / "expired" / "invalid"
 
         path = request.url.path
@@ -86,6 +88,7 @@ class AuthStateMiddleware(BaseHTTPMiddleware):
             request.state.is_authenticated = True
             request.state.wallet_address = payload.get("address", "").lower()
             request.state.session_id = payload.get("session_id")
+            request.state.token_version = payload.get("token_version", 1)  # 提取版本号
             request.state.token_status = "valid"
 
             logger.debug(f"Auth: {request.state.wallet_address[:8]}... authenticated")

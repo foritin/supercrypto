@@ -4,6 +4,7 @@
 @notice 权益代币质押挖矿合约 - STO合规版本
 @dev 质押RWA代币获得平台代币奖励，双重奖励机制：APY + 固定释放
      添加KYC验证确保仅合规投资者参与
+     使用 AddressProvider 模式获取依赖地址
 """
 
 # 接口定义
@@ -22,13 +23,16 @@ interface ISubscription:
 interface IKYCManager:
     def isVerified(_investor: address) -> bool: view
 
+interface IAddressProvider:
+    def get_kyc_manager() -> address: view
+    def get_vanke_rwa_token() -> address: view
+    def get_vanke_platform_token() -> address: view
+    def get_vanke_subscription() -> address: view
+
 # 合约迁移接口（统一使用 IMigration）
 interface IMigration:
     def owner() -> address: view
-    def rwa_token() -> address: view
-    def platform_token() -> address: view
-    def subscription() -> address: view
-    def kyc_manager() -> address: view
+    def ADDRESS_PROVIDER() -> address: view  # 纯 Provider 模式
     def paused() -> bool: view
     def total_staked() -> uint256: view
     def staking_apy() -> uint256: view
@@ -86,11 +90,10 @@ event Migrated:
 
 # 状态变量
 owner: public(address)
-rwaToken: public(address)           # RWA代币地址
-platformToken: public(address)      # 平台代币地址
-subscription: public(address)       # 认购合约地址
-kycManager: public(address)         # KYC管理合约地址
 paused: public(bool)
+
+# AddressProvider (immutable) - 纯 Provider 模式
+ADDRESS_PROVIDER: public(immutable(address))
 
 # 质押数据
 stakes: public(HashMap[address, HashMap[uint256, StakeInfo]])
@@ -114,24 +117,48 @@ SECONDS_PER_DAY: constant(uint256) = 24 * 3600
 
 
 @deploy
-def __init__(_rwaToken: address, _platformToken: address, _subscription: address, _kycManager: address):
+def __init__(_address_provider: address):
     """
-    @notice 初始化质押合约（STO合规版本）
-    @param _rwaToken RWA代币地址
-    @param _platformToken 平台代币地址
-    @param _subscription 认购合约地址
-    @param _kycManager KYC管理合约地址
+    @notice 初始化质押合约（纯 Provider 模式）
+    @param _address_provider AddressProvider 合约地址
     """
+    ADDRESS_PROVIDER = _address_provider
     self.owner = msg.sender
-    self.rwaToken = _rwaToken
-    self.platformToken = _platformToken
-    self.subscription = _subscription
-    self.kycManager = _kycManager
     self.paused = False
 
     # 默认参数
     self.stakingAPY = 3000  # 30% APY
     self.dailyEmission = 10_000 * 10 ** 18  # 每日释放10000个平台代币
+
+
+# ==================== Provider 查询 ====================
+
+@view
+@internal
+def _get_kyc_manager() -> address:
+    """@notice 从 AddressProvider 获取 KYC 管理合约地址"""
+    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_kyc_manager()
+
+
+@view
+@internal
+def _get_rwa_token() -> address:
+    """@notice 从 AddressProvider 获取 Vanke RWA Token 地址"""
+    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_vanke_rwa_token()
+
+
+@view
+@internal
+def _get_platform_token() -> address:
+    """@notice 从 AddressProvider 获取 Vanke Platform Token 地址"""
+    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_vanke_platform_token()
+
+
+@view
+@internal
+def _get_subscription() -> address:
+    """@notice 从 AddressProvider 获取 Vanke Subscription 地址"""
+    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_vanke_subscription()
 
 
 @external
@@ -175,54 +202,13 @@ def set_daily_emission(_emission: uint256):
     log DailyEmissionUpdated(oldEmission, _emission)
 
 
-@external
-def set_kyc_manager(_new_manager: address):
-    """
-    @notice 更新KYC管理合约地址
-    @param _new_manager 新KYC管理合约地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_manager != empty(address), "Invalid address"
-    self.kycManager = _new_manager
-
-
-@external
-def set_rwa_token(_new_rwa_token: address):
-    """
-    @notice 更新RWA代币地址
-    @param _new_rwa_token 新RWA代币地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_rwa_token != empty(address), "Invalid address"
-    self.rwaToken = _new_rwa_token
-
-
-@external
-def set_platform_token(_new_platform_token: address):
-    """
-    @notice 更新平台代币地址
-    @param _new_platform_token 新平台代币地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_platform_token != empty(address), "Invalid address"
-    self.platformToken = _new_platform_token
-
-
-@external
-def set_subscription(_new_subscription: address):
-    """
-    @notice 更新认购合约地址
-    @param _new_subscription 新认购合约地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_subscription != empty(address), "Invalid address"
-    self.subscription = _new_subscription
+# 注意: set_kyc_manager, set_rwa_token, set_platform_token, set_subscription 已移除 - 纯 Provider 模式
 
 
 @external
 def stake(_amount: uint256, _subscriptionId: uint256):
     """
-    @notice 质押RWA代币（STO合规版本）
+    @notice 质押RWA代币（纯 Provider 模式）
     @param _amount 质押数量
     @param _subscriptionId 关联的认购ID
     """
@@ -230,19 +216,24 @@ def stake(_amount: uint256, _subscriptionId: uint256):
     assert not self.paused, "Contract paused"
     assert _amount > 0, "Amount must be positive"
 
+    # 从 Provider 获取依赖地址
+    kyc: address = self._get_kyc_manager()
+    subscription: address = self._get_subscription()
+    rwa_token: address = self._get_rwa_token()
+
     # STO合规：KYC验证
-    assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
 
     # 验证认购信息
-    subCount: uint256 = staticcall ISubscription(self.subscription).subscriptionCount(msg.sender)
+    subCount: uint256 = staticcall ISubscription(subscription).subscriptionCount(msg.sender)
     assert _subscriptionId < subCount, "Invalid subscription ID"
 
-    subInfo: SubscriptionInfo = staticcall ISubscription(self.subscription).subscriptions(msg.sender, _subscriptionId)
+    subInfo: SubscriptionInfo = staticcall ISubscription(subscription).subscriptions(msg.sender, _subscriptionId)
     assert not subInfo.redeemed, "Subscription already redeemed"
     assert block.timestamp < subInfo.redeemTime, "Redeem period ended"
 
     # 转入RWA代币
-    assert extcall IERC20(self.rwaToken).transferFrom(msg.sender, self, _amount), "Transfer failed"
+    assert extcall IERC20(rwa_token).transferFrom(msg.sender, self, _amount), "Transfer failed"
 
     # 创建质押记录
     stakeId: uint256 = self.stakeCount[msg.sender]
@@ -277,8 +268,12 @@ def unstake(_stakeId: uint256):
     assert not self.paused, "Contract paused"
     assert _stakeId < self.stakeCount[msg.sender], "Invalid stake ID"
 
+    # 从 Provider 获取依赖地址
+    kyc: address = self._get_kyc_manager()
+    rwa_token: address = self._get_rwa_token()
+
     # STO合规：KYC验证
-    assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
 
     stakeInfo: StakeInfo = self.stakes[msg.sender][_stakeId]
     assert not stakeInfo.unstaked, "Already unstaked"
@@ -293,7 +288,7 @@ def unstake(_stakeId: uint256):
     self._claim_reward(msg.sender, _stakeId)
 
     # 返还RWA代币
-    assert extcall IERC20(self.rwaToken).transfer(msg.sender, stakeInfo.amount), "Transfer failed"
+    assert extcall IERC20(rwa_token).transfer(msg.sender, stakeInfo.amount), "Transfer failed"
 
     # 标记为已解除质押
     self.stakes[msg.sender][_stakeId].unstaked = True
@@ -305,14 +300,15 @@ def unstake(_stakeId: uint256):
 @external
 def claim_reward(_stakeId: uint256):
     """
-    @notice 领取奖励（STO合规版本）
+    @notice 领取奖励（纯 Provider 模式）
     @param _stakeId 质押ID
     """
     assert not self.migrated, "Contract migrated, use new contract"
     assert not self.paused, "Contract paused"
 
     # STO合规：KYC验证
-    assert staticcall IKYCManager(self.kycManager).isVerified(msg.sender), "KYC verification required"
+    kyc: address = self._get_kyc_manager()
+    assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
 
     self._claim_reward(msg.sender, _stakeId)
 
@@ -334,7 +330,8 @@ def _claim_reward(_user: address, _stakeId: uint256):
 
     if reward > 0:
         # 铸造平台代币作为奖励
-        extcall IPlatformToken(self.platformToken).mint(_user, reward)
+        platform_token: address = self._get_platform_token()
+        extcall IPlatformToken(platform_token).mint(_user, reward)
 
         # 更新上次领取时间
         self.stakes[_user][_stakeId].lastRewardTime = block.timestamp
@@ -431,27 +428,53 @@ def transfer_ownership(_new_owner: address):
 
 @external
 @view
-def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖（必须依赖 + 可选依赖）
-    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
-    @dev 必须依赖: VankeRWAToken, VankePlatformToken, VankeSubscription, DefaultKYCManager
-    @dev 无可选依赖
+    @notice 获取合约依赖（纯 Provider 模式）
+    @return (unbound_required, bound_all, unbound_optional) 未绑定必须依赖、已绑定所有依赖、未绑定可选依赖
+    @dev 必须依赖: VankeRWAToken, VankePlatformToken, VankeSubscription, KYC
+    @dev 所有依赖通过 AddressProvider 获取
     """
-    required: DynArray[String[50], 10] = []
-    optional: DynArray[String[50], 10] = []
+    unbound_required: DynArray[String[50], 10] = []
+    bound_all: DynArray[String[50], 10] = []
+    unbound_optional: DynArray[String[50], 10] = []
 
-    # 检查必须依赖
-    if self.rwaToken == empty(address):
-        required.append("VankeRWAToken")
-    if self.platformToken == empty(address):
-        required.append("VankePlatformToken")
-    if self.subscription == empty(address):
-        required.append("VankeSubscription")
-    if self.kycManager == empty(address):
-        required.append("DefaultKYCManager")
+    # 检查必须依赖（从 Provider 获取）
+    rwa_token: address = self._get_rwa_token()
+    if rwa_token == empty(address):
+        unbound_required.append("VankeRWAToken")
+    else:
+        bound_all.append("VankeRWAToken")
 
-    return required, optional
+    platform_token: address = self._get_platform_token()
+    if platform_token == empty(address):
+        unbound_required.append("VankePlatformToken")
+    else:
+        bound_all.append("VankePlatformToken")
+
+    subscription: address = self._get_subscription()
+    if subscription == empty(address):
+        unbound_required.append("VankeSubscription")
+    else:
+        bound_all.append("VankeSubscription")
+
+    kyc: address = self._get_kyc_manager()
+    if kyc == empty(address):
+        unbound_required.append("KYC")
+    else:
+        bound_all.append("KYC")
+
+    return unbound_required, bound_all, unbound_optional
+
+
+@view
+@external
+def get_address_provider() -> address:
+    """
+    @notice 获取 AddressProvider 地址
+    @return AddressProvider 合约地址
+    """
+    return ADDRESS_PROVIDER
 
 
 # ==================== 合约迁移功能 ====================
@@ -489,9 +512,10 @@ def is_migrated() -> bool:
 @external
 def receive_migration(oldContract: address):
     """
-    @notice 从旧合约接收迁移状态
+    @notice 从旧合约接收迁移状态（纯 Provider 模式）
     @param oldContract 旧合约地址
     @dev 只有旧合约可以调用此函数
+    @dev 注意: rwaToken, platformToken, subscription, kycManager 通过 AddressProvider 获取，不需要迁移
     """
     assert msg.sender == oldContract, "Only old contract"
 
@@ -499,13 +523,7 @@ def receive_migration(oldContract: address):
 
     # 迁移基本状态变量
     self.owner = staticcall old.owner()
-    self.rwaToken = staticcall old.rwa_token()
-    self.platformToken = staticcall old.platform_token()
-    self.subscription = staticcall old.subscription()
-    self.kycManager = staticcall old.kyc_manager()
-    self.paused = staticcall old.paused()
-    self.totalStaked = staticcall old.total_staked()
-    self.stakingAPY = staticcall old.staking_apy()
+    # 注意: rwaToken, platformToken, subscription, kycManager 通过 AddressProvider 获取，不需要迁移
     self.dailyEmission = staticcall old.daily_emission()
 
     # 迁移用户质押记录

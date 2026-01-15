@@ -17,6 +17,7 @@ import {
   Badge,
   Divider,
   App,
+  Tabs,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -25,6 +26,9 @@ import {
   DeleteOutlined,
   WarningOutlined,
   ApiOutlined,
+  ApartmentOutlined,
+  TableOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
@@ -38,6 +42,13 @@ import {
   type ContractStatusResponse,
   CONTRACT_SET_ABIS,
 } from "@/services/contract";
+import { ContractDependencyGraph } from "@/components/admin/ContractDependencyGraph";
+import { ContractDependencyTree } from "@/components/admin/ContractDependencyTree";
+import { ContractDetailPanel } from "@/components/admin/ContractDetailPanel";
+import { ContractFilterBar, type ContractFilters, DEFAULT_FILTERS } from "@/components/admin/ContractFilterBar";
+import { ContractTableList } from "@/components/admin/ContractTableList";
+import { ContractStatusLegend } from "@/components/admin/ContractStatusLegend";
+import { Node } from "reactflow";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -72,6 +83,15 @@ export default function AdminContractsPage() {
     useState<DependencyStatusItem | null>(null);
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [form] = Form.useForm();
+
+  // 视图切换状态
+  const [viewMode, setViewMode] = useState<"table" | "graph">("table");
+  const [detailPanelOpen, setDetailPanelOpen] = useState(false);
+  const [selectedGraphNode, setSelectedGraphNode] = useState<Node | null>(null);
+  const [selectedListContract, setSelectedListContract] = useState<ContractStatusItem | null>(null);
+
+  // 筛选条件状态
+  const [filters, setFilters] = useState<ContractFilters>(DEFAULT_FILTERS);
 
   // Data state
   const [contractStatus, setContractStatus] =
@@ -123,6 +143,43 @@ export default function AdminContractsPage() {
     if (!contractStatus?.projects) return {};
     return Object.fromEntries(contractStatus.projects.map((p) => [p.name, p]));
   }, [contractStatus]);
+
+  // 筛选后的合约列表
+  const filteredContracts = useMemo(() => {
+    if (!contractStatus?.contracts) return [];
+
+    return contractStatus.contracts.filter((contract) => {
+      // 搜索筛选
+      if (filters.search && !contract.name.toLowerCase().includes(filters.search.toLowerCase())) {
+        return false;
+      }
+
+      // 项目筛选
+      if (filters.project !== 'all' && contract.project !== filters.project) {
+        return false;
+      }
+
+      // 状态筛选
+      if (filters.status !== 'all' && contract.dependency_status !== filters.status) {
+        return false;
+      }
+
+      // 类型筛选 - 根据 project 推断合约类型
+      if (filters.type !== 'all') {
+        let contractType = 'exclusive'; // 默认为独占类型
+        if (contract.project === 'common') {
+          contractType = 'common';
+        } else if (contract.project === 'mock') {
+          contractType = 'mock';
+        }
+        if (contractType !== filters.type) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [contractStatus, filters]);
 
   // 更新地址
   const handleUpdate = async (values: {
@@ -323,76 +380,113 @@ export default function AdminContractsPage() {
   return (
     <RequireAdmin>
       <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-        {/* Page Header */}
-        <div style={{ marginBottom: 32 }}>
-          <Title level={2} style={{ marginBottom: 8 }}>
-            {t("admin.contracts.title")}
-          </Title>
-          <Text style={{ color: "rgba(255, 255, 255, 0.65)" }}>
-            {t("admin.contracts.subtitle")}
-          </Text>
+        {/* Page Header with Refresh Button */}
+        <div style={{ marginBottom: 32, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <Title level={2} style={{ marginBottom: 8 }}>
+              {t("admin.contracts.title")}
+            </Title>
+            <Text style={{ color: "rgba(255, 255, 255, 0.65)" }}>
+              {t("admin.contracts.subtitle")}
+            </Text>
+          </div>
+          <Button
+            icon={<ReloadOutlined spin={isLoading} />}
+            onClick={fetchContractStatus}
+            loading={isLoading}
+          >
+            {t("admin.contracts.refresh")}
+          </Button>
         </div>
 
-        {/* Contract Groups */}
-        <Flex vertical gap={24} style={{ width: "100%" }}>
-          {Object.entries(groupedContracts).map(([project, contracts]) => {
-            const projectInfo = projectMap[project];
-            return (
-              <Card
-                key={project}
-                title={
-                  <Space>
-                    <Badge status="processing" />
-                    <Text strong>{projectInfo?.label || project}</Text>
-                    <Tag>{contracts.length}</Tag>
-                  </Space>
-                }
-                extra={
-                  <Button
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={() => handleReset(project)}
-                  >
-                    {t("admin.contracts.reset")}
-                  </Button>
-                }
-              >
-                <Text
-                  type="secondary"
-                  style={{ marginBottom: 16, display: "block" }}
-                >
-                  {projectInfo?.description || ""}
-                </Text>
-                <Table
-                  columns={columns}
-                  dataSource={contracts}
-                  rowKey="name"
-                  pagination={false}
-                  loading={isLoading}
-                />
-              </Card>
-            );
-          })}
+        {/* View Toggle Tabs */}
+        <Tabs
+          activeKey={viewMode}
+          onChange={(key) => setViewMode(key as "table" | "graph")}
+          items={[
+            {
+              key: "table",
+              label: (
+                <Space>
+                  <TableOutlined />
+                  {t("admin.contracts.table.listView")}
+                </Space>
+              ),
+              children: (
+                <>
+                  {/* 状态图例 */}
+                  <ContractStatusLegend />
 
-          {/* Global Reset */}
-          <Divider />
-          <Card>
-            <Flex vertical>
-              <Text strong>{t("admin.contracts.globalReset")}</Text>
-              <Text type="secondary">
-                {t("admin.contracts.globalResetDescription")}
-              </Text>
-              <Button
-                danger
-                type="primary"
-                icon={<DeleteOutlined />}
-                onClick={() => handleReset(null)}
-              >
-                {t("admin.contracts.resetAll")}
-              </Button>
-            </Flex>
-          </Card>
-        </Flex>
+                  {/* 筛选栏 */}
+                  <ContractFilterBar
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    onReset={() => setFilters(DEFAULT_FILTERS)}
+                  />
+
+                  {/* 表格列表 */}
+                  <ContractTableList
+                    contracts={filteredContracts}
+                    loading={isLoading}
+                    onContractClick={(contract) => {
+                      setSelectedListContract(contract);
+                      // 将 ContractStatusItem 转换为 Node 格式供详情面板使用
+                      setSelectedGraphNode({
+                        id: contract.name,
+                        data: {
+                          id: contract.name,
+                          label: contract.name,
+                          address: contract.address || '',
+                          project: contract.project,
+                          status: contract.deployment_status || contract.dependency_status,
+                          type: 'exclusive',
+                          deployedAt: contract.deployed_at,
+                        },
+                      } as Node);
+                      setDetailPanelOpen(true);
+                    }}
+                  />
+                </>
+              ),
+            },
+            {
+              key: "graph",
+              label: (
+                <Space>
+                  <ApartmentOutlined />
+                  {t("admin.contracts.table.treeView")}
+                </Space>
+              ),
+              children: (
+                /* Dependency Tree View - Compact */
+                <ContractDependencyTree
+                  onContractClick={(contractId) => {
+                    // Find contract node data
+                    const nodeData = contractStatus?.contracts.find(
+                      (c) => c.name === contractId
+                    );
+                    if (nodeData) {
+                      // Create a mock node for compatibility
+                      setSelectedGraphNode({
+                        id: contractId,
+                        data: {
+                          id: contractId,
+                          label: nodeData.display_name || contractId,
+                          address: nodeData.address || '',
+                          project: nodeData.project || 'common',
+                          status: nodeData.deployment_status || nodeData.dependency_status as any,
+                          type: nodeData.type as any,
+                          deployedAt: nodeData.deployed_at || null,
+                        },
+                      } as Node);
+                      setDetailPanelOpen(true);
+                    }
+                  }}
+                />
+              ),
+            },
+          ]}
+        />
 
         {/* Update Modal */}
         <Modal
@@ -487,6 +581,35 @@ export default function AdminContractsPage() {
             }
           />
         </Modal>
+
+        {/* Contract Detail Panel (for Graph View and List View) */}
+        <ContractDetailPanel
+          open={detailPanelOpen}
+          onClose={() => {
+            setDetailPanelOpen(false);
+            setSelectedGraphNode(null);
+            setSelectedListContract(null);
+          }}
+          node={selectedGraphNode?.data || null}
+          onUpdateDependency={() => {
+            // 从图节点数据或列表合约中查找对应的合约和依赖
+            const contractName = selectedGraphNode?.data?.id || selectedListContract?.name;
+            if (contractName) {
+              const contract = contractStatus?.contracts.find(
+                (c) => c.name === contractName
+              );
+              if (contract && contract.dependencies.length > 0) {
+                // 找到需要更新的依赖
+                const needsUpdateDep = contract.dependencies.find(
+                  (d) => d.status === "needs_update"
+                );
+                if (needsUpdateDep) {
+                  handleUpdateDependency(contract, needsUpdateDep);
+                }
+              }
+            }
+          }}
+        />
       </div>
     </RequireAdmin>
   );

@@ -115,26 +115,32 @@ paused: public(bool)
 def __init__(initial_signers: DynArray[address, 20]):
     """
     @notice 初始化多签管理合约
-    @param initial_signers 初始签名者列表（至少3个）
+    @param initial_signers 初始签名者列表（可为空，后续通过batch_add_initial_signers添加）
     """
-    assert len(initial_signers) >= 3, "Need at least 3 signers"
-    
     self.owner = msg.sender
-    self.required_signatures = 2  # 2-of-3
     self.paused = False
     self.proposal_counter = 0
     self.signer_count = 0
-    
+
     # 添加初始签名者
-    for signer: address in initial_signers:
-        assert signer != empty(address), "Invalid signer"
-        assert not self.signers[signer], "Duplicate signer"
-        
-        self.signers[signer] = True
-        self.signer_list.append(signer)
-        self.signer_count += 1
-        
-        log SignerAdded(signer, msg.sender)
+    if len(initial_signers) > 0:
+        assert len(initial_signers) >= 3, "Need at least 3 signers"
+
+        for signer: address in initial_signers:
+            assert signer != empty(address), "Invalid signer"
+            assert not self.signers[signer], "Duplicate signer"
+
+            self.signers[signer] = True
+            self.signer_list.append(signer)
+            self.signer_count += 1
+
+            log SignerAdded(signer, msg.sender)
+
+        # 设置所需签名数：n-1规则
+        self.required_signatures = self.signer_count - 1
+    else:
+        # 如果没有签名者，暂时设置为0
+        self.required_signatures = 0
 
 # ============================================
 # 修饰器辅助函数
@@ -154,6 +160,12 @@ def _only_signer():
 
 @internal
 @view
+def _require_initialized():
+    """要求合约已初始化（有签名者）"""
+    assert self.signer_count > 0, "Contract not initialized - add signers first"
+
+@internal
+@view
 def _when_not_paused():
     """仅在未暂停时可调用"""
     assert not self.paused, "Contract is paused"
@@ -161,6 +173,32 @@ def _when_not_paused():
 # ============================================
 # 签名者管理
 # ============================================
+
+@external
+def batch_add_initial_signers(new_signers: DynArray[address, 20]):
+    """
+    @notice 批量添加初始签名者（仅在签名者数量为0时可用，由所有者调用）
+    @param new_signers 新签名者地址数组（至少3个）
+    @dev 只能在还没有签名者时调用，用于初始化设置
+    """
+    self._only_owner()
+    self._when_not_paused()
+
+    # 只能在没有签名者时调用
+    assert self.signer_count == 0, "Signers already initialized"
+    assert len(new_signers) >= 3, "Need at least 3 signers"
+    assert len(new_signers) <= 20, "Max 20 signers allowed"
+
+    for signer: address in new_signers:
+        assert signer != empty(address), "Invalid signer"
+        assert not self.signers[signer], "Duplicate signer"
+
+        self.signers[signer] = True
+        self.signer_list.append(signer)
+        log SignerAdded(signer, msg.sender)
+
+    self.signer_count = len(new_signers)
+    self.required_signatures = self.signer_count - 1  # n-1规则，至少需要n-1个签名
 
 @external
 def add_signer(new_signer: address, proposal_id: uint256):
@@ -171,6 +209,7 @@ def add_signer(new_signer: address, proposal_id: uint256):
     """
     self._only_owner()
     self._when_not_paused()
+    self._require_initialized()  # 确保合约已初始化
     
     assert new_signer != empty(address), "Invalid signer"
     assert not self.signers[new_signer], "Already a signer"
@@ -202,6 +241,7 @@ def remove_signer(signer: address, proposal_id: uint256):
     """
     self._only_owner()
     self._when_not_paused()
+    self._require_initialized()  # 确保合约已初始化
     
     assert self.signers[signer], "Not a signer"
     assert self.signer_count > 3, "Cannot remove, min 3 signers required"
@@ -276,6 +316,7 @@ def sign_proposal(proposal_id: uint256):
     """
     self._only_signer()
     self._when_not_paused()
+    self._require_initialized()  # 确保合约已初始化
     
     proposal: Proposal = self.proposals[proposal_id]
     assert proposal.status == ProposalStatus.PENDING, "Proposal not pending"
@@ -454,16 +495,17 @@ def transfer_ownership(new_owner: address):
 
 @external
 @view
-def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖（必须依赖 + 可选依赖）
-    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
+    @notice 获取合约依赖
+    @return (unbound_required, bound_all, unbound_optional) 未绑定必须依赖、已绑定所有依赖、未绑定可选依赖
     @dev MultiSigManager 是预言机系统核心合约，无依赖
-    @dev 两个数组都为空
+    @dev 三个数组都为空
     """
-    required: DynArray[String[50], 10] = []
-    optional: DynArray[String[50], 10] = []
-    return required, optional
+    unbound_required: DynArray[String[50], 10] = []
+    bound_all: DynArray[String[50], 10] = []
+    unbound_optional: DynArray[String[50], 10] = []
+    return unbound_required, bound_all, unbound_optional
 
 
 # ==================== 合约迁移功能 ====================

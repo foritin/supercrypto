@@ -31,9 +31,9 @@ class AccountService:
     """
 
     @property
-    def net_type(self) -> str:
+    def network(self) -> str:
         """当前网络类型"""
-        return SETTINGS.wallet
+        return SETTINGS.NETWORK
 
     async def create(self, data: AccountCreate) -> AccountResponse:
         """
@@ -51,9 +51,7 @@ class AccountService:
         address = data.address.lower()
 
         # 检查是否已存在
-        exists = await Account.filter(
-            address=address, net_type=self.net_type
-        ).exists()
+        exists = await Account.filter(address=address, network=self.network).exists()
         if exists:
             raise ConflictException(
                 f"Account {address[:10]}... already exists",
@@ -64,7 +62,7 @@ class AccountService:
         account = await Account.create(
             address=address,
             private_key=data.private_key,
-            net_type=self.net_type,
+            network=self.network,
             tag=data.tag,
         )
 
@@ -84,9 +82,7 @@ class AccountService:
             NotFoundException: 账户不存在
         """
         address = address.lower()
-        account = await Account.filter(
-            address=address, net_type=self.net_type
-        ).first()
+        account = await Account.filter(address=address, network=self.network).first()
 
         if not account:
             raise NotFoundException(
@@ -107,9 +103,7 @@ class AccountService:
             Optional[AccountResponse]: 账户响应或 None
         """
         address = address.lower()
-        account = await Account.filter(
-            address=address, net_type=self.net_type
-        ).first()
+        account = await Account.filter(address=address, network=self.network).first()
 
         if not account:
             return None
@@ -127,9 +121,7 @@ class AccountService:
             Optional[Account]: ORM 模型或 None
         """
         address = address.lower()
-        return await Account.filter(
-            address=address, net_type=self.net_type
-        ).first()
+        return await Account.filter(address=address, network=self.network).first()
 
     async def update(self, address: str, data: AccountUpdate) -> AccountResponse:
         """
@@ -146,9 +138,7 @@ class AccountService:
             NotFoundException: 账户不存在
         """
         address = address.lower()
-        account = await Account.filter(
-            address=address, net_type=self.net_type
-        ).first()
+        account = await Account.filter(address=address, network=self.network).first()
 
         if not account:
             raise NotFoundException(
@@ -174,9 +164,7 @@ class AccountService:
             AccountResponse: 更新后的账户
         """
         address = address.lower()
-        account = await Account.filter(
-            address=address, net_type=self.net_type
-        ).first()
+        account = await Account.filter(address=address, network=self.network).first()
 
         if not account:
             raise NotFoundException(
@@ -200,7 +188,7 @@ class AccountService:
         Returns:
             Tuple[List[AccountResponse], int, int]: (账户列表, 总数, 总页数)
         """
-        q = Account.filter(net_type=self.net_type)
+        q = Account.filter(network=self.network)
 
         # 应用过滤条件
         if query.tag:
@@ -212,7 +200,9 @@ class AccountService:
         total_pages = calculate_total_pages(total, query.page_size)
 
         offset = (query.page - 1) * query.page_size
-        accounts = await q.offset(offset).limit(query.page_size).order_by("-created_at").all()
+        accounts = (
+            await q.offset(offset).limit(query.page_size).order_by("-created_at").all()
+        )
 
         return [self._to_response(acc) for acc in accounts], total, total_pages
 
@@ -231,7 +221,7 @@ class AccountService:
         """
         address = address.lower()
         deleted_count = await Account.filter(
-            address=address, net_type=self.net_type
+            address=address, network=self.network
         ).delete()
 
         if deleted_count == 0:
@@ -253,9 +243,7 @@ class AccountService:
             bool: 存在返回 True
         """
         address = address.lower()
-        return await Account.filter(
-            address=address, net_type=self.net_type
-        ).exists()
+        return await Account.filter(address=address, network=self.network).exists()
 
     def _to_response(self, account: Account) -> AccountResponse:
         """将 ORM 模型转换为响应 Schema"""
@@ -263,7 +251,7 @@ class AccountService:
             id=account.id,
             address=account.address,
             tag=account.tag,
-            net_type=account.net_type,
+            network=account.network,
             last_login_dt=account.last_login_dt,
             created_at=account.created_at,
             updated_at=account.updated_at,
@@ -272,4 +260,3 @@ class AccountService:
 
 # 全局服务实例
 account_service = AccountService()
-

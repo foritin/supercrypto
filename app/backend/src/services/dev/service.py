@@ -87,7 +87,7 @@ class DevToolsService:
         recipients = []
 
         # 获取当前环境的所有账户
-        accounts = await Account.filter(net_type=self.environment).all()
+        accounts = await Account.filter(network=self.environment).all()
 
         for account in accounts:
             # 排除指定地址

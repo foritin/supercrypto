@@ -134,14 +134,20 @@ def refresh_tokens(token: str) -> Tuple[str, str]:
     Raises:
         RefreshTokenExpiredException: Refresh Token 已过期，需要重新登录
         UnauthorizedException: Token 无效
+
+    注意：
+    - 保留原有的 session_id 和 token_version
+    - 新 token 与旧 token 具有相同的版本号
     """
     # 验证必须是 refresh token 类型
     payload = verify_token(token, expected_type="refresh")
 
-    # 保留原有的 session_id
+    # 保留原有的 session_id 和 token_version
     new_payload = {"address": payload.get("address")}
     if "session_id" in payload:
         new_payload["session_id"] = payload["session_id"]
+    if "token_version" in payload:
+        new_payload["token_version"] = payload["token_version"]
 
     access_token = create_access_token(new_payload)
     new_refresh_token = create_refresh_token(new_payload)

@@ -1,6 +1,15 @@
 const home = {
   home: {
     badge: "Next-Gen RWA Investment Platform",
+    heroTitle: {
+      unlock: "Unlock",
+      onWeb3: "On Web3",
+    },
+    dynamicWords: [
+      "DeFi Strategies",
+      "Staking Rewards",
+      "Smart Investing",
+    ],
     title: {
       line1: "The Fastest",
       highlight: "Way",

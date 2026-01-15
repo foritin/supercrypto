@@ -4,6 +4,7 @@
 @notice 流动性挖矿合约 - STO合规版本
 @dev 质押Uniswap LP Token获得平台代币奖励
      添加KYC验证（可选，默认关闭）
+     使用 AddressProvider 模式获取依赖地址
 """
 
 # 接口定义
@@ -18,12 +19,15 @@ interface IPlatformToken:
 interface IKYCManager:
     def isVerified(_investor: address) -> bool: view
 
+interface IAddressProvider:
+    def get_kyc_manager() -> address: view
+    def get_vanke_platform_token() -> address: view
+
 # 合约迁移接口
 interface IMigration:
     def owner() -> address: view
-    def lp_token() -> address: view
-    def platform_token() -> address: view
-    def kyc_manager() -> address: view
+    def ADDRESS_PROVIDER() -> address: view  # 纯 Provider 模式
+    def lp_token() -> address: view  # LP Token 仍通过 setter 管理（外部合约）
     def require_kyc() -> bool: view
     def paused() -> bool: view
     def total_lp_staked() -> uint256: view
@@ -67,11 +71,12 @@ event Migrated:
 
 # 状态变量
 owner: public(address)
-lp_token: public(address)           # LP Token地址
-platform_token: public(address)     # 平台代币地址
-kyc_manager: public(address)        # KYC管理合约地址
+lp_token: public(address)           # LP Token地址（外部合约，仍通过 setter 管理）
 require_kyc: public(bool)           # 是否要求KYC（默认关闭）
 paused: public(bool)
+
+# AddressProvider (immutable) - 纯 Provider 模式
+ADDRESS_PROVIDER: public(immutable(address))
 
 # LP质押数据
 lpStakes: public(HashMap[address, HashMap[uint256, LPStakeInfo]])
@@ -92,22 +97,36 @@ SECONDS_PER_DAY: constant(uint256) = 24 * 3600
 
 
 @deploy
-def __init__(_lp_token: address, _platform_token: address, _kyc_manager: address):
+def __init__(_address_provider: address, _lp_token: address):
     """
-    @notice 初始化流动性挖矿合约（STO合规版本）
-    @param _lp_token LP Token地址
-    @param _platform_token 平台代币地址
-    @param _kyc_manager KYC管理合约地址
+    @notice 初始化流动性挖矿合约（纯 Provider 模式）
+    @param _address_provider AddressProvider 合约地址
+    @param _lp_token LP Token地址（外部合约）
     """
+    ADDRESS_PROVIDER = _address_provider
     self.owner = msg.sender
-    self.lp_token = _lp_token
-    self.platform_token = _platform_token
-    self.kyc_manager = _kyc_manager
+    self.lp_token = _lp_token  # LP Token 是外部合约，需要单独传入
     self.require_kyc = False  # 默认不要求KYC（流动性挖矿可选）
     self.paused = False
 
     # 默认每日释放5000个平台代币
     self.daily_emission = 5_000 * 10 ** 18
+
+
+# ==================== Provider 查询 ====================
+
+@view
+@internal
+def _get_kyc_manager() -> address:
+    """@notice 从 AddressProvider 获取 KYC 管理合约地址"""
+    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_kyc_manager()
+
+
+@view
+@internal
+def _get_platform_token() -> address:
+    """@notice 从 AddressProvider 获取 Vanke Platform Token 地址"""
+    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_vanke_platform_token()
 
 
 @external
@@ -151,31 +170,23 @@ def set_require_kyc(_require: bool):
 
 
 @external
-def set_kyc_manager(_new_manager: address):
+def set_lp_token(_new_lp_token: address):
     """
-    @notice 更新KYC管理合约地址
-    @param _new_manager 新KYC管理合约地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_manager != empty(address), "Invalid address"
-    self.kyc_manager = _new_manager
-
-
-@external
-def set_platform_token(_new_platform_token: address):
-    """
-    @notice 更新平台代币地址
-    @param _new_platform_token 新平台代币地址
+    @notice 更新LP Token地址（外部合约，仍通过 setter 管理）
+    @param _new_lp_token 新LP Token地址
     """
     assert msg.sender == self.owner, "Only owner"
-    assert _new_platform_token != empty(address), "Invalid address"
-    self.platform_token = _new_platform_token
+    assert _new_lp_token != empty(address), "Invalid address"
+    self.lp_token = _new_lp_token
+
+
+# 注意: set_kyc_manager, set_platform_token 已移除 - 纯 Provider 模式
 
 
 @external
 def stake_lp_token(_amount: uint256):
     """
-    @notice 质押LP Token（STO合规版本）
+    @notice 质押LP Token（纯 Provider 模式）
     @param _amount 质押数量
     """
     assert not self.migrated, "Contract migrated, use new contract"
@@ -184,7 +195,8 @@ def stake_lp_token(_amount: uint256):
 
     # STO合规：KYC验证（如果启用）
     if self.require_kyc:
-        assert staticcall IKYCManager(self.kyc_manager).isVerified(msg.sender), "KYC verification required"
+        kyc: address = self._get_kyc_manager()
+        assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
 
     # 转入LP Token
     assert extcall IERC20(self.lp_token).transferFrom(msg.sender, self, _amount), "Transfer failed"
@@ -221,7 +233,8 @@ def unstake_lp_token(_stake_id: uint256):
 
     # STO合规：KYC验证（如果启用）
     if self.require_kyc:
-        assert staticcall IKYCManager(self.kyc_manager).isVerified(msg.sender), "KYC verification required"
+        kyc: address = self._get_kyc_manager()
+        assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
 
     stake_info: LPStakeInfo = self.lpStakes[msg.sender][_stake_id]
     assert not stake_info.unstaked, "Already unstaked"
@@ -242,7 +255,7 @@ def unstake_lp_token(_stake_id: uint256):
 @external
 def claim_lp_reward(_stake_id: uint256):
     """
-    @notice 领取LP挖矿奖励（STO合规版本）
+    @notice 领取LP挖矿奖励（纯 Provider 模式）
     @param _stake_id 质押ID
     """
     assert not self.migrated, "Contract migrated, use new contract"
@@ -250,7 +263,8 @@ def claim_lp_reward(_stake_id: uint256):
 
     # STO合规：KYC验证（如果启用）
     if self.require_kyc:
-        assert staticcall IKYCManager(self.kyc_manager).isVerified(msg.sender), "KYC verification required"
+        kyc: address = self._get_kyc_manager()
+        assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
 
     self._claim_lp_reward(msg.sender, _stake_id)
 
@@ -272,7 +286,8 @@ def _claim_lp_reward(_user: address, _stake_id: uint256):
 
     if reward > 0:
         # 铸造平台代币作为奖励
-        extcall IPlatformToken(self.platform_token).mint(_user, reward)
+        platform_token: address = self._get_platform_token()
+        extcall IPlatformToken(platform_token).mint(_user, reward)
 
         # 更新上次领取时间
         self.lpStakes[_user][_stake_id].lastRewardTime = block.timestamp
@@ -331,15 +346,7 @@ def get_lp_stake(_user: address, _stake_id: uint256) -> LPStakeInfo:
     return self.lpStakes[_user][_stake_id]
 
 
-@external
-def set_lp_token(_lp_token: address):
-    """
-    @notice 设置LP Token地址
-    @param _lp_token LP Token地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _lp_token != empty(address), "Invalid address"
-    self.lp_token = _lp_token
+# 注意: 旧的 set_lp_token 已移除，使用新的版本
 
 
 @external
@@ -357,26 +364,48 @@ def transfer_ownership(_new_owner: address):
 
 @external
 @view
-def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10]):
+def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], DynArray[String[50], 10]):
     """
-    @notice 获取合约依赖（必须依赖 + 可选依赖）
-    @return (required, optional) 必须依赖合约名称数组、可选依赖合约名称数组
-    @dev 必须依赖: UniswapLP (LP Token接口), VankePlatformToken, DefaultKYCManager
-    @dev 无可选依赖
+    @notice 获取合约依赖（纯 Provider 模式）
+    @return (unbound_required, bound_all, unbound_optional) 未绑定必须依赖、已绑定所有依赖、未绑定可选依赖
+    @dev 必须依赖: UniswapLP (LP Token接口 - 通过 setter), VankePlatformToken, KYC (通过 Provider)
     @dev UniswapLP可以是Mock LP Token或真实Uniswap LP Token
     """
-    required: DynArray[String[50], 10] = []
-    optional: DynArray[String[50], 10] = []
+    unbound_required: DynArray[String[50], 10] = []
+    bound_all: DynArray[String[50], 10] = []
+    unbound_optional: DynArray[String[50], 10] = []
 
     # 检查必须依赖
+    # LP Token 仍通过 setter 管理（外部合约）
     if self.lp_token == empty(address):
-        required.append("UniswapLP")
-    if self.platform_token == empty(address):
-        required.append("VankePlatformToken")
-    if self.kyc_manager == empty(address):
-        required.append("DefaultKYCManager")
+        unbound_required.append("UniswapLP")
+    else:
+        bound_all.append("UniswapLP")
 
-    return required, optional
+    # 以下依赖通过 Provider 获取
+    platform_token: address = self._get_platform_token()
+    if platform_token == empty(address):
+        unbound_required.append("VankePlatformToken")
+    else:
+        bound_all.append("VankePlatformToken")
+
+    kyc: address = self._get_kyc_manager()
+    if kyc == empty(address):
+        unbound_required.append("KYC")
+    else:
+        bound_all.append("KYC")
+
+    return unbound_required, bound_all, unbound_optional
+
+
+@view
+@external
+def get_address_provider() -> address:
+    """
+    @notice 获取 AddressProvider 地址
+    @return AddressProvider 合约地址
+    """
+    return ADDRESS_PROVIDER
 
 
 # ==================== 合约迁移功能 ====================
@@ -414,9 +443,10 @@ def is_migrated() -> bool:
 @external
 def receive_migration(old_contract: address):
     """
-    @notice 从旧合约接收迁移状态
+    @notice 从旧合约接收迁移状态（纯 Provider 模式）
     @param old_contract 旧合约地址
     @dev 只有旧合约可以调用此函数
+    @dev 注意: platform_token, kyc_manager 通过 AddressProvider 获取，不需要迁移
     """
     assert msg.sender == old_contract, "Only old contract"
 
@@ -424,9 +454,8 @@ def receive_migration(old_contract: address):
 
     # 迁移基本状态变量
     self.owner = staticcall old.owner()
-    self.lp_token = staticcall old.lp_token()
-    self.platform_token = staticcall old.platform_token()
-    self.kyc_manager = staticcall old.kyc_manager()
+    self.lp_token = staticcall old.lp_token()  # LP Token 仍需迁移（外部合约）
+    # 注意: platform_token, kyc_manager 通过 AddressProvider 获取，不需要迁移
     self.require_kyc = staticcall old.require_kyc()
     self.paused = staticcall old.paused()
     self.total_lp_staked = staticcall old.total_lp_staked()

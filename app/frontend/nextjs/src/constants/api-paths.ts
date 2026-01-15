@@ -92,15 +92,13 @@ export const ADMIN_PATHS = {
   ASSET_UNBIND: (id: number) => `/admin/assets/${id}/unbind`,
 
   // 合约管理
-  CONTRACTS: '/admin/contracts',
   CONTRACT_STATUS: '/admin/contracts/status',
-  CONTRACT_STATUS_ENHANCED: '/admin/contracts/status-enhanced',
-  CONTRACT_AVAILABLE: '/admin/contracts/available',
-  CONTRACT_CONFIRM_BINDING: '/admin/contracts/confirm-binding',
-  CONTRACT_DEPENDENCIES: (name: string) => `/admin/contracts/dependencies/${name}`,
+  CONTRACT_DEPENDENCY_GRAPH: '/admin/contracts/dependency-graph',
+  CONTRACT_DEPENDENCIES: (name: string) => `/admin/contracts/${name}/dependencies`,
   CONTRACT_UPDATE_ADDRESS: '/admin/contracts/update-address',
+  CONTRACT_CONFIRM_BINDING: '/admin/contracts/confirm-binding',
   CONTRACT_RESET_PROJECT: (project: string) => `/admin/contracts/reset/${project}`,
-  CONTRACT_RESET_ALL: '/admin/contracts/reset',
+  CONTRACT_RESET_ALL: '/admin/contracts/reset/all',
 
   // 平台统计
   STATS: '/admin/stats',

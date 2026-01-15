@@ -92,9 +92,8 @@ async def list_accounts(
 
     返回分页的账户列表
     """
-    net_type = SETTINGS.wallet
     query = AccountListQuery(
-        net_type=net_type, tag=tag, address=address, page=page, page_size=page_size
+        tag=tag, address=address, page=page, page_size=page_size
     )
 
     accounts, total, total_pages = await service.list(query)

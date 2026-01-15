@@ -59,7 +59,7 @@ class KycContractService:
         }
         net_type = net_type_map.get(env, NetType.LOCAL)
 
-        admin = await Account.filter(tag="admin", net_type=net_type).first()
+        admin = await Account.filter(tag="admin", network=net_type).first()
         if not admin:
             raise ValueError(f"Admin account not found for {env} environment")
 
@@ -67,18 +67,27 @@ class KycContractService:
         return admin.private_key
 
     async def _get_contract_address(self) -> str:
-        """获取 KYCManager 合约地址"""
+        """
+        获取 KYCManager 合约地址
+
+        直接从 Contract 表查询，避免循环依赖 ContractService
+        """
         if self._contract_address is None:
-            from src.services.contract.service import ContractService
+            from src.models.contracts.contract import Contract
+            from src.shared.schemas.enums import ContractStatus
 
-            contract_service = ContractService()
-            self._contract_address = await contract_service.get_contract_address(
-                deploy_step="0-common-kyc", contract_name="KYCManager"
-            )
+            # KYCManager 是 GLOBAL scope，project_name 为 _common
+            contract = await Contract.filter(
+                name="KYCManager",
+                project_name="_common",
+                network=SETTINGS.NETWORK,
+                status=ContractStatus.ACTIVE,
+            ).first()
 
-            if not self._contract_address:
+            if not contract:
                 raise ValueError("KYCManager contract not deployed")
 
+            self._contract_address = contract.address
             logger.debug(f"KYCManager address: {self._contract_address}")
 
         return self._contract_address

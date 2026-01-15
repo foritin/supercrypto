@@ -67,7 +67,7 @@ export default function HomePage() {
   // Phase 11: 打字机效果 - 纯 CSS 动画
   // 优化：使用长度接近的词，减少视觉位移
   const { text: dynamicText, animationKey } = useTypewriter(
-    ['DeFi Strategies', 'Staking Rewards', 'Smart Investing'],
+    t('home.dynamicWords', { returnObjects: true }),
     { wordDuration: 3000, loop: true }
   );
 
@@ -206,7 +206,7 @@ export default function HomePage() {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  Unlock{' '}
+                  {t('home.heroTitle.unlock')}{' '}
                   <span
                     key={animationKey}
                     className="gold-text typewriter-text"
@@ -220,7 +220,7 @@ export default function HomePage() {
                   >
                     {dynamicText}
                   </span>
-                  {' '}On Web3
+                  {' '}{t('home.heroTitle.onWeb3')}
                 </Title>
               </div>
 

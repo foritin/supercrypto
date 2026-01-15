@@ -78,14 +78,21 @@ async def login(
         network_type=data.network_type,
     )
 
+    # 获取 session 中的 token 版本号
+    token_version = await session_service.get_token_version(wallet_address, session_id)
+
     if data.expires_in_mins:
         expires_in_mins = data.expires_in_mins
     else:
         expires_in_mins = SETTINGS.REFRESH_TOKEN_EXPIRE_MINUTES
 
     expire = datetime.timedelta(minutes=expires_in_mins)
-    # 存储地址和会话ID到 token
-    token_data = {"address": wallet_address, "session_id": session_id}
+    # 存储地址、会话ID 和版本号到 token
+    token_data = {
+        "address": wallet_address,
+        "session_id": session_id,
+        "token_version": token_version,  # 添加版本号
+    }
     access_token = create_access_token(token_data, expires_delta=expire)
     new_refresh_token = create_refresh_token(token_data, expires_delta=expire)
 
@@ -131,24 +138,37 @@ async def refresh_token_api(data: RefreshTokenRequest):
     return create_success_response(object_data=response)
 
 
-@router.post("/logout", summary="登出", description="用户登出，清理会话")
+@router.post("/logout", summary="登出", description="用户登出，清理会话并失效所有token")
 async def logout(data: LogoutRequest):
     """
     登出
 
     - **wallet_address**: 钱包地址
 
-    清理用户的所有会话数据
+    清理：
+    1. 递增 token 版本号（使所有设备的 token 立即失效）
+    2. 清理所有会话数据
+
+    Token 版本号机制确保：
+    - 所有已颁发的 access_token 和 refresh_token 立即失效
+    - 用户需要重新签名登录获取新 token
     """
     wallet_address = data.wallet_address.lower()
 
-    # 清除该用户的所有会话并加入黑名单
-    cleared_count = await session_service.add_to_blacklist(wallet_address)
+    # 递增 token 版本号（使所有 token 失效）
+    new_version, affected_count = await session_service.increment_token_version(
+        wallet_address
+    )
+
+    # 清理所有会话
+    cleared_count = await session_service.clear_user_sessions(wallet_address)
 
     return create_success_response(
         object_data={
             "wallet_address": wallet_address,
+            "new_token_version": new_version,
+            "invalidated_tokens": affected_count,
             "cleared_sessions": cleared_count,
         },
-        msg="Logout successful",
+        msg="Logout successful. All tokens have been invalidated.",
     )
