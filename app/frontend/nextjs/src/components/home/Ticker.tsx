@@ -42,9 +42,9 @@ const PARTNERS = [
 
 export default function Ticker() {
   return (
-    <div className="w-full py-16 border-y border-white/5 relative overflow-hidden bg-[#0a0f0d]/90 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-6 mb-12 text-center">
-        <p className="text-[#00D4AA] font-semibold text-sm tracking-[0.2em] uppercase">
+    <div className="w-full py-8 border-t border-white/5 relative overflow-hidden bg-[#0a0f0d]/80 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-6 mb-6 text-center">
+        <p className="text-[#00D4AA] font-semibold text-xs tracking-[0.2em] uppercase">
           Backed By Leading Institutions And Protocols
         </p>
       </div>
@@ -60,13 +60,13 @@ export default function Ticker() {
           {PARTNERS.map((partner, index) => (
             <div
               key={`p1-${index}`}
-              className="mx-12 flex items-center justify-center opacity-40 hover:opacity-100 transition-all duration-500 cursor-pointer grayscale hover:grayscale-0 filter"
-              style={{ height: "40px" }}
+              className="mx-12 flex items-center justify-center opacity-60 hover:opacity-100 transition-all duration-500 cursor-pointer grayscale hover:grayscale-0 filter"
+              style={{ height: "32px" }}
             >
               <img 
                 src={partner.logo} 
                 alt={partner.name} 
-                className="h-full w-auto object-contain max-h-[40px] max-w-[140px]"
+                className="h-full w-auto object-contain max-h-[32px] max-w-[120px]"
                 loading="lazy"
               />
             </div>
@@ -78,13 +78,13 @@ export default function Ticker() {
           {PARTNERS.map((partner, index) => (
             <div
               key={`p2-${index}`}
-              className="mx-12 flex items-center justify-center opacity-40 hover:opacity-100 transition-all duration-500 cursor-pointer grayscale hover:grayscale-0 filter"
-              style={{ height: "40px" }}
+              className="mx-12 flex items-center justify-center opacity-60 hover:opacity-100 transition-all duration-500 cursor-pointer grayscale hover:grayscale-0 filter"
+              style={{ height: "32px" }}
             >
               <img 
                 src={partner.logo} 
                 alt={partner.name} 
-                className="h-full w-auto object-contain max-h-[40px] max-w-[140px]"
+                className="h-full w-auto object-contain max-h-[32px] max-w-[120px]"
                 loading="lazy"
               />
             </div>
