@@ -31,7 +31,6 @@ import { useTypewriter } from "@/hooks/useTypewriter";
 import { RippleButton } from "@/components/ui/RippleButton";
 import { YieldCalculator } from "@/components/calculator/YieldCalculator";
 import { LogoWall } from "@/components/logo-wall/LogoWall";
-import Ticker from "@/components/home/Ticker";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -102,15 +101,10 @@ export default function HomePage() {
 
         {/* Hero Content */}
         <div
-          className="hero-content fade-in-stagger w-full"
+          className="hero-content fade-in-stagger"
           style={{
             position: 'relative',
             zIndex: 2,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            minHeight: '100vh', // 确保占满屏幕高度
-            paddingBottom: '120px', // 为底部的 Ticker 留出空间
           }}
         >
           <div
@@ -335,17 +329,6 @@ export default function HomePage() {
 
             </Flex>
           </div>
-        </div>
-
-        {/* Ticker Positioned Absolutely at Bottom of Hero */}
-        <div style={{ 
-          position: 'absolute', 
-          bottom: 0, 
-          left: 0, 
-          width: '100%', 
-          zIndex: 10 
-        }}>
-          <Ticker />
         </div>
       </section>
 

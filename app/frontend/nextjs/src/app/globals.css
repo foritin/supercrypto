@@ -2614,27 +2614,3 @@ input:focus:not(:focus-visible) {
   font-size: var(--menu-font-size) !important;
   padding: var(--menu-item-padding-y) var(--menu-item-padding-x) !important;
 }
-
-/* ============================================
-   Ticker Animation - 合作伙伴滚动条动画
-   ============================================ */
-
-@keyframes scroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.animate-scroll {
-  animation: scroll 40s linear infinite;
-}
-
-/* 移动端加速 */
-@media (max-width: 768px) {
-  .animate-scroll {
-    animation-duration: 20s;
-  }
-}
