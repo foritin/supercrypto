@@ -31,6 +31,7 @@ import { useTypewriter } from "@/hooks/useTypewriter";
 import { RippleButton } from "@/components/ui/RippleButton";
 import { YieldCalculator } from "@/components/calculator/YieldCalculator";
 import { LogoWall } from "@/components/logo-wall/LogoWall";
+import Ticker from "@/components/home/Ticker";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -388,6 +389,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Ticker Section - Institutional Grade Trust */}
+      <Ticker />
 
       {/* Features Section */}
       <section
