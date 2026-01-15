@@ -38,7 +38,12 @@ export function LanguageSwitcher({ ariaLabel }: { ariaLabel?: string }) {
   }
 
   return (
-    <Dropdown menu={{ items: menuItems }} trigger={['click']}>
+    <Dropdown 
+      menu={{ items: menuItems }} 
+      trigger={['click']}
+      getPopupContainer={(triggerNode) => triggerNode.parentElement || document.body}
+      overlayStyle={{ zIndex: 1100 }}
+    >
       <Button
         type="text"
         icon={<Globe width={16} height={16} aria-hidden="true" />}

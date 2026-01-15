@@ -5,9 +5,14 @@
 
 .partners-marquee {
   padding: 48px 0;
-  background: rgba(0, 0, 0, 0.2);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 212, 170, 0.03) 0%,
+    rgba(0, 0, 0, 0.3) 50%,
+    rgba(0, 212, 170, 0.03) 100%
+  );
+  border-top: 1px solid rgba(0, 212, 170, 0.1);
+  border-bottom: 1px solid rgba(0, 212, 170, 0.1);
   overflow: hidden;
 }
 
@@ -24,7 +29,7 @@
 }
 
 .partners-marquee__title {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 1.5px;
@@ -33,7 +38,7 @@
 }
 
 .partners-marquee__subtitle {
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.45);
   font-size: 13px;
   margin: 0;
 }
@@ -95,17 +100,17 @@
   transition: all 0.3s ease;
 }
 
-/* 灰度效果 */
+/* 灰度效果 - 提高默认亮度 */
 .partners-marquee__item.grayscale .partners-marquee__logo {
-  filter: grayscale(1) brightness(0.8);
-  opacity: 0.5;
+  filter: grayscale(1) brightness(1.2) contrast(1.1);
+  opacity: 0.7;
   transition: all 0.3s ease;
 }
 
 .partners-marquee__item.grayscale:hover .partners-marquee__logo {
-  filter: grayscale(0) brightness(1);
+  filter: grayscale(0) brightness(1.1);
   opacity: 1;
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 /* Logo */
