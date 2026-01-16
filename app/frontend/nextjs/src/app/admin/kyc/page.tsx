@@ -195,7 +195,7 @@ function AdminKycPageContent() {
       };
 
       const response = await adminService.getKycList(params);
-      setKycList(response.list);
+      setKycList(response.list_data);
       setPagination((prev) => ({
         ...prev,
         total: response.pagination.total,

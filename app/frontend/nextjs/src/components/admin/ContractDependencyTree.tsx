@@ -1,849 +1,725 @@
-/**
- * Contract Dependency Tree Component - Web3 Style
- * 合约依赖关系树组件 - Web3 风格
- *
- * 数据结构理解：
- * - module: 合约模块类型（kyc, stablecoin, business, oracle）
- * - project: 项目归属（如 vanke, common）
- *
- * 树形结构：
- * 📁 公共组件
- *   ├─ KYC (kyc)
- *   ├─ USDT (stablecoin)
- *   └─ USDC (stablecoin)
- * 📁 万科项目
- *   ├─ VankeRWAToken (business)
- *   ├─ VankePlatformToken (business)
- *   └─ MultiSigManager (oracle)
- */
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Tree, Tag, Space, Typography, Skeleton, Alert, Empty, Divider, Drawer } from 'antd';
-import { FolderOutlined, FileOutlined, DownOutlined, CloseOutlined, CopyOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import React, { useMemo, useCallback, useEffect } from 'react';
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  Handle,
+  Position,
+  useNodesState,
+  useEdgesState,
+  BackgroundVariant,
+  Panel,
+  type Node,
+  type Edge,
+  type NodeTypes,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import Dagre from '@dagrejs/dagre';
+import { Typography, Skeleton, Alert, Empty, Tooltip } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { contractGraphService, type DependencyGraphData, type GraphNode } from '@/services/contract-graph';
+import { contractGraphService, type GraphNode } from '@/services/contract-graph';
 
 const { Text } = Typography;
 
-// Web3 配色方案
-const WEB3_COLORS = {
-  // 项目颜色
-  project: {
-    vanke: '#00F0FF',
-    common: '#A855F7',
-    unknown: '#6B7280',
+// ============================================
+// Dark Fintech Theme - Web3 配色方案
+// ============================================
+const THEME = {
+  // 背景
+  bg: {
+    canvas: '#0a0a14',
+    node: 'rgba(16, 18, 30, 0.95)',
+    glass: 'rgba(22, 27, 45, 0.85)',
   },
-  // 模块颜色
-  module: {
-    kyc: '#10B981',           // 绿色 - KYC
-    stablecoin: '#F59E0B',    // 橙色 - 稳定币
-    business: '#00F0FF',      // 青色 - 业务
-    oracle: '#A855F7',        // 紫色 - 预言机
+  // 主色调 - Indigo/Purple 系
+  accent: {
+    primary: '#818CF8',      // Indigo-400
+    primaryGlow: 'rgba(129, 140, 248, 0.4)',
+    secondary: '#34D399',    // Emerald-400 - 成功
+    secondaryGlow: 'rgba(52, 211, 153, 0.3)',
+    warning: '#FBBF24',      // Amber-400 - 警告
+    warningGlow: 'rgba(251, 191, 36, 0.3)',
+    error: '#F87171',        // Red-400
+    muted: '#6B7280',        // Gray-500
   },
-  // 状态颜色
-  status: {
-    synced: '#10B981',
-    needs_update: '#EF4444',
-    not_deployed: '#6B7280',
+  // 边框
+  border: {
+    subtle: 'rgba(255, 255, 255, 0.08)',
+    normal: 'rgba(255, 255, 255, 0.12)',
+    accent: 'rgba(129, 140, 248, 0.4)',
   },
-  // 绑定状态颜色
-  binding: {
-    binded: '#10B981',
-    deployed_not_binded: '#F59E0B',
-    not_deployed: '#6B7280',
-    needs_update: '#EF4444',
+  // 文字
+  text: {
+    primary: '#F8FAFC',
+    secondary: 'rgba(248, 250, 252, 0.7)',
+    muted: 'rgba(248, 250, 252, 0.45)',
   },
 };
 
-// 模块显示配置 - 将在组件中使用翻译
-const MODULE_ICONS: Record<string, string> = {
-  kyc: '🔐',
-  stablecoin: '💰',
-  business: '📄',
-  oracle: '🔮',
+// 状态配色
+const STATUS_COLORS: Record<string, { color: string; glow: string }> = {
+  ready: { color: THEME.accent.secondary, glow: THEME.accent.secondaryGlow },
+  not_registered: { color: THEME.accent.warning, glow: THEME.accent.warningGlow },
+  not_deployed: { color: THEME.accent.muted, glow: 'transparent' },
+  missing_deps: { color: THEME.accent.error, glow: 'rgba(248, 113, 113, 0.3)' },
 };
 
-// 树节点数据结构
-interface TreeNode {
-  key: string;
-  title: React.ReactNode;
-  children?: TreeNode[];
+// 状态文字映射
+const STATUS_TEXT: Record<string, string> = {
+  ready: 'Ready',
+  not_registered: 'Not Registered',
+  not_deployed: 'Not Deployed',
+  missing_deps: 'Missing Deps',
+};
+
+// ============================================
+// 自定义合约节点 - Turbo Flow 风格
+// ============================================
+function ContractNode({ data }: { data: GraphNode }) {
+  const status = STATUS_COLORS[data.status] || STATUS_COLORS.not_deployed;
+  const statusText = STATUS_TEXT[data.status] || 'Unknown';
+  const isGlobal = data.project === 'common' || !data.project;
+
+  return (
+    <div className="contract-node">
+      {/* 发光边框效果 - 使用状态颜色 */}
+      <div 
+        className="node-glow"
+        style={{ 
+          background: `linear-gradient(135deg, ${status.color}30 0%, transparent 60%)`,
+        }} 
+      />
+      
+      {/* 主体内容 */}
+      <div 
+        className="node-content"
+        style={{
+          borderColor: `${status.color}50`,
+        }}
+      >
+        {/* Handles */}
+        <Handle 
+          type="target" 
+          position={Position.Top} 
+          className="node-handle"
+          style={{ background: status.color }}
+        />
+        <Handle 
+          type="source" 
+          position={Position.Bottom} 
+          className="node-handle"
+          style={{ background: status.color }}
+        />
+
+        {/* 顶部：状态条 */}
+        <div 
+          className="status-bar"
+          style={{ 
+            background: `linear-gradient(90deg, ${status.color} 0%, ${status.color}60 100%)`,
+          }}
+        >
+          <div 
+            className="status-dot"
+            style={{ background: status.color }}
+          />
+          <span className="status-text">{statusText}</span>
+        </div>
+
+        {/* 合约名称 */}
+        <Tooltip title={data.label}>
+          <div className="node-name">{data.label}</div>
+        </Tooltip>
+
+        {/* 标签行 */}
+        <div className="node-tags">
+          <span 
+            className="tag project-tag"
+            style={{ 
+              background: isGlobal 
+                ? 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)' 
+                : 'linear-gradient(135deg, #34D399 0%, #10B981 100%)',
+            }}
+          >
+            {isGlobal ? 'GLOBAL' : data.project?.toUpperCase()}
+          </span>
+          {data.module && (
+            <span className="tag module-tag">{data.module}</span>
+          )}
+        </div>
+
+        {/* 地址 */}
+        {data.address && (
+          <Tooltip title={data.address}>
+            <div className="node-address">
+              {data.address.slice(0, 8)}...{data.address.slice(-6)}
+            </div>
+          </Tooltip>
+        )}
+      </div>
+
+      <style>{`
+        .contract-node {
+          position: relative;
+          width: 220px;
+          cursor: pointer;
+        }
+        .node-glow {
+          position: absolute;
+          inset: -1px;
+          border-radius: 14px;
+          z-index: 0;
+        }
+        .node-content {
+          position: relative;
+          padding: 14px 16px;
+          border-radius: 12px;
+          background: ${THEME.bg.node};
+          border: 1px solid ${THEME.border.normal};
+          backdrop-filter: blur(12px);
+          z-index: 1;
+          transition: all 0.2s ease;
+        }
+        .contract-node:hover .node-content {
+          border-color: ${THEME.accent.primary};
+          box-shadow: 0 0 24px ${THEME.accent.primaryGlow};
+          transform: translateY(-2px);
+        }
+        .node-handle {
+          width: 8px !important;
+          height: 8px !important;
+          border: none !important;
+          transition: transform 0.2s;
+        }
+        .contract-node:hover .node-handle {
+          transform: scale(1.3);
+        }
+        .status-bar {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 10px;
+          border-radius: 6px;
+          margin: -14px -16px 12px -16px;
+          border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .status-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .status-text {
+          font-size: 11px;
+          font-weight: 600;
+          color: rgba(255,255,255,0.9);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .node-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: ${THEME.text.primary};
+          margin-bottom: 10px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .node-tags {
+          display: flex;
+          gap: 6px;
+          margin-bottom: 10px;
+          flex-wrap: wrap;
+        }
+        .tag {
+          font-size: 10px;
+          font-weight: 600;
+          padding: 3px 8px;
+          border-radius: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .project-tag {
+          color: #fff;
+        }
+        .module-tag {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid ${THEME.border.subtle};
+          color: ${THEME.text.secondary};
+        }
+        .node-address {
+          font-size: 11px;
+          font-family: 'SF Mono', 'Fira Code', monospace;
+          color: ${THEME.text.muted};
+          padding: 4px 8px;
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        .node-address:hover {
+          color: ${THEME.text.secondary};
+          background: rgba(0, 0, 0, 0.3);
+        }
+      `}</style>
+    </div>
+  );
 }
 
+const nodeTypes: NodeTypes = {
+  contract: ContractNode,
+};
+
+// ============================================
+// Dagre 布局
+// ============================================
+function getLayoutedElements(
+  nodes: Node[],
+  edges: Edge[],
+  direction: 'TB' | 'LR' = 'TB'
+): { nodes: Node[]; edges: Edge[] } {
+  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+
+  g.setGraph({
+    rankdir: direction,
+    nodesep: 60,
+    ranksep: 80,
+    marginx: 40,
+    marginy: 40,
+  });
+
+  nodes.forEach((node) => {
+    g.setNode(node.id, { width: 220, height: 130 });
+  });
+
+  edges.forEach((edge) => {
+    g.setEdge(edge.source, edge.target);
+  });
+
+  Dagre.layout(g);
+
+  const layoutedNodes = nodes.map((node) => {
+    const pos = g.node(node.id);
+    return {
+      ...node,
+      position: { x: pos.x - 110, y: pos.y - 65 },
+    };
+  });
+
+  return { nodes: layoutedNodes, edges };
+}
+
+// ============================================
+// 主组件
+// ============================================
 interface ContractDependencyTreeProps {
   onContractClick?: (contractId: string) => void;
+  showDeleted?: boolean;
 }
 
-export function ContractDependencyTree({ onContractClick }: ContractDependencyTreeProps) {
+export function ContractDependencyTree({ onContractClick, showDeleted = false }: ContractDependencyTreeProps) {
   const { t } = useTranslation();
-  // 预览面板状态
-  const [previewNode, setPreviewNode] = useState<GraphNode | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
+
   const { data: graphData, isLoading, error } = useQuery({
     queryKey: ['contract-dependency-graph'],
     queryFn: contractGraphService.getDependencyGraph,
   });
 
-  // 构建依赖关系映射（用于预览面板）- 必须在所有条件返回之前
-  const dependenciesMap = useMemo(() => {
-    if (!graphData) return new Map();
-    const map = new Map<string, DependencyGraphData['edges']>();
-    graphData.edges.forEach((edge) => {
-      if (!map.has(edge.source)) {
-        map.set(edge.source, []);
-      }
-      map.get(edge.source)!.push(edge);
-    });
-    return map;
-  }, [graphData]);
+  // DEBUG: 检查 API 返回的数据
+  if (graphData) {
+    console.log('[DEBUG] graphData.nodes USDT/USDC:', 
+      graphData.nodes.filter(n => ['USDT', 'USDC'].includes(n.id))
+        .map(n => ({ id: n.id, status: n.status, type: n.type }))
+    );
+  }
 
-  // 构建树形数据结构
-  const treeData = useMemo((): TreeNode[] => {
-    if (!graphData || graphData.nodes.length === 0) return [];
-
-    // 构建依赖关系映射
-    const dependencies = new Map<string, DependencyGraphData['edges']>();
-    graphData.edges.forEach((edge) => {
-      if (!dependencies.has(edge.source)) {
-        dependencies.set(edge.source, []);
-      }
-      dependencies.get(edge.source)!.push(edge);
-    });
-
-    // 分组策略：
-    // 1. 公共组件：kyc + stablecoin 模块，project 为 'common' 或 null
-    // 2. 具体项目：business + oracle 模块，按 project 分组（如 vanke）
-
-    const commonNodes: GraphNode[] = [];
-    const projectGroups: Record<string, GraphNode[]> = {};
-
-    graphData.nodes.forEach((node) => {
-      const isCommonModule = node.module === 'kyc' || node.module === 'stablecoin';
-      const isCommonProject = !node.project || node.project === 'common' || node.project === 'unknown';
-
-      if (isCommonModule && isCommonProject) {
-        // 公共组件
-        commonNodes.push(node);
-      } else {
-        // 项目合约
-        const project = node.project || 'unknown';
-        if (!projectGroups[project]) {
-          projectGroups[project] = [];
-        }
-        projectGroups[project].push(node);
-      }
-    });
-
-    const treeNodes: TreeNode[] = [];
-
-    // 1. 公共组件组
-    if (commonNodes.length > 0) {
-      treeNodes.push({
-        key: 'group-common',
-        title: (
-          <Space size={10}>
-            <FolderOutlined style={{ color: WEB3_COLORS.project.common, fontSize: 16 }} />
-            <Text strong style={{ color: '#fff', fontSize: 16 }}>
-              {t('admin.contracts.filters.common')}
-            </Text>
-            <Tag
-              style={{
-                margin: 0,
-                background: `${WEB3_COLORS.project.common}20`,
-                border: `1px solid ${WEB3_COLORS.project.common}40`,
-                color: WEB3_COLORS.project.common,
-                borderRadius: 4,
-                fontSize: 12,
-                padding: '2px 8px',
-              }}
-            >
-              {commonNodes.length}
-            </Tag>
-          </Space>
-        ),
-        children: commonNodes.map((node) => createContractNode(node, dependencies, onContractClick, t)),
-      });
+  // 构建节点和边
+  const { layoutedNodes, layoutedEdges } = useMemo(() => {
+    if (!graphData || graphData.nodes.length === 0) {
+      return { layoutedNodes: [], layoutedEdges: [] };
     }
 
-    // 2. 各个项目组
-    Object.entries(projectGroups)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .forEach(([project, nodes]) => {
-        const projectColor = WEB3_COLORS.project[project as keyof typeof WEB3_COLORS.project] || WEB3_COLORS.project.unknown;
-        const projectLabel = t(`admin.contracts.filters.${project}`) || project;
+    // 根据 showDeleted 过滤节点
+    const filteredNodes = showDeleted 
+      ? graphData.nodes 
+      : graphData.nodes.filter(node => !node.isDeleted);
 
-        treeNodes.push({
-          key: `project-${project}`,
-          title: (
-            <Space size={10}>
-              <FolderOutlined style={{ color: projectColor, fontSize: 16 }} />
-              <Text strong style={{ color: '#fff', fontSize: 16 }}>
-                {projectLabel}
-              </Text>
-              <Tag
-                style={{
-                  margin: 0,
-                  background: `${projectColor}20`,
-                  border: `1px solid ${projectColor}40`,
-                  color: projectColor,
-                  borderRadius: 4,
-                  fontSize: 12,
-                  padding: '2px 8px',
-                }}
-              >
-                {nodes.length}
-              </Tag>
-            </Space>
-          ),
-          children: nodes.map((node) => createContractNode(node, dependencies, onContractClick, t)),
-        });
+    // 获取过滤后的节点 ID 集合
+    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
+
+    // 直接使用过滤后的合约节点，不再创建 Group Header
+    const nodes: Node[] = filteredNodes.map((node) => ({
+      id: node.id,
+      type: 'contract',
+      position: { x: 0, y: 0 },
+      data: node as unknown as Record<string, unknown>,
+    }));
+
+    // 构建依赖边（只保留两端节点都存在的边）
+    const edges: Edge[] = graphData.edges
+      .filter(edge => filteredNodeIds.has(edge.source) && filteredNodeIds.has(edge.target))
+      .map((edge, idx) => {
+        const isRegistered = edge.status === 'registered';
+        const edgeColor = isRegistered ? THEME.accent.secondary : THEME.accent.warning;
+
+        return {
+          id: `dep-${idx}`,
+          source: edge.source,
+          target: edge.target,
+          type: 'smoothstep',
+          label: edge.key,
+          labelStyle: { 
+            fontSize: 10, 
+            fontWeight: 500,
+            fill: edgeColor,
+          },
+          labelBgStyle: { 
+            fill: THEME.bg.node, 
+            fillOpacity: 0.95,
+          },
+          labelBgPadding: [6, 10] as [number, number],
+          labelBgBorderRadius: 6,
+          style: {
+            stroke: edgeColor,
+            strokeWidth: 2,
+            strokeDasharray: isRegistered ? undefined : '6 4',
+          },
+          animated: !isRegistered,
+          markerEnd: {
+            type: 'arrowclosed' as const,
+            color: edgeColor,
+            width: 18,
+            height: 18,
+          },
+        };
       });
 
-    return treeNodes;
-  }, [graphData, onContractClick, setPreviewNode, setPreviewOpen, t]);
+    const { nodes: ln, edges: le } = getLayoutedElements(nodes, edges, 'TB');
+    return { layoutedNodes: ln, layoutedEdges: le };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graphData, showDeleted]);
 
-  // 创建合约节点
-  function createContractNode(
-    node: GraphNode,
-    dependencies: Map<string, DependencyGraphData['edges']>,
-    onContractClick?: (contractId: string) => void,
-    t?: any,
-  ): TreeNode {
-    const nodeDeps = dependencies.get(node.id) || [];
-    const statusColor = node.status === 'synced' ? WEB3_COLORS.status.synced :
-                       node.status === 'needs_update' ? WEB3_COLORS.status.needs_update :
-                       WEB3_COLORS.status.not_deployed;
+  const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
+  const [rfEdges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
 
-    // 获取模块显示信息
-    const moduleIcon = node.module ? MODULE_ICONS[node.module] : null;
-    const moduleLabel = node.module ? t(`admin.contracts.tree.module.${node.module}`) : null;
-    const moduleColor = node.module ? WEB3_COLORS.module[node.module] || '#6B7280' : '#6B7280';
+  useEffect(() => {
+    if (layoutedNodes.length > 0) {
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
+    }
+  }, [layoutedNodes, layoutedEdges, setNodes, setEdges]);
 
-    return {
-      key: node.id,
-      title: (
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            // 打开预览面板
-            setPreviewNode(node);
-            setPreviewOpen(true);
-            // 同时触发原有的点击事件
-            onContractClick?.(node.id);
-          }}
-          style={{
-            padding: '8px 12px',
-            borderRadius: 8,
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            transition: 'all 0.2s',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
-            e.currentTarget.style.borderColor = `${statusColor}40`;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-          }}
-        >
-          {/* 主信息行 */}
-          <Space size={10} style={{ marginBottom: nodeDeps.length > 0 ? 10 : 0 }}>
-            <FileOutlined style={{ color: statusColor, fontSize: 15 }} />
-            <Text strong style={{ color: '#fff', fontSize: 15 }}>
-              {node.label}
-            </Text>
-            {/* 模块标签 */}
-            {moduleIcon && moduleLabel && (
-              <Tag
-                style={{
-                  margin: 0,
-                  fontSize: 11,
-                  padding: '2px 6px',
-                  borderRadius: 4,
-                  background: `${moduleColor}15`,
-                  border: `1px solid ${moduleColor}40`,
-                  color: moduleColor,
-                }}
-              >
-                {moduleIcon} {moduleLabel}
-              </Tag>
-            )}
-            <Tag
-              style={{
-                margin: 0,
-                fontSize: 11,
-                padding: '2px 6px',
-                borderRadius: 4,
-                background: `${statusColor}20`,
-                border: `1px solid ${statusColor}40`,
-                color: statusColor,
-              }}
-            >
-              {node.status === 'synced' ? t('admin.contracts.status.synced') : node.status === 'needs_update' ? t('admin.contracts.status.needs_update') : t('admin.contracts.status.not_deployed')}
-            </Tag>
-          </Space>
+  const handleNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      onContractClick?.(node.id);
+    },
+    [onContractClick]
+  );
 
-          {/* 地址 */}
-          <div style={{ marginLeft: 24, marginBottom: nodeDeps.length > 0 ? 8 : 0 }}>
-            <Text
-              copyable={{
-                text: node.address,
-                tooltips: [t('common.copy'), t('common.copied')],
-              }}
-              style={{
-                fontSize: 12,
-                fontFamily: 'monospace',
-                color: 'rgba(255, 255, 255, 0.5)',
-              }}
-            >
-              {node.address.slice(0, 10)}...{node.address.slice(-8)}
-            </Text>
-          </div>
-
-          {/* 依赖关系列表 */}
-          {nodeDeps.length > 0 && (
-            <div style={{ marginLeft: 24, marginTop: 8 }}>
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: 'rgba(255, 255, 255, 0.6)',
-                  display: 'block',
-                  marginBottom: 6,
-                }}
-              >
-                {t('admin.contracts.tree.dependencies')} ({nodeDeps.length}):
-              </Text>
-              <Space orientation="vertical" size={6}>
-                {nodeDeps.map((dep, idx) => {
-                  const bindingColor = dep.status === 'needs_update' ? WEB3_COLORS.binding.needs_update :
-                                     dep.isBinded ? WEB3_COLORS.binding.binded :
-                                     dep.isDeployed ? WEB3_COLORS.binding.deployed_not_binded :
-                                     WEB3_COLORS.binding.not_deployed;
-
-                  const bindingText = dep.status === 'needs_update' ? '需要更新' :
-                                   dep.isBinded ? '已绑定' :
-                                   dep.isDeployed ? '已部署未绑定' : '未部署';
-
-                  const bindingIcon = dep.isBinded ? '✓' :
-                                    dep.isDeployed ? '⚠' : '✗';
-
-                  return (
-                    <div
-                      key={`${node.id}-dep-${idx}`}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: 6,
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        borderLeft: `2px solid ${bindingColor}`,
-                      }}
-                    >
-                      <Space size={10}>
-                        <span style={{ color: bindingColor, fontSize: 14 }}>
-                          {bindingIcon}
-                        </span>
-                        <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 13 }}>
-                          {dep.label}
-                        </Text>
-                        {dep.setFunction && (
-                          <Tag
-                            style={{
-                              margin: 0,
-                              fontSize: 11,
-                              padding: '2px 6px',
-                              borderRadius: 4,
-                              background: `${bindingColor}15`,
-                              border: `1px solid ${bindingColor}40`,
-                              color: bindingColor,
-                            }}
-                          >
-                            {dep.setFunction}()
-                          </Tag>
-                        )}
-                        <Tag
-                          style={{
-                            margin: 0,
-                            fontSize: 10,
-                            padding: '0 4px',
-                            borderRadius: 3,
-                            background: `${bindingColor}20`,
-                            border: `1px solid ${bindingColor}40`,
-                            color: bindingColor,
-                          }}
-                        >
-                          {bindingText}
-                        </Tag>
-                      </Space>
-                    </div>
-                  );
-                })}
-              </Space>
-            </div>
-          )}
-        </div>
-      ),
-    };
-  }
-
+  // Loading State
   if (isLoading) {
     return (
-      <div style={{
-        padding: 24,
-        background: 'radial-gradient(ellipse at top, #1a1a2e 0%, #16213e 50%, #0f0f1a 100%)',
-        borderRadius: 16,
-        minHeight: 400,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <Skeleton active paragraph={{ rows: 6 }} />
+      <div className="tree-container tree-loading">
+        <Skeleton active paragraph={{ rows: 10 }} />
+        <style>{containerStyles}</style>
       </div>
     );
   }
 
+  // Error State
   if (error) {
     return (
-      <div style={{
-        padding: 24,
-        background: 'radial-gradient(ellipse at top, #1a1a2e 0%, #16213e 50%, #0f0f1a 100%)',
-        borderRadius: 16,
-        minHeight: 400,
-      }}>
+      <div className="tree-container">
         <Alert
           type="error"
-          message="加载失败"
-          description={(error as Error).message || '无法加载合约依赖关系数据'}
+          message={t('admin.contracts.tree.loadFailed')}
+          description={(error as Error).message}
           showIcon
-          style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none' }}
         />
+        <style>{containerStyles}</style>
       </div>
     );
   }
 
+  // Empty State
   if (!graphData || graphData.nodes.length === 0) {
     return (
-      <div style={{
-        padding: 24,
-        background: 'radial-gradient(ellipse at top, #1a1a2e 0%, #16213e 50%, #0f0f1a 100%)',
-        borderRadius: 16,
-        minHeight: 400,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <Empty description="暂无合约数据" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+      <div className="tree-container tree-empty">
+        <Empty 
+          description={<span style={{ color: THEME.text.muted }}>{t('admin.contracts.tree.noData')}</span>} 
+        />
+        <style>{containerStyles}</style>
       </div>
     );
   }
 
+  // 统计信息
+  const globalCount = graphData.nodes.filter(n => n.project === 'common' || !n.project).length;
+  const projectCount = graphData.nodes.length - globalCount;
+  const registeredEdges = graphData.edges.filter(e => e.status === 'registered').length;
+  const pendingEdges = graphData.edges.length - registeredEdges;
+
   return (
-    <>
-      <div style={{
-        padding: 24,
-        background: 'radial-gradient(ellipse at top, #1a1a2e 0%, #16213e 50%, #0f0f1a 100%)',
-        borderRadius: 16,
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), inset 0 0 60px rgba(0, 240, 255, 0.05)',
-      }}>
-      {/* 图例 */}
-      <div style={{
-        marginBottom: 16,
-        padding: 16,
-        background: 'rgba(15, 15, 26, 0.6)',
-        borderRadius: 8,
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(8px)',
-      }}>
-        <Space size="large" wrap>
-          <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 14 }}>
-            <strong>绑定状态：</strong>
-          </Text>
-          <Space size={16}>
-            <Space size={6}>
-              <span style={{ color: WEB3_COLORS.binding.binded, fontSize: 15 }}>✓</span>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 13 }}>已绑定</Text>
-            </Space>
-            <Space size={6}>
-              <span style={{ color: WEB3_COLORS.binding.deployed_not_binded, fontSize: 15 }}>⚠</span>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 13 }}>已部署未绑定</Text>
-            </Space>
-            <Space size={6}>
-              <span style={{ color: WEB3_COLORS.binding.needs_update, fontSize: 15 }}>✗</span>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 13 }}>需要更新</Text>
-            </Space>
-          </Space>
-          <Divider orientation="vertical" style={{ background: 'rgba(255, 255, 255, 0.2)', margin: '0 12px' }} />
-          <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 14 }}>
-            <strong>模块类型：</strong>
-          </Text>
-          <Space size={10}>
-            <Tag style={{ margin: 0, fontSize: 12, padding: '4px 8px', borderRadius: 4,
-              background: `${WEB3_COLORS.module.kyc}20`, border: `1px solid ${WEB3_COLORS.module.kyc}40`,
-              color: WEB3_COLORS.module.kyc }}>
-              🔐 KYC
-            </Tag>
-            <Tag style={{ margin: 0, fontSize: 12, padding: '4px 8px', borderRadius: 4,
-              background: `${WEB3_COLORS.module.stablecoin}20`, border: `1px solid ${WEB3_COLORS.module.stablecoin}40`,
-              color: WEB3_COLORS.module.stablecoin }}>
-              💰 稳定币
-            </Tag>
-            <Tag style={{ margin: 0, fontSize: 12, padding: '4px 8px', borderRadius: 4,
-              background: `${WEB3_COLORS.module.business}20`, border: `1px solid ${WEB3_COLORS.module.business}40`,
-              color: WEB3_COLORS.module.business }}>
-              📄 业务
-            </Tag>
-            <Tag style={{ margin: 0, fontSize: 12, padding: '4px 8px', borderRadius: 4,
-              background: `${WEB3_COLORS.module.oracle}20`, border: `1px solid ${WEB3_COLORS.module.oracle}40`,
-              color: WEB3_COLORS.module.oracle }}>
-              🔮 预言机
-            </Tag>
-          </Space>
-        </Space>
-      </div>
-
-      {/* 树形结构 */}
-      <Tree
-        showLine={{
-          showLeafIcon: false,
-        }}
-        defaultExpandAll
-        switcherIcon={<DownOutlined />}
-        treeData={treeData}
-        style={{
-          background: 'transparent',
-          fontSize: 14,
-        }}
-        className="web3-dependency-tree"
-      />
-
-      <style>{`
-        .web3-dependency-tree .ant-tree-treenode {
-          padding: 6px 0;
-        }
-        .web3-dependency-tree .ant-tree-switcher {
-          color: rgba(255, 255, 255, 0.5);
-        }
-        .web3-dependency-tree .ant-tree-switcher:hover {
-          color: #00F0FF;
-        }
-        .web3-dependency-tree .ant-tree-node-content-wrapper {
-          color: rgba(255, 255, 255, 0.85);
-          border-radius: 6px;
-          transition: all 0.2s;
-        }
-        .web3-dependency-tree .ant-tree-node-content-wrapper:hover {
-          background: rgba(255, 255, 255, 0.05) !important;
-        }
-        .web3-dependency-tree .ant-tree-line {
-          border-color: rgba(255, 255, 255, 0.1) !important;
-        }
-      `}</style>
-    </div>
-
-      {/* 预览面板 */}
-      <Drawer
-        title={null}
-        onClose={() => setPreviewOpen(false)}
-        open={previewOpen}
-        size={480}
-        placement="right"
-        styles={{
-          body: { padding: 0 },
-          content: {
-            background: 'radial-gradient(ellipse at top, #1a1a2e 0%, #16213e 50%, #0f0f1a 100%)',
-          },
-        }}
-        closable={false}
+    <div className="tree-container">
+      <ReactFlow
+        nodes={nodes}
+        edges={rfEdges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodeClick={handleNodeClick}
+        nodeTypes={nodeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
+        minZoom={0.2}
+        maxZoom={1.5}
+        proOptions={{ hideAttribution: true }}
       >
-        {previewNode && (
-          <div style={{
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-          }}>
-            {/* 头部 */}
-            <div style={{
-              padding: '24px 28px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-            }}>
-              <div style={{ flex: 1 }}>
-                <Space orientation="vertical" size={10}>
-                  <Space size={10}>
-                    <Text strong style={{ color: '#fff', fontSize: 20 }}>
-                      {previewNode.label}
-                    </Text>
-                    {previewNode.module && MODULE_ICONS[previewNode.module] && (
-                      <Tag
-                        style={{
-                          margin: 0,
-                          fontSize: 12,
-                          padding: '4px 10px',
-                          borderRadius: 6,
-                          background: `${WEB3_COLORS.module[previewNode.module]}15`,
-                          border: `1px solid ${WEB3_COLORS.module[previewNode.module]}40`,
-                          color: WEB3_COLORS.module[previewNode.module],
-                        }}
-                      >
-                        {MODULE_ICONS[previewNode.module]} {t(`admin.contracts.tree.module.${previewNode.module}`)}
-                      </Tag>
-                    )}
-                  </Space>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14 }}>
-                    {t(`admin.contracts.filters.${previewNode.project}`) || previewNode.project || t('admin.contracts.tree.ungrouped')}
-                  </Text>
-                </Space>
-              </div>
-              <div
-                onClick={() => setPreviewOpen(false)}
-                style={{
-                  cursor: 'pointer',
-                  padding: 4,
-                  borderRadius: 4,
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                }}
-              >
-                <CloseOutlined style={{ color: 'rgba(255, 255, 255, 0.6)' }} />
-              </div>
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1}
+          color="rgba(255, 255, 255, 0.03)"
+        />
+        
+        <Controls
+          className="rf-controls"
+          showInteractive={false}
+        />
+
+        <MiniMap
+          className="rf-minimap"
+          nodeColor={(node) => {
+            const data = node.data as unknown as GraphNode;
+            const status = STATUS_COLORS[data.status] || STATUS_COLORS.not_deployed;
+            return status.color;
+          }}
+          maskColor="rgba(0, 0, 0, 0.8)"
+          pannable
+          zoomable
+        />
+
+        {/* 顶部统计面板 */}
+        <Panel position="top-left" className="stats-panel">
+          <div className="stats-grid">
+            <div className="stat-item">
+              <span className="stat-value" style={{ color: THEME.accent.primary }}>{globalCount}</span>
+              <span className="stat-label">Global</span>
             </div>
-
-            {/* 内容区域 */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: 28 }}>
-              <Space orientation="vertical" size={28} style={{ width: '100%' }}>
-                {/* 状态卡片 */}
-                <div style={{
-                  padding: 20,
-                  borderRadius: 14,
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                }}>
-                  <Space orientation="vertical" size={14} style={{ width: '100%' }}>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 14 }}>
-                      {t('admin.contracts.tree.contractStatus')}
-                    </Text>
-                    <Space size={14}>
-                      {previewNode.status === 'synced' ? (
-                        <CheckCircleOutlined style={{ color: WEB3_COLORS.status.synced, fontSize: 20 }} />
-                      ) : (
-                        <ExclamationCircleOutlined style={{ color: WEB3_COLORS.status.needs_update, fontSize: 20 }} />
-                      )}
-                      <Text style={{
-                        color: previewNode.status === 'synced' ? WEB3_COLORS.status.synced : WEB3_COLORS.status.needs_update,
-                        fontSize: 16,
-                      }}>
-                        {previewNode.status === 'synced' ? t('admin.contracts.preview.synced') : t('admin.contracts.status.needs_update')}
-                      </Text>
-                    </Space>
-                  </Space>
-                </div>
-
-                {/* 合约地址 */}
-                <div style={{
-                  padding: 20,
-                  borderRadius: 14,
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                }}>
-                  <Space orientation="vertical" size={14} style={{ width: '100%' }}>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 14 }}>
-                      {t('admin.contracts.tree.contractAddress')}
-                    </Text>
-                    <Space size={10}>
-                      <Text
-                        copyable={{
-                          text: previewNode.address,
-                          tooltips: [t('admin.contracts.preview.copyAddress'), t('common.copied')],
-                          icon: <CopyOutlined style={{ fontSize: 14 }} />,
-                        }}
-                        style={{
-                          fontSize: 15,
-                          fontFamily: 'monospace',
-                          color: '#fff',
-                          wordBreak: 'break-all',
-                        }}
-                      >
-                        {previewNode.address}
-                      </Text>
-                    </Space>
-                  </Space>
-                </div>
-
-                {/* 部署时间 */}
-                {previewNode.deployedAt && (
-                  <div style={{
-                    padding: 20,
-                    borderRadius: 14,
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                  }}>
-                    <Space orientation="vertical" size={14} style={{ width: '100%' }}>
-                      <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 14 }}>
-                        {t('admin.contracts.tree.deployedAt')}
-                      </Text>
-                      <Text style={{ color: '#fff', fontSize: 15 }}>
-                        {new Date(previewNode.deployedAt).toLocaleString('zh-CN', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </Text>
-                    </Space>
-                  </div>
-                )}
-
-                {/* 依赖关系 */}
-                {(() => {
-                  const nodeDeps = dependenciesMap.get(previewNode.id) || [];
-                  if (nodeDeps.length === 0) return null;
-
-                  return (
-                    <div style={{
-                      padding: 20,
-                      borderRadius: 14,
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                    }}>
-                      <Space orientation="vertical" size={14} style={{ width: '100%' }}>
-                        <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 14 }}>
-                          {t('admin.contracts.tree.dependencyRelations')} ({nodeDeps.length})
-                        </Text>
-                        <Space orientation="vertical" size={10} style={{ width: '100%' }}>
-                          {nodeDeps.map((dep, idx) => {
-                            const bindingColor = dep.status === 'needs_update' ? WEB3_COLORS.binding.needs_update :
-                                               dep.isBinded ? WEB3_COLORS.binding.binded :
-                                               dep.isDeployed ? WEB3_COLORS.binding.deployed_not_binded :
-                                               WEB3_COLORS.binding.not_deployed;
-
-                            const bindingText = dep.status === 'needs_update' ? t('admin.contracts.status.needs_update') :
-                                             dep.isBinded ? t('admin.contracts.tree.binded') :
-                                             dep.isDeployed ? t('admin.contracts.tree.deployedNotBinded') : t('admin.contracts.status.not_deployed');
-
-                            const bindingIcon = dep.isBinded ? '✓' :
-                                              dep.isDeployed ? '⚠' : '✗';
-
-                            return (
-                              <div
-                                key={`${previewNode.id}-dep-${idx}`}
-                                style={{
-                                  padding: 16,
-                                  borderRadius: 10,
-                                  background: 'rgba(0, 0, 0, 0.2)',
-                                  borderLeft: `3px solid ${bindingColor}`,
-                                }}
-                              >
-                                <Space orientation="vertical" size={10} style={{ width: '100%' }}>
-                                  <Space size={10} wrap>
-                                    <span style={{ color: bindingColor, fontSize: 16 }}>
-                                      {bindingIcon}
-                                    </span>
-                                    <Text style={{ color: '#fff', fontSize: 15, fontWeight: 500 }}>
-                                      {dep.label}
-                                    </Text>
-                                  </Space>
-                                  <Space size={10} wrap>
-                                    {dep.setFunction && (
-                                      <Tag
-                                        style={{
-                                          margin: 0,
-                                          fontSize: 12,
-                                          padding: '4px 10px',
-                                          borderRadius: 6,
-                                          background: `${bindingColor}15`,
-                                          border: `1px solid ${bindingColor}40`,
-                                          color: bindingColor,
-                                        }}
-                                      >
-                                        {dep.setFunction}()
-                                      </Tag>
-                                    )}
-                                    <Tag
-                                      style={{
-                                        margin: 0,
-                                        fontSize: 12,
-                                        padding: '4px 10px',
-                                        borderRadius: 6,
-                                        background: `${bindingColor}20`,
-                                        border: `1px solid ${bindingColor}40`,
-                                        color: bindingColor,
-                                      }}
-                                    >
-                                      {bindingText}
-                                    </Tag>
-                                  </Space>
-                                  {dep.currentAddress && (
-                                    <Text
-                                      copyable={{
-                                        text: dep.currentAddress,
-                                        tooltips: ['复制地址', '已复制'],
-                                      }}
-                                      style={{
-                                        fontSize: 12,
-                                        fontFamily: 'monospace',
-                                        color: 'rgba(255, 255, 255, 0.5)',
-                                        display: 'block',
-                                      }}
-                                    >
-                                      当前: {dep.currentAddress.slice(0, 10)}...{dep.currentAddress.slice(-8)}
-                                    </Text>
-                                  )}
-                                  {dep.latestAddress && dep.latestAddress !== dep.currentAddress && (
-                                    <Text
-                                      copyable={{
-                                        text: dep.latestAddress,
-                                        tooltips: ['复制地址', '已复制'],
-                                      }}
-                                      style={{
-                                        fontSize: 12,
-                                        fontFamily: 'monospace',
-                                        color: 'rgba(255, 255, 255, 0.5)',
-                                        display: 'block',
-                                      }}
-                                    >
-                                      最新: {dep.latestAddress.slice(0, 10)}...{dep.latestAddress.slice(-8)}
-                                    </Text>
-                                  )}
-                                </Space>
-                              </div>
-                            );
-                          })}
-                        </Space>
-                      </Space>
-                    </div>
-                  );
-                })()}
-
-                {/* 操作按钮区域（预留） */}
-                <div style={{
-                  padding: 20,
-                  borderRadius: 14,
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                }}>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14 }}>
-                    通过主界面的"更新地址"按钮进行依赖绑定操作
-                  </Text>
-                </div>
-              </Space>
+            <div className="stat-divider" />
+            <div className="stat-item">
+              <span className="stat-value" style={{ color: THEME.accent.secondary }}>{projectCount}</span>
+              <span className="stat-label">Project</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-item">
+              <span className="stat-value" style={{ color: THEME.accent.secondary }}>{registeredEdges}</span>
+              <span className="stat-label">Linked</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-item">
+              <span className="stat-value" style={{ color: THEME.accent.warning }}>{pendingEdges}</span>
+              <span className="stat-label">Pending</span>
             </div>
           </div>
-        )}
-      </Drawer>
-    </>
+        </Panel>
+
+        {/* 底部图例 */}
+        <Panel position="bottom-left" className="legend-panel">
+          <div className="legend-grid">
+            <div className="legend-section">
+              <Text className="legend-title">Status</Text>
+              <div className="legend-items">
+                <div className="legend-item">
+                  <span className="legend-dot" style={{ background: THEME.accent.secondary }} />
+                  <span>{t('admin.contracts.status.ready')}</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-dot" style={{ background: THEME.accent.warning }} />
+                  <span>{t('admin.contracts.status.notRegistered')}</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-dot" style={{ background: THEME.accent.muted }} />
+                  <span>{t('admin.contracts.status.notDeployed')}</span>
+                </div>
+              </div>
+            </div>
+            <div className="legend-section">
+              <Text className="legend-title">Dependency</Text>
+              <div className="legend-items">
+                <div className="legend-item">
+                  <span className="legend-line solid" style={{ background: THEME.accent.secondary }} />
+                  <span>{t('admin.contracts.status.registered')}</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-line dashed" style={{ background: THEME.accent.warning }} />
+                  <span>{t('admin.contracts.status.notRegistered')}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Panel>
+      </ReactFlow>
+
+      <style>{containerStyles}</style>
+      <style>{panelStyles}</style>
+    </div>
   );
 }
+
+// ============================================
+// 样式
+// ============================================
+const containerStyles = `
+  .tree-container {
+    height: 700px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: ${THEME.bg.canvas};
+    border: 1px solid ${THEME.border.subtle};
+    position: relative;
+  }
+  .tree-loading, .tree-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+  }
+  .rf-controls {
+    background: ${THEME.bg.glass} !important;
+    border: 1px solid ${THEME.border.normal} !important;
+    border-radius: 10px !important;
+    backdrop-filter: blur(12px);
+  }
+  .rf-controls button {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid ${THEME.border.subtle} !important;
+    color: ${THEME.text.secondary} !important;
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .rf-controls button:last-child {
+    border-bottom: none !important;
+  }
+  .rf-controls button:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: ${THEME.text.primary} !important;
+  }
+  .rf-controls button svg {
+    fill: currentColor !important;
+  }
+  .rf-minimap {
+    background: ${THEME.bg.glass} !important;
+    border: 1px solid ${THEME.border.normal} !important;
+    border-radius: 10px !important;
+    backdrop-filter: blur(12px);
+  }
+  .react-flow__edge-path {
+    stroke-linecap: round;
+  }
+  .react-flow__edge.animated path {
+    animation: dashdraw 0.6s linear infinite;
+  }
+  @keyframes dashdraw {
+    from { stroke-dashoffset: 20; }
+    to { stroke-dashoffset: 0; }
+  }
+`;
+
+const panelStyles = `
+  .stats-panel {
+    background: ${THEME.bg.glass};
+    border: 1px solid ${THEME.border.normal};
+    border-radius: 12px;
+    padding: 12px 20px;
+    backdrop-filter: blur(12px);
+  }
+  .stats-grid {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: ${THEME.text.muted};
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .stat-divider {
+    width: 1px;
+    height: 32px;
+    background: ${THEME.border.subtle};
+  }
+  .legend-panel {
+    background: ${THEME.bg.glass};
+    border: 1px solid ${THEME.border.normal};
+    border-radius: 12px;
+    padding: 14px 18px;
+    backdrop-filter: blur(12px);
+  }
+  .legend-grid {
+    display: flex;
+    gap: 28px;
+  }
+  .legend-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .legend-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: ${THEME.text.muted};
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .legend-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: ${THEME.text.secondary};
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-line {
+    width: 20px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend-line.dashed {
+    background: repeating-linear-gradient(
+      90deg,
+      currentColor 0px,
+      currentColor 4px,
+      transparent 4px,
+      transparent 7px
+    ) !important;
+  }
+`;
 
 export default ContractDependencyTree;

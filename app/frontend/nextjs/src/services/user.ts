@@ -50,7 +50,7 @@ export const userService = {
         return null
       }
       
-      return data.data.object as CurrentUser
+      return data.data.object_data as CurrentUser
     } catch {
       return null
     }

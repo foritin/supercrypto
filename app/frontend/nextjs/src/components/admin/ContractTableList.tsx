@@ -1,9 +1,10 @@
 /**
  * Contract Table List Component
- * 合约表格列表组件
+ * 合约表格列表组件 (纯 Provider 模式)
  *
  * 功能:
- * - 拆分为两个表格：公共合约表格 + 项目合约表格
+ * - 按 scope 分组：Global Contracts / Project Contracts
+ * - 显示 contract_type 列（registry, kyc, stablecoin, token, defi）
  * - 支持排序 (sorter 配置)
  * - 状态徽章增强 (颜色 + 动画)
  * - 依赖标签展开/收起
@@ -24,56 +25,85 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ExclamationCircleOutlined,
+  WarningOutlined,
   EyeOutlined,
   ApiOutlined,
+  GlobalOutlined,
   FolderOutlined,
+  SafetyCertificateOutlined,
+  BankOutlined,
+  DollarOutlined,
+  GoldOutlined,
+  LineChartOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { ColumnsType } from 'antd/es/table';
 import type {
   ContractStatusItem,
+  ContractStatusResponse,
   DependencyStatusItem,
+  RegistrationStatus,
+  ContractType,
+  ProjectContractsGroup,
 } from '@/services/contract';
 import { useMemo } from 'react';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
-// 部署状态颜色映射（三种状态）
-const DEPLOYMENT_STATUS_COLORS = {
-  deployed_and_binded: 'success',
-  deployed_needs_binding: 'warning',
-  not_deployed: 'error',
-} as const;
-
-// 部署状态图标映射
-const DEPLOYMENT_STATUS_ICONS = {
-  deployed_and_binded: <CheckCircleOutlined />,
-  deployed_needs_binding: <ExclamationCircleOutlined />,
-  not_deployed: <CloseCircleOutlined />,
-};
-
-// 状态颜色映射（用于依赖项）
-const STATUS_COLORS = {
+// 注册状态颜色映射（纯 Provider 模式）
+const REGISTRATION_STATUS_COLORS: Record<RegistrationStatus, string> = {
   synced: 'success',
-  needs_update: 'warning',
+  mismatch: 'warning',
+  not_registered: 'orange',
   not_deployed: 'error',
-} as const;
-
-// 状态图标映射（用于依赖项）
-const STATUS_ICONS = {
-  synced: <CheckCircleOutlined />,
-  needs_update: <ExclamationCircleOutlined />,
-  not_deployed: <CloseCircleOutlined />,
+  unknown: 'default',
 };
 
+// 注册状态图标映射
+const REGISTRATION_STATUS_ICONS: Record<RegistrationStatus, React.ReactNode> = {
+  synced: <CheckCircleOutlined />,
+  mismatch: <ExclamationCircleOutlined />,
+  not_registered: <WarningOutlined />,
+  not_deployed: <CloseCircleOutlined />,
+  unknown: <ExclamationCircleOutlined />,
+};
+
+// 合约类型图标映射
+const CONTRACT_TYPE_ICONS: Record<ContractType, React.ReactNode> = {
+  registry: <AppstoreOutlined />,
+  kyc: <SafetyCertificateOutlined />,
+  governance: <BankOutlined />,
+  stablecoin: <DollarOutlined />,
+  token: <GoldOutlined />,
+  defi: <LineChartOutlined />,
+};
+
+// 合约类型颜色映射
+const CONTRACT_TYPE_COLORS: Record<ContractType, string> = {
+  registry: 'purple',
+  kyc: 'blue',
+  governance: 'geekblue',
+  stablecoin: 'green',
+  token: 'gold',
+  defi: 'orange',
+};
+
+// 依赖状态颜色映射（基于 registered 布尔值）
+const DEP_STATUS_COLORS = {
+  registered: 'success',
+  not_registered: 'warning',
+} as const;
+
+// 新版 Props：接收新的 API 结构
 interface ContractTableListProps {
-  contracts: ContractStatusItem[];
+  contractStatus: ContractStatusResponse | null;
   loading?: boolean;
   onContractClick?: (contract: ContractStatusItem) => void;
 }
 
-// 通用表格列生成函数（不含项目列）
-function getCommonColumns(
+// 通用表格列生成函数（Global Contracts - 包含 Type 列）
+function getGlobalColumns(
   t: any,
   onContractClick?: (contract: ContractStatusItem) => void
 ): ColumnsType<ContractStatusItem> {
@@ -82,9 +112,162 @@ function getCommonColumns(
       title: t('admin.contracts.table.name'),
       dataIndex: 'name',
       key: 'name',
-      width: 200,
+      width: 180,
       sorter: (a, b) => a.name.localeCompare(b.name),
       render: (name: string, record: ContractStatusItem) => (
+        <Space>
+          <ApiOutlined style={{ color: '#00D4AA' }} />
+          <Text strong>{name}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: t('admin.contracts.table.type'),
+      dataIndex: 'contract_type',
+      key: 'contract_type',
+      width: 120,
+      sorter: (a, b) => (a.contract_type || '').localeCompare(b.contract_type || ''),
+      render: (type: ContractType | null) => {
+        if (!type) return <Text type="secondary">-</Text>;
+        const icon = CONTRACT_TYPE_ICONS[type] || <AppstoreOutlined />;
+        const color = CONTRACT_TYPE_COLORS[type] || 'default';
+        return (
+          <Tag color={color} icon={icon} style={{ textTransform: 'capitalize' }}>
+            {type}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: t('admin.contracts.table.address'),
+      dataIndex: 'address',
+      key: 'address',
+      width: 180,
+      render: (address: string | null) =>
+        address ? (
+          <Text copyable style={{ fontFamily: 'monospace' }}>
+            {address.slice(0, 10)}...{address.slice(-8)}
+          </Text>
+        ) : (
+          <Tag color="error">{t('admin.contracts.status.not_deployed')}</Tag>
+        ),
+    },
+    {
+      title: t('admin.contracts.status.legendTitle'),
+      dataIndex: 'registration_status',
+      key: 'registration_status',
+      width: 160,
+      sorter: (a, b) => (a.registration_status || '').localeCompare(b.registration_status || ''),
+      render: (status: RegistrationStatus) => {
+        const color = REGISTRATION_STATUS_COLORS[status] || 'default';
+        const icon = REGISTRATION_STATUS_ICONS[status] || <ExclamationCircleOutlined />;
+        const labelKey = {
+          synced: 'synced',
+          mismatch: 'mismatch',
+          not_registered: 'notRegistered',
+          not_deployed: 'notDeployed',
+          unknown: 'unknown',
+        }[status] || 'unknown';
+        return (
+          <Tag color={color} icon={icon} style={{ fontWeight: 500 }}>
+            {t(`admin.contracts.status.${labelKey}`)}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: t('admin.contracts.table.dependencies'),
+      dataIndex: 'dependencies',
+      key: 'dependencies',
+      width: 200,
+      render: (deps: DependencyStatusItem[]) => {
+        if (!deps || deps.length === 0) {
+          return <Text type="secondary">-</Text>;
+        }
+
+        return (
+          <Space wrap size={4}>
+            {deps.map((dep) => (
+              <Tooltip
+                key={dep.key}
+                title={
+                  <div>
+                    <div>
+                      <strong>{dep.contract}</strong>
+                    </div>
+                    <div style={{ fontSize: 11, opacity: 0.8 }}>
+                      Key: {dep.key}
+                    </div>
+                    <div style={{ fontSize: 11, opacity: 0.8 }}>
+                      {dep.address || t('admin.contracts.status.notRegistered')}
+                    </div>
+                  </div>
+                }
+              >
+                <Tag
+                  color={dep.registered ? DEP_STATUS_COLORS.registered : DEP_STATUS_COLORS.not_registered}
+                  icon={dep.registered ? <CheckCircleOutlined /> : <WarningOutlined />}
+                  style={{
+                    cursor: 'default',
+                    padding: '2px 6px',
+                    fontSize: 11,
+                    borderRadius: 4,
+                  }}
+                >
+                  {dep.contract}
+                </Tag>
+              </Tooltip>
+            ))}
+          </Space>
+        );
+      },
+    },
+    {
+      title: t('admin.contracts.table.deployedAt'),
+      dataIndex: 'deployed_at',
+      key: 'deployed_at',
+      width: 160,
+      sorter: (a, b) => {
+        const aTime = a.deployed_at ? new Date(a.deployed_at).getTime() : 0;
+        const bTime = b.deployed_at ? new Date(b.deployed_at).getTime() : 0;
+        return aTime - bTime;
+      },
+      render: (date: string | null) =>
+        date ? new Date(date).toLocaleString() : '-',
+    },
+    {
+      title: t('admin.contracts.table.actions'),
+      key: 'actions',
+      width: 80,
+      fixed: 'right' as const,
+      render: (_, record: ContractStatusItem) => (
+        <Space size="small">
+          <Tooltip title={t('admin.contracts.table.viewDetails')}>
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => onContractClick?.(record)}
+            />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
+}
+
+// 项目合约表格列（包含项目列，不含 Type）
+function getProjectColumns(
+  t: any,
+  onContractClick?: (contract: ContractStatusItem) => void
+): ColumnsType<ContractStatusItem> {
+  return [
+    {
+      title: t('admin.contracts.table.name'),
+      dataIndex: 'name',
+      key: 'name',
+      width: 180,
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      render: (name: string) => (
         <Space>
           <ApiOutlined style={{ color: '#00D4AA' }} />
           <Text strong>{name}</Text>
@@ -107,18 +290,20 @@ function getCommonColumns(
     },
     {
       title: t('admin.contracts.status.legendTitle'),
-      dataIndex: 'deployment_status',
-      key: 'deployment_status',
-      width: 200,
-      sorter: (a, b) => a.deployment_status?.localeCompare(b.deployment_status || ''),
-      render: (status: string) => {
-        const color = DEPLOYMENT_STATUS_COLORS[status as keyof typeof DEPLOYMENT_STATUS_COLORS];
-        const icon = DEPLOYMENT_STATUS_ICONS[status as keyof typeof DEPLOYMENT_STATUS_ICONS];
+      dataIndex: 'registration_status',
+      key: 'registration_status',
+      width: 160,
+      sorter: (a, b) => (a.registration_status || '').localeCompare(b.registration_status || ''),
+      render: (status: RegistrationStatus) => {
+        const color = REGISTRATION_STATUS_COLORS[status] || 'default';
+        const icon = REGISTRATION_STATUS_ICONS[status] || <ExclamationCircleOutlined />;
         const labelKey = {
-          deployed_and_binded: 'deployedAndBinded',
-          deployed_needs_binding: 'deployedNeedsBinding',
+          synced: 'synced',
+          mismatch: 'mismatch',
+          not_registered: 'notRegistered',
           not_deployed: 'notDeployed',
-        }[status] || 'notDeployed';
+          unknown: 'unknown',
+        }[status] || 'unknown';
         return (
           <Tag color={color} icon={icon} style={{ fontWeight: 500 }}>
             {t(`admin.contracts.status.${labelKey}`)}
@@ -127,51 +312,47 @@ function getCommonColumns(
       },
     },
     {
+      title: t('admin.contracts.table.project'),
+      dataIndex: 'project',
+      key: 'project',
+      width: 100,
+      render: (project: string) => (
+        <Tag style={{ textTransform: 'uppercase', fontWeight: 500 }}>
+          {project}
+        </Tag>
+      ),
+    },
+    {
       title: t('admin.contracts.table.dependencies'),
       dataIndex: 'dependencies',
       key: 'dependencies',
-      width: 300,
+      width: 250,
       render: (deps: DependencyStatusItem[]) => {
         if (!deps || deps.length === 0) {
           return <Text type="secondary">-</Text>;
         }
 
         return (
-          <Space wrap>
+          <Space wrap size={4}>
             {deps.map((dep) => (
               <Tooltip
-                key={dep.dependency_name}
+                key={dep.key}
                 title={
                   <div>
-                    <div>
-                      <strong>{dep.dependency_name}</strong>
-                    </div>
+                    <div><strong>{dep.contract}</strong></div>
+                    <div style={{ fontSize: 11, opacity: 0.8 }}>Key: {dep.key}</div>
                     <div style={{ fontSize: 11, opacity: 0.8 }}>
-                      {dep.status === 'needs_update'
-                        ? `${dep.current_address?.slice(0, 10)}... → ${dep.latest_address?.slice(0, 10)}...`
-                        : dep.current_address || t('admin.contracts.status.not_deployed')}
-                    </div>
-                    <div style={{ fontSize: 11, opacity: 0.6 }}>
-                      {dep.set_function}
+                      {dep.address || t('admin.contracts.status.notRegistered')}
                     </div>
                   </div>
                 }
               >
                 <Tag
-                  color={STATUS_COLORS[dep.status]}
-                  icon={STATUS_ICONS[dep.status]}
-                  style={{
-                    cursor: 'default',
-                    padding: '4px 8px',
-                    fontSize: 12,
-                    borderRadius: 6,
-                    transition: 'all 0.2s',
-                  }}
+                  color={dep.registered ? DEP_STATUS_COLORS.registered : DEP_STATUS_COLORS.not_registered}
+                  icon={dep.registered ? <CheckCircleOutlined /> : <WarningOutlined />}
+                  style={{ padding: '2px 6px', fontSize: 11, borderRadius: 4 }}
                 >
-                  {dep.dependency_name}
-                  {dep.status === 'needs_update' && (
-                    <ExclamationCircleOutlined style={{ marginLeft: 4 }} />
-                  )}
+                  {dep.contract}
                 </Tag>
               </Tooltip>
             ))}
@@ -183,7 +364,7 @@ function getCommonColumns(
       title: t('admin.contracts.table.deployedAt'),
       dataIndex: 'deployed_at',
       key: 'deployed_at',
-      width: 180,
+      width: 160,
       sorter: (a, b) => {
         const aTime = a.deployed_at ? new Date(a.deployed_at).getTime() : 0;
         const bTime = b.deployed_at ? new Date(b.deployed_at).getTime() : 0;
@@ -195,59 +376,25 @@ function getCommonColumns(
     {
       title: t('admin.contracts.table.actions'),
       key: 'actions',
-      width: 100,
+      width: 80,
       fixed: 'right' as const,
       render: (_, record: ContractStatusItem) => (
-        <Space size="small">
-          <Tooltip title={t('admin.contracts.table.viewDetails')}>
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
-              onClick={() => onContractClick?.(record)}
-            />
-          </Tooltip>
-        </Space>
+        <Tooltip title={t('admin.contracts.table.viewDetails')}>
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            onClick={() => onContractClick?.(record)}
+          />
+        </Tooltip>
       ),
     },
   ];
 }
 
-// 项目合约表格列（包含项目列）
-function getProjectColumns(
-  t: any,
-  onContractClick?: (contract: ContractStatusItem) => void
-): ColumnsType<ContractStatusItem> {
-  const commonColumns = getCommonColumns(t, onContractClick);
-  // 在状态列后插入项目列
-  const projectColumn: ColumnsType<ContractStatusItem>[0] = {
-    title: t('admin.contracts.table.project'),
-    dataIndex: 'project',
-    key: 'project',
-    width: 120,
-    sorter: (a, b) => a.project.localeCompare(b.project),
-    render: (project: string) => (
-      <Tag
-        style={{
-          textTransform: 'uppercase',
-          fontWeight: 500,
-        }}
-      >
-        {project}
-      </Tag>
-    ),
-  };
-
-  return [
-    ...commonColumns.slice(0, 3), // name, address, status
-    projectColumn, // project
-    ...commonColumns.slice(3), // dependencies, deployedAt, actions
-  ];
-}
-
 // 表格行样式
 const getRowClassName = (record: ContractStatusItem) => {
-  const status = record.deployment_status || 'not_deployed';
-  if (status === 'deployed_needs_binding') {
+  const status = record.registration_status || 'not_deployed';
+  if (status === 'mismatch' || status === 'not_registered') {
     return 'row-needs-binding';
   }
   if (status === 'not_deployed') {
@@ -279,7 +426,7 @@ function ContractTable({ title, dataSource, columns, loading, onContractClick }:
         dataSource={dataSource}
         rowKey="name"
         loading={loading}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1100 }}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
@@ -290,27 +437,34 @@ function ContractTable({ title, dataSource, columns, loading, onContractClick }:
           onClick: () => onContractClick?.(record),
           style: { cursor: 'pointer' },
         })}
+        size="middle"
       />
     </div>
   );
 }
 
 export function ContractTableList({
-  contracts,
+  contractStatus,
   loading = false,
   onContractClick,
 }: ContractTableListProps) {
   const { t } = useTranslation();
 
-  // 分离公共合约和项目合约
-  const { commonContracts, projectContracts } = useMemo(() => {
-    const common = contracts.filter(c => c.project === 'common');
-    const projects = contracts.filter(c => c.project !== 'common');
-    return { commonContracts: common, projectContracts: projects };
-  }, [contracts]);
+  // 获取 global 和 project 合约
+  const globalContracts = contractStatus?.global_contracts || [];
+  const projectGroups = contractStatus?.project_contracts || [];
 
-  const commonColumns = getCommonColumns(t, onContractClick);
+  // 合并所有项目合约用于显示
+  const allProjectContracts = useMemo(() => {
+    return projectGroups.flatMap(g => g.contracts);
+  }, [projectGroups]);
+
+  const globalColumns = getGlobalColumns(t, onContractClick);
   const projectColumns = getProjectColumns(t, onContractClick);
+
+  if (!contractStatus) {
+    return null;
+  }
 
   return (
     <>
@@ -337,32 +491,29 @@ export function ContractTableList({
           background: rgba(0, 212, 170, 0.05) !important;
           transition: background 0.2s;
         }
-
-        /* 状态徽章发光动画 */
-        @keyframes pulse-badge {
-          0%, 100% { box-shadow: 0 0 10px rgba(234, 179, 8, 0.4); }
-          50% { box-shadow: 0 0 20px rgba(234, 179, 8, 0.6), 0 0 30px rgba(234, 179, 8, 0.3); }
-        }
       `}</style>
 
-      {/* 公共合约表格 */}
+      {/* Global Contracts 表格 */}
       <ContractTable
         title={
           <Space size="small">
-            <FolderOutlined style={{ color: '#3B82F6' }} />
+            <GlobalOutlined style={{ color: '#3B82F6' }} />
             <Text strong style={{ color: '#fff', fontSize: 16 }}>
-              {t('admin.contracts.filters.common')}
+              Global Contracts
+            </Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              ({t('admin.contracts.globalContracts.description') || '公共基础设施合约'})
             </Text>
           </Space>
         }
-        dataSource={commonContracts}
-        columns={commonColumns}
+        dataSource={globalContracts}
+        columns={globalColumns}
         loading={loading}
         onContractClick={onContractClick}
       />
 
-      {/* 项目合约表格 */}
-      {projectContracts.length > 0 && (
+      {/* Project Contracts 表格 */}
+      {allProjectContracts.length > 0 && (
         <>
           <Divider style={{ borderColor: 'rgba(255, 255, 255, 0.1)', margin: '32px 0' }} />
           <ContractTable
@@ -370,11 +521,14 @@ export function ContractTableList({
               <Space size="small">
                 <FolderOutlined style={{ color: '#10B981' }} />
                 <Text strong style={{ color: '#fff', fontSize: 16 }}>
-                  {t('admin.contracts.table.projectContracts')}
+                  Project Contracts
+                </Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  ({t('admin.contracts.projectContracts.description') || '项目专属合约'})
                 </Text>
               </Space>
             }
-            dataSource={projectContracts}
+            dataSource={allProjectContracts}
             columns={projectColumns}
             loading={loading}
             onContractClick={onContractClick}

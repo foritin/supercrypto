@@ -1,0 +1,151 @@
+/**
+ * Service Providers - 深色主题版本
+ * 适配 SuperCrypto 主页风格
+ */
+
+.service-providers {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 212, 170, 0.03) 0%,
+    rgba(0, 0, 0, 0.4) 50%,
+    rgba(0, 212, 170, 0.03) 100%
+  );
+  padding: 80px 24px;
+  border-top: 1px solid rgba(0, 212, 170, 0.1);
+  border-bottom: 1px solid rgba(0, 212, 170, 0.1);
+}
+
+.sp-content {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Label */
+.sp-label {
+  color: #00D4AA;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+/* Title */
+.sp-title {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 300;
+  line-height: 1.2;
+  margin: 0 0 48px 0;
+}
+
+/* Logo Container Area */
+.sp-logos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 48px;
+}
+
+/* Row Wrapper - overflow hidden */
+.sp-row-wrapper {
+  overflow: hidden;
+}
+
+/* Row Track - contains all logos, moves with translateX */
+.sp-row-track {
+  display: flex;
+  gap: 8px;
+  transition: transform 0.5s ease-in-out;
+}
+
+/* Individual Logo Container - 白色圆形容器 */
+.sp-logo-container {
+  flex-shrink: 0;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.sp-logo-container:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 30px rgba(0, 212, 170, 0.3);
+}
+
+/* Logo Image - 彩色显示 */
+.sp-logo {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.sp-logo-container:hover .sp-logo {
+  transform: scale(1.1);
+}
+
+/* Description */
+.sp-description {
+  max-width: 600px;
+  margin-bottom: 32px;
+}
+
+.sp-description p {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 15px;
+  line-height: 1.7;
+  margin: 0 0 16px 0;
+}
+
+.sp-description p:last-child {
+  margin-bottom: 0;
+}
+
+/* CTA Button */
+.sp-cta-button {
+  background: #00D4AA !important;
+  border-color: #00D4AA !important;
+  color: #0a0a0f !important;
+  border-radius: 24px !important;
+  padding: 0 28px !important;
+  height: 44px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+.sp-cta-button:hover {
+  background: #00E5B8 !important;
+  border-color: #00E5B8 !important;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .service-providers {
+    padding: 60px 16px;
+  }
+
+  .sp-logos {
+    gap: 6px;
+  }
+
+  .sp-logo-container {
+    width: 80px;
+    height: 80px;
+    padding: 16px;
+  }
+
+  .sp-row-track {
+    gap: 6px;
+  }
+}

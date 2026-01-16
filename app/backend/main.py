@@ -16,8 +16,8 @@ from src.api.v1.router import api_router
 from src.models import Account
 from src.shared.aerich_redirect import TORTOISE_ORM
 from src.shared.common.exceptions import BusinessException
-from src.shared.middleware import AuthStateMiddleware
-from src.tasks.contract_task import async_chain_contracts_info
+from src.shared.middleware import AuthStateMiddleware, AuditMiddleware
+from src.tasks.contract_task import async_sync_provider_registry
 
 settings = SETTINGS
 
@@ -40,10 +40,11 @@ async def lifespan(app: FastAPI):
     print("✅ Scheduler started")
 
     print("🔄 Scheduling tasks...")
-    # await SchedulerService.schedule_task(
-    #     async_chain_contracts_info, "cyclic", interval=120
-    # )
-    print("✅ Task scheduled")
+    # 每 2 分钟同步 Provider 注册状态
+    await SchedulerService.schedule_task(
+        async_sync_provider_registry, "cyclic", interval=120
+    )
+    print("✅ Provider sync task scheduled (interval=120s)")
 
     # 生成数据库表（开发环境）
     if settings.debug:
@@ -86,6 +87,9 @@ app.add_middleware(
 
 
 app.add_middleware(AuthStateMiddleware)
+
+# 审计中间件 - 自动记录需要审计的 API 请求
+app.add_middleware(AuditMiddleware)
 
 
 # 全局异常处理

@@ -42,7 +42,9 @@ export function LanguageSwitcher({ ariaLabel }: { ariaLabel?: string }) {
       menu={{ items: menuItems }} 
       trigger={['click']}
       getPopupContainer={(triggerNode) => triggerNode.parentElement || document.body}
-      overlayStyle={{ zIndex: 1100 }}
+      popupRender={(menu) => (
+        <div style={{ zIndex: 1100 }}>{menu}</div>
+      )}
     >
       <Button
         type="text"

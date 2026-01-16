@@ -107,10 +107,34 @@ async def review_kyc(
 
     Updates the KYC status and optionally updates on-chain KYC status.
     """
+    from src.services.audit.service import audit_service
+    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
+    
     # 使用管理员地址作为 reviewer 标识
     result = await service.review(kyc_id, data, reviewer_address=admin_address)
 
     action = "approved" if data.approved else "rejected"
+    
+    # 记录详细的审计日志
+    audit_action = AuditAction.KYC_APPROVE if data.approved else AuditAction.KYC_REJECT
+    await audit_service.log_async(
+        category=AuditCategory.KYC,
+        action=audit_action,
+        operator_address=admin_address,
+        operator_type="admin",
+        target_type="kyc",
+        target_id=kyc_id,
+        target_address=result.wallet_address,
+        status=AuditStatus.SUCCESS,
+        description=f"KYC #{kyc_id} {action}",
+        reason=data.reject_reason if not data.approved else None,
+        new_value={
+            "status": result.status.value,
+            "is_accredited": result.is_accredited,
+            "on_chain_sync_status": result.on_chain_sync_status.value if result.on_chain_sync_status else None,
+        },
+    )
+    
     return ApiResponse(data=result, message=f"KYC application {action} successfully")
 
 

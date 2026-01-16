@@ -207,7 +207,7 @@ export default function AdminSessionsPage() {
         >
           <Table
             columns={columns}
-            dataSource={data?.list || []}
+            dataSource={data?.list_data || []}
             loading={isLoading}
             rowKey="session_id"
             scroll={{ x: 900 }}

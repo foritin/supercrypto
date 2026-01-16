@@ -1,0 +1,171 @@
+# contracts.yaml - 合约配置文件
+# 支持多环境: contracts.local.yaml, contracts.dev.yaml, contracts.prod.yaml
+#
+# 使用说明:
+# 1. 此文件定义了 Provider Keys 与合约的映射关系
+# 2. 定义了合约之间的依赖关系
+# 3. 定义了项目分组配置
+#
+# 修改后需要重启后端服务 (或调用 /admin/config/reload)
+
+version: "1.0"
+
+# =============================================================================
+# Provider Keys 配置
+# 定义 AddressProvider 中的 Key 与合约的映射关系
+# =============================================================================
+provider_keys:
+  # ===== 公共合约 (common) =====
+  ADDRESS_PROVIDER:
+    category: common
+    contract: AddressProvider
+    description: "地址提供者合约 - 所有合约地址的注册中心"
+    
+  KYC_MANAGER:
+    category: common
+    contract: KYC
+    description: "KYC 管理合约 - 用户身份验证"
+    
+  TIMELOCK:
+    category: common
+    contract: Timelock
+    description: "时间锁合约 - 延迟执行关键操作"
+    
+  MULTI_SIG:
+    category: common
+    contract: MultiSigManager
+    description: "多签管理合约 - 多签名批准机制"
+
+  # ===== 稳定币 (stablecoin) =====
+  USDT:
+    category: stablecoin
+    contract: USDT
+    description: "USDT 稳定币 (Mock)"
+    
+  USDC:
+    category: stablecoin
+    contract: USDC
+    description: "USDC 稳定币 (Mock)"
+
+  # ===== Vanke 项目合约 =====
+  VANKE_RWA_TOKEN:
+    category: vanke
+    contract: VankeRWAToken
+    description: "万科 RWA Token - 资产代币化"
+    
+  VANKE_PLATFORM_TOKEN:
+    category: vanke
+    contract: VankePlatformToken
+    description: "万科平台 Token - 平台激励代币"
+    
+  VANKE_SUBSCRIPTION:
+    category: vanke
+    contract: VankeSubscription
+    description: "万科认购合约 - 处理用户认购"
+    
+  VANKE_STAKING:
+    category: vanke
+    contract: VankeStaking
+    description: "万科质押合约 - RWA Token 质押"
+    
+  VANKE_LIQUIDITY_MINING:
+    category: vanke
+    contract: VankeLiquidityMining
+    description: "万科流动性挖矿 - 流动性激励"
+
+# =============================================================================
+# 合约依赖关系
+# Key: 合约名称 (对应 Contract.name)
+# Value: 依赖的 Provider Key 列表
+# =============================================================================
+contract_dependencies:
+  # ----- Common 合约 (无依赖 - 根节点) -----
+  AddressProvider: []
+  KYC: []
+  Timelock: []
+  MultiSigManager: []
+  
+  # ----- Stablecoin (无依赖) -----
+  USDT: []
+  USDC: []
+  
+  # ----- Vanke 项目合约 -----
+  VankeRWAToken:
+    - KYC_MANAGER
+    
+  VankePlatformToken:
+    - KYC_MANAGER
+    
+  VankeSubscription:
+    - KYC_MANAGER
+    - USDT
+    - VANKE_RWA_TOKEN
+    
+  VankeStaking:
+    - KYC_MANAGER
+    - VANKE_RWA_TOKEN
+    - VANKE_PLATFORM_TOKEN
+    - VANKE_SUBSCRIPTION
+    
+  VankeLiquidityMining:
+    - KYC_MANAGER
+    - USDT
+    - VANKE_PLATFORM_TOKEN
+
+# =============================================================================
+# 项目配置
+# 用于 UI 分组显示
+# =============================================================================
+projects:
+  common:
+    label: "公共合约"
+    label_en: "Common Contracts"
+    color: "blue"
+    order: 1
+    contracts:
+      - AddressProvider
+      - KYC
+      - Timelock
+      - MultiSigManager
+    
+  stablecoin:
+    label: "稳定币"
+    label_en: "Stablecoins"
+    color: "gold"
+    order: 2
+    contracts:
+      - USDT
+      - USDC
+    
+  vanke:
+    label: "万科项目"
+    label_en: "Vanke Project"
+    color: "green"
+    order: 3
+    contracts:
+      - VankeRWAToken
+      - VankePlatformToken
+      - VankeSubscription
+      - VankeStaking
+      - VankeLiquidityMining
+    
+  mock:
+    label: "Mock 合约"
+    label_en: "Mock Contracts"
+    color: "orange"
+    order: 99
+
+# =============================================================================
+# 合约设置函数映射 (用于手动绑定)
+# Key: Provider Key
+# Value: 对应合约的 setter 函数
+# =============================================================================
+dependency_set_functions:
+  KYC_MANAGER: setKycManager
+  USDT: setUSDT
+  USDC: setUSDC
+  VANKE_RWA_TOKEN: setRwaToken
+  VANKE_PLATFORM_TOKEN: setPlatformToken
+  VANKE_SUBSCRIPTION: setSubscription
+  TIMELOCK: setTimelock
+  MULTI_SIG: setMultiSig

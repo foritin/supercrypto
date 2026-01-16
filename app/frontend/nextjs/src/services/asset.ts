@@ -158,32 +158,32 @@ export const assetService = {
     const url = PUBLIC_PATHS.ASSETS + (params.toString() ? '?' + params.toString() : '')
     const response = await api.get<API.ResponseData<AssetListItem>>(url)
     return {
-      items: response.list || [],
+      items: response.list_data || [],
       pagination: response.pagination || { total: 0, page: 1, page_size: 10, total_pages: 0 },
     }
   },
 
   async getAsset(id: number): Promise<AssetDetail> {
     return (await api.get<API.ResponseData<AssetDetail>>(PUBLIC_PATHS.ASSET_DETAIL(id)))
-      .object as AssetDetail
+      .object_data as AssetDetail
   },
 
   async getAssetBySymbol(symbol: string): Promise<AssetDetail> {
     return (await api.get<API.ResponseData<AssetDetail>>(PUBLIC_PATHS.ASSET_BY_SYMBOL(symbol)))
-      .object as AssetDetail
+      .object_data as AssetDetail
   },
 
   async getPriceHistory(assetId: number, limit = 50): Promise<PriceHistoryItem[]> {
     return (
       (await api.get<API.ResponseData<PriceHistoryItem>>(
         PUBLIC_PATHS.ASSET_PRICE_HISTORY(assetId, limit)
-      )).list || []
+      )).list_data || []
     )
   },
 
   async getAssetMedia(assetId: number): Promise<AssetMediaItem[]> {
     return (
-      (await api.get<API.ResponseData<AssetMediaItem>>(PUBLIC_PATHS.ASSET_MEDIA(assetId))).list ||
+      (await api.get<API.ResponseData<AssetMediaItem>>(PUBLIC_PATHS.ASSET_MEDIA(assetId))).list_data ||
       []
     )
   },
@@ -192,18 +192,18 @@ export const assetService = {
 
   async createAsset(data: AssetCreateRequest): Promise<AssetDetail> {
     return (await api.post<API.ResponseData<AssetDetail>>(ADMIN_PATHS.ASSETS, data))
-      .object as AssetDetail
+      .object_data as AssetDetail
   },
 
   async updateAsset(id: number, data: AssetUpdateRequest): Promise<AssetDetail> {
     return (await api.put<API.ResponseData<AssetDetail>>(ADMIN_PATHS.ASSET_DETAIL(id), data))
-      .object as AssetDetail
+      .object_data as AssetDetail
   },
 
   async updateAssetStatus(id: number, status: AssetStatus): Promise<AssetDetail> {
     return (
       await api.patch<API.ResponseData<AssetDetail>>(ADMIN_PATHS.ASSET_STATUS(id), { status })
-    ).object as AssetDetail
+    ).object_data as AssetDetail
   },
 
   async updateAssetPrice(id: number, price: number, source = 'manual'): Promise<AssetDetail> {
@@ -212,12 +212,12 @@ export const assetService = {
         ADMIN_PATHS.ASSET_PRICE(id, price, source),
         {}
       )
-    ).object as AssetDetail
+    ).object_data as AssetDetail
   },
 
   async getAvailableProjects(): Promise<ProjectContractInfo[]> {
     return (await api.get<API.ResponseData<ProjectContractInfo>>(ADMIN_PATHS.ASSET_PROJECTS))
-      .list || []
+      .list_data || []
   },
 
   async bindProjectContracts(
@@ -232,7 +232,7 @@ export const assetService = {
         contract_names: contractNames,
         set_primary: setPrimary,
       })
-    ).object as AssetDetail
+    ).object_data as AssetDetail
   },
 
   async unbindContracts(
@@ -243,7 +243,7 @@ export const assetService = {
       await api.delete<API.ResponseData<AssetDetail>>(ADMIN_PATHS.ASSET_UNBIND(assetId), {
         data: options,
       })
-    ).object as AssetDetail
+    ).object_data as AssetDetail
   },
 }
 

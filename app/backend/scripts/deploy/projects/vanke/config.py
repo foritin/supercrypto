@@ -16,7 +16,7 @@ Usage:
     ape run deploy_vanke --network ethereum:hardhat
 """
 
-from deploy.base import ZERO_ADDRESS, ContractConfig, ProjectConfig, ProviderKey
+from ...base import ZERO_ADDRESS, ContractConfig, ProjectConfig, ProviderKey
 
 # ============================================
 # Vanke Provider Key 定义
@@ -53,6 +53,7 @@ VANKE_PROJECT = ProjectConfig(
             provider_deps=["KYC_MANAGER"],
             register_to_provider=True,
             provider_key=VankeProviderKey.RWA_TOKEN,
+            description="万科 RWA Token - 资产代币化",
         ),
         # 2. 平台代币 - TOKEN 类型
         ContractConfig(
@@ -63,6 +64,7 @@ VANKE_PROJECT = ProjectConfig(
             constructor_args={},
             register_to_provider=True,
             provider_key=VankeProviderKey.PLATFORM_TOKEN,
+            description="万科平台 Token - 平台激励代币",
         ),
         # 3. 认购合约 - DEFI 类型
         ContractConfig(
@@ -76,6 +78,7 @@ VANKE_PROJECT = ProjectConfig(
             provider_deps=["KYC_MANAGER", "USDT", "VANKE_RWA_TOKEN"],
             register_to_provider=True,
             provider_key=VankeProviderKey.SUBSCRIPTION,
+            description="万科认购合约 - 处理用户认购",
         ),
         # 4. 质押合约 - DEFI 类型
         ContractConfig(
@@ -94,6 +97,7 @@ VANKE_PROJECT = ProjectConfig(
             ],
             register_to_provider=True,
             provider_key=VankeProviderKey.STAKING,
+            description="万科质押合约 - RWA Token 质押",
         ),
         # 5. 流动性挖矿 - DEFI 类型
         ContractConfig(
@@ -108,6 +112,7 @@ VANKE_PROJECT = ProjectConfig(
             provider_deps=["KYC_MANAGER", "VANKE_PLATFORM_TOKEN"],
             register_to_provider=True,
             provider_key=VankeProviderKey.LIQUIDITY_MINING,
+            description="万科流动性挖矿 - 流动性激励",
         ),
     ],
 )

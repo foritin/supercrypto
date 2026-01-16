@@ -10,10 +10,11 @@ Tortoise ORM统一入口
 from src.models.account import Account
 from src.models.asset import Asset, AssetContractBinding, AssetPriceHistory
 from src.models.asset_media import AssetFeatures, AssetMedia
-from src.models.audit_log import AuditLog
+from src.models.audit import AuditLog, log_audit, query_audit_logs
 from src.models.base import AbstractModel, TimestampMixin
 from src.models.contracts.contract import Contract
 from src.models.contracts.contract_dependency import ContractDependency
+from src.models.contracts.contract_meta import ContractMeta
 from src.models.contracts.provider_registry import ProviderRegistry
 from src.models.kyc import UserKyc
 from src.models.staking import (
@@ -25,6 +26,14 @@ from src.models.staking import (
 )
 from src.models.subscription import Subscription
 from src.models.transaction import Transaction
+from src.models.transaction_audit import (
+    TransactionAudit,
+    get_pending_transactions,
+    get_transaction_by_hash,
+    query_transactions,
+    record_transaction,
+    update_transaction_status,
+)
 from src.models.wallet import Wallet
 
 # 枚举 - 从 shared.schemas.enums 统一导入（向后兼容）
@@ -36,6 +45,8 @@ from src.shared.schemas.enums import (
     AuditAction,
     AuditCategory,
     AuditStatus,
+    TransactionAuditStatus,
+    TransactionAuditType,
     # Contract
     ChainID,
     # KYC
@@ -81,6 +92,7 @@ __all__ = [
     "Subscription",
     # Contract
     "Contract",
+    "ContractMeta",
     "ContractDependency",
     "ProviderRegistry",
     # Staking
@@ -91,6 +103,15 @@ __all__ = [
     "BASE_DAILY_RATE",
     # Audit Log
     "AuditLog",
+    "log_audit",
+    "query_audit_logs",
+    # Transaction Audit
+    "TransactionAudit",
+    "record_transaction",
+    "update_transaction_status",
+    "get_transaction_by_hash",
+    "get_pending_transactions",
+    "query_transactions",
     # ============ 枚举 (向后兼容) ============
     # KYC
     "KycStatus",
@@ -117,4 +138,6 @@ __all__ = [
     "AuditAction",
     "AuditCategory",
     "AuditStatus",
+    "TransactionAuditType",
+    "TransactionAuditStatus",
 ]

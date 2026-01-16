@@ -8,13 +8,13 @@ from typing import List, Optional, Tuple
 
 from falib.utils.config import SETTINGS
 
+from src.models.kyc import UserKyc
 from src.services.kyc.schemas import (
     KycApplyRequest,
     KycFullResponse,
     KycReviewRequest,
     KycStatusResponse,
 )
-from src.models.kyc import UserKyc
 from src.shared.common.exceptions import BusinessException
 from src.shared.schemas.enums import KycStatus, OnChainSyncStatus
 
@@ -39,9 +39,7 @@ class KycService:
         """
         address = wallet_address.lower()
 
-        kyc = await UserKyc.filter(
-            wallet_address=address, environment=self.environment
-        ).first()
+        kyc = await UserKyc.filter(wallet_address=address).first()
 
         if not kyc:
             # 返回默认状态 (not_started)
@@ -85,9 +83,7 @@ class KycService:
         id_number_last4 = data.id_number[-4:]
 
         # 检查是否已存在申请
-        existing = await UserKyc.filter(
-            wallet_address=address, environment=self.environment
-        ).first()
+        existing = await UserKyc.filter(wallet_address=address).first()
 
         if existing:
             if existing.status == KycStatus.PENDING:
@@ -125,7 +121,6 @@ class KycService:
         # 创建新申请
         kyc = await UserKyc.create(
             wallet_address=address,
-            environment=self.environment,
             status=KycStatus.PENDING,
             submitted_at=datetime.now(timezone.utc),
             country_code=data.country_code,
@@ -153,7 +148,7 @@ class KycService:
         Returns:
             KYC 完整响应或 None
         """
-        kyc = await UserKyc.filter(id=kyc_id, environment=self.environment).first()
+        kyc = await UserKyc.filter(id=kyc_id).first()
 
         if not kyc:
             return None
@@ -174,7 +169,7 @@ class KycService:
         Returns:
             (列表, 总数, 总页数)
         """
-        query = UserKyc.filter(environment=self.environment)
+        query = UserKyc.all()
 
         if status:
             query = query.filter(status=status)
@@ -208,7 +203,7 @@ class KycService:
         """
         from src.services.kyc.strategies import get_kyc_strategy
 
-        kyc = await UserKyc.filter(id=kyc_id, environment=self.environment).first()
+        kyc = await UserKyc.filter(id=kyc_id).first()
 
         if not kyc:
             raise BusinessException(code=404, message="KYC record not found")
@@ -269,7 +264,7 @@ class KycService:
         """
         from src.services.kyc.strategies import get_kyc_strategy
 
-        kyc = await UserKyc.filter(id=kyc_id, environment=self.environment).first()
+        kyc = await UserKyc.filter(id=kyc_id).first()
 
         if not kyc:
             raise BusinessException(code=404, message="KYC record not found")
@@ -330,9 +325,7 @@ class KycService:
 
         address = wallet_address.lower()
 
-        kyc = await UserKyc.filter(
-            wallet_address=address, environment=self.environment
-        ).first()
+        kyc = await UserKyc.filter(wallet_address=address).first()
 
         if kyc:
             kyc.status = KycStatus.APPROVED
@@ -344,7 +337,6 @@ class KycService:
         else:
             kyc = await UserKyc.create(
                 wallet_address=address,
-                environment=self.environment,
                 status=KycStatus.APPROVED,
                 submitted_at=datetime.now(timezone.utc),
                 reviewed_at=datetime.now(timezone.utc),
@@ -374,9 +366,7 @@ class KycService:
 
         address = wallet_address.lower()
 
-        deleted = await UserKyc.filter(
-            wallet_address=address, environment=self.environment
-        ).delete()
+        deleted = await UserKyc.filter(wallet_address=address).delete()
 
         return deleted > 0
 
@@ -385,7 +375,7 @@ class KycService:
         return KycFullResponse(
             id=kyc.id,
             wallet_address=kyc.wallet_address,
-            environment=kyc.environment,
+            environment=self.environment,  # 使用当前环境
             status=kyc.status,
             submitted_at=kyc.submitted_at,
             reviewed_at=kyc.reviewed_at,

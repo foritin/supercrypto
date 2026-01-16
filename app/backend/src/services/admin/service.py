@@ -21,7 +21,7 @@ from src.services.admin.schemas import (
 )
 from src.models.account import Account
 from src.models.asset import Asset
-from src.models.audit_log import AuditLog
+from src.models.audit import AuditLog
 from src.models.kyc import UserKyc
 from src.models.staking import RewardClaim, StakingRecord
 from src.models.subscription import Subscription

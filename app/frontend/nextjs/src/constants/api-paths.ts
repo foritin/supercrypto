@@ -99,6 +99,10 @@ export const ADMIN_PATHS = {
   CONTRACT_CONFIRM_BINDING: '/admin/contracts/confirm-binding',
   CONTRACT_RESET_PROJECT: (project: string) => `/admin/contracts/reset/${project}`,
   CONTRACT_RESET_ALL: '/admin/contracts/reset/all',
+  CONTRACT_REGISTER_PREPARE: '/admin/contracts/register/prepare',
+  CONTRACT_REGISTER_CONFIRM: '/admin/contracts/register/confirm',
+  CONTRACT_UNREGISTER_PREPARE: '/admin/contracts/unregister/prepare',
+  CONTRACT_UNREGISTER_CONFIRM: '/admin/contracts/unregister/confirm',
 
   // 平台统计
   STATS: '/admin/stats',

@@ -9,8 +9,6 @@ from typing import Optional
 from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends, Query
 
-from src.services.admin.service import admin_service
-from src.shared.schemas.enums import AuditAction
 from src.shared.security import require_admin
 from src.shared.services import session_service
 
@@ -69,6 +67,9 @@ async def revoke_user_sessions(
 
     撤销该用户的所有会话，用户下次请求将收到 401 错误
     """
+    from src.services.audit.service import audit_service
+    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
+    
     wallet_address = wallet_address.lower()
 
     # 防止管理员下线自己
@@ -82,16 +83,19 @@ async def revoke_user_sessions(
     cleared_count = await session_service.add_to_blacklist(wallet_address)
 
     # 记录审计日志
-    await admin_service.create_audit_log(
-        operator_address=admin_address,
+    await audit_service.log_async(
+        category=AuditCategory.AUTH,
         action=AuditAction.USER_SESSION_REVOKE,
+        operator_address=admin_address,
+        operator_type="admin",
         target_type="session",
-        target_id=wallet_address,
-        details={
+        target_address=wallet_address,
+        status=AuditStatus.SUCCESS,
+        description=f"Session revoked for {wallet_address[:10]}...",
+        extra_data={
             "cleared_sessions": cleared_count,
             "target_address": wallet_address,
         },
-        success=True,
     )
 
     return create_success_response(
@@ -140,6 +144,9 @@ async def remove_user_from_blacklist(
 
     - **wallet_address**: 用户钱包地址
     """
+    from src.services.audit.service import audit_service
+    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
+    
     wallet_address = wallet_address.lower()
 
     # 检查是否在黑名单
@@ -153,16 +160,19 @@ async def remove_user_from_blacklist(
     await session_service.remove_from_blacklist(wallet_address)
 
     # 记录审计日志
-    await admin_service.create_audit_log(
+    await audit_service.log_async(
+        category=AuditCategory.AUTH,
+        action=AuditAction.USER_BLACKLIST_REMOVE,
         operator_address=admin_address,
-        action=AuditAction.USER_SESSION_REVOKE,  # TODO: 添加新的 AuditAction
+        operator_type="admin",
         target_type="blacklist",
-        target_id=wallet_address,
-        details={
+        target_address=wallet_address,
+        status=AuditStatus.SUCCESS,
+        description=f"Removed {wallet_address[:10]}... from blacklist",
+        extra_data={
             "action": "remove_from_blacklist",
             "target_address": wallet_address,
         },
-        success=True,
     )
 
     return create_success_response(

@@ -101,8 +101,14 @@ export const transactionService = {
     const url = `${API_PATHS.ADMIN.TRANSACTIONS}${
       params.toString() ? `?${params.toString()}` : ""
     }`;
-    const response = await api.get<PaginatedResponse<TransactionRecord>>(url);
-    return response;
+    const response = await api.get<API.ResponseData<TransactionRecord>>(url);
+    return {
+      items: response.list_data || [],
+      total: response.pagination?.total || 0,
+      page: response.pagination?.page || 1,
+      page_size: response.pagination?.page_size || 10,
+      total_pages: response.pagination?.total_pages || 0,
+    };
   },
 
   /**
@@ -114,8 +120,14 @@ export const transactionService = {
   ): Promise<PaginatedResponse<TransactionRecord>> {
     const address = getWalletAddress();
     const url = `${API_PATHS.ADMIN.TRANSACTION_ADDRESS_HISTORY(address)}?page=${page}&page_size=${pageSize}`;
-    const response = await api.get<PaginatedResponse<TransactionRecord>>(url);
-    return response;
+    const response = await api.get<API.ResponseData<TransactionRecord>>(url);
+    return {
+      items: response.list_data || [],
+      total: response.pagination?.total || 0,
+      page: response.pagination?.page || 1,
+      page_size: response.pagination?.page_size || 10,
+      total_pages: response.pagination?.total_pages || 0,
+    };
   },
 
   /**

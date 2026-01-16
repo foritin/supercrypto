@@ -93,7 +93,7 @@ export async function getKycStatus(walletAddress: string): Promise<KycStatusResp
   const response = await api.get<API.ResponseData<KycStatusResponse>>(
     PUBLIC_PATHS.KYC_STATUS(walletAddress)
   )
-  return response.object as KycStatusResponse
+  return response.object_data as KycStatusResponse
 }
 
 // ============================================================================
@@ -105,7 +105,7 @@ export async function getKycStatus(walletAddress: string): Promise<KycStatusResp
  */
 export async function applyKyc(data: KycApplyRequest): Promise<KycFullResponse> {
   const response = await api.post<API.ResponseData<KycFullResponse>>(USER_PATHS.KYC_APPLY, data)
-  return response.object as KycFullResponse
+  return response.object_data as KycFullResponse
 }
 
 // ============================================================================
@@ -131,7 +131,7 @@ export async function listKyc(params: {
   )
 
   return {
-    items: response.list || [],
+    items: response.list_data || [],
     total: response.pagination?.total || 0,
     page: response.pagination?.page || 1,
     page_size: response.pagination?.page_size || 10,
@@ -144,7 +144,7 @@ export async function listKyc(params: {
  */
 export async function getKycById(id: number): Promise<KycFullResponse> {
   const response = await api.get<API.ResponseData<KycFullResponse>>(ADMIN_PATHS.KYC_DETAIL(id))
-  return response.object as KycFullResponse
+  return response.object_data as KycFullResponse
 }
 
 /**
@@ -155,7 +155,7 @@ export async function reviewKyc(id: number, data: KycReviewRequest): Promise<Kyc
     ADMIN_PATHS.KYC_REVIEW(id),
     data
   )
-  return response.object as KycFullResponse
+  return response.object_data as KycFullResponse
 }
 
 /**
@@ -163,7 +163,7 @@ export async function reviewKyc(id: number, data: KycReviewRequest): Promise<Kyc
  */
 export async function retrySyncKyc(id: number): Promise<KycFullResponse> {
   const response = await api.post<API.ResponseData<KycFullResponse>>(ADMIN_PATHS.KYC_RETRY_SYNC(id))
-  return response.object as KycFullResponse
+  return response.object_data as KycFullResponse
 }
 
 // ============================================================================
@@ -177,7 +177,7 @@ export async function quickApproveKyc(walletAddress: string): Promise<KycFullRes
   const response = await api.post<API.ResponseData<KycFullResponse>>(
     DEV_PATHS.KYC_QUICK_APPROVE(walletAddress)
   )
-  return response.object as KycFullResponse
+  return response.object_data as KycFullResponse
 }
 
 /**
@@ -189,7 +189,7 @@ export async function resetKyc(
   const response = await api.delete<API.ResponseData<{ wallet_address: string; reset: boolean }>>(
     DEV_PATHS.KYC_RESET(walletAddress)
   )
-  return response.object as { wallet_address: string; reset: boolean }
+  return response.object_data as { wallet_address: string; reset: boolean }
 }
 
 // ============================================================================

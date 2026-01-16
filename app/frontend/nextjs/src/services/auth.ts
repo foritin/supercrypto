@@ -47,7 +47,7 @@ export async function login(
     chain_name: chainName,
   });
 
-  const data = response.data.data.object as LoginResponse;
+  const data = response.data.data.object_data as LoginResponse;
 
   // Save tokens
   saveTokens({
@@ -77,7 +77,7 @@ export async function refreshAccessToken(): Promise<TokenData | null> {
       refresh_token: refreshToken,
     });
 
-    const data = response.data.data.object as LoginResponse;
+    const data = response.data.data.object_data as LoginResponse;
 
     const tokenData: TokenData = {
       accessToken: data.access_token,

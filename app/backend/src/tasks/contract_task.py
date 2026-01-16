@@ -1,108 +1,266 @@
-"""Concurrent contract dependency synchronization task."""
+"""
+Contract Provider Sync Task
+合约 Provider 同步任务 (纯 Provider 模式)
+
+定期同步 AddressProvider 注册状态到数据库
+
+数据来源: ContractMeta 表获取所有需要同步的合约
+"""
 
 import asyncio
+from datetime import datetime
 
 from falib.utils.log import get_logger
 from tortoise import Tortoise
 
 from src.models.contracts.contract import Contract
-from src.models.contracts.contract_dependency import ContractDependency
+from src.models.contracts.contract_meta import ContractMeta
+from src.models.contracts.provider_registry import (
+    ZERO_ADDRESS,
+    ProviderRegistry,
+    compute_key_hash,
+)
 from src.shared.aerich_redirect import TORTOISE_ORM
 from src.shared.common.adapters import get_async_minio_adapter, get_async_web3_adapter
 from src.shared.schemas.enums import ChainID, ContractStatus
 
-minio_adapter = get_async_minio_adapter()
 web3_adapter = get_async_web3_adapter()
+minio_adapter = get_async_minio_adapter()
 schedule_logger = get_logger("schedule.contract_task")
 
 
-async def get_network_chain():
-    """"""
+async def get_network_chain() -> tuple[str, int]:
+    """获取当前网络和链ID"""
     async with web3_adapter as adapter:
         chain_id = await adapter.get_chain_id()
         network = ChainID.from_value_to_name(chain_id)
         return str(network), chain_id
 
 
-async def get_contract_instances(network: str, chain_id: int):
-    """获取合约实例"""
-    contracts = await Contract.filter(
-        network=network, chain_id=chain_id, status=ContractStatus.ACTIVE
-    ).all()
-    return contracts
+async def get_provider_contract(network: str, chain_id: int) -> Contract | None:
+    """
+    获取 AddressProvider 合约实例
+
+    Returns:
+        AddressProvider 合约记录，或 None
+    """
+    return await Contract.filter(
+        name="AddressProvider",
+        network=network,
+        chain_id=chain_id,
+        status=ContractStatus.ACTIVE,
+    ).first()
 
 
-async def async_chain_contracts_info():
+async def sync_provider_registry_from_chain(
+    provider_address: str,
+    chain_id: int,
+    network: str,
+    provider_abi: list,
+) -> list[ProviderRegistry]:
     """
-    同步链合约信息
+    从链上同步 Provider 注册状态到数据库
+
+    数据来源: ContractMeta 表获取所有有 provider_key 的合约
+
+    Args:
+        provider_address: AddressProvider 合约地址
+        chain_id: 链 ID
+        network: 网络名称
+        provider_abi: Provider 合约 ABI
+
+    Returns:
+        更新后的注册记录列表
     """
-    await Tortoise.init(config=TORTOISE_ORM)
-    network, chain_id = await get_network_chain()
-    contracts = await get_contract_instances(network, chain_id)
-    for contract in contracts:
-        address = contract.address
-        abi_path = contract.abi_path
-        abi_content = await minio_adapter.get_json(abi_path)
-        web3_adapter.register_contract(address, abi_content)
+    results = []
+    now = datetime.now()
+
+    # 从 ContractMeta 获取所有有 provider_key 的合约
+    metas = await ContractMeta.filter(provider_key__not_isnull=True)
+
+    if not metas:
+        schedule_logger.warning("No contracts with provider_key found in ContractMeta")
+        return results
+
+    # 注册合约到 web3_adapter
+    web3_adapter.register_contract(provider_address, provider_abi)
 
     async with web3_adapter as adapter:
-        # 并发获取所有合约依赖
-        addresses = list(adapter._contract_abis.keys())
+        for meta in metas:
+            key = meta.provider_key
+            key_hash = compute_key_hash(key)
+
+            try:
+                # 查询链上注册地址
+                registered_addr = await adapter.call_function(
+                    provider_address, "get_address", [key_hash]
+                )
+                schedule_logger.debug(
+                    f"Provider key {key} ({key_hash[:10]}...) -> {registered_addr}"
+                )
+            except Exception as e:
+                schedule_logger.warning(f"Failed to query Provider for key {key}: {e}")
+                registered_addr = ZERO_ADDRESS
+
+            # 更新或创建注册记录
+            registry, created = await ProviderRegistry.update_or_create(
+                provider_address=provider_address,
+                chain_id=chain_id,
+                key=key,
+                defaults={
+                    "network": network,
+                    "key_hash": key_hash,
+                    "registered_address": registered_addr,
+                    "category": meta.project_name,
+                    "contract_name": meta.contract_name,
+                    "is_registered": registered_addr != ZERO_ADDRESS,
+                    "last_synced_at": now,
+                },
+            )
+
+            action = "Created" if created else "Updated"
+            schedule_logger.debug(
+                f"{action} registry: {key} -> {registered_addr[:10]}..."
+            )
+            results.append(registry)
+
+    return results
+
+    return results
+
+
+async def check_project_status(
+    project_name: str, provider_address: str, chain_id: int
+) -> dict:
+    """
+    检查项目状态（所有合约是否已注册到 Provider）
+
+    数据来源: ContractMeta 表获取项目的合约列表
+
+    Args:
+        project_name: 项目分类名称，如 "vanke"
+        provider_address: Provider 地址
+        chain_id: 链 ID
+
+    Returns:
+        项目状态字典
+    """
+    # 从 ContractMeta 获取项目的所有合约
+    metas = await ContractMeta.filter(
+        project_name=project_name,
+        provider_key__not_isnull=True,
+    )
+
+    project_keys = [m.provider_key for m in metas]
+
+    if not project_keys:
+        return {
+            "project": project_name,
+            "status": "unknown",
+            "message": f"No contracts with provider_key for project: {project_name}",
+        }
+
+    # 查询注册状态（排除已删除记录）
+    registrations = await ProviderRegistry.filter(
+        provider_address=provider_address,
+        chain_id=chain_id,
+        key__in=project_keys,
+        is_deleted=False,
+    )
+
+    registered_keys = {r.key for r in registrations if r.is_registered}
+    unregistered_keys = set(project_keys) - registered_keys
+
+    # 计算状态
+    if len(registered_keys) == len(project_keys):
+        status = "ready"
+    elif len(registered_keys) > 0:
+        status = "partially_ready"
+    else:
+        status = "not_ready"
+
+    return {
+        "project": project_name,
+        "status": status,
+        "total": len(project_keys),
+        "registered": len(registered_keys),
+        "registered_keys": list(registered_keys),
+        "unregistered_keys": list(unregistered_keys),
+    }
+
+
+async def async_sync_provider_registry():
+    """
+    主同步任务：同步 AddressProvider 注册状态
+
+    此任务用于定期调度执行，从链上查询 Provider 状态并更新数据库
+    """
+    await Tortoise.init(config=TORTOISE_ORM)
+
+    network, chain_id = await get_network_chain()
+    schedule_logger.info(
+        f"Starting Provider sync for network={network}, chain_id={chain_id}"
+    )
+
+    # 获取 AddressProvider 合约
+    provider_contract = await get_provider_contract(network, chain_id)
+
+    if not provider_contract:
+        schedule_logger.warning(
+            f"AddressProvider not found for network={network}, chain_id={chain_id}"
+        )
+        return
+
+    # 加载 ABI (优先从 MinIO，失败则从本地)
+    provider_abi = None
+    try:
+        provider_abi = await minio_adapter.get_json(provider_contract.abi_path)
+    except Exception as e:
+        schedule_logger.warning(f"Failed to load ABI from MinIO: {e}")
+
+    if not provider_abi:
+        # Fallback: 从本地加载
+        import json
+        from pathlib import Path
+
+        local_abi_path = Path(__file__).parent.parent.parent / ".build" / "abi" / "AddressProvider.json"
+        if local_abi_path.exists():
+            schedule_logger.info(f"Loading ABI from local: {local_abi_path}")
+            with open(local_abi_path) as f:
+                provider_abi = json.load(f)
+        else:
+            schedule_logger.error(f"ABI not found: MinIO path={provider_contract.abi_path}, local={local_abi_path}")
+            return
+
+    # 同步注册状态
+    registries = await sync_provider_registry_from_chain(
+        provider_address=provider_contract.address,
+        chain_id=chain_id,
+        network=network,
+        provider_abi=provider_abi,
+    )
+
+    schedule_logger.info(f"Synced {len(registries)} Provider registrations")
+
+    # 检查各项目状态 (从 ContractMeta 获取所有项目)
+    project_names = (
+        await ContractMeta.all().distinct().values_list("project_name", flat=True)
+    )
+    for project_name in project_names:
+        status = await check_project_status(
+            project_name, provider_contract.address, chain_id
+        )
         schedule_logger.info(
-            f"Fetching dependencies for {len(addresses)} contracts concurrently..."
+            f"Project '{project_name}': {status['status']} "
+            f"({status['registered']}/{status['total']} registered)"
         )
 
-        fetch_tasks = [
-            adapter.call_function(addr, "get_dependencies") for addr in addresses
-        ]
-        all_dependencies = await asyncio.gather(*fetch_tasks)
+    return registries
 
-        # 处理结果
-        for inner_address, dependencies in zip(addresses, all_dependencies):
-            schedule_logger.info(f"{inner_address} Dependencies: {dependencies}")
 
-            need_dependencies, done_dependencies, optional_dependencies = dependencies
-            inner_contract_instance = await Contract.filter(
-                address__iexact=inner_address, status=ContractStatus.ACTIVE
-            ).first()
-            for dependencies_contract_name in need_dependencies:
-                dependencies_contract_instance = await Contract.filter(
-                    name=dependencies_contract_name, status=ContractStatus.ACTIVE
-                ).first()
-                if not dependencies_contract_instance:
-                    await ContractDependency.update_or_create(
-                        contract_id=inner_contract_instance.id,
-                        dependency_id=None,
-                        defaults={
-                            "contract_id": inner_contract_instance.id,
-                            "contract_name": inner_contract_instance.name,
-                            "contract_address": inner_address,
-                            "dependency_name": dependencies_contract_name,
-                            "is_binded": False,
-                            "is_deployed": False,
-                        },
-                    )
-                else:
-                    await ContractDependency.update_or_create(
-                        contract_id=inner_contract_instance.id,
-                        dependency_id=dependencies_contract_instance.id,
-                        defaults={
-                            "contract_address": inner_address,
-                            "dependency_address": dependencies_contract_instance.address,
-                            "contract_name": inner_contract_instance.name,
-                            "dependency_name": dependencies_contract_instance.name,
-                            "is_binded": False,
-                            "is_deployed": True,
-                        },
-                    )
-                # contract_instance = await Contract.filter(address=inner_address).first()
-                # assert contract_instance
-                # # 解析依赖：(unbound_required, bound_all, unbound_optional)
-                # unbound_required, bound_all, unbound_optional = dependencies
-                # dependency_record = await ContractDependency.filter(
-                #     contract_id=contract_instance.id,
-                # )
+# Legacy alias for backward compatibility
+async_chain_contracts_info = async_sync_provider_registry
 
 
 if __name__ == "__main__":
-    asyncio.run(async_chain_contracts_info())
+    asyncio.run(async_sync_provider_registry())

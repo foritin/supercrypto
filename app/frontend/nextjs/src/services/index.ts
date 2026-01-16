@@ -13,3 +13,17 @@ export {
   type AuditLogResponse,
   type AuditLogQuery,
 } from "./admin";
+export {
+  auditService,
+  AuditCategory,
+  AuditAction,
+  AuditStatus,
+  TransactionAuditType,
+  TransactionAuditStatus,
+  type AuditLog,
+  type TransactionAudit,
+  type AuditStats,
+  type TransactionStats,
+  type AuditLogQueryParams,
+  type TransactionAuditQueryParams,
+} from "./audit";

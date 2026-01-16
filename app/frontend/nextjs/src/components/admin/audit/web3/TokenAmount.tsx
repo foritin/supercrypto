@@ -1,0 +1,98 @@
+/**
+ * TokenAmount Component
+ * Token 金额格式化显示组件
+ */
+'use client';
+
+import React from 'react';
+import { Typography, Tooltip } from 'antd';
+import { formatUnits } from 'viem';
+
+const { Text } = Typography;
+
+interface TokenAmountProps {
+  amount: string | bigint;
+  decimals?: number;
+  symbol?: string;
+  showSymbol?: boolean;
+  precision?: number;
+  showFull?: boolean;
+}
+
+export const TokenAmount: React.FC<TokenAmountProps> = ({
+  amount,
+  decimals = 18,
+  symbol = 'ETH',
+  showSymbol = true,
+  precision = 4,
+  showFull = false,
+}) => {
+  // 格式化金额
+  const formatAmount = (): string => {
+    try {
+      const bigAmount = typeof amount === 'string' ? BigInt(amount) : amount;
+      const formatted = formatUnits(bigAmount, decimals);
+      const num = parseFloat(formatted);
+      
+      if (showFull) {
+        return formatted;
+      }
+      
+      // 根据数值大小决定显示精度
+      if (num === 0) {
+        return '0';
+      } else if (num < 0.0001) {
+        return '< 0.0001';
+      } else if (num < 1) {
+        return num.toFixed(precision);
+      } else if (num < 1000) {
+        return num.toFixed(Math.min(precision, 2));
+      } else if (num < 1000000) {
+        return `${(num / 1000).toFixed(2)}K`;
+      } else if (num < 1000000000) {
+        return `${(num / 1000000).toFixed(2)}M`;
+      } else {
+        return `${(num / 1000000000).toFixed(2)}B`;
+      }
+    } catch (err) {
+      return '0';
+    }
+  };
+
+  const getFullAmount = (): string => {
+    try {
+      const bigAmount = typeof amount === 'string' ? BigInt(amount) : amount;
+      return formatUnits(bigAmount, decimals);
+    } catch (err) {
+      return '0';
+    }
+  };
+
+  const displayAmount = formatAmount();
+  const fullAmount = getFullAmount();
+
+  return (
+    <Tooltip title={showFull ? undefined : `${fullAmount} ${symbol}`}>
+      <Text
+        style={{
+          fontFamily: 'monospace',
+          fontSize: 13,
+          color: 'rgba(255, 255, 255, 0.85)',
+        }}
+      >
+        {displayAmount}
+        {showSymbol && (
+          <Text
+            style={{
+              marginLeft: 4,
+              fontSize: 12,
+              color: 'rgba(255, 255, 255, 0.55)',
+            }}
+          >
+            {symbol}
+          </Text>
+        )}
+      </Text>
+    </Tooltip>
+  );
+};

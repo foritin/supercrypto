@@ -17,6 +17,7 @@ from src.services.asset.schemas import (
     UnbindContractsRequest,
 )
 from src.services.asset.service import AssetService
+from src.shared.security import require_admin
 
 router = APIRouter()
 
@@ -28,7 +29,9 @@ def get_asset_service() -> AssetService:
 
 @router.post("", summary="创建资产", description="创建新的 RWA 资产 (管理员)")
 async def create_asset(
-    data: AssetCreateRequest, service: AssetService = Depends(get_asset_service)
+    data: AssetCreateRequest,
+    service: AssetService = Depends(get_asset_service),
+    admin_address: str = Depends(require_admin),
 ):
     """
     创建新资产
@@ -36,7 +39,28 @@ async def create_asset(
     - 需要管理员权限
     - 自动设置 environment 为当前环境
     """
-    result = await service.create_asset(data, created_by=None)
+    from src.services.audit.service import audit_service
+    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
+    
+    result = await service.create_asset(data, created_by=admin_address)
+    
+    # 记录审计日志
+    await audit_service.log_async(
+        category=AuditCategory.ASSET,
+        action=AuditAction.ASSET_CREATE,
+        operator_address=admin_address,
+        operator_type="admin",
+        target_type="asset",
+        target_id=result.id,
+        status=AuditStatus.SUCCESS,
+        description=f"Asset '{result.name}' created",
+        new_value={
+            "id": result.id,
+            "name": result.name,
+            "symbol": result.symbol,
+            "asset_type": result.asset_type.value if result.asset_type else None,
+        },
+    )
 
     return create_success_response(
         object_data=result.model_dump(mode="json"), msg="Asset created successfully"
@@ -50,6 +74,7 @@ async def update_asset(
     asset_id: int,
     data: AssetUpdateRequest,
     service: AssetService = Depends(get_asset_service),
+    admin_address: str = Depends(require_admin),
 ):
     """
     更新资产信息
@@ -57,7 +82,23 @@ async def update_asset(
     - 需要管理员权限
     - 只更新非空字段
     """
+    from src.services.audit.service import audit_service
+    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
+    
     result = await service.update_asset(asset_id, data)
+    
+    # 记录审计日志
+    await audit_service.log_async(
+        category=AuditCategory.ASSET,
+        action=AuditAction.ASSET_UPDATE,
+        operator_address=admin_address,
+        operator_type="admin",
+        target_type="asset",
+        target_id=asset_id,
+        status=AuditStatus.SUCCESS,
+        description=f"Asset #{asset_id} updated",
+        new_value=data.model_dump(exclude_none=True),
+    )
 
     return create_success_response(
         object_data=result.model_dump(mode="json"), msg="Asset updated successfully"
@@ -73,13 +114,30 @@ async def update_asset_status(
     asset_id: int,
     data: AssetStatusUpdateRequest,
     service: AssetService = Depends(get_asset_service),
+    admin_address: str = Depends(require_admin),
 ):
     """
     更新资产状态
 
     - **status**: active (可认购), paused (已暂停), sold_out (已售罄), closed (已关闭)
     """
+    from src.services.audit.service import audit_service
+    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
+    
     result = await service.update_asset_status(asset_id, data.status)
+    
+    # 记录审计日志
+    await audit_service.log_async(
+        category=AuditCategory.ASSET,
+        action=AuditAction.ASSET_STATUS_CHANGE,
+        operator_address=admin_address,
+        operator_type="admin",
+        target_type="asset",
+        target_id=asset_id,
+        status=AuditStatus.SUCCESS,
+        description=f"Asset #{asset_id} status changed to {data.status.value}",
+        new_value={"status": data.status.value},
+    )
 
     return create_success_response(
         object_data=result.model_dump(mode="json"),
@@ -97,13 +155,30 @@ async def update_asset_price(
     price: float = Query(..., gt=0, description="新价格"),
     source: str = Query("manual", description="价格来源"),
     service: AssetService = Depends(get_asset_service),
+    admin_address: str = Depends(require_admin),
 ):
     """
     更新资产价格
 
     - 会自动记录价格历史
     """
+    from src.services.audit.service import audit_service
+    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
+    
     result = await service.update_price(asset_id, Decimal(str(price)), source)
+    
+    # 记录审计日志
+    await audit_service.log_async(
+        category=AuditCategory.ASSET,
+        action=AuditAction.ASSET_PRICE_UPDATE,
+        operator_address=admin_address,
+        operator_type="admin",
+        target_type="asset",
+        target_id=asset_id,
+        status=AuditStatus.SUCCESS,
+        description=f"Asset #{asset_id} price updated to {price}",
+        new_value={"price": str(price), "source": source},
+    )
 
     return create_success_response(
         object_data=result.model_dump(mode="json"), msg="Price updated successfully"
@@ -139,6 +214,7 @@ async def bind_project_contracts(
     asset_id: int,
     data: BindProjectRequest,
     service: AssetService = Depends(get_asset_service),
+    admin_address: str = Depends(require_admin),
 ):
     """
     按项目绑定合约（支持选择性绑定）
@@ -148,6 +224,9 @@ async def bind_project_contracts(
     - **set_primary**: 是否将该项目的主合约设为 primary
     - exclusive 类型合约不能被多个资产绑定
     """
+    from src.services.audit.service import audit_service
+    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
+    
     result = await service.bind_project_contracts(
         asset_id=asset_id,
         project=data.project,
@@ -156,6 +235,24 @@ async def bind_project_contracts(
     )
 
     bound_count = len(data.contract_names) if data.contract_names else "all"
+    
+    # 记录审计日志
+    await audit_service.log_async(
+        category=AuditCategory.ASSET,
+        action=AuditAction.ASSET_BIND_CONTRACT,
+        operator_address=admin_address,
+        operator_type="admin",
+        target_type="asset",
+        target_id=asset_id,
+        status=AuditStatus.SUCCESS,
+        description=f"Bound {bound_count} contracts from project '{data.project}' to asset #{asset_id}",
+        new_value={
+            "project": data.project,
+            "contract_names": data.contract_names,
+            "set_primary": data.set_primary,
+        },
+    )
+    
     return create_success_response(
         object_data=result.model_dump(mode="json"),
         msg=f"Bound {bound_count} contracts from project '{data.project}'",
@@ -171,6 +268,7 @@ async def unbind_contracts(
     asset_id: int,
     data: UnbindContractsRequest,
     service: AssetService = Depends(get_asset_service),
+    admin_address: str = Depends(require_admin),
 ):
     """
     解绑合约
@@ -180,6 +278,9 @@ async def unbind_contracts(
     - **unbind_all**: 解绑所有合约
     - 必须指定其中一个参数
     """
+    from src.services.audit.service import audit_service
+    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
+    
     result = await service.unbind_contracts(
         asset_id=asset_id,
         contract_names=data.contract_names,
@@ -193,5 +294,22 @@ async def unbind_contracts(
         msg = f"Unbound {len(data.contract_names)} contracts"
     else:
         msg = f"Contracts from project '{data.project}' unbound"
+
+    # 记录审计日志
+    await audit_service.log_async(
+        category=AuditCategory.ASSET,
+        action=AuditAction.ASSET_UNBIND_CONTRACT,
+        operator_address=admin_address,
+        operator_type="admin",
+        target_type="asset",
+        target_id=asset_id,
+        status=AuditStatus.SUCCESS,
+        description=msg,
+        old_value={
+            "contract_names": data.contract_names,
+            "project": data.project,
+            "unbind_all": data.unbind_all,
+        },
+    )
 
     return create_success_response(object_data=result.model_dump(mode="json"), msg=msg)

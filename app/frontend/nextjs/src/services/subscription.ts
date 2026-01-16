@@ -112,7 +112,7 @@ export const subscriptionService = {
     const response = await api.get<API.ResponseData<SubscriptionPreviewResponse>>(
       `${PUBLIC_PATHS.SUBSCRIPTION_PREVIEW}?${queryParams.toString()}`
     )
-    return response.object as SubscriptionPreviewResponse
+    return response.object_data as SubscriptionPreviewResponse
   },
 
   /**
@@ -123,7 +123,7 @@ export const subscriptionService = {
       USER_PATHS.SUBSCRIPTIONS,
       data
     )
-    return response.object as SubscriptionResponse
+    return response.object_data as SubscriptionResponse
   },
 
   /**
@@ -148,7 +148,7 @@ export const subscriptionService = {
     const response = await api.get<API.ResponseData<SubscriptionResponse>>(url)
 
     return {
-      items: response.list || [],
+      items: response.list_data || [],
       pagination: response.pagination || {
         total: 0,
         page: 1,
@@ -165,7 +165,7 @@ export const subscriptionService = {
     const response = await api.get<API.ResponseData<SubscriptionResponse>>(
       USER_PATHS.SUBSCRIPTION_DETAIL(id)
     )
-    return response.object as SubscriptionResponse
+    return response.object_data as SubscriptionResponse
   },
 
   /**
@@ -173,7 +173,7 @@ export const subscriptionService = {
    */
   async getUserStats(): Promise<UserStats> {
     const response = await api.get<API.ResponseData<UserStats>>(USER_PATHS.SUBSCRIPTION_STATS)
-    return response.object as UserStats
+    return response.object_data as UserStats
   },
 
   /**
@@ -184,7 +184,7 @@ export const subscriptionService = {
       USER_PATHS.SUBSCRIPTION_REDEEM(id),
       { tx_hash: txHash }
     )
-    return response.object as SubscriptionResponse
+    return response.object_data as SubscriptionResponse
   },
 }
 

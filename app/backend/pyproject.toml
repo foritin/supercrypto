@@ -22,6 +22,7 @@ dependencies = [
     "pyjwt[crypto]>=2.10.1",
     "python-jwt>=4.1.0",
     "python-multipart>=0.0.20",
+    "ape-hardhat>=0.8.5",
 ]
 
 [project.optional-dependencies]

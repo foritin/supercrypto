@@ -71,6 +71,7 @@ class ContractConfig:
         skip_if_exists: 已存在时是否跳过
         register_to_provider: 部署后是否注册到 Provider
         provider_key: Provider 中的 key (bytes32)
+        description: 合约描述
     """
 
     name: str
@@ -90,6 +91,9 @@ class ContractConfig:
     skip_if_exists: bool = True
     register_to_provider: bool = False
     provider_key: Optional[bytes] = None
+
+    # 元数据
+    description: str = ""
 
     def get_constructor_args(self, deployed: dict, provider=None) -> list:
         """

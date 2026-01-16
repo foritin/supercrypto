@@ -12,7 +12,13 @@ from .account import NetType, NetworkType
 from .asset import AssetStatus, AssetType, MediaType
 
 # 审计相关
-from .audit import AuditAction, AuditCategory, AuditStatus
+from .audit import (
+    AuditAction,
+    AuditCategory,
+    AuditStatus,
+    TransactionAuditStatus,
+    TransactionAuditType,
+)
 from .base import NetWork
 
 # 合约相关
@@ -63,6 +69,8 @@ __all__ = [
     "AuditCategory",
     "AuditAction",
     "AuditStatus",
+    "TransactionAuditType",
+    "TransactionAuditStatus",
     # Contract
     "ChainID",
     "ContractScope",

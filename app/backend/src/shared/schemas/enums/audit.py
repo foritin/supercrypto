@@ -44,12 +44,16 @@ class AuditAction(str, Enum):
     AUTH_LOGOUT = "auth.logout"
     AUTH_LOGIN_FAILED = "auth.login_failed"
     AUTH_PASSWORD_CHANGE = "auth.password_change"
+    AUTH_REFRESH = "auth.refresh"
     USER_SESSION_REVOKE = "user_session_revoke"
+    USER_BLACKLIST_REMOVE = "user_blacklist_remove"
     
     # ========== KYC 操作 ==========
     KYC_APPROVE = "kyc_approve"
     KYC_REJECT = "kyc_reject"
     KYC_RESET = "kyc_reset"
+    KYC_REVIEW = "kyc_review"
+    KYC_SYNC_RETRY = "kyc_sync_retry"
     
     # ========== 资产操作 ==========
     ASSET_CREATE = "asset_create"
@@ -61,6 +65,10 @@ class AuditAction(str, Enum):
     ASSET_WITHDRAW = "asset.withdraw"
     ASSET_TRANSFER = "asset.transfer"
     ASSET_APPROVE = "asset.approve"
+    ASSET_STATUS_CHANGE = "asset_status_change"
+    ASSET_PRICE_UPDATE = "asset_price_update"
+    ASSET_BIND_CONTRACT = "asset_bind_contract"
+    ASSET_UNBIND_CONTRACT = "asset_unbind_contract"
     
     # ========== 合约操作 ==========
     CONTRACT_DEPLOY = "contract.deploy"
@@ -74,6 +82,9 @@ class AuditAction(str, Enum):
     CONTRACT_UNBIND = "contract_unbind"
     CONTRACT_UPDATE = "contract_update"
     CONTRACT_RESET = "contract_reset"
+    CONTRACT_REGISTER = "contract.register"
+    CONTRACT_UNREGISTER = "contract.unregister"
+    CONTRACT_SYNC = "contract.sync"
     
     # ========== 质押挖矿 ==========
     STAKING_CONFIG_UPDATE = "staking_config_update"
@@ -112,4 +123,27 @@ class AuditStatus(str, Enum):
     FAILED = "failed"        # 失败
     PENDING = "pending"      # 待处理
     REVERTED = "reverted"    # 已回滚
+
+
+class TransactionAuditType(str, Enum):
+    """链上交易类型"""
+    TRANSFER = "transfer"              # ETH 转账
+    TOKEN_TRANSFER = "token_transfer"  # Token 转账
+    TOKEN_APPROVE = "token_approve"    # Token 授权
+    CONTRACT_DEPLOY = "contract_deploy"  # 合约部署
+    CONTRACT_CALL = "contract_call"    # 合约调用
+    STAKING = "staking"                # 质押
+    UNSTAKING = "unstaking"            # 解除质押
+    CLAIM_REWARD = "claim_reward"      # 领取奖励
+    SWAP = "swap"                      # 兑换
+    OTHER = "other"                    # 其他
+
+
+class TransactionAuditStatus(str, Enum):
+    """链上交易状态"""
+    PENDING = "pending"        # 待确认
+    CONFIRMED = "confirmed"    # 已确认
+    FAILED = "failed"          # 失败
+    REVERTED = "reverted"      # 已回滚
+    DROPPED = "dropped"        # 已丢弃
 

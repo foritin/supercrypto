@@ -14,17 +14,7 @@ vyper:
   evm_version: paris
 
 # 网络配置
-networks:
-  custom:
-    - name: hardhat
-      chain_id: 31337
-      ecosystem: ethereum
-
 ethereum:
-  # 开发网络（远程 hardhat 节点）
-  hardhat:
-    default_provider: node
-
   # Sepolia测试网
   sepolia:
     default_provider: alchemy
@@ -33,7 +23,15 @@ ethereum:
   mainnet:
     default_provider: alchemy
 
-# 节点配置
+# 自定义网络配置
+networks:
+  custom:
+    - name: hardhat
+      chain_id: 31337
+      ecosystem: ethereum
+      default_provider: node
+
+# Node provider 配置（连接远程 Hardhat 节点）
 node:
   ethereum:
     hardhat:

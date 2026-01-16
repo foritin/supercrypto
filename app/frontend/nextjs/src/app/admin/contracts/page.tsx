@@ -31,7 +31,7 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
-import { useAccount, useWalletClient, usePublicClient } from "wagmi";
+import { useAccount, useWalletClient, usePublicClient, useSwitchChain } from "wagmi";
 import { parseAbi } from "viem";
 import { useCurrentUser } from "@/hooks";
 import { RequireAdmin } from "@/components/auth";
@@ -41,6 +41,7 @@ import {
   type DependencyStatusItem,
   type ContractStatusResponse,
   CONTRACT_SET_ABIS,
+  ADDRESS_PROVIDER_ABI,
 } from "@/services/contract";
 import { ContractDependencyGraph } from "@/components/admin/ContractDependencyGraph";
 import { ContractDependencyTree } from "@/components/admin/ContractDependencyTree";
@@ -52,27 +53,32 @@ import { Node } from "reactflow";
 
 const { Title, Text, Paragraph } = Typography;
 
-// 状态颜色映射
+// 注册状态颜色映射（纯 Provider 模式）
 const STATUS_COLORS = {
-  synced: "success",
-  needs_update: "warning",
-  not_deployed: "error",
+  synced: "success",           // 已同步
+  mismatch: "warning",         // 地址不匹配
+  not_registered: "warning",   // 未注册到 Provider
+  not_deployed: "error",       // 未部署
+  unknown: "default",          // 未知
 } as const;
 
 // 状态图标映射
 const STATUS_ICONS = {
   synced: <CheckCircleOutlined />,
-  needs_update: <ExclamationCircleOutlined />,
+  mismatch: <ExclamationCircleOutlined />,
+  not_registered: <WarningOutlined />,
   not_deployed: <CloseCircleOutlined />,
+  unknown: <ExclamationCircleOutlined />,
 };
 
 export default function AdminContractsPage() {
   const { t } = useTranslation();
   const { message } = App.useApp();
-  const { isConnected } = useAccount();
+  const { isConnected, chain } = useAccount();
   const { isAdmin } = useCurrentUser();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
+  const { switchChainAsync } = useSwitchChain();
 
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [resetModalOpen, setResetModalOpen] = useState(false);
@@ -90,7 +96,7 @@ export default function AdminContractsPage() {
   const [selectedGraphNode, setSelectedGraphNode] = useState<Node | null>(null);
   const [selectedListContract, setSelectedListContract] = useState<ContractStatusItem | null>(null);
 
-  // 筛选条件状态
+  // 筛选条件状态（包含 showDeleted）
   const [filters, setFilters] = useState<ContractFilters>(DEFAULT_FILTERS);
 
   // Data state
@@ -99,6 +105,8 @@ export default function AdminContractsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isUnregistering, setIsUnregistering] = useState(false);
 
   // 获取合约状态
   const fetchContractStatus = useCallback(async () => {
@@ -121,13 +129,34 @@ export default function AdminContractsPage() {
 
   const refetch = fetchContractStatus;
 
-  // 按项目分组
+  // 项目信息映射
+  const projectMap = useMemo(() => {
+    if (!contractStatus?.projects) return {};
+    return Object.fromEntries(contractStatus.projects.map((p) => [p.name, p]));
+  }, [contractStatus]);
+
+  // 获取所有合约的扁平列表（用于筛选和其他操作）
+  const allContracts = useMemo(() => {
+    if (!contractStatus) return [];
+    return [
+      ...(contractStatus.global_contracts || []),
+      ...(contractStatus.project_contracts?.flatMap(p => p.contracts) || []),
+    ];
+  }, [contractStatus]);
+
+  // 过滤后的所有合约（根据 filters.showDeleted 过滤）
+  const filteredAllContracts = useMemo(() => {
+    if (filters.showDeleted) return allContracts;
+    return allContracts.filter(c => !c.is_deleted);
+  }, [allContracts, filters.showDeleted]);
+
+  // 按项目分组 (使用 allContracts)
   const groupedContracts = useMemo(() => {
-    if (!contractStatus?.contracts) return {};
+    if (!allContracts.length) return {};
 
     const groups: Record<string, ContractStatusItem[]> = {};
 
-    for (const contract of contractStatus.contracts) {
+    for (const contract of allContracts) {
       const project = contract.project || "unknown";
       if (!groups[project]) {
         groups[project] = [];
@@ -136,19 +165,18 @@ export default function AdminContractsPage() {
     }
 
     return groups;
-  }, [contractStatus]);
+  }, [allContracts]);
 
-  // 项目信息映射
-  const projectMap = useMemo(() => {
-    if (!contractStatus?.projects) return {};
-    return Object.fromEntries(contractStatus.projects.map((p) => [p.name, p]));
-  }, [contractStatus]);
+  // 筛选后的合约数据（返回新结构）
+  const filteredContractStatus = useMemo(() => {
+    if (!contractStatus) return null;
 
-  // 筛选后的合约列表
-  const filteredContracts = useMemo(() => {
-    if (!contractStatus?.contracts) return [];
+    const filterContract = (contract: ContractStatusItem) => {
+      // 已删除（解绑）的合约过滤
+      if (!filters.showDeleted && contract.is_deleted) {
+        return false;
+      }
 
-    return contractStatus.contracts.filter((contract) => {
       // 搜索筛选
       if (filters.search && !contract.name.toLowerCase().includes(filters.search.toLowerCase())) {
         return false;
@@ -159,26 +187,30 @@ export default function AdminContractsPage() {
         return false;
       }
 
-      // 状态筛选
-      if (filters.status !== 'all' && contract.dependency_status !== filters.status) {
+      // 状态筛选（使用 registration_status）
+      if (filters.status !== 'all' && contract.registration_status !== filters.status) {
         return false;
       }
 
-      // 类型筛选 - 根据 project 推断合约类型
+      // 类型筛选 - 使用 scope
       if (filters.type !== 'all') {
-        let contractType = 'exclusive'; // 默认为独占类型
-        if (contract.project === 'common') {
-          contractType = 'common';
-        } else if (contract.project === 'mock') {
-          contractType = 'mock';
-        }
-        if (contractType !== filters.type) {
+        const contractScope = contract.scope === 'global' ? 'common' : 'exclusive';
+        if (contractScope !== filters.type) {
           return false;
         }
       }
 
       return true;
-    });
+    };
+
+    return {
+      ...contractStatus,
+      global_contracts: contractStatus.global_contracts?.filter(filterContract) || [],
+      project_contracts: contractStatus.project_contracts?.map(group => ({
+        ...group,
+        contracts: group.contracts.filter(filterContract),
+      })).filter(group => group.contracts.length > 0) || [],
+    };
   }, [contractStatus, filters]);
 
   // 更新地址
@@ -211,7 +243,7 @@ export default function AdminContractsPage() {
       await publicClient.waitForTransactionReceipt({ hash });
 
       const depName =
-        selectedDependency?.dependency_name ||
+        selectedDependency?.contract ||
         values.setFunction
           .replace("set", "")
           .replace("KYCManager", "KYCManager");
@@ -265,7 +297,7 @@ export default function AdminContractsPage() {
     }
   };
 
-  // 处理更新依赖地址
+  // 处理更新依赖地址（纯 Provider 模式下通过 Provider 注册）
   const handleUpdateDependency = (
     contract: ContractStatusItem,
     dependency: DependencyStatusItem
@@ -273,10 +305,257 @@ export default function AdminContractsPage() {
     setSelectedContract(contract);
     setSelectedDependency(dependency);
     form.setFieldsValue({
-      setFunction: dependency.set_function,
-      newAddress: dependency.latest_address,
+      providerKey: dependency.key,
+      contractName: dependency.contract,
+      currentAddress: dependency.address,
     });
     setUpdateModalOpen(true);
+  };
+
+  // 处理注册合约到 Provider (前端钱包签名模式)
+  const handleRegisterToProvider = async (contractName: string) => {
+    if (!walletClient || !publicClient) {
+      message.error(t("admin.contracts.register.walletNotConnected"));
+      return;
+    }
+
+    // 检查并切换到 Hardhat 网络 (chainId: 31337)
+    const HARDHAT_CHAIN_ID = 31337;
+    if (chain?.id !== HARDHAT_CHAIN_ID) {
+      try {
+        message.loading(t("admin.contracts.register.switchingNetwork") || "Switching to Hardhat network...", 0);
+        await switchChainAsync({ chainId: HARDHAT_CHAIN_ID });
+        message.destroy();
+      } catch (switchError) {
+        message.destroy();
+        const err = switchError as { code?: number; message?: string };
+        if (err.code === 4001 || err.message?.includes('rejected')) {
+          message.warning(t("admin.contracts.register.switchRejected") || "Network switch rejected. Please switch to Hardhat network manually.");
+        } else {
+          message.error(t("admin.contracts.register.switchFailed") || "Failed to switch network. Please switch to Hardhat network manually in MetaMask.");
+        }
+        return;
+      }
+    }
+
+    setIsRegistering(true);
+    try {
+      // 1. 获取调用参数
+      const prepareData = await contractAdminService.prepareRegister({
+        contract_name: contractName,
+      });
+
+      console.log("[Register] prepareData:", prepareData);
+
+      // 2. 验证 provider_address 是否是合约
+      const providerCode = await publicClient.getCode({
+        address: prepareData.provider_address as `0x${string}`,
+      });
+
+      if (!providerCode || providerCode === "0x") {
+        message.error(
+          t("admin.contracts.register.providerNotDeployed", {
+            address: prepareData.provider_address.slice(0, 10) + "...",
+          }) || `AddressProvider 合约未部署或地址无效: ${prepareData.provider_address.slice(0, 10)}...`
+        );
+        return;
+      }
+
+      // 3. 校验 owner 权限
+      let owner: string;
+      try {
+        owner = await publicClient.readContract({
+          address: prepareData.provider_address as `0x${string}`,
+          abi: ADDRESS_PROVIDER_ABI,
+          functionName: "owner",
+        }) as string;
+      } catch (ownerError) {
+        console.error("[Register] Failed to read owner:", ownerError);
+        message.error(
+          t("admin.contracts.register.ownerReadFailed") || 
+          `无法读取 AddressProvider 的 owner，请确认合约地址正确: ${prepareData.provider_address.slice(0, 10)}...`
+        );
+        return;
+      }
+
+      const walletAddress = walletClient.account?.address;
+      if (!walletAddress || walletAddress.toLowerCase() !== owner.toLowerCase()) {
+        message.error(
+          t("admin.contracts.register.notOwner", {
+            owner: owner.slice(0, 10) + "...",
+          })
+        );
+        return;
+      }
+
+      // 4. 钱包签名发送交易
+      message.loading(t("admin.contracts.register.signing"), 0);
+
+      const hash = await walletClient.writeContract({
+        address: prepareData.provider_address as `0x${string}`,
+        abi: prepareData.abi,
+        functionName: prepareData.function_name,
+        args: [prepareData.key_hash as `0x${string}`, prepareData.contract_address as `0x${string}`],
+      });
+
+      message.destroy();
+      message.loading(t("admin.contracts.register.confirming"), 0);
+
+      // 4. 等待交易确认
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      // 5. 更新数据库缓存
+      await contractAdminService.confirmRegister({
+        contract_name: contractName,
+        provider_key: prepareData.provider_key,
+        tx_hash: hash,
+      });
+
+      message.destroy();
+      message.success(
+        t("admin.contracts.register.success", {
+          name: contractName,
+          tx: hash.slice(0, 10) + "...",
+        })
+      );
+
+      // 6. 关闭面板并刷新
+      setDetailPanelOpen(false);
+      setSelectedGraphNode(null);
+      setSelectedListContract(null);
+      refetch();
+    } catch (error) {
+      message.destroy();
+      const errorMessage = (error as Error).message || "Unknown error";
+      message.error(
+        t("admin.contracts.register.failed", { error: errorMessage })
+      );
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  // 处理解除注册合约 (前端钱包签名模式)
+  const handleUnregisterFromProvider = async (contractName: string) => {
+    if (!walletClient || !publicClient) {
+      message.error(t("admin.contracts.unregister.walletNotConnected", "请先连接钱包"));
+      return;
+    }
+
+    // 检查并切换到 Hardhat 网络 (chainId: 31337)
+    const HARDHAT_CHAIN_ID = 31337;
+    if (chain?.id !== HARDHAT_CHAIN_ID) {
+      try {
+        message.loading(t("admin.contracts.register.switchingNetwork") || "Switching to Hardhat network...", 0);
+        await switchChainAsync({ chainId: HARDHAT_CHAIN_ID });
+        message.destroy();
+      } catch (switchError) {
+        message.destroy();
+        const err = switchError as { code?: number; message?: string };
+        if (err.code === 4001 || err.message?.includes('rejected')) {
+          message.warning(t("admin.contracts.register.switchRejected") || "Network switch rejected.");
+        } else {
+          message.error(t("admin.contracts.register.switchFailed") || "Failed to switch network.");
+        }
+        return;
+      }
+    }
+
+    setIsUnregistering(true);
+    try {
+      // 1. 获取调用参数
+      const prepareData = await contractAdminService.prepareUnregister({
+        contract_name: contractName,
+      });
+
+      console.log("[Unregister] prepareData:", prepareData);
+
+      // 2. 验证 provider_address 是否是合约
+      const providerCode = await publicClient.getCode({
+        address: prepareData.provider_address as `0x${string}`,
+      });
+
+      if (!providerCode || providerCode === "0x") {
+        message.error(
+          t("admin.contracts.unregister.providerNotDeployed", "AddressProvider 合约未部署")
+        );
+        return;
+      }
+
+      // 3. 校验 owner 权限
+      let owner: string;
+      try {
+        owner = await publicClient.readContract({
+          address: prepareData.provider_address as `0x${string}`,
+          abi: ADDRESS_PROVIDER_ABI,
+          functionName: "owner",
+        }) as string;
+      } catch (ownerError) {
+        console.error("[Unregister] Failed to read owner:", ownerError);
+        message.error(t("admin.contracts.unregister.ownerReadFailed", "无法读取 owner"));
+        return;
+      }
+
+      const walletAddress = walletClient.account?.address;
+      if (!walletAddress || walletAddress.toLowerCase() !== owner.toLowerCase()) {
+        message.error(
+          t("admin.contracts.unregister.notOwner", {
+            defaultValue: "只有 owner 可以解除注册",
+            owner: owner.slice(0, 10) + "...",
+          })
+        );
+        return;
+      }
+
+      // 4. 钱包签名发送交易
+      message.loading(t("admin.contracts.unregister.signing", "签名中..."), 0);
+
+      const hash = await walletClient.writeContract({
+        address: prepareData.provider_address as `0x${string}`,
+        abi: prepareData.abi,
+        functionName: prepareData.function_name,
+        args: [prepareData.key_hash as `0x${string}`, prepareData.contract_address as `0x${string}`],
+      });
+
+      message.destroy();
+      message.loading(t("admin.contracts.unregister.confirming", "确认交易中..."), 0);
+
+      // 5. 等待交易确认
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      // 6. 更新数据库缓存
+      await contractAdminService.confirmUnregister({
+        contract_name: contractName,
+        provider_key: prepareData.provider_key,
+        tx_hash: hash,
+      });
+
+      message.destroy();
+      message.success(
+        t("admin.contracts.unregister.success", {
+          defaultValue: "解除注册成功: {{name}}, TX: {{tx}}",
+          name: contractName,
+          tx: hash.slice(0, 10) + "...",
+        })
+      );
+
+      // 7. 关闭面板并刷新
+      setDetailPanelOpen(false);
+      setSelectedGraphNode(null);
+      setSelectedListContract(null);
+      refetch();
+    } catch (error) {
+      message.destroy();
+      const errorMessage = (error as Error).message || "Unknown error";
+      message.error(
+        t("admin.contracts.unregister.failed", {
+          defaultValue: "解除注册失败: {{error}}",
+          error: errorMessage,
+        })
+      );
+    } finally {
+      setIsUnregistering(false);
+    }
   };
 
   // 处理 Reset
@@ -297,85 +576,6 @@ export default function AdminContractsPage() {
     }
     handleResetExecute();
   };
-
-  // 表格列
-  const columns = [
-    {
-      title: t("admin.contracts.table.name"),
-      dataIndex: "name",
-      key: "name",
-      render: (name: string) => (
-        <Space>
-          <ApiOutlined style={{ color: "#00D4AA" }} />
-          <Text strong>{name}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: t("admin.contracts.table.address"),
-      dataIndex: "address",
-      key: "address",
-      render: (address: string | null) =>
-        address ? (
-          <Text copyable style={{ fontFamily: "monospace" }}>
-            {address.slice(0, 10)}...{address.slice(-8)}
-          </Text>
-        ) : (
-          <Tag color="error">{t("admin.contracts.status.not_deployed")}</Tag>
-        ),
-    },
-    {
-      title: t("admin.contracts.table.dependencies"),
-      dataIndex: "dependencies",
-      key: "dependencies",
-      render: (deps: DependencyStatusItem[], record: ContractStatusItem) => {
-        if (!deps || deps.length === 0) {
-          return <Text type="secondary">-</Text>;
-        }
-
-        return (
-          <Space wrap>
-            {deps.map((dep) => (
-              <Tooltip
-                key={dep.dependency_name}
-                title={
-                  dep.status === "needs_update"
-                    ? `${dep.current_address?.slice(
-                        0,
-                        10
-                      )}... → ${dep.latest_address?.slice(0, 10)}...`
-                    : dep.current_address
-                }
-              >
-                <Tag
-                  color={STATUS_COLORS[dep.status]}
-                  icon={STATUS_ICONS[dep.status]}
-                  style={{
-                    cursor:
-                      dep.status === "needs_update" ? "pointer" : "default",
-                  }}
-                  onClick={() => {
-                    if (dep.status === "needs_update") {
-                      handleUpdateDependency(record, dep);
-                    }
-                  }}
-                >
-                  {dep.dependency_name}
-                </Tag>
-              </Tooltip>
-            ))}
-          </Space>
-        );
-      },
-    },
-    {
-      title: t("admin.contracts.table.deployedAt"),
-      dataIndex: "deployed_at",
-      key: "deployed_at",
-      render: (date: string | null) =>
-        date ? new Date(date).toLocaleString() : "-",
-    },
-  ];
 
   return (
     <RequireAdmin>
@@ -417,7 +617,7 @@ export default function AdminContractsPage() {
                   {/* 状态图例 */}
                   <ContractStatusLegend />
 
-                  {/* 筛选栏 */}
+                  {/* 筛选栏（包含显示已解绑 Checkbox） */}
                   <ContractFilterBar
                     filters={filters}
                     onFiltersChange={setFilters}
@@ -426,7 +626,7 @@ export default function AdminContractsPage() {
 
                   {/* 表格列表 */}
                   <ContractTableList
-                    contracts={filteredContracts}
+                    contractStatus={filteredContractStatus}
                     loading={isLoading}
                     onContractClick={(contract) => {
                       setSelectedListContract(contract);
@@ -438,9 +638,13 @@ export default function AdminContractsPage() {
                           label: contract.name,
                           address: contract.address || '',
                           project: contract.project,
-                          status: contract.deployment_status || contract.dependency_status,
-                          type: 'exclusive',
+                          status: contract.registration_status,
+                          type: contract.scope === 'global' ? 'common' : 'exclusive',
                           deployedAt: contract.deployed_at,
+                          providerAddress: contract.provider_address,
+                          lastSynced: contract.last_synced,
+                          isRegistered: contract.registration_status === 'synced',
+                          providerKey: contract.provider_key,
                         },
                       } as Node);
                       setDetailPanelOpen(true);
@@ -459,30 +663,43 @@ export default function AdminContractsPage() {
               ),
               children: (
                 /* Dependency Tree View - Compact */
-                <ContractDependencyTree
-                  onContractClick={(contractId) => {
-                    // Find contract node data
-                    const nodeData = contractStatus?.contracts.find(
-                      (c) => c.name === contractId
-                    );
-                    if (nodeData) {
-                      // Create a mock node for compatibility
-                      setSelectedGraphNode({
-                        id: contractId,
-                        data: {
+                <>
+                  {/* 筛选栏（包含显示已解绑 Checkbox） */}
+                  <ContractFilterBar
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    onReset={() => setFilters(DEFAULT_FILTERS)}
+                  />
+                  <ContractDependencyTree
+                    showDeleted={filters.showDeleted}
+                    onContractClick={(contractId) => {
+                      // Find contract node data from all contracts
+                      const nodeData = allContracts.find(
+                        (c) => c.name === contractId
+                      );
+                      if (nodeData) {
+                        // Create a mock node for compatibility
+                        setSelectedGraphNode({
                           id: contractId,
-                          label: nodeData.display_name || contractId,
-                          address: nodeData.address || '',
-                          project: nodeData.project || 'common',
-                          status: nodeData.deployment_status || nodeData.dependency_status as any,
-                          type: nodeData.type as any,
-                          deployedAt: nodeData.deployed_at || null,
-                        },
-                      } as Node);
-                      setDetailPanelOpen(true);
-                    }
-                  }}
-                />
+                          data: {
+                            id: contractId,
+                            label: contractId,
+                            address: nodeData.address || '',
+                            project: nodeData.project || 'common',
+                            status: nodeData.registration_status,
+                            type: nodeData.scope === 'global' ? 'common' : 'exclusive',
+                            deployedAt: nodeData.deployed_at || null,
+                            providerAddress: nodeData.provider_address,
+                            lastSynced: nodeData.last_synced,
+                            isRegistered: nodeData.registration_status === 'synced',
+                            providerKey: nodeData.provider_key,
+                          },
+                        } as Node);
+                        setDetailPanelOpen(true);
+                      }
+                    }}
+                  />
+                </>
               ),
             },
           ]}
@@ -508,11 +725,11 @@ export default function AdminContractsPage() {
                 <div>
                   <div>
                     <strong>{t("admin.contracts.updateModal.from")}:</strong>{" "}
-                    {selectedDependency.current_address}
+                    {selectedDependency.address}
                   </div>
                   <div>
-                    <strong>{t("admin.contracts.updateModal.to")}:</strong>{" "}
-                    {selectedDependency.latest_address}
+                    <strong>{t("admin.contracts.updateModal.contract")}:</strong>{" "}
+                    {selectedDependency.contract}
                   </div>
                 </div>
               }
@@ -592,23 +809,21 @@ export default function AdminContractsPage() {
           }}
           node={selectedGraphNode?.data || null}
           onUpdateDependency={() => {
-            // 从图节点数据或列表合约中查找对应的合约和依赖
+            // 注册合约到 Provider (前端钱包签名)
             const contractName = selectedGraphNode?.data?.id || selectedListContract?.name;
             if (contractName) {
-              const contract = contractStatus?.contracts.find(
-                (c) => c.name === contractName
-              );
-              if (contract && contract.dependencies.length > 0) {
-                // 找到需要更新的依赖
-                const needsUpdateDep = contract.dependencies.find(
-                  (d) => d.status === "needs_update"
-                );
-                if (needsUpdateDep) {
-                  handleUpdateDependency(contract, needsUpdateDep);
-                }
-              }
+              handleRegisterToProvider(contractName);
             }
           }}
+          onUnregister={() => {
+            // 解除注册合约 (前端钱包签名)
+            const contractName = selectedGraphNode?.data?.id || selectedListContract?.name;
+            if (contractName) {
+              handleUnregisterFromProvider(contractName);
+            }
+          }}
+          isRegistering={isRegistering}
+          isUnregistering={isUnregistering}
         />
       </div>
     </RequireAdmin>

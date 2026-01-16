@@ -84,7 +84,7 @@ export interface AuditLogResponse {
 
 /** 分页响应 */
 export interface PaginatedResponse<T> {
-  list: T[];
+  list_data: T[];
   pagination: {
     total: number;
     page: number;
@@ -109,34 +109,34 @@ export interface AuditLogQuery {
  * 获取平台统计汇总
  */
 export async function getPlatformStats(): Promise<PlatformStatsResponse> {
-  const data = await get<{ object: PlatformStatsResponse }>("/admin/stats");
-  return data.object;
+  const data = await get<{ object_data: PlatformStatsResponse }>("/admin/stats");
+  return data.object_data;
 }
 
 /**
  * 获取 TVL 统计
  */
 export async function getTVLStats(): Promise<TVLStatsResponse> {
-  const data = await get<{ object: TVLStatsResponse }>("/admin/stats/tvl");
-  return data.object;
+  const data = await get<{ object_data: TVLStatsResponse }>("/admin/stats/tvl");
+  return data.object_data;
 }
 
 /**
  * 获取用户统计
  */
 export async function getUserStats(): Promise<UserStatsResponse> {
-  const data = await get<{ object: UserStatsResponse }>("/admin/stats/users");
-  return data.object;
+  const data = await get<{ object_data: UserStatsResponse }>("/admin/stats/users");
+  return data.object_data;
 }
 
 /**
  * 获取质押池统计
  */
 export async function getStakingStats(): Promise<StakingPoolStatsResponse> {
-  const data = await get<{ object: StakingPoolStatsResponse }>(
+  const data = await get<{ object_data: StakingPoolStatsResponse }>(
     "/admin/stats/staking"
   );
-  return data.object;
+  return data.object_data;
 }
 
 /**
@@ -158,10 +158,10 @@ export async function getAuditLogs(
 export async function getAuditLogDetail(
   logId: number
 ): Promise<AuditLogResponse> {
-  const data = await get<{ object: AuditLogResponse }>(
+  const data = await get<{ object_data: AuditLogResponse }>(
     `/admin/audit-logs/${logId}`
   );
-  return data.object;
+  return data.object_data;
 }
 
 // ============ KYC Admin Types (Story 2.9) ============
@@ -249,8 +249,8 @@ export interface KycContractComparison {
  * 获取 KYC 统计
  */
 export async function getKycStats(): Promise<KycStats> {
-  const data = await get<{ object: KycStats }>("/admin/kyc/stats");
-  return data.object;
+  const data = await get<{ object_data: KycStats }>("/admin/kyc/stats");
+  return data.object_data;
 }
 
 /**
@@ -286,26 +286,26 @@ export async function getKycList(params?: {
  * 获取同步失败的 KYC 列表
  */
 export async function getFailedSyncKycList(): Promise<AdminKycItem[]> {
-  const data = await get<{ list: AdminKycItem[] }>("/admin/kyc/failed-sync");
-  return data.list;
+  const data = await get<{ list_data: AdminKycItem[] }>("/admin/kyc/failed-sync");
+  return data.list_data;
 }
 
 /**
  * 获取拒绝原因预设列表
  */
 export async function getRejectReasons(): Promise<RejectReasonOption[]> {
-  const data = await get<{ list: RejectReasonOption[] }>(
+  const data = await get<{ list_data: RejectReasonOption[] }>(
     "/admin/kyc/reject-reasons"
   );
-  return data.list;
+  return data.list_data;
 }
 
 /**
  * 获取 KYC 详情
  */
 export async function getKycDetail(kycId: number): Promise<AdminKycDetail> {
-  const data = await get<{ object: AdminKycDetail }>(`/admin/kyc/${kycId}`);
-  return data.object;
+  const data = await get<{ object_data: AdminKycDetail }>(`/admin/kyc/${kycId}`);
+  return data.object_data;
 }
 
 /**
@@ -314,10 +314,10 @@ export async function getKycDetail(kycId: number): Promise<AdminKycDetail> {
 export async function getKycContractComparison(
   kycId: number
 ): Promise<KycContractComparison> {
-  const data = await get<{ object: KycContractComparison }>(
+  const data = await get<{ object_data: KycContractComparison }>(
     `/admin/kyc/${kycId}/contract-comparison`
   );
-  return data.object;
+  return data.object_data;
 }
 
 export const adminService = {

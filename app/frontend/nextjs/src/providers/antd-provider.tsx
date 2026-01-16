@@ -66,7 +66,20 @@ export const darkTheme = {
 export function AntdProvider({ children }: { children: ReactNode }) {
   return (
     <ConfigProvider theme={darkTheme}>
-      <App>{children}</App>
+      <App
+        message={{
+          top: 80, // header 高度 + 间距，避免被遮挡
+          duration: 5, // 显示 5 秒
+          maxCount: 3,
+        }}
+        notification={{
+          top: 80,
+          placement: "topRight",
+          duration: 5,
+        }}
+      >
+        {children}
+      </App>
     </ConfigProvider>
   );
 }

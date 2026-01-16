@@ -110,6 +110,8 @@ export function WalletConnect() {
           kyc_status: user.kyc_status,
         })
         setIsAuthenticated(true)
+        // 触发自定义事件，通知其他组件（如 Header）刷新用户信息
+        window.dispatchEvent(new CustomEvent('supercrypto-login-success'))
         message.success(t('wallet.loginSuccess'))
       } else {
         // 登录成功但获取用户信息失败

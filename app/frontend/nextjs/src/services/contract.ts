@@ -60,7 +60,7 @@ export const contractService = {
     const response = await api.get<API.ResponseData<ContractAddresses>>(
       PUBLIC_PATHS.CONTRACT_ADDRESSES
     );
-    return response.object as ContractAddresses;
+    return response.object_data as ContractAddresses;
   },
 
   /**
@@ -70,7 +70,7 @@ export const contractService = {
     const response = await api.get<API.ResponseData<SubscriptionContractInfo>>(
       PUBLIC_PATHS.CONTRACT_SUBSCRIPTION
     );
-    return response.object;
+    return response.object_data;
   },
 
   /**
@@ -84,7 +84,7 @@ export const contractService = {
     const response = await api.get<API.ResponseData<ContractAddress>>(
       `${PUBLIC_PATHS.CONTRACT_BY_NAME(contractName)}${params}`
     );
-    return response.object as ContractAddress;
+    return response.object_data as ContractAddress;
   },
 };
 
@@ -161,57 +161,101 @@ export function parseUSDTAmount(amount: bigint): number {
 
 // ============ 管理员 API ============
 
-// 部署状态（三种状态）
-export type DeploymentStatus =
-  | "deployed_and_binded" // 已部署且所有依赖已绑定
-  | "deployed_needs_binding" // 已部署但有依赖未绑定或需更新
-  | "not_deployed"; // 未部署
+// 注册状态（纯 Provider 模式）
+export type RegistrationStatus =
+  | "synced"          // 已同步：DB 和链上一致
+  | "mismatch"        // 不匹配：DB 和链上地址不一致
+  | "not_registered"  // 未注册：已部署但未注册到 Provider
+  | "not_deployed"    // 未部署
+  | "unknown";        // 未知：不在 Provider 配置中
 
-// 依赖状态
-export interface DependencyStatusItem {
-  dependency_name: string;
-  set_function: string;
-  status: "synced" | "needs_update" | "not_deployed";
-  current_address: string | null;
-  latest_address: string | null;
-  last_synced_at: string | null;
-  is_binded?: boolean;
+// 合约类型
+export type ContractType =
+  | "registry"     // 注册中心
+  | "kyc"          // KYC
+  | "governance"   // 治理
+  | "stablecoin"   // 稳定币
+  | "token"        // 代币
+  | "defi";        // DeFi
+
+// 合约类型配置
+export interface ContractTypeConfig {
+  label: string;
+  color: string;
+  icon: string;
 }
 
-// 合约状态（增强版）
+// 依赖状态（纯 Provider 模式）
+export interface DependencyStatusItem {
+  key: string;              // Provider Key，如 "KYC_MANAGER"
+  contract: string;         // 合约名称
+  registered: boolean;      // 是否已注册到 Provider
+  address: string | null;   // 注册的地址
+}
+
+// 合约状态（纯 Provider 模式）
 export interface ContractStatusItem {
   name: string;
-  project: string; // 项目分组，从后端获取
-  address: string | null;
-  deploy_step: string;
+  project: string;                          // 项目分组
+  address: string | null;                   // 本地 DB 地址
   deployed: boolean;
   deployed_at: string | null;
-  dependency_status: "synced" | "needs_update" | "not_deployed";
-  deployment_status: DeploymentStatus; // 精确的部署状态
-  dependencies: DependencyStatusItem[];
-  set_functions: string[];
-  type?: string; // 合约类型：common, mock, exclusive
-  display_name?: string; // 可选的显示名称
+  registration_status: RegistrationStatus;  // 注册状态
+  provider_address: string | null;          // Provider 上的地址
+  provider_key: string | null;              // Provider Key
+  dependencies: DependencyStatusItem[];     // 依赖列表
+  scope: "global" | "project";              // 作用域：global(公共) / project(项目)
+  contract_type: ContractType | null;       // 合约类型
+  type_config?: ContractTypeConfig;         // 类型配置
+  description?: string;                     // 描述
+  last_synced?: string | null;              // 上次同步时间
+  is_deleted?: boolean;                     // 是否已删除（解绑）
 }
 
 // 项目配置
 export interface ProjectInfo {
   name: string;
   label: string;
-  description: string;
   color: string;
-  order: number;
 }
 
+// 项目合约分组
+export interface ProjectContractsGroup {
+  project: string;
+  config: ProjectInfo;
+  contracts: ContractStatusItem[];
+}
+
+// 统计信息
+export interface ContractStats {
+  total: number;
+  global_count: number;
+  project_count: number;
+  deployed: number;
+  registered: number;
+}
+
+// 合约状态响应（新结构）
+export interface ContractStatusResponse {
+  // 按 scope 分组的合约
+  global_contracts: ContractStatusItem[];
+  project_contracts: ProjectContractsGroup[];
+  // 元数据
+  contract_types: Record<ContractType, ContractTypeConfig>;
+  projects: ProjectInfo[];
+  network: string;
+  needs_update_count: number;
+  // 统计
+  stats: ContractStats;
+}
+
+// 兼容旧结构的类型（用于筛选等）
 export interface ContractStatusList {
   contracts: ContractStatusItem[];
-  projects: ProjectInfo[]; // 项目列表
+  projects: ProjectInfo[];
   network: string;
   needs_update_count: number;
 }
-
-// 类型别名
-export type ContractStatusResponse = ContractStatusList;
 
 // 合约依赖
 export interface ContractDependency {
@@ -249,16 +293,112 @@ export interface ResetDeployRequest {
   confirm: string;
 }
 
+// 准备注册请求 (前端钱包签名模式)
+export interface PrepareRegisterRequest {
+  contract_name: string;
+  provider_key?: string;
+}
+
+// 准备注册响应
+export interface PrepareRegisterResponse {
+  provider_address: string;      // AddressProvider 合约地址
+  function_name: string;         // "set_address"
+  key_hash: string;              // keccak256(provider_key)
+  contract_address: string;      // 要注册的合约地址
+  contract_name: string;
+  provider_key: string;
+  abi: Array<{
+    name: string;
+    type: string;
+    stateMutability: string;
+    inputs: Array<{ name: string; type: string }>;
+    outputs: Array<{ name: string; type: string }>;
+  }>;
+}
+
+// 确认注册请求
+export interface ConfirmRegisterRequest {
+  contract_name: string;
+  provider_key: string;
+  tx_hash: string;
+}
+
+// 确认注册响应
+export interface ConfirmRegisterResponse {
+  status: string;
+  contract_name: string;
+  provider_key: string;
+  address: string;
+  tx_hash: string;
+}
+
+// 准备解除注册请求 (前端钱包签名模式)
+export interface PrepareUnregisterRequest {
+  contract_name: string;
+  provider_key?: string;
+}
+
+// 准备解除注册响应
+export interface PrepareUnregisterResponse {
+  provider_address: string;      // AddressProvider 合约地址
+  function_name: string;         // "set_address"
+  key_hash: string;              // keccak256(provider_key)
+  contract_address: string;      // 零地址 (0x0000...0000)
+  contract_name: string;
+  provider_key: string;
+  abi: Array<{
+    name: string;
+    type: string;
+    stateMutability: string;
+    inputs: Array<{ name: string; type: string }>;
+    outputs: Array<{ name: string; type: string }>;
+  }>;
+}
+
+// 确认解除注册请求
+export interface ConfirmUnregisterRequest {
+  contract_name: string;
+  provider_key: string;
+  tx_hash: string;
+}
+
+// 确认解除注册响应
+export interface ConfirmUnregisterResponse {
+  success: boolean;
+  contract_name: string;
+  provider_key: string;
+  tx_hash: string;
+  message: string;
+}
+
 export const contractAdminService = {
   /**
    * 获取合约状态（管理员）
-   * 包含部署状态、依赖关系和更新检测结果
+   * 返回按 scope 分组的合约状态
    */
-  async getContractStatus(): Promise<ContractStatusList> {
-    const response = await api.get<API.ResponseData<ContractStatusList>>(
+  async getContractStatus(): Promise<ContractStatusResponse> {
+    const response = await api.get<API.ResponseData<ContractStatusResponse>>(
       ADMIN_PATHS.CONTRACT_STATUS
     );
-    return response.object as ContractStatusList;
+    return response.object_data as ContractStatusResponse;
+  },
+
+  /**
+   * 获取扁平化的合约列表（兼容旧组件）
+   * 将新结构转换为旧的 contracts 数组格式
+   */
+  async getContractStatusFlat(): Promise<ContractStatusList> {
+    const data = await this.getContractStatus();
+    const contracts = [
+      ...data.global_contracts,
+      ...data.project_contracts.flatMap(p => p.contracts),
+    ];
+    return {
+      contracts,
+      projects: data.projects,
+      network: data.network,
+      needs_update_count: data.needs_update_count,
+    };
   },
 
   /**
@@ -270,7 +410,7 @@ export const contractAdminService = {
     const response = await api.get<API.ResponseData<ContractDependency>>(
       ADMIN_PATHS.CONTRACT_DEPENDENCIES(contractName)
     );
-    return response.object as ContractDependency;
+    return response.object_data as ContractDependency;
   },
 
   /**
@@ -283,7 +423,7 @@ export const contractAdminService = {
     const response = await api.post<
       API.ResponseData<UpdateContractAddressResponse>
     >(ADMIN_PATHS.CONTRACT_UPDATE_ADDRESS, request);
-    return response.object as UpdateContractAddressResponse;
+    return response.object_data as UpdateContractAddressResponse;
   },
 
   /**
@@ -309,7 +449,7 @@ export const contractAdminService = {
         network: string;
       }>
     >(ADMIN_PATHS.CONTRACT_RESET_PROJECT(project), { confirm });
-    return response.object as {
+    return response.object_data as {
       deleted_count: number;
       project: string;
       network: string;
@@ -326,7 +466,63 @@ export const contractAdminService = {
     const response = await api.delete<
       API.ResponseData<{ deleted_count: number; network: string }>
     >(ADMIN_PATHS.CONTRACT_RESET_ALL, { confirm });
-    return response.object as { deleted_count: number; network: string };
+    return response.object_data as { deleted_count: number; network: string };
+  },
+
+  /**
+   * 准备注册合约到 Provider（管理员）
+   * 返回前端钱包签名需要的调用参数
+   */
+  async prepareRegister(
+    request: PrepareRegisterRequest
+  ): Promise<PrepareRegisterResponse> {
+    const response = await api.post<API.ResponseData<PrepareRegisterResponse>>(
+      ADMIN_PATHS.CONTRACT_REGISTER_PREPARE,
+      request
+    );
+    return response.object_data as PrepareRegisterResponse;
+  },
+
+  /**
+   * 确认注册完成（管理员）
+   * 前端完成链上交易后，调用此接口更新数据库缓存
+   */
+  async confirmRegister(
+    request: ConfirmRegisterRequest
+  ): Promise<ConfirmRegisterResponse> {
+    const response = await api.post<API.ResponseData<ConfirmRegisterResponse>>(
+      ADMIN_PATHS.CONTRACT_REGISTER_CONFIRM,
+      request
+    );
+    return response.object_data as ConfirmRegisterResponse;
+  },
+
+  /**
+   * 准备解除注册合约（管理员）
+   * 返回前端钱包签名需要的调用参数（target_address 为零地址）
+   */
+  async prepareUnregister(
+    request: PrepareUnregisterRequest
+  ): Promise<PrepareUnregisterResponse> {
+    const response = await api.post<API.ResponseData<PrepareUnregisterResponse>>(
+      ADMIN_PATHS.CONTRACT_UNREGISTER_PREPARE,
+      request
+    );
+    return response.object_data as PrepareUnregisterResponse;
+  },
+
+  /**
+   * 确认解除注册完成（管理员）
+   * 前端完成链上交易后，调用此接口更新数据库缓存
+   */
+  async confirmUnregister(
+    request: ConfirmUnregisterRequest
+  ): Promise<ConfirmUnregisterResponse> {
+    const response = await api.post<API.ResponseData<ConfirmUnregisterResponse>>(
+      ADMIN_PATHS.CONTRACT_UNREGISTER_CONFIRM,
+      request
+    );
+    return response.object_data as ConfirmUnregisterResponse;
   },
 };
 
@@ -339,3 +535,24 @@ export const CONTRACT_SET_ABIS: Record<string, string[]> = {
   setSubscription: ["function setSubscription(address _newSubscription)"],
   setLPToken: ["function setLPToken(address _lpToken)"],
 };
+
+// AddressProvider ABI (用于注册和 owner 检查)
+export const ADDRESS_PROVIDER_ABI = [
+  {
+    name: "owner",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    name: "set_address",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_key", type: "bytes32" },
+      { name: "_address", type: "address" },
+    ],
+    outputs: [],
+  },
+] as const;

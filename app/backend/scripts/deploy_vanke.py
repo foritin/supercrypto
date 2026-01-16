@@ -13,20 +13,17 @@
     - VankeLiquidityMining: 流动性挖矿合约
 
 Usage:
-    ape run deploy_vanke --network ethereum:hardhat
+    # 部署到远程 Hardhat 节点 (YOUR_RPC_HOST:8545)
+    ape run deploy_vanke --network ethereum:hardhat:node
 
 前置条件:
-    - AddressProvider 已部署 (ape run deploy_provider)
-    - KYC 已部署 (ape run deploy_kyc)
-    - 稳定币已部署 (ape run deploy_stablecoins)
+    - AddressProvider 已部署 (ape run deploy_common --network ethereum:hardhat:node --only provider)
+
+注意:
+    - 部署后需要通过 Admin UI 手动注册到 Provider
+    - 部署后需要通过 Admin UI 绑定合约依赖
 """
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent))
-
-from ape import project
 from deploy.executor import (
     deploy_contract,
     get_chain_id,
@@ -37,7 +34,7 @@ from deploy.executor import (
     get_network_enum,
     record_dependencies,
 )
-from deploy.projects.vanke import VANKE_PROJECT
+from deploy.projects.vanke.config import VANKE_PROJECT
 
 
 def main():
@@ -57,23 +54,18 @@ def main():
     deployer = get_deployer(network)
     deployed = get_global_and_project_deployed(chain_id, net_enum, project_config.name)
 
-    # 获取 Provider
-    provider = None
+    # 检查 AddressProvider
     provider_contract = get_deployed_contract(
-        "AddressProvider", chain_id, net_enum, "_common"
+        "AddressProvider", chain_id, net_enum, "common"
     )
     if provider_contract:
-        provider = project.AddressProvider.at(provider_contract.address)
         deployed["AddressProvider"] = provider_contract.address
         print(f"✅ AddressProvider: {provider_contract.address}")
     else:
-        print("❌ AddressProvider 未部署，请先运行: ape run deploy_provider")
+        print(
+            "❌ AddressProvider 未部署，请先运行: ape run deploy_common --network ethereum:hardhat:node"
+        )
         return
-
-    # 检查 KYC
-    kyc_addr = provider.get_kyc_manager()
-    if kyc_addr == "0x0000000000000000000000000000000000000000":
-        print("⚠️  KYC 未注册到 Provider，建议先运行: ape run deploy_kyc")
 
     # 部署项目合约
     for config in project_config.contracts:
@@ -87,21 +79,11 @@ def main():
             network=net_enum,
             project_name=project_config.name,
             deployed=deployed,
-            provider=provider,
         )
 
         deployed[config.name] = address
 
-        # 注册到 Provider
-        if config.register_to_provider and provider and config.provider_key:
-            print("   📥 注册到 AddressProvider...")
-            try:
-                provider.set_address(config.provider_key, address, sender=deployer)
-                print("   ✅ 已注册")
-            except Exception as e:
-                print(f"   ⚠️  注册失败: {e}")
-
-        # 记录依赖关系
+        # 记录依赖关系到数据库
         db_contract = get_deployed_contract(
             config.name, chain_id, net_enum, project_config.name
         )
@@ -124,10 +106,11 @@ def main():
         address = deployed.get(config.name, "未部署")
         print(f"   {config.name}: {address}")
 
-    print("\n🔗 Provider 依赖:")
-    for config in project_config.contracts:
-        if config.provider_deps:
-            print(f"   {config.name}: {', '.join(config.provider_deps)}")
+    print("\n📋 后续操作:")
+    print("   1. 通过 Admin UI 将合约注册到 Provider")
+    print("   2. 通过 Admin UI 绑定合约依赖关系")
+
+    print("=" * 60)
 
     print("=" * 60)
 

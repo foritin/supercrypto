@@ -161,7 +161,7 @@ export const stakingService = {
     const response = await api.get<API.ResponseData<StakingConfigResponse>>(
       PUBLIC_PATHS.STAKING_CONFIG
     )
-    return response.object as StakingConfigResponse
+    return response.object_data as StakingConfigResponse
   },
 
   /**
@@ -171,7 +171,7 @@ export const stakingService = {
     const response = await api.get<API.ResponseData<StakingLimitResponse>>(
       PUBLIC_PATHS.STAKING_LIMIT
     )
-    return response.object as StakingLimitResponse
+    return response.object_data as StakingLimitResponse
   },
 
   /**
@@ -181,7 +181,7 @@ export const stakingService = {
     const response = await api.get<API.ResponseData<PLTTokenInfoResponse>>(
       PUBLIC_PATHS.STAKING_PLT_TOKEN
     )
-    return response.object as PLTTokenInfoResponse
+    return response.object_data as PLTTokenInfoResponse
   },
 
   /**
@@ -192,7 +192,7 @@ export const stakingService = {
       USER_PATHS.STAKING_PREVIEW,
       data
     )
-    return response.object as StakingPreviewResponse
+    return response.object_data as StakingPreviewResponse
   },
 
   /**
@@ -200,7 +200,7 @@ export const stakingService = {
    */
   async createStaking(data: StakingCreateRequest): Promise<StakingResponse> {
     const response = await api.post<API.ResponseData<StakingResponse>>(USER_PATHS.STAKING, data)
-    return response.object as StakingResponse
+    return response.object_data as StakingResponse
   },
 
   /**
@@ -224,7 +224,7 @@ export const stakingService = {
     const response = await api.get<API.ResponseData<StakingResponse>>(url)
 
     return {
-      items: response.list || [],
+      items: response.list_data || [],
       pagination: response.pagination || {
         total: 0,
         page: 1,
@@ -239,7 +239,7 @@ export const stakingService = {
    */
   async getStaking(id: number): Promise<StakingResponse> {
     const response = await api.get<API.ResponseData<StakingResponse>>(USER_PATHS.STAKING_DETAIL(id))
-    return response.object as StakingResponse
+    return response.object_data as StakingResponse
   },
 
   /**
@@ -247,7 +247,7 @@ export const stakingService = {
    */
   async getUserStats(): Promise<StakingStatsResponse> {
     const response = await api.get<API.ResponseData<StakingStatsResponse>>(USER_PATHS.STAKING_STATS)
-    return response.object as StakingStatsResponse
+    return response.object_data as StakingStatsResponse
   },
 
   /**
@@ -258,7 +258,7 @@ export const stakingService = {
       USER_PATHS.STAKING_UNSTAKE(id),
       { tx_hash: txHash }
     )
-    return response.object as StakingResponse
+    return response.object_data as StakingResponse
   },
 
   /**
@@ -269,7 +269,7 @@ export const stakingService = {
       USER_PATHS.STAKING_CLAIM(id),
       { tx_hash: txHash }
     )
-    return response.object as RewardClaimResponse
+    return response.object_data as RewardClaimResponse
   },
 }
 

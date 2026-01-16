@@ -9,8 +9,8 @@ declare namespace API {
    */
   interface ResponseData<T> {
     msg: string
-    list: T[]
-    object: T | null
+    list_data: T[]
+    object_data: T | null
     pagination: Pagination | null
   }
 

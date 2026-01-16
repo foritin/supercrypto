@@ -16,9 +16,12 @@ from ape import accounts, networks, project
 from falib.utils.tools import DevTools, PathTools
 
 from src.models import Account, Contract
-from src.models.contracts.contract_dependency import (
-    PROVIDER_KEYS,
-    ContractDependency,
+from src.models.contracts.contract_dependency import ContractDependency
+from src.models.contracts.contract_meta import ContractMeta
+from src.models.contracts.provider_registry import (
+    ZERO_ADDRESS as PROVIDER_ZERO_ADDRESS,
+    ProviderRegistry,
+    compute_key_hash,
 )
 from src.shared.common.adapters import get_db_adapter, get_minio_adapter
 from src.shared.schemas.enums import ChainID, ContractStatus, NetWork
@@ -318,6 +321,19 @@ def deploy_contract(
         abi_url=abi_url,
     )
 
+    # 8. 自动写入 ContractMeta (元数据)
+    save_contract_meta(config, project_name)
+
+    # 9. 预创建 ProviderRegistry 记录 (如果有 provider_key)
+    if config.provider_key and provider:
+        create_provider_registry_record(
+            config=config,
+            project_name=project_name,
+            provider_address=str(provider.address),
+            chain_id=chain_id,
+            network=network,
+        )
+
     print(f"   ✅ 已部署: {contract.address}")
 
     return contract, str(contract.address)
@@ -380,6 +396,157 @@ def save_contract(
             )
 
 
+def save_contract_meta(config: ContractConfig, project_name: str):
+    """
+    保存合约元数据到 ContractMeta 表
+
+    从 ContractConfig 自动提取并写入：
+    - contract_name
+    - project_name
+    - provider_key (name)
+    - provider_key_hash
+    - dependencies (provider_deps)
+    - contract_type
+    - scope
+    - description
+
+    Args:
+        config: 合约配置
+        project_name: 项目名称
+    """
+    # 计算 provider_key 名称和 hash
+    provider_key_name = None
+    provider_key_hash = None
+
+    if config.provider_key:
+        # provider_key 是 bytes32，转为 hex
+        provider_key_hash = "0x" + config.provider_key.hex()
+        # 从 config.name 推断 key 名称 (VankeRWAToken -> VANKE_RWA_TOKEN)
+        provider_key_name = _contract_name_to_provider_key(config.name)
+
+    with get_db() as db:
+        # 查找现有记录 (按 contract_name 唯一)
+        existing = db.query(ContractMeta.filter(contract_name=config.name).first())
+
+        meta_data = {
+            "project_name": project_name or "_common",
+            "provider_key": provider_key_name,
+            "provider_key_hash": provider_key_hash,
+            "dependencies": config.provider_deps,
+            "contract_type": config.contract_type,
+            "scope": config.scope,
+            "description": config.description,
+        }
+
+        if existing:
+            # 更新现有记录
+            db.query(ContractMeta.filter(id=existing.id).update(**meta_data))
+            print(f"   📝 ContractMeta 已更新: {config.name}")
+        else:
+            # 创建新记录
+            db.query(ContractMeta.create(contract_name=config.name, **meta_data))
+            print(f"   📝 ContractMeta 已创建: {config.name}")
+
+
+def _contract_name_to_provider_key(contract_name: str) -> str:
+    """
+    合约名称转 Provider Key 名称
+
+    VankeRWAToken -> VANKE_RWA_TOKEN
+    KYC -> KYC_MANAGER (特殊处理)
+    """
+    # 特殊映射
+    special_mappings = {
+        "KYC": "KYC_MANAGER",
+        "MultiSigManager": "MULTI_SIG",
+    }
+    if contract_name in special_mappings:
+        return special_mappings[contract_name]
+
+    # 通用规则: 驼峰转下划线大写
+    result = []
+    for i, char in enumerate(contract_name):
+        if char.isupper() and i > 0:
+            result.append("_")
+        result.append(char.upper())
+    return "".join(result)
+
+
+def create_provider_registry_record(
+    config: ContractConfig,
+    project_name: str,
+    provider_address: str,
+    chain_id: int,
+    network: NetWork,
+):
+    """
+    部署时预创建 ProviderRegistry 记录
+
+    创建 is_registered=False 的记录，后续注册/解除注册只需 update。
+    如果记录已存在且未删除，则跳过创建。
+
+    Args:
+        config: 合约配置
+        project_name: 项目名称
+        provider_address: AddressProvider 合约地址
+        chain_id: 链 ID
+        network: 网络
+    """
+    # 只有有 provider_key 的合约才需要创建记录
+    if not config.provider_key:
+        return
+
+    provider_key_name = _contract_name_to_provider_key(config.name)
+    key_hash = compute_key_hash(provider_key_name)
+
+    with get_db() as db:
+        # 查找现有记录（包括已删除的）
+        existing = db.query(
+            ProviderRegistry.filter(
+                provider_address=provider_address,
+                chain_id=chain_id,
+                key=provider_key_name,
+            ).first()
+        )
+
+        if existing:
+            if existing.is_deleted:
+                # 如果是已删除的记录，恢复它
+                db.query(
+                    ProviderRegistry.filter(id=existing.id).update(
+                        is_deleted=False,
+                        deleted_at=None,
+                        deleted_by=None,
+                        is_registered=False,
+                        registered_address=PROVIDER_ZERO_ADDRESS,
+                    )
+                )
+                print(f"   📋 ProviderRegistry 已恢复: {provider_key_name}")
+            else:
+                # 记录已存在且未删除，跳过
+                print(f"   📋 ProviderRegistry 已存在: {provider_key_name}")
+        else:
+            # 创建新记录
+            from datetime import datetime
+
+            db.query(
+                ProviderRegistry.create(
+                    provider_address=provider_address,
+                    chain_id=chain_id,
+                    network=network,
+                    key=provider_key_name,
+                    key_hash=key_hash,
+                    registered_address=PROVIDER_ZERO_ADDRESS,
+                    category=project_name or "_common",
+                    contract_name=config.name,
+                    is_registered=False,
+                    is_deleted=False,
+                    last_synced_at=datetime.now(),
+                )
+            )
+            print(f"   📋 ProviderRegistry 已创建: {provider_key_name}")
+
+
 # ============================================
 # 依赖记录
 # ============================================
@@ -406,9 +573,10 @@ def record_dependencies(
     """
     # Provider 依赖 - 使用 Provider Key
     for provider_key in config.provider_deps:
-        # 从 PROVIDER_KEYS 配置获取依赖合约信息
-        key_info = PROVIDER_KEYS.get(provider_key, {})
-        dep_contract_name = key_info.get("contract", provider_key)
+        # 从 ContractMeta 获取依赖合约信息（同步查询需要异步支持，这里简化处理）
+        # 实际依赖合约名称已在 provider_key 映射表中，我们直接使用 key 名反推
+        # 常见映射: KYC_MANAGER -> KYC, VANKE_RWA_TOKEN -> VankeRWAToken
+        dep_contract_name = _provider_key_to_contract_name(provider_key)
 
         # 查找依赖合约 (在 with 块外调用，避免嵌套)
         dep_contract = get_deployed_contract(dep_contract_name, chain_id, network)
@@ -447,3 +615,23 @@ def record_dependencies(
                         is_deployed=dep_contract is not None,
                     )
                 )
+
+
+def _provider_key_to_contract_name(provider_key: str) -> str:
+    """
+    Provider Key 转合约名称 (简单规则映射)
+
+    部署脚本中使用，无法访问数据库，使用简单规则映射。
+    对于复杂场景，应在部署后通过 ContractMeta 查询。
+    """
+    # 特殊映射
+    special_mappings = {
+        "KYC_MANAGER": "KYC",
+        "MULTI_SIG": "MultiSigManager",
+    }
+    if provider_key in special_mappings:
+        return special_mappings[provider_key]
+
+    # 通用规则: VANKE_RWA_TOKEN -> VankeRWAToken (下划线分隔转驼峰)
+    parts = provider_key.split("_")
+    return "".join(part.capitalize() for part in parts)

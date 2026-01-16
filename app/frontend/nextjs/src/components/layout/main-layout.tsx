@@ -27,7 +27,7 @@ export function MainLayout({ children }: { children: ReactNode }) {
     <Layout style={{ minHeight: "100vh" }}>
       {/* Web3 粒子网络背景 - 只渲染一次，切换页面不重新初始化 */}
       <Web3Background
-        excludePaths={["/", "/admin"]}
+        excludePaths={["/"]}
         particleCount={60}
         linkDistance={150}
         mouseRadius={180}

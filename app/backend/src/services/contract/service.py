@@ -1,15 +1,28 @@
 """
 Contract Service
-合约地址服务
+合约地址服务 (纯 Provider 模式)
+
+数据来源:
+- ContractMeta 表: 合约元数据、依赖关系
+- Contract 表: 合约部署信息
+- ProviderRegistry 表: Provider 注册状态
 """
 
-from typing import Optional, Dict, List, Any
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
-from falib.adapter import get_async_web3_adapter
+
+from src.shared.common.adapters import get_async_web3_adapter
 
 from src.models.contracts.contract import Contract as ContractModel
+from src.models.contracts.contract_meta import ContractMeta
+from src.models.contracts.provider_registry import (
+    ZERO_ADDRESS,
+    ProviderRegistry,
+    compute_key_hash,
+)
 from src.shared.schemas.enums import ContractStatus
 
 logger = get_logger("contract.service")
@@ -23,26 +36,21 @@ ADDRESS_PROVIDER_ABI = [
         "inputs": [],
         "outputs": [
             {"name": "", "type": "bytes32[]"},
-            {"name": "", "type": "address[]"}
-        ]
-    }
+            {"name": "", "type": "address[]"},
+        ],
+    },
+    {
+        "name": "getAddress",
+        "type": "function",
+        "stateMutability": "view",
+        "inputs": [{"name": "key", "type": "bytes32"}],
+        "outputs": [{"name": "", "type": "address"}],
+    },
 ]
 
-# 核心合约 Key 映射 (bytes32 hex -> contract_name)
-# 注意: 需要保持与 AddressProvider.vy 中的定义一致
-PROVIDER_KEYS = {
-    # 公共合约
-    "0x9c6c0c457597576d522763f3366c032626e2e22c7a76c7662d362372733d2673": "KYCManager", # keccak256("KYC_MANAGER")
-    "0x3e2a9a714777d2d3e027f373d3e6c3733e36306373733d3d223e223d333e223d": "USDT",       # keccak256("USDT")
-    "0x2e3a3a714777d2d3e027f373d3e6c3733e36306373733d3d223e223d333e223d": "USDC",       # keccak256("USDC")
-    # Vanke 项目合约
-    "0x5a6a3a714777d2d3e027f373d3e6c3733e36306373733d3d223e223d333e223d": "VankeRWAToken",
-    "0x6a6a3a714777d2d3e027f373d3e6c3733e36306373733d3d223e223d333e223d": "VankeSubscription",
-    "0x7a6a3a714777d2d3e027f373d3e6c3733e36306373733d3d223e223d333e223d": "VankeStaking",
-}
 
 class ContractService:
-    """合约服务"""
+    """合约服务 (纯 Provider 模式)"""
 
     def __init__(self, network: Optional[str] = None):
         self.network = SETTINGS.NETWORK
@@ -61,246 +69,760 @@ class ContractService:
 
     async def get_contract_status(self) -> dict:
         """
-        获取合约状态列表（适配注册制）
-        """
-        # 查询所有本地合约记录
-        contracts = await ContractModel.all().order_by("name")
-        
-        # 尝试从链上获取 Provider 状态
-        provider_state = {}
-        try:
-            # 获取 AddressProvider 地址
-            provider_contract = await ContractModel.filter(name="AddressProvider", network=self.network).first()
-            if provider_contract and provider_contract.address:
-                async with get_async_web3_adapter(abi=ADDRESS_PROVIDER_ABI) as web3:
-                    # 调用 get_all_addresses
-                    result = await web3.call_function(
-                        contract_address=provider_contract.address,
-                        function_name="get_all_addresses",
-                        parameters=[]
-                    )
-                    # result[0] 是 keys, result[1] 是 addresses
-                    keys = result[0]
-                    addrs = result[1]
-                    
-                    for i, k in enumerate(keys):
-                        key_hex = k.hex()
-                        # 这里做一个简化的映射尝试，实际生产中应该有完整的 Key 映射表
-                        # 如果找不到映射，暂时忽略或显示为 Unknown
-                        contract_name = PROVIDER_KEYS.get(key_hex)
-                        if contract_name:
-                            provider_state[contract_name] = addrs[i]
-                            
-        except Exception as e:
-            logger.warning(f"Failed to fetch provider state: {e}")
+        获取合约状态列表（纯 Provider 模式）
 
-        # 构建合约列表
-        contract_list = []
-        needs_update_count = 0
+        数据来源:
+        - ContractMeta: 合约元数据、依赖关系
+        - Contract: 部署状态
+        - ProviderRegistry: Provider 注册状态
+
+        返回结构按 scope 分组:
+        - global_contracts: 公共合约 (AddressProvider, KYC, USDT, USDC 等)
+        - project_contracts: 按项目分组的项目合约
+        
+        注意: 返回所有记录（包括已删除的），由前端根据 is_deleted 字段过滤显示
+        """
+        # 查询所有合约元数据
+        metas = await ContractMeta.all().order_by("project_name", "contract_name")
+
+        # 查询所有本地合约记录
+        contracts = await ContractModel.filter(network=self.network).order_by("name")
+        contract_map = {c.name: c for c in contracts}
+
+        # 获取 Provider 注册状态（返回所有记录，包括已删除的，由前端过滤）
+        registrations = await ProviderRegistry.filter(network=self.network)
+        registry_map = {r.contract_name: r for r in registrations}
+
+        # 构建 provider_key -> contract_name 映射
+        key_to_contract = {}
+        for m in metas:
+            if m.provider_key:
+                key_to_contract[m.provider_key] = m.contract_name
+
+        # 合约类型配置
+        contract_type_configs = {
+            "registry": {"label": "注册中心", "color": "purple", "icon": "📦"},
+            "kyc": {"label": "KYC", "color": "blue", "icon": "🔐"},
+            "governance": {"label": "治理", "color": "indigo", "icon": "⚖️"},
+            "stablecoin": {"label": "稳定币", "color": "green", "icon": "💵"},
+            "token": {"label": "代币", "color": "yellow", "icon": "🪙"},
+            "defi": {"label": "DeFi", "color": "orange", "icon": "📊"},
+        }
 
         # 项目配置
         project_configs = {
-            "common": {"name": "common", "label": "公共合约", "color": "blue", "order": 1},
-            "vanke": {"name": "vanke", "label": "万科项目", "color": "green", "order": 2},
-            "mock": {"name": "mock", "label": "Mock合约", "color": "orange", "order": 3},
+            "common": {"name": "common", "label": "公共合约", "color": "blue"},
+            "vanke": {"name": "vanke", "label": "万科项目", "color": "green"},
         }
 
-        for contract in contracts:
+        global_contracts = []  # scope == 'global'
+        project_contracts = {}  # scope == 'project', 按 project_name 分组
+        needs_update_count = 0
+
+        # 遍历 ContractMeta (而非 Contract 表)
+        for meta in metas:
+            contract = contract_map.get(meta.contract_name)
+            db_addr = contract.address if contract else None
+
+            # 从 ProviderRegistry 查找注册状态
+            registry = registry_map.get(meta.contract_name)
+            chain_addr = (
+                registry.registered_address
+                if registry and registry.is_registered
+                else None
+            )
+
             # 判断状态
-            db_addr = contract.address
-            chain_addr = provider_state.get(contract.name)
-            
-            status = "synced"
             if not db_addr:
                 status = "not_deployed"
             elif chain_addr and db_addr.lower() != chain_addr.lower():
-                status = "mismatch" # DB与链上不一致
+                status = "mismatch"  # DB与链上不一致
                 needs_update_count += 1
-            elif not chain_addr and contract.name in PROVIDER_KEYS.values():
-                 # 应该是注册的合约，但链上没查到
-                 status = "missing_on_chain"
-            
-            # 构造返回数据
-            contract_list.append({
-                "name": contract.name,
-                "project": contract.project_name or "common",
+            elif registry and not registry.is_registered:
+                status = "not_registered"  # 已部署但未注册到 Provider
+            elif not registry and meta.provider_key:
+                status = "not_registered"  # 有 provider_key 但未注册
+            else:
+                status = "synced"
+
+            # 获取依赖信息 (从 ContractMeta.dependencies)
+            deps = meta.dependencies or []
+            dep_status_list = []
+            for dep_key in deps:
+                dep_contract_name = key_to_contract.get(dep_key, dep_key)
+                dep_registry = registry_map.get(dep_contract_name)
+                dep_status_list.append(
+                    {
+                        "key": dep_key,
+                        "contract": dep_contract_name,
+                        "registered": dep_registry.is_registered
+                        if dep_registry
+                        else False,
+                        "address": dep_registry.registered_address
+                        if dep_registry
+                        else None,
+                    }
+                )
+
+            # 构造合约数据
+            contract_data = {
+                "name": meta.contract_name,
+                "project": meta.project_name,
                 "address": db_addr,
-                "deploy_step": contract.name,
                 "deployed": bool(db_addr),
-                "deployed_at": contract.created_at.isoformat() if contract.created_at else None,
-                "dependency_status": status, # 复用字段，实际表示注册状态
-                "deployment_status": "deployed_and_binded" if status == "synced" else "deployed_needs_binding",
-                "dependencies": [], # 注册制下不再详细展示每个依赖的绑定状态，由 Provider 保证
-                "provider_address": chain_addr, # 新增字段：链上 Provider 记录的地址
-                "type": "common" if contract.project_name == "common" else "exclusive"
-            })
+                "deployed_at": contract.created_at.isoformat()
+                if contract and contract.created_at
+                else None,
+                "registration_status": status,
+                "provider_address": chain_addr,
+                "provider_key": meta.provider_key,
+                "dependencies": dep_status_list,
+                "scope": meta.scope or "project",
+                "contract_type": meta.contract_type,
+                "type_config": contract_type_configs.get(meta.contract_type, {}),
+                "description": meta.description,
+                "last_synced": registry.last_synced_at.isoformat()
+                if registry and registry.last_synced_at
+                else None,
+                "is_deleted": registry.is_deleted if registry else False,
+            }
+
+            # 按 scope 分组
+            if meta.scope == "global":
+                global_contracts.append(contract_data)
+            else:
+                # 按 project_name 分组
+                project_name = meta.project_name
+                if project_name not in project_contracts:
+                    project_contracts[project_name] = {
+                        "project": project_name,
+                        "config": project_configs.get(
+                            project_name,
+                            {
+                                "name": project_name,
+                                "label": project_name,
+                                "color": "gray",
+                            },
+                        ),
+                        "contracts": [],
+                    }
+                project_contracts[project_name]["contracts"].append(contract_data)
 
         return {
-            "contracts": contract_list,
+            # 新结构：按 scope 分组
+            "global_contracts": global_contracts,
+            "project_contracts": list(project_contracts.values()),
+            # 元数据
+            "contract_types": contract_type_configs,
             "projects": list(project_configs.values()),
             "network": self.network,
             "needs_update_count": needs_update_count,
+            # 统计
+            "stats": {
+                "total": len(metas),
+                "global_count": len(global_contracts),
+                "project_count": sum(
+                    len(p["contracts"]) for p in project_contracts.values()
+                ),
+                "deployed": sum(1 for m in metas if contract_map.get(m.contract_name)),
+                "registered": sum(
+                    1
+                    for m in metas
+                    if (reg := registry_map.get(m.contract_name)) and reg.is_registered
+                ),
+            },
         }
+
 
     async def sync_from_provider(self) -> Dict[str, Any]:
         """
-        从链上 Provider 同步状态到本地 DB
+        从链上 Provider 同步状态到 ProviderRegistry
+
+        数据来源: ContractMeta 表获取所有有 provider_key 的合约
+
+        Returns:
+            同步结果统计
         """
-        provider_contract = await ContractModel.filter(name="AddressProvider", network=self.network).first()
+        from src.shared.common.adapters import get_async_minio_adapter
+
+        provider_contract = await ContractModel.filter(
+            name="AddressProvider", network=self.network, status=ContractStatus.ACTIVE
+        ).first()
+
         if not provider_contract or not provider_contract.address:
             raise Exception("AddressProvider not found or not deployed")
 
-        updated_count = 0
-        async with get_async_web3_adapter(abi=ADDRESS_PROVIDER_ABI) as web3:
-            result = await web3.call_function(
-                contract_address=provider_contract.address,
-                function_name="get_all_addresses",
-                parameters=[]
-            )
-            keys = result[0]
-            addrs = result[1]
+        # 加载 ABI
+        minio_adapter = get_async_minio_adapter()
+        provider_abi = await minio_adapter.get_json(provider_contract.abi_path)
 
-            for i, k in enumerate(keys):
-                key_hex = k.hex()
-                contract_name = PROVIDER_KEYS.get(key_hex)
-                if contract_name:
-                    new_addr = addrs[i]
-                    # 更新 DB
-                    contract = await ContractModel.filter(name=contract_name, network=self.network).first()
-                    if contract and contract.address != new_addr:
-                        contract.address = new_addr
-                        await contract.save()
-                        updated_count += 1
-                        logger.info(f"Synced contract {contract_name}: {new_addr}")
-        
-        return {"updated": updated_count}
+        # 从 ContractMeta 获取所有有 provider_key 的合约
+        metas = await ContractMeta.filter(provider_key__not_isnull=True)
+
+        updated_count = 0
+        created_count = 0
+        now = datetime.now()
+
+        # 注册合约到 web3_adapter
+        web3_adapter = get_async_web3_adapter()
+        web3_adapter.register_contract(provider_contract.address, provider_abi)
+
+        async with web3_adapter as adapter:
+            for meta in metas:
+                key = meta.provider_key
+                key_hash = compute_key_hash(key)
+
+                try:
+                    registered_addr = await adapter.call_function(
+                        provider_contract.address, "getAddress", [key_hash]
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to query Provider for key {key}: {e}")
+                    registered_addr = ZERO_ADDRESS
+
+                # 更新或创建 ProviderRegistry 记录
+                _, created = await ProviderRegistry.update_or_create(
+                    provider_address=provider_contract.address,
+                    chain_id=provider_contract.chain_id,
+                    key=key,
+                    defaults={
+                        "network": self.network,
+                        "key_hash": key_hash,
+                        "registered_address": registered_addr,
+                        "category": meta.project_name,
+                        "contract_name": meta.contract_name,
+                        "is_registered": registered_addr != ZERO_ADDRESS,
+                        "last_synced_at": now,
+                    },
+                )
+
+                if created:
+                    created_count += 1
+                else:
+                    updated_count += 1
+
+                logger.debug(
+                    f"{'Created' if created else 'Updated'} registry: {key} -> {registered_addr[:10]}..."
+                )
+
+        return {
+            "updated": updated_count,
+            "created": created_count,
+            "total": len(metas),
+        }
 
     async def update_registry_record(self, contract_name: str, address: str):
         """
-        手动更新本地注册记录
+        手动更新本地合约记录
         """
-        contract = await ContractModel.filter(name=contract_name, network=self.network).first()
+        contract = await ContractModel.filter(
+            name=contract_name, network=self.network
+        ).first()
         if not contract:
-            # 如果不存在，尝试创建（或者是报错，视业务逻辑而定，这里选择报错以防误操作）
             raise Exception(f"Contract {contract_name} not found in DB")
-        
+
         contract.address = address
         await contract.save()
         logger.info(f"Manually updated contract {contract_name} to {address}")
         return contract
 
-    async def get_dependency_graph(self) -> dict:
+    async def prepare_register(
+        self,
+        contract_name: str,
+        provider_key: Optional[str] = None,
+    ) -> dict:
         """
-        获取合约依赖关系图数据
+        准备注册调用参数 (前端钱包签名模式)
 
-        数据来源：仅使用 Contract 和 ContractDependency 两张表
+        返回前端需要的调用信息，由前端签名发送交易
 
-        返回用于前端可视化图的数据结构：
-        {
-            "nodes": [{"id": "ContractName", "label": "...", "type": "...", "address": "...", "status": "...", "project": "..."}],
-            "edges": [{"source": "ContractA", "target": "ContractB", "label": "setFunction", "setFunction": "...", "status": "..."}]
-        }
+        Args:
+            contract_name: 合约名称
+            provider_key: Provider Key (可选，不传则从 ContractMeta 获取)
+
+        Returns:
+            调用参数 dict
         """
-        # 查询所有合约（不过滤 network，获取所有数据）
-        contracts = await ContractModel.all()
+        # 1. 获取合约元数据
+        meta = await ContractMeta.filter(contract_name=contract_name).first()
+        if not meta:
+            raise Exception(f"Contract '{contract_name}' not found in ContractMeta")
 
-        # 构建合约映射 {name: contract}
-        contract_map = {c.name: c for c in contracts}
+        # 使用传入的 key 或从 meta 获取
+        key = provider_key or meta.provider_key
+        if not key:
+            raise Exception(
+                f"No provider_key specified and contract '{contract_name}' has no provider_key in ContractMeta"
+            )
 
-        # 查询所有绑定记录（包括未绑定的）
-        # 不过滤 contract_address，获取所有记录以显示依赖关系
-        bindings = await ContractDependencyModel.all()
+        # 2. 验证合约已部署
+        contract = await ContractModel.filter(
+            name=contract_name,
+            network=self.network,
+        ).first()
 
-        # 构建绑定映射 {contract_name: [bindings]}
-        binding_map = {}
-        for b in bindings:
-            if b.contract_name not in binding_map:
-                binding_map[b.contract_name] = []
-            binding_map[b.contract_name].append(b)
+        if not contract:
+            raise Exception(f"Contract '{contract_name}' not found in Contract table")
 
-        # 合约类型映射：modules -> type
-        # stablecoin -> mock, business -> exclusive, oracle/kyc -> common
-        module_type_map = {
-            "stablecoin": "mock",
-            "business": "exclusive",
-            "oracle": "common",
-            "kyc": "common",
-            "unknown": "exclusive",
+        if not contract.address:
+            raise Exception(f"Contract '{contract_name}' not deployed (no address)")
+
+        # 3. 获取 AddressProvider 合约
+        provider_contract = await ContractModel.filter(
+            name="AddressProvider",
+            network=self.network,
+            status=ContractStatus.ACTIVE,
+        ).first()
+
+        if not provider_contract or not provider_contract.address:
+            raise Exception("AddressProvider not found or not deployed")
+
+        # 4. 计算 Key Hash
+        key_hash = compute_key_hash(key)
+
+        # 5. 返回调用参数 (ABI 只需要 set_address 函数)
+        set_address_abi = [
+            {
+                "name": "set_address",
+                "type": "function",
+                "stateMutability": "nonpayable",
+                "inputs": [
+                    {"name": "_key", "type": "bytes32"},
+                    {"name": "_address", "type": "address"},
+                ],
+                "outputs": [],
+            }
+        ]
+
+        return {
+            "provider_address": provider_contract.address,
+            "function_name": "set_address",
+            "key_hash": key_hash,
+            "contract_address": contract.address,
+            "contract_name": contract_name,
+            "provider_key": key,
+            "abi": set_address_abi,
         }
 
-        # 构建节点列表
-        nodes = []
-        for contract in contracts:
-            # 检查该合约是否有需要更新的依赖
-            contract_bindings = binding_map.get(contract.name, [])
-            has_outdated = False
+    async def confirm_register(
+        self,
+        contract_name: str,
+        provider_key: str,
+        tx_hash: str,
+    ) -> dict:
+        """
+        确认注册完成，更新数据库缓存 (前端完成交易后调用)
 
-            for binding in contract_bindings:
-                dep_contract = contract_map.get(binding.dependency_name)
-                if dep_contract and binding.dependency_address:
-                    # 比较绑定的依赖地址与当前合约地址
-                    dep_addr = binding.dependency_address.lower()
-                    latest_addr = dep_contract.address.lower()
-                    if dep_addr != latest_addr:
-                        has_outdated = True
-                        break
+        如果合约之前被 unregister (soft delete)，重新注册时会清空 deleted_by 和 deleted_at
 
-            # 映射 modules 到 type - 处理 None 值
-            module_value = contract.modules.value if contract.modules else None
-            contract_type = module_type_map.get(module_value, "exclusive")
+        Args:
+            contract_name: 合约名称
+            provider_key: Provider Key
+            tx_hash: 交易哈希
 
-            # 使用 project_name 或默认值
-            project_name = contract.project_name or "unknown"
+        Returns:
+            确认结果
+        """
+        # 1. 获取合约信息
+        contract = await ContractModel.filter(
+            name=contract_name,
+            network=self.network,
+        ).first()
 
-            nodes.append(
+        if not contract:
+            raise Exception(f"Contract '{contract_name}' not found")
+
+        # 2. 获取 Provider 合约
+        provider_contract = await ContractModel.filter(
+            name="AddressProvider",
+            network=self.network,
+            status=ContractStatus.ACTIVE,
+        ).first()
+
+        if not provider_contract:
+            raise Exception("AddressProvider not found")
+
+        # 3. 获取元数据
+        meta = await ContractMeta.filter(contract_name=contract_name).first()
+
+        # 4. 更新 ProviderRegistry 缓存
+        key_hash = compute_key_hash(provider_key)
+        now = datetime.now()
+
+        # 查找现有记录（包括已删除的）
+        existing_registry = await ProviderRegistry.filter(
+            provider_address=provider_contract.address,
+            chain_id=provider_contract.chain_id,
+            key=provider_key,
+        ).first()
+
+        if existing_registry:
+            # 更新现有记录
+            existing_registry.network = self.network
+            existing_registry.key_hash = key_hash
+            existing_registry.registered_address = contract.address
+            existing_registry.category = meta.project_name if meta else "unknown"
+            existing_registry.contract_name = contract_name
+            existing_registry.is_registered = True
+            existing_registry.last_synced_at = now
+            
+            # 如果之前被删除，清空删除标记（恢复）
+            if existing_registry.is_deleted:
+                existing_registry.is_deleted = False
+                existing_registry.deleted_at = None
+                existing_registry.deleted_by = None
+                logger.info(f"Restored previously unregistered contract: {contract_name}")
+            
+            await existing_registry.save()
+        else:
+            # 创建新记录
+            await ProviderRegistry.create(
+                provider_address=provider_contract.address,
+                chain_id=provider_contract.chain_id,
+                key=provider_key,
+                network=self.network,
+                key_hash=key_hash,
+                registered_address=contract.address,
+                category=meta.project_name if meta else "unknown",
+                contract_name=contract_name,
+                is_registered=True,
+                is_deleted=False,
+                last_synced_at=now,
+            )
+
+        logger.info(
+            f"Confirmed registration: {contract_name} -> {provider_key}, tx: {tx_hash}"
+        )
+
+        return {
+            "status": "registered",
+            "contract_name": contract_name,
+            "provider_key": provider_key,
+            "address": contract.address,
+            "tx_hash": tx_hash,
+        }
+
+
+    async def prepare_unregister(
+        self,
+        contract_name: str,
+        provider_key: Optional[str] = None,
+    ) -> dict:
+        """
+        准备解除注册调用参数 (前端钱包签名模式)
+
+        1. 验证合约存在于 ContractMeta
+        2. 验证合约已注册 (is_registered=True)
+        3. 返回调用参数，target_address 为零地址
+
+        Args:
+            contract_name: 合约名称
+            provider_key: Provider Key (可选，不传则从 ContractMeta 获取)
+
+        Returns:
+            调用参数 dict
+        """
+        # 1. 获取合约元数据
+        meta = await ContractMeta.filter(contract_name=contract_name).first()
+        if not meta:
+            raise Exception(f"Contract '{contract_name}' not found in ContractMeta")
+
+        # 使用传入的 key 或从 meta 获取
+        key = provider_key or meta.provider_key
+        if not key:
+            raise Exception(
+                f"No provider_key specified and contract '{contract_name}' has no provider_key in ContractMeta"
+            )
+
+        # 2. 获取 AddressProvider 合约
+        provider_contract = await ContractModel.filter(
+            name="AddressProvider",
+            network=self.network,
+            status=ContractStatus.ACTIVE,
+        ).first()
+
+        if not provider_contract or not provider_contract.address:
+            raise Exception("AddressProvider not found or not deployed")
+
+        # 3. 验证合约已注册
+        registry = await ProviderRegistry.filter(
+            provider_address=provider_contract.address,
+            chain_id=provider_contract.chain_id,
+            key=key,
+            is_deleted=False,
+        ).first()
+
+        if not registry or not registry.is_registered:
+            raise Exception(f"Contract '{contract_name}' is not registered")
+
+        # 4. 计算 Key Hash
+        key_hash = compute_key_hash(key)
+
+        # 5. 返回调用参数 (target_address 为零地址)
+        set_address_abi = [
+            {
+                "name": "set_address",
+                "type": "function",
+                "stateMutability": "nonpayable",
+                "inputs": [
+                    {"name": "_key", "type": "bytes32"},
+                    {"name": "_address", "type": "address"},
+                ],
+                "outputs": [],
+            }
+        ]
+
+        return {
+            "provider_address": provider_contract.address,
+            "function_name": "set_address",
+            "key_hash": key_hash,
+            "contract_address": ZERO_ADDRESS,  # 解除注册使用零地址
+            "contract_name": contract_name,
+            "provider_key": key,
+            "abi": set_address_abi,
+        }
+
+    async def confirm_unregister(
+        self,
+        contract_name: str,
+        provider_key: str,
+        tx_hash: str,
+    ) -> dict:
+        """
+        确认解除注册完成，更新数据库缓存 (前端完成交易后调用)
+
+        1. 更新 ProviderRegistry.is_registered = False
+        2. 更新 ProviderRegistry.registered_address = ZERO_ADDRESS
+        3. 调用 soft_delete() 设置 is_deleted=True
+        4. 更新 last_synced_at
+
+        Args:
+            contract_name: 合约名称
+            provider_key: Provider Key
+            tx_hash: 交易哈希
+
+        Returns:
+            确认结果
+        """
+        # 1. 获取 Provider 合约
+        provider_contract = await ContractModel.filter(
+            name="AddressProvider",
+            network=self.network,
+            status=ContractStatus.ACTIVE,
+        ).first()
+
+        if not provider_contract:
+            raise Exception("AddressProvider not found")
+
+        # 2. 查找 ProviderRegistry 记录
+        registry = await ProviderRegistry.filter(
+            provider_address=provider_contract.address,
+            chain_id=provider_contract.chain_id,
+            key=provider_key,
+            is_deleted=False,
+        ).first()
+
+        if not registry:
+            raise Exception(
+                f"ProviderRegistry record not found for key '{provider_key}'"
+            )
+
+        # 3. 更新记录
+        now = datetime.now()
+        registry.is_registered = False
+        registry.registered_address = ZERO_ADDRESS
+        registry.last_synced_at = now
+        await registry.save()
+
+        # 4. 软删除记录
+        await registry.soft_delete(deleted_by=f"unregister_tx:{tx_hash[:10]}")
+
+        logger.info(
+            f"Confirmed unregistration: {contract_name} -> {provider_key}, tx: {tx_hash}"
+        )
+
+        return {
+            "success": True,
+            "contract_name": contract_name,
+            "provider_key": provider_key,
+            "tx_hash": tx_hash,
+            "message": "Contract unregistered successfully",
+        }
+
+    async def get_provider_status(self, category: Optional[str] = None) -> dict:
+        """
+        获取 Provider 注册状态详情
+
+        Args:
+            category: 可选，按分类过滤 (如 "vanke", "common")
+
+        Returns:
+            注册状态详情
+        """
+        filters = {"network": self.network, "is_deleted": False}
+        if category:
+            filters["category"] = category
+
+        registrations = await ProviderRegistry.filter(**filters).order_by(
+            "category", "key"
+        )
+
+        result = {
+            "total": len(registrations),
+            "registered": sum(1 for r in registrations if r.is_registered),
+            "unregistered": sum(1 for r in registrations if not r.is_registered),
+            "categories": {},
+            "registrations": [],
+        }
+
+        for reg in registrations:
+            # 按分类统计
+            if reg.category not in result["categories"]:
+                result["categories"][reg.category] = {
+                    "total": 0,
+                    "registered": 0,
+                }
+            result["categories"][reg.category]["total"] += 1
+            if reg.is_registered:
+                result["categories"][reg.category]["registered"] += 1
+
+            # 详细列表
+            result["registrations"].append(
                 {
-                    "id": contract.name,
-                    "label": contract.name,
-                    "type": contract_type,
-                    "module": module_value,  # 保留原始模块类型（kyc, stablecoin, business, oracle）
-                    "address": contract.address,
-                    "status": "needs_update" if has_outdated else "synced",
-                    "project": project_name,
-                    "deployedAt": contract.created_at.isoformat()
-                    if contract.created_at
+                    "key": reg.key,
+                    "key_hash": reg.key_hash,
+                    "contract_name": reg.contract_name,
+                    "category": reg.category,
+                    "registered_address": reg.registered_address,
+                    "is_registered": reg.is_registered,
+                    "last_synced_at": reg.last_synced_at.isoformat()
+                    if reg.last_synced_at
                     else None,
                 }
             )
 
-        # 构建边列表
-        edges = []
-        for binding in bindings:
-            # 获取 set 函数名称
-            set_func = DEPENDENCY_SET_FUNCTIONS.get(
-                (binding.contract_name, binding.dependency_name),
-                f"set{binding.dependency_name}",
-            )
+        return result
 
-            # 检查边的状态
-            dep_contract = contract_map.get(binding.dependency_name)
-            if dep_contract and binding.dependency_address:
-                dep_addr = binding.dependency_address.lower()
-                latest_addr = dep_contract.address.lower()
-                edge_status = "needs_update" if dep_addr != latest_addr else "synced"
-            elif dep_contract:
-                # 有合约但没有依赖地址记录
-                edge_status = "needs_update"
+
+    async def get_dependency_graph(self) -> dict:
+        """
+        获取合约依赖关系图数据 (纯 Provider 模式)
+
+        数据来源：
+        - ContractMeta 表获取合约元数据和依赖关系
+        - Contract 表获取部署信息
+        - ProviderRegistry 获取注册状态
+
+        返回用于前端可视化图的数据结构：
+        {
+            "nodes": [{"id": "ContractName", "label": "...", "type": "...", "address": "...", "status": "...", "project": "..."}],
+            "edges": [{"source": "ContractA", "target": "DependencyKey", "status": "..."}]
+        }
+        
+        注意: 返回所有记录（包括已删除的），由前端根据 isDeleted 字段过滤显示
+        """
+        # 查询所有合约元数据
+        metas = await ContractMeta.all()
+
+        # 构建 provider_key -> contract_name 映射
+        key_to_contract = {}
+        for m in metas:
+            if m.provider_key:
+                key_to_contract[m.provider_key] = m.contract_name
+
+        # 查询所有合约部署记录
+        contracts = await ContractModel.filter(network=self.network)
+        contract_map = {c.name: c for c in contracts}
+
+        # 查询 Provider 注册状态（返回所有记录，包括已删除的，由前端过滤）
+        registrations = await ProviderRegistry.filter(network=self.network)
+        registry_map = {r.contract_name: r for r in registrations}
+
+        # 合约类型映射
+        type_to_graph_type = {
+            "registry": "common",
+            "kyc": "common",
+            "stablecoin": "mock",
+            "governance": "common",
+            "token": "exclusive",
+            "defi": "exclusive",
+        }
+
+        # 构建节点列表 (基于 ContractMeta)
+        nodes = []
+        for meta in metas:
+            contract = contract_map.get(meta.contract_name)
+            registry = registry_map.get(meta.contract_name)
+
+            # 检查该合约的依赖是否都已注册
+            deps = meta.dependencies or []
+            missing_deps = []
+            for dep_key in deps:
+                dep_contract_name = key_to_contract.get(dep_key, dep_key)
+                dep_registry = registry_map.get(dep_contract_name)
+                if not dep_registry or not dep_registry.is_registered:
+                    missing_deps.append(dep_key)
+
+            # 决定节点状态
+            if not contract or not contract.address:
+                node_status = "not_deployed"
+            elif meta.provider_key and (not registry or not registry.is_registered):
+                node_status = "not_registered"
+            elif missing_deps:
+                node_status = "missing_deps"
             else:
-                edge_status = "not_deployed"
+                node_status = "ready"
 
-            edges.append(
+            # 映射 contract_type 到图类型
+            graph_type = type_to_graph_type.get(meta.contract_type, "exclusive")
+
+            nodes.append(
                 {
-                    "source": binding.contract_name,
-                    "target": binding.dependency_name,
-                    "label": set_func,
-                    "setFunction": set_func,
-                    "status": edge_status,
-                    "currentAddress": binding.dependency_address,
-                    "latestAddress": dep_contract.address if dep_contract else None,
-                    "isBinded": binding.is_binded,
-                    "isDeployed": binding.is_deployed,
+                    "id": meta.contract_name,
+                    "label": meta.contract_name,
+                    "type": graph_type,
+                    "module": meta.contract_type,
+                    "address": contract.address if contract else None,
+                    "status": node_status,
+                    "project": meta.project_name,
+                    "deployedAt": contract.created_at.isoformat()
+                    if contract and contract.created_at
+                    else None,
+                    "isRegistered": registry.is_registered if registry else False,
+                    "providerAddress": registry.registered_address
+                    if registry
+                    else None,
+                    "missingDeps": missing_deps,
+                    "description": meta.description,
+                    "isDeleted": registry.is_deleted if registry else False,
                 }
             )
+
+        # 构建边列表 (基于 ContractMeta.dependencies)
+        edges = []
+        for meta in metas:
+            deps = meta.dependencies or []
+            for dep_key in deps:
+                dep_contract_name = key_to_contract.get(dep_key, dep_key)
+                dep_registry = registry_map.get(dep_contract_name)
+
+                # 检查边的状态
+                if dep_registry and dep_registry.is_registered:
+                    edge_status = "registered"
+                else:
+                    edge_status = "not_registered"
+
+                edges.append(
+                    {
+                        "source": meta.contract_name,
+                        "target": dep_contract_name,
+                        "key": dep_key,
+                        "status": edge_status,
+                        "registeredAddress": dep_registry.registered_address
+                        if dep_registry
+                        else None,
+                    }
+                )
 
         return {
             "nodes": nodes,

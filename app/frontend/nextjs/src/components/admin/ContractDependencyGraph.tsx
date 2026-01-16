@@ -59,11 +59,12 @@ const WEB3_COLORS = {
     glow: 'rgba(107, 114, 128, 0.3)',
     gradient: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)',
   },
-  // 状态颜色
+  // 状态颜色（纯 Provider 模式）
   status: {
-    synced: '#10B981',
-    needs_update: '#EF4444',
-    not_deployed: '#6B7280',
+    ready: '#10B981',           // 就绪
+    not_deployed: '#6B7280',    // 未部署
+    not_registered: '#F59E0B',  // 未注册
+    missing_deps: '#EF4444',    // 缺少依赖
   },
   // 背景渐变
   background: {
@@ -84,12 +85,16 @@ function Web3ContractNode({ data }: { data: GraphNode }) {
                        data.project === 'mock' ? WEB3_COLORS.mock :
                        WEB3_COLORS.unknown;
 
-    const statusStyle = data.status === 'needs_update' ? {
-      borderColor: WEB3_COLORS.status.needs_update,
+    const statusStyle = data.status === 'missing_deps' ? {
+      borderColor: WEB3_COLORS.status.missing_deps,
       glowColor: 'rgba(239, 68, 68, 0.8)',
       animation: 'pulse-red 2s ease-in-out infinite',
-    } : data.status === 'synced' ? {
-      borderColor: WEB3_COLORS.status.synced,
+    } : data.status === 'not_registered' ? {
+      borderColor: WEB3_COLORS.status.not_registered,
+      glowColor: 'rgba(245, 158, 11, 0.6)',
+      animation: 'pulse-orange 2s ease-in-out infinite',
+    } : data.status === 'ready' ? {
+      borderColor: WEB3_COLORS.status.ready,
       glowColor: 'rgba(16, 185, 129, 0.6)',
       animation: 'pulse-green 3s ease-in-out infinite',
     } : {
@@ -173,12 +178,14 @@ function Web3ContractNode({ data }: { data: GraphNode }) {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              background: data.status === 'synced' ? '#10B981' :
-                         data.status === 'needs_update' ? '#EF4444' : '#6B7280',
-              boxShadow: `0 0 8px ${data.status === 'synced' ? '#10B981' :
-                                  data.status === 'needs_update' ? '#EF4444' : '#6B7280'}`,
-              animation: data.status === 'synced' ? 'status-pulse 2s ease-in-out infinite' :
-                         data.status === 'needs_update' ? 'status-alert 1s ease-in-out infinite' : 'none',
+              background: data.status === 'ready' ? '#10B981' :
+                         data.status === 'missing_deps' ? '#EF4444' :
+                         data.status === 'not_registered' ? '#F59E0B' : '#6B7280',
+              boxShadow: `0 0 8px ${data.status === 'ready' ? '#10B981' :
+                                  data.status === 'missing_deps' ? '#EF4444' :
+                                  data.status === 'not_registered' ? '#F59E0B' : '#6B7280'}`,
+              animation: data.status === 'ready' ? 'status-pulse 2s ease-in-out infinite' :
+                         data.status === 'missing_deps' ? 'status-alert 1s ease-in-out infinite' : 'none',
             }}
           />
         </div>
@@ -221,7 +228,9 @@ function Web3ContractNode({ data }: { data: GraphNode }) {
 
         {/* 状态文本 */}
         <Text style={{ fontSize: 9, color: 'rgba(255, 255, 255, 0.6)' }}>
-          {data.status === 'synced' ? '已同步' : data.status === 'needs_update' ? '需更新' : '未部署'}
+          {data.status === 'ready' ? '已就绪' : 
+           data.status === 'missing_deps' ? '缺少依赖' :
+           data.status === 'not_registered' ? '未注册' : '未部署'}
         </Text>
       </Space>
 
@@ -396,9 +405,7 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
     if (!graphData) return [];
 
     return graphData.edges.map((edge, index) => {
-      const isNeedingUpdate = edge.status === 'needs_update';
-      const isBinded = edge.isBinded; // 已绑定
-      const isDeployed = edge.isDeployed; // 已部署（但可能未绑定）
+      const isRegistered = edge.status === 'registered';
 
       // 确定边的样式
       let strokeColor = '#6B7280'; // 默认灰色
@@ -406,21 +413,18 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
       let strokeWidth = 2;
       let animated = false;
 
-      if (isNeedingUpdate) {
-        strokeColor = '#EF4444'; // 红色 - 需要更新
-        animated = true;
-        strokeWidth = 3;
-      } else if (isBinded) {
-        strokeColor = '#10B981'; // 绿色 - 已绑定
+      if (isRegistered) {
+        strokeColor = '#10B981'; // 绿色 - 已注册
         strokeWidth = 2;
-      } else if (isDeployed) {
-        strokeColor = '#F59E0B'; // 橙色 - 已部署但未绑定
+      } else {
+        strokeColor = '#F59E0B'; // 橙色 - 未注册
         strokeDasharray = '5,5'; // 虚线
+        animated = true;
       }
 
       // 标签文本
-      const labelText = isBinded ? '已绑定' : isDeployed ? '未绑定' : '未部署';
-      const labelColor = isBinded ? '#10B981' : isDeployed ? '#F59E0B' : '#6B7280';
+      const labelText = isRegistered ? '已注册' : '未注册';
+      const labelColor = isRegistered ? '#10B981' : '#F59E0B';
 
       return {
         id: `edge-${index}`,
@@ -433,21 +437,19 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
             gap: 4,
           }}>
             <Text style={{ fontSize: 9, color: labelColor, fontWeight: 500 }}>
-              {edge.label}
+              {edge.key || edge.target}
             </Text>
-            {edge.setFunction && (
-              <Tag style={{
-                margin: 0,
-                fontSize: 8,
-                padding: '0 4px',
-                borderRadius: 4,
-                background: isBinded ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                border: `1px solid ${labelColor}`,
-                color: labelColor,
-              }}>
-                {edge.setFunction}
-              </Tag>
-            )}
+            <Tag style={{
+              margin: 0,
+              fontSize: 8,
+              padding: '0 4px',
+              borderRadius: 4,
+              background: isRegistered ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+              border: `1px solid ${labelColor}`,
+              color: labelColor,
+            }}>
+              {labelText}
+            </Tag>
           </div>
         ),
         labelStyle: {
@@ -465,7 +467,7 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
         style: {
           stroke: strokeColor,
           strokeWidth,
-          strokeOpacity: isNeedingUpdate ? 1 : 0.6,
+          strokeOpacity: isRegistered ? 0.6 : 1,
           strokeDasharray,
         },
         animated,

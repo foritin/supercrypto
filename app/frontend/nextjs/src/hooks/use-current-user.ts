@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAccount } from 'wagmi'
 import { userService, type CurrentUser } from '@/services/user'
+import { hasJwtToken } from '@/utils/auth'
 
 export function useCurrentUser() {
   const { address, isConnected } = useAccount()
@@ -15,6 +16,12 @@ export function useCurrentUser() {
 
   const fetchUser = useCallback(async () => {
     if (!isConnected || !address) {
+      setData(null)
+      return
+    }
+
+    // 等待 JWT token 存在后再获取用户信息
+    if (!hasJwtToken()) {
       setData(null)
       return
     }
@@ -34,6 +41,29 @@ export function useCurrentUser() {
 
   useEffect(() => {
     fetchUser()
+  }, [fetchUser])
+
+  // 监听 storage 事件，当 JWT 变化时重新获取用户信息
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'supercrypto-jwt' && e.newValue) {
+        // JWT 更新了，重新获取用户信息
+        fetchUser()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [fetchUser])
+
+  // 监听自定义事件，用于同一窗口内的登录通知
+  useEffect(() => {
+    const handleLoginSuccess = () => {
+      fetchUser()
+    }
+
+    window.addEventListener('supercrypto-login-success', handleLoginSuccess)
+    return () => window.removeEventListener('supercrypto-login-success', handleLoginSuccess)
   }, [fetchUser])
 
   return {

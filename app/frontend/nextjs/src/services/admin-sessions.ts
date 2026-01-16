@@ -21,7 +21,7 @@ export interface UserSession {
  * 会话列表响应
  */
 export interface SessionListResponse {
-  list: UserSession[]
+  list_data: UserSession[]
   pagination: {
     total: number
     page: number
@@ -34,7 +34,7 @@ export interface SessionListResponse {
  * 撤销会话响应
  */
 export interface RevokeSessionResponse {
-  object: {
+  object_data: {
     wallet_address: string
     revoked_sessions: number
   }
@@ -63,8 +63,8 @@ export async function revokeUserSession(walletAddress: string): Promise<RevokeSe
  * 获取用户会话列表
  */
 export async function getUserSessions(walletAddress: string): Promise<{
-  list: UserSession[]
-  object: {
+  list_data: UserSession[]
+  object_data: {
     wallet_address: string
     session_count: number
   }

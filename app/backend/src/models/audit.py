@@ -6,11 +6,23 @@
 - 权限变更（授予、撤销）
 - 合约操作（部署、调用、管理员操作等）
 - 资产操作（充值、提现、转账等）
+
+设计原则：
+- 只追加不修改：审计日志只能追加，不能修改或删除
+- 异步记录：审计日志记录不阻塞主业务流程
 """
 from tortoise import fields
 
 from src.models.base import AbstractModel, get_utc_time
+from src.shared.common.exceptions import BusinessException
 from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
+
+
+class AuditLogImmutableError(BusinessException):
+    """审计日志不可变异常"""
+    
+    def __init__(self, message: str = "Audit log is immutable"):
+        super().__init__(message=message, code=403)
 
 
 class AuditLog(AbstractModel):
@@ -83,6 +95,14 @@ class AuditLog(AbstractModel):
     error_code = fields.CharField(max_length=50, null=True, description="错误码")
     error_message = fields.TextField(null=True, description="错误信息")
     
+    # 环境
+    environment = fields.CharField(
+        max_length=32,
+        default="local",
+        description="环境: local/test/main",
+        index=True
+    )
+    
     class Meta:
         table = "audit_log"
         table_description = "通用审计日志表"
@@ -91,19 +111,52 @@ class AuditLog(AbstractModel):
         # 复合索引 - 根据常见查询优化
         indexes = [
             # 按操作者查询
-            ("operator_id", "-operated_at"),
+            ("operator_id", "operated_at"),
             # 按目标对象查询
-            ("target_type", "target_id", "-operated_at"),
+            ("target_type", "target_id", "operated_at"),
             # 按类别和操作查询
-            ("category", "action", "-operated_at"),
+            ("category", "action", "operated_at"),
             # 按状态查询（查找失败操作）
-            ("status", "-operated_at"),
-            # 按交易哈希查询（区块链操作）
-            ("tx_hash",),
+            ("status", "operated_at"),
         ]
     
     def __str__(self):
         return f"AuditLog({self.action} by operator={self.operator_id} on {self.target_type}:{self.target_id} at {self.operated_at})"
+    
+    # ==================== 不可变性保护 ====================
+    
+    async def save(self, *args, **kwargs):
+        """
+        重写保存方法，禁止更新已存在的记录
+        
+        只允许创建新记录，不允许修改已存在的记录
+        """
+        if self.id is not None:
+            # 检查是否是已存在的记录
+            exists = await AuditLog.filter(id=self.id).exists()
+            if exists:
+                raise AuditLogImmutableError(
+                    f"Cannot update audit log {self.id}: audit logs are immutable"
+                )
+        return await super().save(*args, **kwargs)
+    
+    async def delete(self, *args, **kwargs):
+        """
+        重写删除方法，禁止删除审计日志
+        """
+        raise AuditLogImmutableError(
+            f"Cannot delete audit log {self.id}: audit logs are immutable"
+        )
+    
+    @classmethod
+    async def bulk_update(cls, *args, **kwargs):
+        """禁止批量更新"""
+        raise AuditLogImmutableError("Bulk update is not allowed for audit logs")
+    
+    @classmethod
+    async def bulk_delete(cls, *args, **kwargs):
+        """禁止批量删除"""
+        raise AuditLogImmutableError("Bulk delete is not allowed for audit logs")
 
 
 # ==================== 审计日志辅助函数 ====================

@@ -43,7 +43,7 @@ export const devToolsService = {
    */
   async getResetInfo(): Promise<ResetableDataInfo> {
     const response = await api.get<API.ResponseData<ResetableDataInfo>>(DEV_PATHS.RESET_INFO)
-    return response.object!
+    return response.object_data!
   },
 
   /**
@@ -51,7 +51,7 @@ export const devToolsService = {
    */
   async resetData(request: DataResetRequest): Promise<DataResetResponse> {
     const response = await api.post<API.ResponseData<DataResetResponse>>(DEV_PATHS.RESET_DATA, request)
-    return response.object!
+    return response.object_data!
   },
 
   /**
@@ -59,7 +59,7 @@ export const devToolsService = {
    */
   async getEnvironment(): Promise<EnvironmentInfo> {
     const response = await api.get<API.ResponseData<EnvironmentInfo>>(DEV_PATHS.ENVIRONMENT)
-    return response.object!
+    return response.object_data!
   },
 
   /**
@@ -67,7 +67,7 @@ export const devToolsService = {
    */
   async getTokenRecipients(): Promise<TokenRecipient[]> {
     const response = await api.get<API.ResponseData<TokenRecipient>>(DEV_PATHS.TOKEN_RECIPIENTS)
-    return response.list || []
+    return response.list_data || []
   },
 }
 
