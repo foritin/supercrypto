@@ -89,7 +89,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
       key: 'operator',
       width: 180,
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           {record.operator_address ? (
             <AddressDisplay address={record.operator_address} />
           ) : record.operator_id ? (
@@ -134,7 +134,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
       key: 'target',
       width: 180,
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           {record.target_address ? (
             <AddressDisplay address={record.target_address} />
           ) : record.target_id ? (

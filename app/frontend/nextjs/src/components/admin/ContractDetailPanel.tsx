@@ -294,7 +294,7 @@ export function ContractDetailPanel({
 
           {/* 操作按钮 */}
           <div style={{ marginTop: 24 }}>
-            <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            <Space orientation="vertical" style={{ width: '100%' }} size={12}>
               {hasIssue && node.status === 'not_registered' && onUpdateDependency && (
                 <Button
                   type="primary"

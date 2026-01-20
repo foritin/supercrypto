@@ -223,7 +223,7 @@ export default function ProjectDetailPage() {
 
         {/* Sidebar */}
         <Col xs={24} lg={8}>
-          <Space direction="vertical" style={{ width: '100%' }} size={16}>
+          <Space orientation="vertical" style={{ width: '100%' }} size={16}>
             {/* Deployment Plan */}
             {deploymentPlan && (
               <DeploymentPlan plan={deploymentPlan} />
@@ -236,7 +236,7 @@ export default function ProjectDetailPage() {
                 size="small"
                 style={{ borderColor: '#ffccc7' }}
               >
-                <Space direction="vertical" style={{ width: '100%' }}>
+                <Space orientation="vertical" style={{ width: '100%' }}>
                   {status.blocking_contracts.map((contractName) => (
                     <Text key={contractName} code style={{ background: '#fff2f0', display: 'block', padding: '4px 8px' }}>
                       {contractName}
@@ -253,7 +253,7 @@ export default function ProjectDetailPage() {
                 size="small"
                 style={{ borderColor: '#b7eb8f' }}
               >
-                <Space direction="vertical" style={{ width: '100%' }}>
+                <Space orientation="vertical" style={{ width: '100%' }}>
                   {status.deployable_contracts.map((contractName) => (
                     <Text key={contractName} code style={{ background: '#f6ffed', display: 'block', padding: '4px 8px' }}>
                       {contractName}

@@ -152,7 +152,7 @@ function Web3ContractNode({ data }: { data: GraphNode }) {
       />
 
       {/* 内容 */}
-      <Space direction="vertical" size={6} style={{ width: '100%', position: 'relative', zIndex: 1 }}>
+      <Space orientation="vertical" size={6} style={{ width: '100%', position: 'relative', zIndex: 1 }}>
         {/* 项目标签 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Tag

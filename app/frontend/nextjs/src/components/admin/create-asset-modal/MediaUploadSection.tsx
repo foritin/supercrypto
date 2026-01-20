@@ -91,7 +91,7 @@ export const MediaUploadSection = React.memo(function MediaUploadSection({
       </Row>
 
       <Alert
-        message={t('admin.assets.mediaNote', '估值报告、法律文件等可在创建后通过媒体管理功能上传')}
+        title={t('admin.assets.mediaNote', '估值报告、法律文件等可在创建后通过媒体管理功能上传')}
         type="info"
         showIcon
         className="mt-4"

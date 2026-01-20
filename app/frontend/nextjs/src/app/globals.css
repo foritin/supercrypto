@@ -564,12 +564,60 @@ body {
   color: var(--color-warning) !important;
 }
 
-/* Table - Admin 表格增强 */
+/* Table - Admin 表格增强 (Ant Design 6.x) */
 .ant-table {
   background: transparent !important;
 }
 
-.ant-table-thead > tr > th {
+/* 消除表头和表体之间的间距 */
+.ant-table-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ant-table-container {
+  border-radius: 0 !important;
+}
+
+.ant-table-container table {
+  border-spacing: 0 !important;
+  border-collapse: collapse !important;
+}
+
+/* 固定列/滚动模式时的表头样式 */
+.ant-table-header {
+  margin-bottom: 0 !important;
+  border-radius: 0 !important;
+}
+
+.ant-table-header table {
+  border-radius: 0 !important;
+}
+
+.ant-table-body {
+  margin-top: 0 !important;
+}
+
+/* Ant Design 6.x sticky header fix */
+.ant-table-sticky-holder {
+  background: transparent !important;
+}
+
+.ant-table-content {
+  overflow: visible !important;
+}
+
+/* 6.x 新增的 section 包装 */
+.ant-table-section {
+  overflow: visible !important;
+}
+
+.ant-table-thead {
+  position: relative;
+}
+
+.ant-table-thead > tr > th,
+.ant-table-thead > tr > td {
   background: var(--bg-elevated) !important;
   color: var(--text-secondary) !important;
   border-bottom: 1px solid var(--border-color) !important;
@@ -578,6 +626,21 @@ body {
   font-size: 12px;
   letter-spacing: 0.5px;
   padding: var(--spacing-md) var(--spacing-lg) !important;
+}
+
+/* 固定列的单元格背景 */
+.ant-table-cell-fix-left,
+.ant-table-cell-fix-right {
+  background: inherit !important;
+}
+
+/* 确保表头和表体之间没有多余间距 */
+.ant-table-tbody {
+  vertical-align: top;
+}
+
+.ant-table-tbody > tr:first-child > td {
+  border-top: none !important;
 }
 
 .ant-table-tbody > tr > td {

@@ -192,7 +192,7 @@ export function AssetStatusIndicator({
 
   // 完整模式
   return (
-    <Space direction="vertical" size={4}>
+    <Space orientation="vertical" size={4}>
       {/* 状态项 */}
       {statusItems.map((item) => (
         <Tooltip key={item.key} title={item.message}>

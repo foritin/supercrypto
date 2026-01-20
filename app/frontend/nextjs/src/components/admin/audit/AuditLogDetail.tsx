@@ -112,7 +112,6 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
     <Drawer
       title={null}
       placement="right"
-      width={560}
       onClose={onClose}
       open={open}
       closable={false}
@@ -122,6 +121,7 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
         header: { display: 'none' },
         wrapper: { 
           zIndex: 2147483648,
+          width: 560,
           background: 'linear-gradient(180deg, rgba(10, 10, 15, 0.98) 0%, rgba(15, 15, 22, 0.98) 100%)',
         },
       }}
