@@ -11,14 +11,14 @@ interface AnimatedNumberProps {
   suffix?: string;
 }
 
-export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
+export const AnimatedNumber: React.FC<AnimatedNumberProps> = React.memo(function AnimatedNumber({
   value,
   format = 'number',
   duration = 1000,
   className = '',
   prefix = '',
   suffix = ''
-}) => {
+}) {
   const [displayValue, setDisplayValue] = useState(
     typeof value === 'number' ? 0 : value
   );
@@ -92,4 +92,4 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
       {suffix}
     </span>
   );
-};
+});

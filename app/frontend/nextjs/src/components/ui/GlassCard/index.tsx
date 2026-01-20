@@ -16,13 +16,13 @@ const blurValues = {
   lg: '20px'
 };
 
-export const GlassCard: React.FC<GlassCardProps> = ({
+export const GlassCard: React.FC<GlassCardProps> = React.memo(function GlassCard({
   children,
   className,
   glow = false,
   blur = 'md',
   hover = true
-}) => {
+}) {
   return (
     <div
       className={cn(
@@ -67,4 +67,4 @@ export const GlassCard: React.FC<GlassCardProps> = ({
       </div>
     </div>
   );
-};
+});

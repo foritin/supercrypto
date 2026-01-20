@@ -37,7 +37,7 @@ import {
   LineChartOutlined,
   AppstoreOutlined,
 } from '@ant-design/icons';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, TFunction } from 'react-i18next';
 import type { ColumnsType } from 'antd/es/table';
 import type {
   ContractStatusItem,
@@ -104,7 +104,7 @@ interface ContractTableListProps {
 
 // 通用表格列生成函数（Global Contracts - 包含 Type 列）
 function getGlobalColumns(
-  t: any,
+  t: TFunction,
   onContractClick?: (contract: ContractStatusItem) => void
 ): ColumnsType<ContractStatusItem> {
   return [
@@ -116,7 +116,7 @@ function getGlobalColumns(
       sorter: (a, b) => a.name.localeCompare(b.name),
       render: (name: string, record: ContractStatusItem) => (
         <Space>
-          <ApiOutlined style={{ color: '#00D4AA' }} />
+          <ApiOutlined className="text-web3-success" />
           <Text strong>{name}</Text>
         </Space>
       ),
@@ -257,7 +257,7 @@ function getGlobalColumns(
 
 // 项目合约表格列（包含项目列，不含 Type）
 function getProjectColumns(
-  t: any,
+  t: TFunction,
   onContractClick?: (contract: ContractStatusItem) => void
 ): ColumnsType<ContractStatusItem> {
   return [
@@ -269,7 +269,7 @@ function getProjectColumns(
       sorter: (a, b) => a.name.localeCompare(b.name),
       render: (name: string) => (
         <Space>
-          <ApiOutlined style={{ color: '#00D4AA' }} />
+          <ApiOutlined className="text-web3-success" />
           <Text strong>{name}</Text>
         </Space>
       ),

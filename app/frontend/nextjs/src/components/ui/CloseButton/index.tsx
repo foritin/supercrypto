@@ -8,6 +8,7 @@
  * - 半透明背景 + hover 效果
  */
 import React from 'react';
+import { cn } from '@/utils/cn';
 
 export interface CloseButtonProps {
   /** 点击回调 */
@@ -21,52 +22,37 @@ export interface CloseButtonProps {
 }
 
 const SIZE_MAP = {
-  sm: 24,
-  md: 32,
-  lg: 40,
+  sm: { dimension: 'w-6 h-6', fontSize: 'text-xs' },
+  md: { dimension: 'w-8 h-8', fontSize: 'text-sm' },
+  lg: { dimension: 'w-10 h-10', fontSize: 'text-base' },
 };
 
-export const CloseButton: React.FC<CloseButtonProps> = ({
+export const CloseButton: React.FC<CloseButtonProps> = React.memo(function CloseButton({
   onClick,
   size = 'md',
   className,
   style,
-}) => {
-  const dimension = SIZE_MAP[size];
+}) {
+  const sizeConfig = SIZE_MAP[size];
 
   return (
     <button
       onClick={onClick}
-      className={className}
-      style={{
-        width: dimension,
-        height: dimension,
-        border: '1px solid var(--border-color-light)',
-        borderRadius: 'var(--radius-md)',
-        background: 'rgba(255, 255, 255, 0.05)',
-        color: 'var(--text-tertiary)',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'var(--transition-fast)',
-        fontSize: size === 'sm' ? 12 : size === 'lg' ? 16 : 14,
-        ...style,
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-        e.currentTarget.style.color = 'var(--text-secondary)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-        e.currentTarget.style.borderColor = 'var(--border-color-light)';
-        e.currentTarget.style.color = 'var(--text-tertiary)';
-      }}
+      className={cn(
+        sizeConfig.dimension,
+        sizeConfig.fontSize,
+        'border border-white/10 rounded-lg',
+        'bg-white/5 text-white/50',
+        'cursor-pointer flex items-center justify-center',
+        'transition-all duration-150',
+        'hover:bg-white/10 hover:border-white/20 hover:text-white/70',
+        className
+      )}
+      style={style}
     >
       ✕
     </button>
   );
-};
+});
 
 export default CloseButton;

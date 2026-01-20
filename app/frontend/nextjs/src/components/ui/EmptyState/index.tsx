@@ -15,11 +15,13 @@ interface EmptyStateProps {
  * 空状态组件
  * 显示友好的空数据提示，带浮动粒子动画
  */
-export const EmptyState: React.FC<EmptyStateProps> = ({
+import React from 'react';
+
+export const EmptyState: React.FC<EmptyStateProps> = React.memo(function EmptyState({
   message,
   description,
   action,
-}) => {
+}) {
   return (
     <motion.div
       className="flex flex-col items-center justify-center py-12"
@@ -73,5 +75,5 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       )}
     </motion.div>
   );
-};
+});
 

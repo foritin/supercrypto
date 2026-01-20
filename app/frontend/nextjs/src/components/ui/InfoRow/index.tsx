@@ -8,6 +8,7 @@
  * - 支持自定义值颜色
  */
 import React from 'react';
+import { cn } from '@/utils/cn';
 
 export interface InfoRowProps {
   /** 标签文本 */
@@ -20,45 +21,28 @@ export interface InfoRowProps {
   className?: string;
 }
 
-export const InfoRow: React.FC<InfoRowProps> = ({
+export const InfoRow: React.FC<InfoRowProps> = React.memo(function InfoRow({
   label,
   children,
   showBorder = true,
   className,
-}) => {
+}) {
   return (
     <div
-      className={className}
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        padding: 'var(--spacing-sm) 0',
-        borderBottom: showBorder ? '1px solid rgba(255, 255, 255, 0.04)' : 'none',
-      }}
+      className={cn(
+        'flex justify-between items-start py-2',
+        showBorder && 'border-b border-white/[0.04]',
+        className
+      )}
     >
-      <span
-        style={{
-          fontSize: 13,
-          color: 'var(--text-muted)',
-          flexShrink: 0,
-          marginRight: 'var(--spacing-lg)',
-        }}
-      >
+      <span className="text-[13px] text-white/50 shrink-0 mr-4">
         {label}
       </span>
-      <div
-        style={{
-          fontSize: 13,
-          color: 'var(--text-primary)',
-          textAlign: 'right',
-          wordBreak: 'break-all',
-        }}
-      >
+      <div className="text-[13px] text-white/90 text-right break-all">
         {children}
       </div>
     </div>
   );
-};
+});
 
 export default InfoRow;

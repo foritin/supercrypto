@@ -6,53 +6,52 @@
  * - 支持媒体文件上传 (封面图、相册、估值报告、法律文件等)
  * - 实时预览将要绑定的合约
  * - 符合 Premium UI 设计风格
+ * 
+ * 重构说明:
+ * - 从单文件拆分为模块目录结构
+ * - 提取 FormSection、MediaUploadSection、ProjectBindingSection 为独立组件
+ * - 类型定义和常量移至 types.ts
  */
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Modal,
   Form,
   Input,
   InputNumber,
   Select,
-  Upload,
   Button,
   Space,
   Typography,
   Tag,
   Tooltip,
-  Alert,
-  Divider,
   Row,
   Col,
   message,
-  Image,
 } from 'antd'
 import {
   PlusOutlined,
-  InboxOutlined,
   InfoCircleOutlined,
-  FileTextOutlined,
-  PictureOutlined,
   DollarOutlined,
   BankOutlined,
-  LinkOutlined,
-  DeleteOutlined,
 } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
-import type { UploadFile, UploadProps } from 'antd'
+import type { UploadFile } from 'antd'
 import {
   assetService,
   type AssetCreateRequest,
   type AssetType,
-  type ProjectContractInfo,
   ASSET_TYPE_NAMES,
 } from '@/services/asset'
 
+import { FormSection } from './FormSection'
+import { MediaUploadSection } from './MediaUploadSection'
+import { ProjectBindingSection } from './ProjectBindingSection'
+import type { CreateAssetModalProps, AssetFormValues } from './types'
+
 const { Text, Title } = Typography
 const { TextArea } = Input
-const { Dragger } = Upload
 
 // 资产类型选项
 const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
@@ -62,74 +61,6 @@ const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
   { value: 'equity', label: ASSET_TYPE_NAMES.equity },
   { value: 'other', label: ASSET_TYPE_NAMES.other },
 ]
-
-// 媒体类型配置
-const MEDIA_CATEGORIES = {
-  cover: { label: '封面图', accept: 'image/*', maxCount: 1, required: false },
-  gallery: { label: '相册', accept: 'image/*', maxCount: 10, required: false },
-  valuation: { label: '估值报告', accept: '.pdf,.doc,.docx', maxCount: 5, required: true },
-  legal: { label: '法律文件', accept: '.pdf,.doc,.docx', maxCount: 10, required: true },
-} as const
-
-interface CreateAssetModalProps {
-  open: boolean
-  onClose: () => void
-  onSuccess: () => void
-  availableProjects: ProjectContractInfo[]
-  isLoadingProjects: boolean
-}
-
-// Section 组件 - 用于分组表单项
-function FormSection({
-  icon,
-  title,
-  description,
-  children,
-  extra,
-}: {
-  icon: React.ReactNode
-  title: string
-  description?: string
-  children: React.ReactNode
-  extra?: React.ReactNode
-}) {
-  return (
-    <div
-      style={{
-        marginBottom: 24,
-        padding: 20,
-        background: 'rgba(255, 255, 255, 0.02)',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
-        borderRadius: 12,
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 16,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: 'var(--color-primary)', fontSize: 18 }}>{icon}</span>
-          <div>
-            <Title level={5} style={{ margin: 0, fontSize: 15 }}>
-              {title}
-            </Title>
-            {description && (
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {description}
-              </Text>
-            )}
-          </div>
-        </div>
-        {extra}
-      </div>
-      {children}
-    </div>
-  )
-}
 
 export function CreateAssetModal({
   open,
@@ -155,7 +86,7 @@ export function CreateAssetModal({
   }
 
   // 提交表单
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: AssetFormValues) => {
     setIsSubmitting(true)
     try {
       // 提取 bind_projects，不包含在 createData 中
@@ -222,8 +153,9 @@ export function CreateAssetModal({
       message.success(t('admin.assets.createSuccess', '资产创建成功'))
       handleClose()
       onSuccess()
-    } catch (error: any) {
-      message.error(error?.message || t('admin.assets.createFailed', '创建失败'))
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : t('admin.assets.createFailed', '创建失败')
+      message.error(errorMessage)
     } finally {
       setIsSubmitting(false)
     }
@@ -266,29 +198,18 @@ export function CreateAssetModal({
       }}
     >
       {/* 头部 - 固定 */}
-      <div
+      <div className="shrink-0 px-7 pt-6 pb-5 border-b border-white/[0.06] rounded-t-2xl"
         style={{
-          flexShrink: 0,
-          padding: '24px 28px 20px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
           background: 'linear-gradient(180deg, rgba(0, 212, 170, 0.08) 0%, transparent 100%)',
-          borderRadius: '16px 16px 0 0',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center border border-web3-success/30"
             style={{
-              width: 48,
-              height: 48,
-              borderRadius: 12,
               background: 'linear-gradient(135deg, rgba(0, 212, 170, 0.2) 0%, rgba(0, 212, 170, 0.05) 100%)',
-              border: '1px solid rgba(0, 212, 170, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
             }}
           >
-            <PlusOutlined style={{ fontSize: 22, color: 'var(--color-primary)' }} />
+            <PlusOutlined className="text-[22px] text-web3-success" />
           </div>
           <div>
             <Title level={4} style={{ margin: 0, color: '#fff' }}>
@@ -302,14 +223,7 @@ export function CreateAssetModal({
       </div>
 
       {/* 表单内容 - 可滚动区域 */}
-      <div 
-        style={{ 
-          flex: 1, 
-          overflowY: 'auto', 
-          overscrollBehavior: 'contain',
-          padding: '24px 28px',
-        }}
-      >
+      <div className="flex-1 overflow-y-auto overscroll-contain px-7 py-6">
         <Form
           form={form}
           layout="vertical"
@@ -395,7 +309,7 @@ export function CreateAssetModal({
                     min={0}
                     prefix="$"
                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    parser={(value) => value!.replace(/\$\s?|(,*)/g, '') as any}
+                    parser={(value) => Number(value?.replace(/\$\s?|(,*)/g, '') || 0) as 0}
                   />
                 </Form.Item>
               </Col>
@@ -431,19 +345,13 @@ export function CreateAssetModal({
                     <Space>
                       <span>3M APY</span>
                       <Tooltip title={t('admin.assets.form.apy3mTooltip', '3个月锁定期年化收益率')}>
-                        <InfoCircleOutlined style={{ color: 'rgba(255,255,255,0.45)' }} />
+                        <InfoCircleOutlined className="text-white/45" />
                       </Tooltip>
                     </Space>
                   }
                   rules={[{ required: true, message: t('admin.assets.form.apy3mRequired') }]}
                 >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    min={0}
-                    max={100}
-                    precision={2}
-                    suffix="%"
-                  />
+                  <InputNumber style={{ width: '100%' }} min={0} max={100} precision={2} suffix="%" />
                 </Form.Item>
               </Col>
               <Col span={8}>
@@ -453,19 +361,13 @@ export function CreateAssetModal({
                     <Space>
                       <span>6M APY</span>
                       <Tooltip title={t('admin.assets.form.apy6mTooltip', '6个月锁定期年化收益率')}>
-                        <InfoCircleOutlined style={{ color: 'rgba(255,255,255,0.45)' }} />
+                        <InfoCircleOutlined className="text-white/45" />
                       </Tooltip>
                     </Space>
                   }
                   rules={[{ required: true, message: t('admin.assets.form.apy6mRequired') }]}
                 >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    min={0}
-                    max={100}
-                    precision={2}
-                    suffix="%"
-                  />
+                  <InputNumber style={{ width: '100%' }} min={0} max={100} precision={2} suffix="%" />
                 </Form.Item>
               </Col>
               <Col span={8}>
@@ -475,181 +377,39 @@ export function CreateAssetModal({
                     <Space>
                       <span>12M APY</span>
                       <Tooltip title={t('admin.assets.form.apy12mTooltip', '12个月锁定期年化收益率')}>
-                        <InfoCircleOutlined style={{ color: 'rgba(255,255,255,0.45)' }} />
+                        <InfoCircleOutlined className="text-white/45" />
                       </Tooltip>
                     </Space>
                   }
                   rules={[{ required: true, message: t('admin.assets.form.apy12mRequired') }]}
                 >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    min={0}
-                    max={100}
-                    precision={2}
-                    suffix="%"
-                  />
+                  <InputNumber style={{ width: '100%' }} min={0} max={100} precision={2} suffix="%" />
                 </Form.Item>
               </Col>
             </Row>
           </FormSection>
 
           {/* 媒体上传 */}
-          <FormSection
-            icon={<PictureOutlined />}
-            title={t('admin.assets.section.media', '媒体文件')}
-            description={t('admin.assets.section.mediaDesc', '可选，更多文件可在创建后管理')}
-            extra={
-              <Tag color="blue" style={{ margin: 0 }}>
-                {t('admin.assets.optional', '可选')}
-              </Tag>
-            }
-          >
-            <Row gutter={24}>
-              {/* 封面图 */}
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <Text strong style={{ fontSize: 13 }}>
-                    {t('admin.assets.form.coverImage', '封面图')}
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
-                    {t('admin.assets.form.coverImageCount', '(1 张)')}
-                  </Text>
-                </div>
-                <Upload
-                  listType="picture-card"
-                  fileList={coverFile}
-                  onChange={({ fileList }) => setCoverFile(fileList.slice(-1))}
-                  beforeUpload={(file) => beforeUpload(file)}
-                  accept="image/*"
-                  maxCount={1}
-                >
-                  {coverFile.length === 0 && (
-                    <div>
-                      <PlusOutlined />
-                      <div style={{ marginTop: 8, fontSize: 12 }}>{t('admin.assets.form.uploadCover', '上传封面')}</div>
-                    </div>
-                  )}
-                </Upload>
-              </Col>
-
-              {/* 相册 */}
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <Text strong style={{ fontSize: 13 }}>
-                    {t('admin.assets.form.gallery', '相册')}
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
-                    {t('admin.assets.form.galleryCount', '(最多 10 张)')}
-                  </Text>
-                </div>
-                <Upload
-                  listType="picture-card"
-                  fileList={galleryFiles}
-                  onChange={({ fileList }) => setGalleryFiles(fileList.slice(0, 10))}
-                  beforeUpload={(file) => beforeUpload(file)}
-                  accept="image/*"
-                  multiple
-                  maxCount={10}
-                >
-                  {galleryFiles.length < 10 && (
-                    <div>
-                      <PlusOutlined />
-                      <div style={{ marginTop: 8, fontSize: 12 }}>{t('admin.assets.form.addImages', '添加图片')}</div>
-                    </div>
-                  )}
-                </Upload>
-              </Col>
-            </Row>
-
-            <Alert
-              message={t('admin.assets.mediaNote', '估值报告、法律文件等可在创建后通过媒体管理功能上传')}
-              type="info"
-              showIcon
-              style={{ marginTop: 16 }}
-            />
-          </FormSection>
+          <MediaUploadSection
+            coverFile={coverFile}
+            galleryFiles={galleryFiles}
+            onCoverChange={setCoverFile}
+            onGalleryChange={setGalleryFiles}
+            beforeUpload={beforeUpload}
+          />
 
           {/* 项目绑定 */}
-          <FormSection
-            icon={<LinkOutlined />}
-            title={t('admin.assets.section.binding', '项目合约绑定')}
-            description={t('admin.assets.section.bindingDesc', '选择要绑定的智能合约项目')}
-            extra={
-              <Tag color="orange" style={{ margin: 0 }}>
-                {t('admin.assets.recommended', '推荐')}
-              </Tag>
-            }
-          >
-            <Form.Item
-              name="bind_projects"
-              label={t('admin.assets.form.bindProjects', 'Select Projects')}
-              tooltip={t('admin.assets.form.bindProjectsTooltip', '选择项目后，该项目下的可用合约将自动绑定')}
-            >
-              <Select
-                mode="multiple"
-                placeholder={t('admin.assets.form.selectProjects', 'Select projects (multiple)')}
-                loading={isLoadingProjects}
-                options={availableProjects.map((p) => ({
-                  value: p.project,
-                  label: `${p.project} (${p.contract_count} ${t('admin.assets.contracts', 'contracts')})`,
-                }))}
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-
-            {/* 合约预览 */}
-            {selectedContracts.length > 0 && (
-              <div
-                style={{
-                  padding: 16,
-                  background: 'rgba(0, 212, 170, 0.05)',
-                  border: '1px solid rgba(0, 212, 170, 0.15)',
-                  borderRadius: 8,
-                }}
-              >
-                <Text strong style={{ fontSize: 13, display: 'block', marginBottom: 12 }}>
-                  {t('admin.assets.contractsToBindTitle', '将要绑定的合约')} ({selectedContracts.length})
-                </Text>
-                <Space wrap size={[8, 8]}>
-                  {selectedContracts.map((c) => (
-                    <Tooltip key={`${c.contract_name}-${c.contract_address}`} title={c.contract_address}>
-                      <Tag
-                        color={c.contract_type === 'common' ? 'blue' : c.contract_type === 'mock' ? 'cyan' : 'green'}
-                      >
-                        {c.contract_name}
-                      </Tag>
-                    </Tooltip>
-                  ))}
-                </Space>
-              </div>
-            )}
-
-            {selectedProjects.length === 0 && (
-              <Alert
-                message={t('admin.assets.noProjectWarning', '未选择项目，资产创建后将不会绑定任何合约')}
-                description={t(
-                  'admin.assets.noProjectWarningDesc',
-                  '用户端仅展示已绑定合约的资产，您可以在创建后通过合约绑定功能进行绑定'
-                )}
-                type="warning"
-                showIcon
-              />
-            )}
-          </FormSection>
+          <ProjectBindingSection
+            availableProjects={availableProjects}
+            isLoadingProjects={isLoadingProjects}
+            selectedProjects={selectedProjects}
+            selectedContracts={selectedContracts}
+          />
         </Form>
       </div>
 
       {/* 底部按钮 - 固定 */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: '16px 28px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: 12,
-        }}
-      >
+      <div className="shrink-0 px-7 py-4 border-t border-white/[0.06] flex justify-end gap-3">
         <Button onClick={handleClose}>{t('common.cancel', 'Cancel')}</Button>
         <Button type="primary" onClick={() => form.submit()} loading={isSubmitting}>
           {t('admin.assets.createButton', 'Create Asset')}

@@ -31,12 +31,25 @@ interface V6ChartProps {
   label2?: string;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface ChartTooltipPayload {
+  color: string;
+  name: string;
+  value: number;
+  dataKey: string;
+}
+
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: ChartTooltipPayload[];
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="premium-chart-tooltip">
         <p className="text-sm font-semibold text-white mb-2">{label}</p>
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry: ChartTooltipPayload, index: number) => (
           <div key={index} className="flex items-center justify-between gap-6 mb-1">
             <div className="flex items-center gap-2">
               <div

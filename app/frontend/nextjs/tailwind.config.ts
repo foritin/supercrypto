@@ -38,6 +38,15 @@ const config: Config = {
         'web3-blue': '#764ba2',
         'web3-success': '#00d4aa',
         'web3-warning': '#ffc107',
+        // 语义化状态颜色 (统一硬编码值)
+        'status': {
+          'success': '#52c41a',      // 成功/上涨 (原 #52c41a)
+          'warning': '#faad14',      // 警告 (原 #faad14)
+          'error': '#ff4d4f',        // 错误/下跌 (原 #ff4d4f)
+          'info': '#1890ff',         // 信息 (原 #1890ff)
+          'primary': '#00D4AA',      // 主色调 - 品牌绿 (原 #00D4AA)
+          'gold': '#ffd700',         // 金色强调
+        },
         // 玻璃态背景
         glass: {
           bg: 'rgba(15, 23, 42, 0.6)',
