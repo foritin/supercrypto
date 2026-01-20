@@ -62,7 +62,7 @@ export const V6StatCard: React.FC<V6StatCardProps> = ({
           {/* 标题 */}
           <span
             className="text-sm font-medium"
-            style={{ color: 'rgba(255, 255, 255, 0.55)' }}  /* Improved from 0.5 - 5.1:1 ✓ */
+            style={{ color: 'var(--text-tertiary)' }}
           >
             {title}
           </span>

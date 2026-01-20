@@ -472,18 +472,18 @@ export function ContractTableList({
       <style>{`
         /* 三状态行样式 - 绿色：已部署且已绑定 */
         .row-deployed {
-          background: rgba(34, 197, 94, 0.03) !important;
-          border-left: 3px solid #22C55E;
+          background: rgba(82, 196, 26, 0.03) !important;
+          border-left: 3px solid var(--color-success);
         }
         /* 黄色：已部署但需绑定 */
         .row-needs-binding {
-          background: rgba(234, 179, 8, 0.05) !important;
-          border-left: 3px solid #EAB308;
+          background: rgba(250, 173, 20, 0.05) !important;
+          border-left: 3px solid var(--color-warning);
         }
         /* 红色：未部署 */
         .row-not-deployed {
-          background: rgba(239, 68, 68, 0.05) !important;
-          border-left: 3px solid #EF4444;
+          background: rgba(255, 77, 79, 0.05) !important;
+          border-left: 3px solid var(--color-error);
         }
 
         /* 表格行 hover 增强 */

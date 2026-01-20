@@ -80,6 +80,15 @@ export function AntdProvider({ children }: { children: ReactNode }) {
       >
         {children}
       </App>
+      {/* 全局样式 */}
+      <style jsx global>{`
+        .ant-message {
+          z-index: 1100 !important;
+        }
+        .ant-notification {
+          z-index: 1100 !important;
+        }
+      `}</style>
     </ConfigProvider>
   );
 }

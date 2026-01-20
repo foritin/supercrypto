@@ -10,19 +10,18 @@ Story 10.4: 部署顺序计算（拓扑排序）
 - 循环依赖检测
 """
 
-from collections import deque
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
 from falib.utils.log import get_logger
+from src.models.project_registry import ContractDeploymentStatus
 
-from src.models.project_registry import ContractDeploymentStatus, ProjectContractConfig
 from src.shared.schemas.enums import ContractRegistryStatus
 
 from .config_loader import get_config_loader
 from .schemas import ProjectConfigSchema
 
-logger = get_logger("project_registry.deployment_order")
+logger = get_logger("contract.deployment")
 
 
 @dataclass
@@ -79,7 +78,7 @@ class DeploymentPlan:
 class DeploymentOrderCalculator:
     """
     部署顺序计算器
-    
+
     使用 Kahn 算法（BFS 拓扑排序）计算合约部署顺序
     """
 
@@ -145,7 +144,9 @@ class DeploymentOrderCalculator:
 
     def _build_dependency_graph(
         self, config: ProjectConfigSchema
-    ) -> Tuple[Dict[str, Set[str]], Dict[str, int], Dict[str, int], Dict[str, List[str]]]:
+    ) -> Tuple[
+        Dict[str, Set[str]], Dict[str, int], Dict[str, int], Dict[str, List[str]]
+    ]:
         """
         构建依赖图
 
@@ -285,9 +286,7 @@ class DeploymentOrderCalculator:
 
     # ===== 便捷方法 =====
 
-    async def get_next_deployable(
-        self, project_name: str, network: str
-    ) -> List[str]:
+    async def get_next_deployable(self, project_name: str, network: str) -> List[str]:
         """获取下一批可部署的合约"""
         plan = await self.calculate_order(
             project_name, exclude_deployed=True, network=network
@@ -307,9 +306,7 @@ class DeploymentOrderCalculator:
             for phase, steps in plan.phases.items()
         }
 
-    def calculate_order_from_config(
-        self, config: ProjectConfigSchema
-    ) -> List[str]:
+    def calculate_order_from_config(self, config: ProjectConfigSchema) -> List[str]:
         """
         从配置直接计算顺序（不查数据库）
 

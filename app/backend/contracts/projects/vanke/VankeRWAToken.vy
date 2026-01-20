@@ -102,8 +102,8 @@ owner: public(address)
 minters: public(HashMap[address, bool])
 burners: public(HashMap[address, bool])
 
-# AddressProvider (immutable) - 纯 Provider 模式
-ADDRESS_PROVIDER: public(immutable(address))
+# AddressProvider - 纯 Provider 模式（部署后通过 Admin 设置）
+ADDRESS_PROVIDER: public(address)
 
 # STO 特定变量
 transfer_agent: public(address)      # 转让代理（监管角色）
@@ -190,12 +190,11 @@ def _trackAllowance(_owner: address, _spender: address):
 
 
 @deploy
-def __init__(_address_provider: address):
+def __init__():
     """
-    @notice 初始化RWA Security Token (纯 Provider 模式)
-    @param _address_provider AddressProvider 合约地址
+    @notice 初始化RWA Security Token
+    @dev 部署后需要通过 setAddressProvider 设置 Provider 地址
     """
-    ADDRESS_PROVIDER = _address_provider
     self.name = "RWA Security Token"
     self.symbol = "RWASTO"
     self.decimals = 18
@@ -203,6 +202,18 @@ def __init__(_address_provider: address):
     self.owner = msg.sender
     self.transfer_agent = msg.sender
     self.issuance_finished = False
+
+
+@external
+def setAddressProvider(_address_provider: address):
+    """
+    @notice 设置 AddressProvider 地址
+    @param _address_provider AddressProvider 合约地址
+    @dev 仅 owner 可调用，通常部署后通过 Admin UI 设置
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _address_provider != empty(address), "Invalid address"
+    self.ADDRESS_PROVIDER = _address_provider
 
 
 # ==================== Provider 查询 ====================
@@ -214,7 +225,7 @@ def _get_kyc_manager() -> address:
     @notice 从 AddressProvider 获取 KYC 管理合约地址
     @return KYC 管理合约地址
     """
-    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_kyc_manager()
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_kyc_manager()
 
 
 # ==================== 管理功能 ====================
@@ -676,7 +687,7 @@ def get_address_provider() -> address:
     @notice 获取 AddressProvider 地址
     @return AddressProvider 合约地址
     """
-    return ADDRESS_PROVIDER
+    return self.ADDRESS_PROVIDER
 
 
 # ==================== 依赖查询功能 ====================

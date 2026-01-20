@@ -5,13 +5,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Drawer, Tag, Button, Space, Typography, Alert, Modal } from 'antd';
+import { Drawer, Button, Space, Typography, Alert, Modal } from 'antd';
 import { SyncOutlined, DeleteOutlined, ExclamationCircleOutlined, CopyOutlined, CheckOutlined } from '@ant-design/icons';
 import { FileCode2, Clock, Layers, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GraphNode } from '@/services/contract-graph';
-
-const { Text } = Typography;
+import { getStatusBgColor, STATUS_COLORS_RAW } from '@/lib/theme-colors';
 
 interface ContractDetailPanelProps {
   open: boolean;
@@ -23,20 +22,20 @@ interface ContractDetailPanelProps {
   isUnregistering?: boolean;
 }
 
-// 项目颜色映射
+// 项目颜色映射 - 使用 CSS 变量
 const PROJECT_COLOR_MAP: Record<string, { bg: string; border: string; text: string }> = {
-  common: { bg: 'rgba(24, 144, 255, 0.1)', border: 'rgba(24, 144, 255, 0.3)', text: '#1890ff' },
-  mock: { bg: 'rgba(250, 173, 20, 0.1)', border: 'rgba(250, 173, 20, 0.3)', text: '#faad14' },
-  vanke: { bg: 'rgba(0, 212, 170, 0.1)', border: 'rgba(0, 212, 170, 0.3)', text: '#00D4AA' },
-  fake: { bg: 'rgba(0, 212, 170, 0.1)', border: 'rgba(0, 212, 170, 0.3)', text: '#00D4AA' },
+  common: { bg: 'rgba(24, 144, 255, 0.1)', border: 'rgba(24, 144, 255, 0.3)', text: 'var(--color-info)' },
+  mock: { bg: 'rgba(250, 173, 20, 0.1)', border: 'rgba(250, 173, 20, 0.3)', text: 'var(--color-warning)' },
+  vanke: { bg: 'rgba(0, 212, 170, 0.1)', border: 'rgba(0, 212, 170, 0.3)', text: 'var(--color-primary)' },
+  fake: { bg: 'rgba(0, 212, 170, 0.1)', border: 'rgba(0, 212, 170, 0.3)', text: 'var(--color-primary)' },
 };
 
-// 状态颜色映射
+// 状态颜色映射 - 使用 CSS 变量
 const STATUS_COLOR_MAP: Record<string, { bg: string; border: string; text: string }> = {
-  ready: { bg: 'rgba(82, 196, 26, 0.1)', border: 'rgba(82, 196, 26, 0.3)', text: '#52c41a' },
-  not_deployed: { bg: 'rgba(140, 140, 140, 0.1)', border: 'rgba(140, 140, 140, 0.3)', text: '#8c8c8c' },
-  not_registered: { bg: 'rgba(250, 173, 20, 0.1)', border: 'rgba(250, 173, 20, 0.3)', text: '#faad14' },
-  missing_deps: { bg: 'rgba(255, 77, 79, 0.1)', border: 'rgba(255, 77, 79, 0.3)', text: '#ff4d4f' },
+  ready: { bg: getStatusBgColor('success', 0.1), border: getStatusBgColor('success', 0.3), text: 'var(--color-success)' },
+  not_deployed: { bg: 'rgba(140, 140, 140, 0.1)', border: 'rgba(140, 140, 140, 0.3)', text: 'var(--text-muted)' },
+  not_registered: { bg: getStatusBgColor('warning', 0.1), border: getStatusBgColor('warning', 0.3), text: 'var(--color-warning)' },
+  missing_deps: { bg: getStatusBgColor('error', 0.1), border: getStatusBgColor('error', 0.3), text: 'var(--color-error)' },
 };
 
 export function ContractDetailPanel({
@@ -55,7 +54,6 @@ export function ContractDetailPanel({
   if (!node) return null;
 
   const hasIssue = node.status === 'not_registered' || node.status === 'missing_deps';
-  const isNotDeployed = node.status === 'not_deployed';
   const isReady = node.status === 'ready';
   const isAddressProvider = node.id === 'AddressProvider' || node.label === 'AddressProvider';
   const canUnregister = isReady && node.isRegistered && onUnregister && !isAddressProvider;

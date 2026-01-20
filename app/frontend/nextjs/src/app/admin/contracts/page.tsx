@@ -31,7 +31,7 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
-import { useAccount, useWalletClient, usePublicClient, useSwitchChain } from "wagmi";
+import { useAccount, useWalletClient, usePublicClient, useSwitchChain, useChainId } from "wagmi";
 import { parseAbi } from "viem";
 import { useCurrentUser } from "@/hooks";
 import { RequireAdmin } from "@/components/auth";
@@ -43,6 +43,7 @@ import {
   CONTRACT_SET_ABIS,
   ADDRESS_PROVIDER_ABI,
 } from "@/services/contract";
+import { transactionAuditService } from "@/services/transaction-audit";
 import { ContractDependencyGraph } from "@/components/admin/ContractDependencyGraph";
 import { ContractDependencyTree } from "@/components/admin/ContractDependencyTree";
 import { ContractDetailPanel } from "@/components/admin/ContractDetailPanel";
@@ -74,7 +75,8 @@ const STATUS_ICONS = {
 export default function AdminContractsPage() {
   const { t } = useTranslation();
   const { message } = App.useApp();
-  const { isConnected, chain } = useAccount();
+  const { isConnected, chain, address } = useAccount();
+  const chainId = useChainId();
   const { isAdmin } = useCurrentUser();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
@@ -218,7 +220,7 @@ export default function AdminContractsPage() {
     setFunction: string;
     newAddress: string;
   }) => {
-    if (!selectedContract || !walletClient || !publicClient) {
+    if (!selectedContract || !walletClient || !publicClient || !address) {
       message.error("Invalid state");
       return;
     }
@@ -240,7 +242,27 @@ export default function AdminContractsPage() {
         args: [values.newAddress as `0x${string}`],
       });
 
-      await publicClient.waitForTransactionReceipt({ hash });
+      // 记录 Admin 合约操作到审计日志
+      transactionAuditService.recordAdminContractCall({
+        txHash: hash,
+        chainId: chainId,
+        network: chain?.name || "local",
+        fromAddress: address,
+        contractAddress: callInfo.target_address,
+        contractName: selectedContract.name,
+        functionName: values.setFunction,
+        functionArgs: { newAddress: values.newAddress },
+        description: `[Admin] Set ${values.setFunction.replace("set", "")} to ${values.newAddress.slice(0, 10)}...`,
+      });
+
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      // 更新交易状态
+      transactionAuditService.updateStatus(hash, "confirmed", {
+        block_number: Number(receipt.blockNumber),
+        gas_used: Number(receipt.gasUsed),
+        effective_gas_price: receipt.effectiveGasPrice?.toString(),
+      });
 
       const depName =
         selectedDependency?.contract ||
@@ -398,13 +420,37 @@ export default function AdminContractsPage() {
         args: [prepareData.key_hash as `0x${string}`, prepareData.contract_address as `0x${string}`],
       });
 
+      // 记录 Admin 注册操作到审计日志
+      transactionAuditService.recordAdminContractCall({
+        txHash: hash,
+        chainId: chainId,
+        network: chain?.name || "local",
+        fromAddress: address!,
+        contractAddress: prepareData.provider_address,
+        contractName: "AddressProvider",
+        functionName: prepareData.function_name,
+        functionArgs: {
+          keyHash: prepareData.key_hash,
+          contractAddress: prepareData.contract_address,
+          contractName: contractName,
+        },
+        description: `[Admin] Register ${contractName} to AddressProvider`,
+      });
+
       message.destroy();
       message.loading(t("admin.contracts.register.confirming"), 0);
 
-      // 4. 等待交易确认
-      await publicClient.waitForTransactionReceipt({ hash });
+      // 5. 等待交易确认
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-      // 5. 更新数据库缓存
+      // 更新交易状态
+      transactionAuditService.updateStatus(hash, "confirmed", {
+        block_number: Number(receipt.blockNumber),
+        gas_used: Number(receipt.gasUsed),
+        effective_gas_price: receipt.effectiveGasPrice?.toString(),
+      });
+
+      // 6. 更新数据库缓存
       await contractAdminService.confirmRegister({
         contract_name: contractName,
         provider_key: prepareData.provider_key,
@@ -517,11 +563,35 @@ export default function AdminContractsPage() {
         args: [prepareData.key_hash as `0x${string}`, prepareData.contract_address as `0x${string}`],
       });
 
+      // 记录 Admin 解除注册操作到审计日志
+      transactionAuditService.recordAdminContractCall({
+        txHash: hash,
+        chainId: chainId,
+        network: chain?.name || "local",
+        fromAddress: address!,
+        contractAddress: prepareData.provider_address,
+        contractName: "AddressProvider",
+        functionName: prepareData.function_name,
+        functionArgs: {
+          keyHash: prepareData.key_hash,
+          contractAddress: prepareData.contract_address,
+          contractName: contractName,
+        },
+        description: `[Admin] Unregister ${contractName} from AddressProvider`,
+      });
+
       message.destroy();
       message.loading(t("admin.contracts.unregister.confirming", "确认交易中..."), 0);
 
       // 5. 等待交易确认
-      await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      // 更新交易状态
+      transactionAuditService.updateStatus(hash, "confirmed", {
+        block_number: Number(receipt.blockNumber),
+        gas_used: Number(receipt.gasUsed),
+        effective_gas_price: receipt.effectiveGasPrice?.toString(),
+      });
 
       // 6. 更新数据库缓存
       await contractAdminService.confirmUnregister({

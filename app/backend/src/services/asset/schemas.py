@@ -129,6 +129,14 @@ class AssetDetailResponse(BaseModel):
     is_available: bool
     environment: str
 
+    # 可见性状态（Admin API）
+    is_visible: Optional[bool] = Field(
+        None, description="是否对用户可见（仅 Admin API 返回）"
+    )
+    visibility_issues: Optional[List[str]] = Field(
+        None, description="不可见原因列表（仅 Admin API 返回）"
+    )
+
     # 时间
     created_at: datetime
     updated_at: datetime
@@ -201,14 +209,16 @@ class BindProjectRequest(BaseModel):
 class UnbindContractsRequest(BaseModel):
     """解绑合约请求"""
 
-    contract_names: Optional[List[str]] = Field(None, description="要解绑的合约名称列表")
+    contract_names: Optional[List[str]] = Field(
+        None, description="要解绑的合约名称列表"
+    )
     project: Optional[str] = Field(None, description="要解绑的项目标识")
     unbind_all: bool = Field(default=False, description="是否解绑所有合约")
 
 
 class ContractBindingStatus(BaseModel):
     """合约绑定状态"""
-    
+
     contract_name: str
     contract_address: str
     contract_type: str  # common, mock, exclusive

@@ -371,6 +371,25 @@ export interface ConfirmUnregisterResponse {
   message: string;
 }
 
+// 合约验证结果
+export interface ContractValidationResult {
+  address: string;
+  format_valid: boolean;
+  exists_on_chain: boolean;
+  message: string;
+}
+
+// 合约验证响应
+export interface ContractValidationResponse {
+  results: Record<string, ContractValidationResult>;
+  all_valid: boolean;
+  rwa_binding?: {
+    is_bound: boolean;
+    message: string;
+    bound_address: string | null;
+  };
+}
+
 export const contractAdminService = {
   /**
    * 获取合约状态（管理员）
@@ -523,6 +542,28 @@ export const contractAdminService = {
       request
     );
     return response.object_data as ConfirmUnregisterResponse;
+  },
+
+  /**
+   * 验证合约地址
+   * @param addresses 要验证的地址列表
+   * @param checkRwaBinding 是否检查 RWA Token 绑定
+   * @param rwaTokenName RWA Token 名称
+   */
+  async validateContracts(
+    addresses: string[],
+    checkRwaBinding = false,
+    rwaTokenName?: string
+  ): Promise<ContractValidationResponse> {
+    const response = await api.post<API.ResponseData<ContractValidationResponse>>(
+      ADMIN_PATHS.CONTRACT_VALIDATE,
+      {
+        addresses,
+        check_rwa_binding: checkRwaBinding,
+        rwa_token_name: rwaTokenName,
+      }
+    );
+    return response.object_data as ContractValidationResponse;
   },
 };
 

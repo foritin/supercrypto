@@ -153,25 +153,25 @@ export function Header() {
         gridTemplateColumns: "1fr auto 1fr",  // 三等分布局，菜单精确居中
         alignItems: "center",
         padding: `var(--header-padding-y) var(--header-padding-x)`,
-        // 滚动触发的背景变换
+        // 滚动触发的背景变换 - 使用纯色背景，无 backdrop-filter
         background: scrolled ? "var(--header-background-scrolled)" : "var(--header-background)",
-        backdropFilter: scrolled ? "var(--header-backdrop-scrolled)" : "none",
         position: "fixed",
         top: 0,
         left: 0,
-        right: 0,
-        zIndex: 2147483647,  /* 最大 32 位整数，确保在所有浏览器扩展之上显示 */
+        right: 0,  // 使用 left + right 而非 width，配合 scrollbar-gutter 避免抖动
+        zIndex: 1000,  /* Header 层级，message/notification 需要更高 */
         height: "var(--header-height)",
         borderBottom: scrolled ? "var(--header-border-scrolled)" : "none",
         boxShadow: scrolled ? "var(--header-shadow-scrolled)" : "none",
         transition: "var(--menu-transition)",
+        willChange: "background, box-shadow",  // 提示浏览器优化
       }}
     >
       {/* 左侧：Logo - 左对齐 */}
       <div style={{ display: "flex", alignItems: "center", justifySelf: "start" }}>
         <Link
           href="/"
-          aria-label={`${isHydrated ? t("header.title") : "ApprovePlatform"} - 首页`}
+          aria-label={`${isHydrated ? t("header.title") : "SlimCrypto"} - 首页`}
           style={{
             textDecoration: "none",
             display: "flex",
@@ -208,7 +208,7 @@ export function Header() {
               fontSize: "var(--logo-title-size)",
             }}
           >
-            {isHydrated ? t("header.title") : "ApprovePlatform"}
+            {isHydrated ? t("header.title") : "SlimCrypto"}
           </Title>
         </Link>
       </div>
@@ -269,7 +269,7 @@ export function Header() {
                 <path d="M4.5 16.5C3 15 2 13 2 10C2 5.5 5.5 2 10 2C13.5 2 16.5 3.5 18.5 6L13 10L15 12L19.5 8C20.5 10 21 12.5 21 15C21 19 18 22 14 22L11.5 19L13 17.5L4.5 16.5Z" stroke="#0A0F0D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <span>{isHydrated ? t("header.title") : "ApprovePlatform"}</span>
+            <span>{isHydrated ? t("header.title") : "SlimCrypto"}</span>
           </div>
         }
         placement="right"

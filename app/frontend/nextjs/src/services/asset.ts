@@ -10,7 +10,8 @@ import { PUBLIC_PATHS, ADMIN_PATHS } from '@/constants/api-paths'
 
 export type AssetStatus = 'active' | 'paused' | 'sold_out' | 'closed'
 export type AssetType = 'real_estate' | 'bond' | 'commodity' | 'equity' | 'other'
-export type MediaType = 'image' | 'cover' | 'floor_plan' | 'evaluation' | 'document' | 'video'
+// MVP 媒体类型 - 与后端 MediaType 枚举同步
+export type MediaType = 'cover' | 'gallery' | 'valuation' | 'legal' | 'financial' | 'image' | 'floor_plan' | 'evaluation' | 'document' | 'video'
 
 export interface AssetMediaItem {
   id: number
@@ -106,6 +107,15 @@ export interface PriceHistoryItem {
   price: number
   source: string | null
   created_at: string
+}
+
+export interface MediaStats {
+  total_count: number
+  by_type: Record<MediaType, number>
+  total_size_bytes: number
+  has_cover: boolean
+  has_valuation: boolean
+  has_legal: boolean
 }
 export interface AssetListQuery {
   status?: AssetStatus
@@ -244,6 +254,91 @@ export const assetService = {
         data: options,
       })
     ).object_data as AssetDetail
+  },
+
+  // ============ 媒体管理接口 ============
+
+  /**
+   * 获取资产媒体列表 (Admin)
+   */
+  async getAssetMediaAdmin(assetId: number, mediaType?: MediaType): Promise<AssetMediaItem[]> {
+    const params = mediaType ? `?media_type=${mediaType}` : ''
+    return (
+      (await api.get<API.ResponseData<AssetMediaItem>>(ADMIN_PATHS.ASSET_MEDIA(assetId) + params))
+        .list_data || []
+    )
+  },
+
+  /**
+   * 获取媒体统计信息
+   */
+  async getMediaStats(assetId: number): Promise<MediaStats> {
+    return (
+      await api.get<API.ResponseData<MediaStats>>(ADMIN_PATHS.ASSET_MEDIA_STATS(assetId))
+    ).object_data as MediaStats
+  },
+
+  /**
+   * 上传媒体文件
+   */
+  async uploadMedia(
+    assetId: number,
+    file: File,
+    mediaType: MediaType,
+    title?: string,
+    description?: string
+  ): Promise<AssetMediaItem> {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('media_type', mediaType)
+    if (title) formData.append('title', title)
+    if (description) formData.append('description', description)
+
+    return (
+      await api.post<API.ResponseData<AssetMediaItem>>(
+        ADMIN_PATHS.ASSET_MEDIA(assetId),
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      )
+    ).object_data as AssetMediaItem
+  },
+
+  /**
+   * 删除媒体文件
+   */
+  async deleteMedia(assetId: number, mediaId: number): Promise<void> {
+    await api.delete(ADMIN_PATHS.ASSET_MEDIA_DETAIL(assetId, mediaId))
+  },
+
+  /**
+   * 更新媒体信息
+   */
+  async updateMedia(
+    assetId: number,
+    mediaId: number,
+    data: { title?: string; description?: string; is_primary?: boolean }
+  ): Promise<AssetMediaItem> {
+    return (
+      await api.patch<API.ResponseData<AssetMediaItem>>(
+        ADMIN_PATHS.ASSET_MEDIA_DETAIL(assetId, mediaId),
+        data
+      )
+    ).object_data as AssetMediaItem
+  },
+
+  /**
+   * 重新排序媒体
+   */
+  async reorderMedia(assetId: number, mediaIds: number[]): Promise<AssetMediaItem[]> {
+    return (
+      await api.put<API.ResponseData<AssetMediaItem>>(ADMIN_PATHS.ASSET_MEDIA_REORDER(assetId), {
+        media_ids: mediaIds,
+      })
+    ).list_data as AssetMediaItem[]
   },
 }
 

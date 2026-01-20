@@ -16,12 +16,9 @@ Usage:
     # 部署到远程 Hardhat 节点 (YOUR_RPC_HOST:8545)
     ape run deploy_vanke --network ethereum:hardhat:node
 
-前置条件:
-    - AddressProvider 已部署 (ape run deploy_common --network ethereum:hardhat:node --only provider)
-
 注意:
     - 部署后需要通过 Admin UI 手动注册到 Provider
-    - 部署后需要通过 Admin UI 绑定合约依赖
+    - 部署后需要通过 Admin UI 设置 AddressProvider (setAddressProvider)
 """
 
 from deploy.executor import (
@@ -53,19 +50,6 @@ def main():
 
     deployer = get_deployer(network)
     deployed = get_global_and_project_deployed(chain_id, net_enum, project_config.name)
-
-    # 检查 AddressProvider
-    provider_contract = get_deployed_contract(
-        "AddressProvider", chain_id, net_enum, "common"
-    )
-    if provider_contract:
-        deployed["AddressProvider"] = provider_contract.address
-        print(f"✅ AddressProvider: {provider_contract.address}")
-    else:
-        print(
-            "❌ AddressProvider 未部署，请先运行: ape run deploy_common --network ethereum:hardhat:node"
-        )
-        return
 
     # 部署项目合约
     for config in project_config.contracts:
@@ -108,9 +92,7 @@ def main():
 
     print("\n📋 后续操作:")
     print("   1. 通过 Admin UI 将合约注册到 Provider")
-    print("   2. 通过 Admin UI 绑定合约依赖关系")
-
-    print("=" * 60)
+    print("   2. 通过 Admin UI 调用 setAddressProvider 设置 Provider 地址")
 
     print("=" * 60)
 

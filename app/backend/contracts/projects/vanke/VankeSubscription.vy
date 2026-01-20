@@ -85,8 +85,8 @@ struct SubscriptionInfo:
 owner: public(address)
 paused: public(bool)         # 暂停标志
 
-# AddressProvider (immutable) - 纯 Provider 模式
-ADDRESS_PROVIDER: public(immutable(address))
+# AddressProvider - 纯 Provider 模式（部署后通过 Admin 设置）
+ADDRESS_PROVIDER: public(address)
 
 # STO 合规参数
 min_investment: public(uint256)      # 最小投资额
@@ -118,12 +118,11 @@ SECONDS_PER_YEAR: constant(uint256) = 365 * 24 * 3600
 
 
 @deploy
-def __init__(_address_provider: address):
+def __init__():
     """
-    @notice 初始化认购合约（纯 Provider 模式）
-    @param _address_provider AddressProvider 合约地址
+    @notice 初始化认购合约
+    @dev 部署后需要通过 setAddressProvider 设置 Provider 地址
     """
-    ADDRESS_PROVIDER = _address_provider
     self.owner = msg.sender
     self.paused = False
 
@@ -139,27 +138,39 @@ def __init__(_address_provider: address):
     self.lock_period_apy[LOCK_12_MONTHS] = 1500   # 15%
 
 
+@external
+def setAddressProvider(_address_provider: address):
+    """
+    @notice 设置 AddressProvider 地址
+    @param _address_provider AddressProvider 合约地址
+    @dev 仅 owner 可调用，通常部署后通过 Admin UI 设置
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _address_provider != empty(address), "Invalid address"
+    self.ADDRESS_PROVIDER = _address_provider
+
+
 # ==================== Provider 查询 ====================
 
 @view
 @internal
 def _get_usdt() -> address:
     """@notice 从 AddressProvider 获取 USDT 地址"""
-    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_usdt()
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_usdt()
 
 
 @view
 @internal
 def _get_kyc_manager() -> address:
     """@notice 从 AddressProvider 获取 KYC 管理合约地址"""
-    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_kyc_manager()
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_kyc_manager()
 
 
 @view
 @internal
 def _get_rwa_token() -> address:
     """@notice 从 AddressProvider 获取 Vanke RWA Token 地址"""
-    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_vanke_rwa_token()
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_rwa_token()
 
 
 @external
@@ -487,7 +498,7 @@ def get_address_provider() -> address:
     @notice 获取 AddressProvider 地址
     @return AddressProvider 合约地址
     """
-    return ADDRESS_PROVIDER
+    return self.ADDRESS_PROVIDER
 
 
 # ==================== 合约迁移功能 ====================

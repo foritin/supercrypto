@@ -28,3 +28,8 @@ package-lock.json
 .mcp.json
 bmad-custom-src
 bmad-custom-modules-src
+
+.kiro
+.github
+_bmad
+.shared

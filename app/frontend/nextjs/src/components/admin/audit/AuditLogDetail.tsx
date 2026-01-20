@@ -5,7 +5,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Drawer, Tag, Typography, Space } from 'antd';
+import { Drawer, Tag, Typography } from 'antd';
 import { 
   CheckCircleOutlined, 
   CloseCircleOutlined, 
@@ -28,6 +28,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { AuditLog, AuditStatus } from '@/services/audit';
 import { AddressDisplay, TxHashLink } from './web3';
+import { SectionCard, InfoRow } from '@/components/ui';
+import { getStatusBgColor } from '@/lib/theme-colors';
 
 const { Text } = Typography;
 
@@ -37,7 +39,7 @@ interface AuditLogDetailProps {
   log: AuditLog | null;
 }
 
-// 状态配置
+// 状态配置 - 使用 CSS 变量
 const STATUS_CONFIG: Record<AuditStatus, { 
   color: string; 
   bg: string;
@@ -46,30 +48,30 @@ const STATUS_CONFIG: Record<AuditStatus, {
   text: string;
 }> = {
   success: { 
-    color: '#52c41a', 
-    bg: 'rgba(82, 196, 26, 0.1)',
-    border: 'rgba(82, 196, 26, 0.3)',
+    color: 'var(--color-success)', 
+    bg: getStatusBgColor('success', 0.1),
+    border: getStatusBgColor('success', 0.3),
     icon: <CheckCircleOutlined />, 
     text: '成功' 
   },
   failed: { 
-    color: '#ff4d4f', 
-    bg: 'rgba(255, 77, 79, 0.1)',
-    border: 'rgba(255, 77, 79, 0.3)',
+    color: 'var(--color-error)', 
+    bg: getStatusBgColor('error', 0.1),
+    border: getStatusBgColor('error', 0.3),
     icon: <CloseCircleOutlined />, 
     text: '失败' 
   },
   pending: { 
-    color: '#1890ff', 
-    bg: 'rgba(24, 144, 255, 0.1)',
-    border: 'rgba(24, 144, 255, 0.3)',
+    color: 'var(--color-info)', 
+    bg: getStatusBgColor('info', 0.1),
+    border: getStatusBgColor('info', 0.3),
     icon: <ClockCircleOutlined />, 
     text: '待处理' 
   },
   reverted: { 
-    color: '#faad14', 
-    bg: 'rgba(250, 173, 20, 0.1)',
-    border: 'rgba(250, 173, 20, 0.3)',
+    color: 'var(--color-warning)', 
+    bg: getStatusBgColor('warning', 0.1),
+    border: getStatusBgColor('warning', 0.3),
     icon: <CloseCircleOutlined />, 
     text: '已回滚' 
   },
@@ -475,86 +477,3 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
     </Drawer>
   );
 };
-
-// 区块卡片组件
-function SectionCard({ 
-  title, 
-  icon, 
-  children,
-  variant = 'default',
-}: { 
-  title: string; 
-  icon: React.ReactNode; 
-  children: React.ReactNode;
-  variant?: 'default' | 'error';
-}) {
-  const borderColor = variant === 'error' ? 'rgba(255, 77, 79, 0.2)' : 'rgba(255, 255, 255, 0.06)';
-  const headerBg = variant === 'error' ? 'rgba(255, 77, 79, 0.05)' : 'rgba(255, 255, 255, 0.02)';
-  
-  return (
-    <div style={{
-      background: 'rgba(255, 255, 255, 0.02)',
-      border: `1px solid ${borderColor}`,
-      borderRadius: 12,
-      overflow: 'hidden',
-      marginBottom: 16,
-    }}>
-      <div style={{
-        padding: '12px 16px',
-        background: headerBg,
-        borderBottom: `1px solid ${borderColor}`,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-      }}>
-        <span style={{ color: variant === 'error' ? '#ff4d4f' : '#00D4AA' }}>{icon}</span>
-        <span style={{ 
-          fontSize: 13, 
-          fontWeight: 600, 
-          color: variant === 'error' ? '#ff4d4f' : 'rgba(255, 255, 255, 0.85)',
-        }}>
-          {title}
-        </span>
-      </div>
-      <div style={{ padding: 16 }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// 信息行组件
-function InfoRow({ 
-  label, 
-  children 
-}: { 
-  label: string; 
-  children: React.ReactNode;
-}) {
-  return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      padding: '8px 0',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
-    }}>
-      <span style={{ 
-        fontSize: 13, 
-        color: 'rgba(255, 255, 255, 0.45)',
-        flexShrink: 0,
-        marginRight: 16,
-      }}>
-        {label}
-      </span>
-      <div style={{ 
-        fontSize: 13, 
-        color: 'rgba(255, 255, 255, 0.85)',
-        textAlign: 'right',
-        wordBreak: 'break-all',
-      }}>
-        {children}
-      </div>
-    </div>
-  );
-}

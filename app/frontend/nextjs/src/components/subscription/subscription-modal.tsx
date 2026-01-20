@@ -266,7 +266,7 @@ export function SubscriptionModal({ open, asset, onClose, onSuccess }: Subscript
     >
       <Flex vertical gap={24} style={{ width: '100%' }}>
         {/* Asset Info */}
-        <Card size="small" style={{ background: '#fafafa' }}>
+        <Card size="small" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }}>
           <Space>
             <Text strong>{asset.name}</Text>
             <Text type="secondary">({asset.symbol})</Text>

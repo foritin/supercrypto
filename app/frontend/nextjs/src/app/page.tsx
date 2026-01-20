@@ -31,7 +31,7 @@ import { useTypewriter } from "@/hooks/useTypewriter";
 import { RippleButton } from "@/components/ui/RippleButton";
 import { YieldCalculator } from "@/components/calculator/YieldCalculator";
 import { LogoWall } from "@/components/logo-wall/LogoWall";
-import { PartnersMarquee, INSTITUTION_PARTNERS, BLOCKCHAIN_PARTNERS } from "@/components/partners";
+import { PartnersMarquee, INSTITUTION_PARTNERS, ServiceProviders } from "@/components/partners";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -630,8 +630,8 @@ export default function HomePage() {
       {/* Phase 11: Yield Calculator Section */}
       <section
         ref={calculatorSection.ref as React.RefObject<HTMLDivElement>}
-        className={`scroll-reveal ${calculatorSection.isVisible ? 'is-visible' : ''}`}
-        style={{ padding: "100px 24px", background: "rgba(0, 212, 170, 0.02)" }}
+        className={`hex-pattern-bg scroll-reveal ${calculatorSection.isVisible ? 'is-visible' : ''}`}
+        style={{ padding: "100px 24px" }}
       >
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }} className="fade-in-stagger">
@@ -672,16 +672,11 @@ export default function HomePage() {
       {/* Phase 11: Ecosystem / Logo Wall Section - 区块链生态 */}
       <section
         ref={ecosystemSection.ref as React.RefObject<HTMLDivElement>}
-        className={`scroll-reveal ${ecosystemSection.isVisible ? 'is-visible' : ''}`}
+        className={`hex-pattern-bg scroll-reveal ${ecosystemSection.isVisible ? 'is-visible' : ''}`}
       >
-        <PartnersMarquee
+        <ServiceProviders
           title={t("home.partners.blockchains.title")}
           subtitle={t("home.partners.blockchains.subtitle")}
-          partners={BLOCKCHAIN_PARTNERS}
-          speed={25}
-          direction="right"
-          grayscale={true}
-          pauseOnHover={true}
         />
       </section>
 

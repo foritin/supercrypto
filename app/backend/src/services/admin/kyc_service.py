@@ -17,7 +17,7 @@ from src.models.kyc import UserKyc
 from src.shared.schemas.enums import KycStatus, OnChainSyncStatus
 from src.shared.services.minio_service import get_minio_service
 
-logger = get_logger(__name__)
+logger = get_logger("kyc.admin")
 
 
 class AdminKycService:

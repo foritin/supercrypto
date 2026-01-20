@@ -58,10 +58,10 @@ export function ContractFilterBar({
       style={{
         padding: 16,
         marginBottom: 16,
-        background: 'rgba(15, 15, 26, 0.6)',
+        background: 'var(--glass-bg)',
         borderRadius: 12,
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(8px)',
+        border: '1px solid var(--glass-border)',
+        backdropFilter: 'var(--glass-blur)',
       }}
     >
       <Space size="middle" wrap style={{ width: '100%' }}>

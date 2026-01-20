@@ -12,7 +12,7 @@ from typing import Callable, Optional, TypeVar
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger("system.minio")
 
 T = TypeVar("T")
 

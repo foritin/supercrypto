@@ -90,6 +90,12 @@ export const ADMIN_PATHS = {
   ASSET_PROJECTS: '/admin/assets/projects/available',
   ASSET_BIND_PROJECT: (id: number) => `/admin/assets/${id}/bind-project`,
   ASSET_UNBIND: (id: number) => `/admin/assets/${id}/unbind`,
+  
+  // 资产媒体管理
+  ASSET_MEDIA: (id: number) => `/admin/assets/${id}/media`,
+  ASSET_MEDIA_STATS: (id: number) => `/admin/assets/${id}/media/stats`,
+  ASSET_MEDIA_DETAIL: (assetId: number, mediaId: number) => `/admin/assets/${assetId}/media/${mediaId}`,
+  ASSET_MEDIA_REORDER: (id: number) => `/admin/assets/${id}/media/reorder`,
 
   // 合约管理
   CONTRACT_STATUS: '/admin/contracts/status',
@@ -103,6 +109,7 @@ export const ADMIN_PATHS = {
   CONTRACT_REGISTER_CONFIRM: '/admin/contracts/register/confirm',
   CONTRACT_UNREGISTER_PREPARE: '/admin/contracts/unregister/prepare',
   CONTRACT_UNREGISTER_CONFIRM: '/admin/contracts/unregister/confirm',
+  CONTRACT_VALIDATE: '/admin/contracts/validate',
 
   // 平台统计
   STATS: '/admin/stats',

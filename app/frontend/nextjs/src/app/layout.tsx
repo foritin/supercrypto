@@ -13,7 +13,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ApprovePlatform - RWA Investment Platform",
+  title: "SlimCrypto - RWA Investment Platform",
   description:
     "Tokenized Real World Asset investment platform with transparent returns",
   keywords: ["RWA", "DeFi", "Crypto", "Investment", "Tokenization"],

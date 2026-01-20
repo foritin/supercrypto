@@ -8,25 +8,20 @@ Story 10.6: 合约绑定状态同步
 路由前缀: /api/v1/dev/projects
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from falib.utils.log import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.services.project_registry import (
-    BindingSyncService,
     ConfigLoadError,
     ContractReadinessInfo,
-    DeploymentOrderCalculator,
-    ProjectConfigLoader,
-    ProjectReadinessChecker,
-    ProjectStatusReport,
     get_binding_sync_service,
     get_config_loader,
     get_deployment_calculator,
     get_readiness_checker,
 )
-from src.shared.schemas.enums import ContractRegistryStatus, DependencyType
+from src.shared.schemas.enums import ContractRegistryStatus
 
 from .schemas.project_registry import (
     BindingInfo,
@@ -52,7 +47,7 @@ from .schemas.project_registry import (
     UpdateDeploymentRequest,
 )
 
-logger = get_logger("api.project_registry")
+logger = get_logger("contract.api")
 
 router = APIRouter(prefix="/projects", tags=["项目注册表"])
 

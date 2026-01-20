@@ -15,7 +15,7 @@ from falib.utils.log import get_logger
 if TYPE_CHECKING:
     from src.models.kyc import UserKyc
 
-logger = get_logger(__name__)
+logger = get_logger("kyc.strategy")
 
 
 class KycReviewStrategy(ABC):

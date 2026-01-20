@@ -15,7 +15,7 @@ import { InstallMetaMaskModal } from '@/components/web3/install-metamask-modal'
 const { Text } = Typography
 
 // 签名登录的固定消息
-const SIGN_MESSAGE = 'ApprovePlatformAccess'
+const SIGN_MESSAGE = 'SlimCryptoAccess'
 
 // Extend Window interface for ethereum
 declare global {
@@ -123,12 +123,12 @@ export function WalletConnect() {
       const err = error as { code?: number; message?: string }
       if (err.code === 4001 || err.message?.includes('rejected')) {
         message.warning(t('wallet.error.signRejected'))
-        // 用户拒绝签名，断开钱包连接
-        disconnect()
       } else {
         message.error(t('wallet.error.loginFailed'))
         console.error('Login failed:', error)
       }
+      // 登录失败时断开钱包连接
+      disconnect()
       setIsAuthenticated(false)
       setCurrentUser(null)
     } finally {

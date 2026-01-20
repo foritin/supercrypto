@@ -14,13 +14,13 @@ from typing import Dict, List, Optional, Set
 import yaml
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
+from src.models.project_registry import ProjectContractConfig
 
-from src.models.project_registry import ContractDeploymentStatus, ProjectContractConfig
-from src.shared.schemas.enums import ContractRegistryStatus, DependencyType
+from src.shared.schemas.enums import DependencyType
 
 from .schemas import ProjectConfigSchema
 
-logger = get_logger("project_registry.config_loader")
+logger = get_logger("contract.registry")
 
 
 class ConfigLoadError(Exception):
@@ -38,14 +38,16 @@ class CyclicDependencyError(ConfigLoadError):
 class ProjectConfigLoader:
     """
     项目配置加载器
-    
+
     支持两种配置来源:
     1. SETTINGS.project_registry.projects (config.{env}.yaml)
     2. config/projects/{project_name}.yaml (回退)
     """
 
     # 回退配置文件目录
-    FALLBACK_CONFIG_DIR = Path(__file__).parent.parent.parent.parent / "config" / "projects"
+    FALLBACK_CONFIG_DIR = (
+        Path(__file__).parent.parent.parent.parent / "config" / "projects"
+    )
 
     def __init__(self):
         self._cache: Dict[str, ProjectConfigSchema] = {}
@@ -53,13 +55,13 @@ class ProjectConfigLoader:
     def _get_settings_projects(self) -> Dict[str, any]:
         """
         从 SETTINGS 获取项目配置
-        
+
         Returns:
             项目配置字典 {project_name: DynamicConfig}
         """
         try:
             project_registry = SETTINGS.project_registry
-            if hasattr(project_registry, 'projects'):
+            if hasattr(project_registry, "projects"):
                 return project_registry.projects
         except AttributeError:
             pass
@@ -68,32 +70,29 @@ class ProjectConfigLoader:
     def _get_project_names_from_settings(self) -> List[str]:
         """
         从 SETTINGS 获取项目名称列表
-        
+
         DynamicConfig 通过 dir() 获取属性名（即项目名）
         """
         projects = self._get_settings_projects()
         if projects is None:
             return []
-        
+
         # DynamicConfig 的属性名就是项目名
-        return [
-            name for name in dir(projects) 
-            if not name.startswith('_')
-        ]
+        return [name for name in dir(projects) if not name.startswith("_")]
 
     def list_projects(self) -> List[str]:
         """列出所有可用项目"""
         projects = set()
-        
+
         # 1. 从 SETTINGS 获取
         projects.update(self._get_project_names_from_settings())
-        
+
         # 2. 从回退目录获取
         if self.FALLBACK_CONFIG_DIR.exists():
             for f in self.FALLBACK_CONFIG_DIR.glob("*.yaml"):
                 if f.is_file():
                     projects.add(f.stem)
-        
+
         return list(sorted(projects))
 
     def load_config(
@@ -133,8 +132,10 @@ class ProjectConfigLoader:
         if raw_config is None:
             config_path = self.FALLBACK_CONFIG_DIR / f"{project_name}.yaml"
             if not config_path.exists():
-                raise ConfigLoadError(f"配置不存在: 项目 '{project_name}' 未在 SETTINGS 或 {config_path} 中定义")
-            
+                raise ConfigLoadError(
+                    f"配置不存在: 项目 '{project_name}' 未在 SETTINGS 或 {config_path} 中定义"
+                )
+
             try:
                 with open(config_path, "r", encoding="utf-8") as f:
                     raw_config = yaml.safe_load(f)
@@ -164,29 +165,29 @@ class ProjectConfigLoader:
     def _convert_dynamic_config(self, obj) -> any:
         """
         将 falib 的 DynamicConfig 转换为普通 dict/list
-        
+
         DynamicConfig 支持点号访问但 Pydantic 需要 dict
         """
         if obj is None:
             return None
-        
+
         # 处理 DynamicConfig - 通过 dir() 获取所有属性
-        if hasattr(obj, '__class__') and obj.__class__.__name__ == 'DynamicConfig':
+        if hasattr(obj, "__class__") and obj.__class__.__name__ == "DynamicConfig":
             result = {}
             for attr in dir(obj):
-                if not attr.startswith('_'):
+                if not attr.startswith("_"):
                     value = getattr(obj, attr)
                     result[attr] = self._convert_dynamic_config(value)
             return result
-        
+
         # 处理字典
         if isinstance(obj, dict):
             return {k: self._convert_dynamic_config(v) for k, v in obj.items()}
-        
+
         # 处理列表
         if isinstance(obj, list):
             return [self._convert_dynamic_config(item) for item in obj]
-        
+
         # 基本类型直接返回
         return obj
 
@@ -224,9 +225,7 @@ class ProjectConfigLoader:
                     # 找到环
                     cycle_start = path.index(neighbor)
                     cycle = path[cycle_start:] + [neighbor]
-                    raise CyclicDependencyError(
-                        f"检测到循环依赖: {' -> '.join(cycle)}"
-                    )
+                    raise CyclicDependencyError(f"检测到循环依赖: {' -> '.join(cycle)}")
 
             path.pop()
             rec_stack.remove(node)

@@ -20,7 +20,7 @@ from src.shared.schemas.base import ApiResponse, PaginatedResponse
 from src.shared.schemas.enums import KycStatus
 from src.shared.security import require_admin
 
-logger = get_logger(__name__)
+logger = get_logger("kyc.api")
 
 router = APIRouter()
 
@@ -109,12 +109,12 @@ async def review_kyc(
     """
     from src.services.audit.service import audit_service
     from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-    
+
     # 使用管理员地址作为 reviewer 标识
     result = await service.review(kyc_id, data, reviewer_address=admin_address)
 
     action = "approved" if data.approved else "rejected"
-    
+
     # 记录详细的审计日志
     audit_action = AuditAction.KYC_APPROVE if data.approved else AuditAction.KYC_REJECT
     await audit_service.log_async(
@@ -131,10 +131,12 @@ async def review_kyc(
         new_value={
             "status": result.status.value,
             "is_accredited": result.is_accredited,
-            "on_chain_sync_status": result.on_chain_sync_status.value if result.on_chain_sync_status else None,
+            "on_chain_sync_status": result.on_chain_sync_status.value
+            if result.on_chain_sync_status
+            else None,
         },
     )
-    
+
     return ApiResponse(data=result, message=f"KYC application {action} successfully")
 
 
@@ -178,8 +180,8 @@ async def get_contract_kyc_status(
 
     返回数据库状态和合约状态的对比，帮助管理员排查同步问题。
     """
-    from src.services.kyc.contract_service import KycContractService
     from src.models.kyc import UserKyc
+    from src.services.kyc.contract_service import KycContractService
 
     address = wallet_address.lower()
 
@@ -230,4 +232,3 @@ async def get_contract_kyc_status(
             is_consistent=is_consistent,
         )
     )
-

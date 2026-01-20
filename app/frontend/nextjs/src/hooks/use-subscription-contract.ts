@@ -25,6 +25,10 @@ import {
   parseUSDTAmount,
   basisPointsToPercent,
 } from "@/services/contract";
+import {
+  transactionAuditService,
+  TransactionType,
+} from "@/services/transaction-audit";
 
 // 合约地址类型
 interface ContractAddresses {
@@ -298,7 +302,8 @@ export function useSubscriptionContract() {
         !walletClient ||
         !addresses?.usdt ||
         !addresses?.subscription ||
-        !publicClient
+        !publicClient ||
+        !address
       ) {
         setError("Wallet not connected");
         return false;
@@ -319,8 +324,29 @@ export function useSubscriptionContract() {
 
         setTxHash(hash);
 
+        // 记录交易到审计日志
+        transactionAuditService.recordTokenApprove({
+          txHash: hash,
+          chainId: chainId,
+          network: backendNetwork || "local",
+          fromAddress: address,
+          spenderAddress: addresses.subscription,
+          tokenAddress: addresses.usdt,
+          tokenSymbol: "USDT",
+          tokenDecimals: 6,
+          amount: amountBigInt.toString(),
+          description: `Approve USDT for subscription`,
+        });
+
         // 等待交易确认
-        await publicClient.waitForTransactionReceipt({ hash });
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+        // 更新交易状态
+        transactionAuditService.updateStatus(hash, "confirmed", {
+          block_number: Number(receipt.blockNumber),
+          gas_used: Number(receipt.gasUsed),
+          effective_gas_price: receipt.effectiveGasPrice?.toString(),
+        });
 
         // 刷新授权额度
         await fetchUserData();
@@ -333,7 +359,7 @@ export function useSubscriptionContract() {
         return false;
       }
     },
-    [walletClient, addresses, publicClient, fetchUserData]
+    [walletClient, addresses, publicClient, fetchUserData, address, chainId, backendNetwork]
   );
 
   // 执行认购
@@ -348,7 +374,7 @@ export function useSubscriptionContract() {
         return null;
       }
 
-      if (!walletClient || !addresses?.subscription || !publicClient) {
+      if (!walletClient || !addresses?.subscription || !publicClient || !address) {
         setError("Wallet not connected");
         return null;
       }
@@ -378,11 +404,30 @@ export function useSubscriptionContract() {
         // 记录已提交的 tx_hash
         submittedTxHashes.current.add(hash);
 
+        // 记录交易到审计日志
+        transactionAuditService.recordSubscription({
+          txHash: hash,
+          chainId: chainId,
+          network: backendNetwork || "local",
+          fromAddress: address,
+          contractAddress: addresses.subscription,
+          amount: amountBigInt.toString(),
+          lockPeriodMonths: lockPeriodMonths,
+          tokenSymbol: "USDT",
+        });
+
         setTxHash(hash);
         setTxState("confirming");
 
         // 等待交易确认
-        await publicClient.waitForTransactionReceipt({ hash });
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+        // 更新交易状态
+        transactionAuditService.updateStatus(hash, "confirmed", {
+          block_number: Number(receipt.blockNumber),
+          gas_used: Number(receipt.gasUsed),
+          effective_gas_price: receipt.effectiveGasPrice?.toString(),
+        });
 
         setTxState("success");
 
@@ -399,13 +444,13 @@ export function useSubscriptionContract() {
         setIsSubmitting(false); // 结束提交
       }
     },
-    [walletClient, addresses, publicClient, fetchUserData, isSubmitting]
+    [walletClient, addresses, publicClient, fetchUserData, isSubmitting, address, chainId, backendNetwork]
   );
 
   // 执行赎回
   const redeem = useCallback(
     async (subscriptionId: number): Promise<string | null> => {
-      if (!walletClient || !addresses?.subscription || !publicClient) {
+      if (!walletClient || !addresses?.subscription || !publicClient || !address) {
         setError("Wallet not connected");
         return null;
       }
@@ -421,10 +466,30 @@ export function useSubscriptionContract() {
           args: [BigInt(subscriptionId)],
         });
 
+        // 记录交易到审计日志
+        transactionAuditService.recordContractCall({
+          txHash: hash,
+          chainId: chainId,
+          network: backendNetwork || "local",
+          fromAddress: address,
+          contractAddress: addresses.subscription,
+          contractName: "VankeSubscription",
+          functionName: "redeem",
+          functionArgs: { subscriptionId },
+          description: `Redeem subscription #${subscriptionId}`,
+        });
+
         setTxHash(hash);
         setTxState("confirming");
 
-        await publicClient.waitForTransactionReceipt({ hash });
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+        // 更新交易状态
+        transactionAuditService.updateStatus(hash, "confirmed", {
+          block_number: Number(receipt.blockNumber),
+          gas_used: Number(receipt.gasUsed),
+          effective_gas_price: receipt.effectiveGasPrice?.toString(),
+        });
 
         setTxState("success");
         await fetchUserData();
@@ -437,7 +502,7 @@ export function useSubscriptionContract() {
         return null;
       }
     },
-    [walletClient, addresses, publicClient, fetchUserData]
+    [walletClient, addresses, publicClient, fetchUserData, address, chainId, backendNetwork]
   );
 
   // 重置状态

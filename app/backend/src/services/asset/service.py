@@ -43,6 +43,7 @@ class AssetService:
         asset_type: Optional[AssetType] = None,
         page: int = 1,
         page_size: int = 10,
+        public_only: bool = False,
     ) -> Tuple[List[AssetListItem], int, int]:
         """
         获取资产列表
@@ -52,16 +53,30 @@ class AssetService:
             asset_type: 类型筛选
             page: 页码
             page_size: 每页数量
+            public_only: 是否只返回可见资产（用于 Public API）
 
         Returns:
             (列表, 总数, 总页数)
         """
+        from decimal import Decimal as D
+
+        from tortoise.expressions import Q
+
         query = Asset.filter(environment=self.environment)
 
         if status:
             query = query.filter(status=status)
         if asset_type:
             query = query.filter(asset_type=asset_type)
+
+        # 可见性过滤：只返回满足条件的资产
+        if public_only:
+            zero = D("0")
+            query = query.filter(
+                Q(contract_address__not_isnull=True)
+                & Q(contract_address__not="")
+                & (Q(apy_3m__gt=zero) | Q(apy_6m__gt=zero) | Q(apy_12m__gt=zero))
+            )
 
         total = await query.count()
         total_pages = (total + page_size - 1) // page_size
@@ -71,12 +86,15 @@ class AssetService:
 
         return ([self._to_list_item(a) for a in assets], total, total_pages)
 
-    async def get_asset(self, asset_id: int) -> Optional[AssetDetailResponse]:
+    async def get_asset(
+        self, asset_id: int, public_only: bool = False
+    ) -> Optional[AssetDetailResponse]:
         """
         获取资产详情
 
         Args:
             asset_id: 资产ID
+            public_only: 是否只返回可见资产（用于 Public API）
 
         Returns:
             资产详情或 None
@@ -86,14 +104,21 @@ class AssetService:
         if not asset:
             return None
 
+        # 可见性检查
+        if public_only and not asset.is_visible_to_public:
+            return None
+
         return await self._to_detail_response(asset)
 
-    async def get_asset_by_symbol(self, symbol: str) -> Optional[AssetDetailResponse]:
+    async def get_asset_by_symbol(
+        self, symbol: str, public_only: bool = False
+    ) -> Optional[AssetDetailResponse]:
         """
         根据符号获取资产
 
         Args:
             symbol: 资产符号
+            public_only: 是否只返回可见资产（用于 Public API）
 
         Returns:
             资产详情或 None
@@ -103,6 +128,10 @@ class AssetService:
         ).first()
 
         if not asset:
+            return None
+
+        # 可见性检查
+        if public_only and not asset.is_visible_to_public:
             return None
 
         return await self._to_detail_response(asset)
@@ -382,8 +411,15 @@ class AssetService:
             is_available=asset.is_available,
         )
 
-    async def _to_detail_response(self, asset: Asset) -> AssetDetailResponse:
-        """转换为详情响应"""
+    async def _to_detail_response(
+        self, asset: Asset, include_visibility: bool = True
+    ) -> AssetDetailResponse:
+        """转换为详情响应
+
+        Args:
+            asset: 资产实例
+            include_visibility: 是否包含可见性信息（Admin API 使用）
+        """
         # 获取合约绑定
         bindings = await AssetContractBinding.filter(asset=asset).all()
         bound_contracts = (
@@ -399,6 +435,13 @@ class AssetService:
             if bindings
             else None
         )
+
+        # 可见性信息
+        is_visible = None
+        visibility_issues = None
+        if include_visibility:
+            is_visible = asset.is_visible_to_public
+            visibility_issues = asset.visibility_issues if not is_visible else []
 
         return AssetDetailResponse(
             id=asset.id,
@@ -425,6 +468,8 @@ class AssetService:
             status=asset.status,
             is_available=asset.is_available,
             environment=asset.environment,
+            is_visible=is_visible,
+            visibility_issues=visibility_issues,
             created_at=asset.created_at,
             updated_at=asset.updated_at,
         )

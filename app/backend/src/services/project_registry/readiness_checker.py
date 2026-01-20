@@ -8,8 +8,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from falib.utils.log import get_logger
-
 from src.models.project_registry import ContractDeploymentStatus, ProjectContractConfig
+
 from src.shared.schemas.enums import (
     ContractRegistryStatus,
     DependencyType,
@@ -18,7 +18,7 @@ from src.shared.schemas.enums import (
 
 from .config_loader import get_config_loader
 
-logger = get_logger("project_registry.readiness_checker")
+logger = get_logger("contract.readiness")
 
 
 @dataclass
@@ -198,9 +198,7 @@ class ProjectReadinessChecker:
 
         # 检查必须依赖（零地址绑定算已绑定）
         unbound_required = [
-            dep
-            for dep in info.missing_required_deps
-            if dep not in info.zero_bound_deps
+            dep for dep in info.missing_required_deps if dep not in info.zero_bound_deps
         ]
         return len(unbound_required) == 0
 

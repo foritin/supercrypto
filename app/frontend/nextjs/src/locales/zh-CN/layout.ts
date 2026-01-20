@@ -1,6 +1,6 @@
 const layout = {
   header: {
-    title: "SuperCrypto",
+    title: "SlimCrypto",
     nav: {
       home: "首页",
       assets: "资产",
@@ -12,7 +12,7 @@ const layout = {
     },
   },
   footer: {
-    copyright: "SuperCrypto ©{{year}} - 安全的加密货币管理平台",
+    copyright: "SlimCrypto ©{{year}} - 安全的加密货币管理平台",
   },
 }
 

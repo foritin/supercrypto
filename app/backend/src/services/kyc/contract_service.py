@@ -17,7 +17,7 @@ from falib.utils.log import get_logger
 from src.models.account import Account
 from src.shared.schemas.enums import NetType
 
-logger = get_logger(__name__)
+logger = get_logger("kyc.contract")
 
 # 合约 ABI 文件路径
 ABI_PATH = Path(__file__).parent.parent.parent.parent / "contracts" / ".build"

@@ -1,6 +1,6 @@
 'use client'
 
-import { Typography, Card } from 'antd'
+import { Typography } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { AssetAdminList } from '@/components/admin/asset-admin-list'
 import { RequireAdmin } from '@/components/auth'
@@ -23,10 +23,8 @@ export default function AdminAssetsPage() {
           </Text>
         </div>
 
-        {/* Asset Management */}
-        <Card>
-          <AssetAdminList />
-        </Card>
+        {/* Asset Management - AssetAdminList 内部已有 Card 包裹 */}
+        <AssetAdminList />
       </div>
     </RequireAdmin>
   )

@@ -92,8 +92,8 @@ event Migrated:
 owner: public(address)
 paused: public(bool)
 
-# AddressProvider (immutable) - 纯 Provider 模式
-ADDRESS_PROVIDER: public(immutable(address))
+# AddressProvider - 纯 Provider 模式（部署后通过 Admin 设置）
+ADDRESS_PROVIDER: public(address)
 
 # 质押数据
 stakes: public(HashMap[address, HashMap[uint256, StakeInfo]])
@@ -117,12 +117,11 @@ SECONDS_PER_DAY: constant(uint256) = 24 * 3600
 
 
 @deploy
-def __init__(_address_provider: address):
+def __init__():
     """
-    @notice 初始化质押合约（纯 Provider 模式）
-    @param _address_provider AddressProvider 合约地址
+    @notice 初始化质押合约
+    @dev 部署后需要通过 setAddressProvider 设置 Provider 地址
     """
-    ADDRESS_PROVIDER = _address_provider
     self.owner = msg.sender
     self.paused = False
 
@@ -131,34 +130,46 @@ def __init__(_address_provider: address):
     self.dailyEmission = 10_000 * 10 ** 18  # 每日释放10000个平台代币
 
 
+@external
+def setAddressProvider(_address_provider: address):
+    """
+    @notice 设置 AddressProvider 地址
+    @param _address_provider AddressProvider 合约地址
+    @dev 仅 owner 可调用，通常部署后通过 Admin UI 设置
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _address_provider != empty(address), "Invalid address"
+    self.ADDRESS_PROVIDER = _address_provider
+
+
 # ==================== Provider 查询 ====================
 
 @view
 @internal
 def _get_kyc_manager() -> address:
     """@notice 从 AddressProvider 获取 KYC 管理合约地址"""
-    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_kyc_manager()
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_kyc_manager()
 
 
 @view
 @internal
 def _get_rwa_token() -> address:
     """@notice 从 AddressProvider 获取 Vanke RWA Token 地址"""
-    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_vanke_rwa_token()
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_rwa_token()
 
 
 @view
 @internal
 def _get_platform_token() -> address:
     """@notice 从 AddressProvider 获取 Vanke Platform Token 地址"""
-    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_vanke_platform_token()
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_platform_token()
 
 
 @view
 @internal
 def _get_subscription() -> address:
     """@notice 从 AddressProvider 获取 Vanke Subscription 地址"""
-    return staticcall IAddressProvider(ADDRESS_PROVIDER).get_vanke_subscription()
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_subscription()
 
 
 @external
@@ -474,7 +485,7 @@ def get_address_provider() -> address:
     @notice 获取 AddressProvider 地址
     @return AddressProvider 合约地址
     """
-    return ADDRESS_PROVIDER
+    return self.ADDRESS_PROVIDER
 
 
 # ==================== 合约迁移功能 ====================

@@ -66,7 +66,7 @@ export function KycRequiredGuard({
   // KYC not approved - show guard
   const kycMessage = (
     <Result
-      icon={<SafetyCertificateOutlined style={{ color: '#faad14' }} />}
+      icon={<SafetyCertificateOutlined style={{ color: 'var(--color-warning)' }} />}
       title={title || t('kyc.guard.title')}
       subTitle={description || t('kyc.guard.description')}
       extra={

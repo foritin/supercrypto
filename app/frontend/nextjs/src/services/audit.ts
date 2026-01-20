@@ -244,7 +244,11 @@ export async function queryAuditLogs(
     "/admin/audit-logs",
     params as Record<string, unknown>
   );
-  return data;
+  // 防御性处理：确保返回的数据结构完整
+  return {
+    list_data: data?.list_data || [],
+    pagination: data?.pagination || { total: 0, page: 1, page_size: 20, total_pages: 0 },
+  };
 }
 
 /**
@@ -268,7 +272,15 @@ export async function getAuditStats(params?: {
     "/admin/audit-logs/stats",
     params
   );
-  return data.object_data;
+  // 防御性处理：返回默认统计数据
+  return data?.object_data || {
+    total_operations: 0,
+    success_count: 0,
+    failed_count: 0,
+    by_category: {},
+    by_action: {},
+    by_operator_type: {},
+  };
 }
 
 /**
@@ -331,7 +343,11 @@ export async function queryTransactionAudits(
     "/admin/transactions/audit",
     params as Record<string, unknown>
   );
-  return data;
+  // 防御性处理：确保返回的数据结构完整
+  return {
+    list_data: data?.list_data || [],
+    pagination: data?.pagination || { total: 0, page: 1, page_size: 20, total_pages: 0 },
+  };
 }
 
 /**
@@ -358,7 +374,18 @@ export async function getTransactionStats(params?: {
     "/admin/transactions/audit/stats",
     params
   );
-  return data.object_data;
+  // 防御性处理：返回默认统计数据
+  return data?.object_data || {
+    total_transactions: 0,
+    pending_count: 0,
+    confirmed_count: 0,
+    failed_count: 0,
+    reverted_count: 0,
+    by_type: {},
+    by_chain: {},
+    total_gas_used: 0,
+    total_gas_cost: "0",
+  };
 }
 
 /**
@@ -371,7 +398,7 @@ export async function getPendingTransactions(
     "/admin/transactions/audit/pending",
     chainId ? { chain_id: chainId } : undefined
   );
-  return data.list_data;
+  return data?.list_data || [];
 }
 
 // ============ 导出服务对象 ============

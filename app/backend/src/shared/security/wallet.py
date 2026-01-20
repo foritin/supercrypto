@@ -12,7 +12,7 @@ from web3 import Web3
 
 
 def verify_wallet_signature(
-    address: str, signature: str, message: str = "ApprovePlatformAccess"
+    address: str, signature: str, message: str = "SlimCryptoAccess"
 ) -> bool:
     """
     验证钱包签名
@@ -54,7 +54,7 @@ def create_sensitive_operation_message(
     Returns:
         待签名的消息字符串
     """
-    msg = f"ApprovePlatform Sensitive Operation\n\n"
+    msg = "ApprovePlatform Sensitive Operation\n\n"
     msg += f"Action: {action}\n"
     msg += f"Wallet: {wallet_address}\n"
     msg += f"Timestamp: {timestamp}\n"

@@ -9,6 +9,13 @@ interface GlassCardProps {
   hover?: boolean;
 }
 
+// 模糊度映射到 CSS 值
+const blurValues = {
+  sm: '8px',
+  md: '12px',
+  lg: '20px'
+};
+
 export const GlassCard: React.FC<GlassCardProps> = ({
   children,
   className,
@@ -16,29 +23,42 @@ export const GlassCard: React.FC<GlassCardProps> = ({
   blur = 'md',
   hover = true
 }) => {
-  const blurMap = {
-    sm: 'backdrop-blur-sm',
-    md: 'backdrop-blur-md',
-    lg: 'backdrop-blur-lg'
-  };
-
   return (
     <div
       className={cn(
-        'relative rounded-xl border border-white/10',
-        'bg-slate-900/60 shadow-2xl',
-        blurMap[blur],
-        glow && 'shadow-indigo-500/20',
-        hover && 'transition-all duration-300 hover:border-white/20 hover:shadow-xl',
+        'relative rounded-xl',
+        hover && 'transition-all duration-300',
         className
       )}
+      style={{
+        background: 'var(--glass-bg)',
+        backdropFilter: `blur(${blurValues[blur]})`,
+        border: '1px solid var(--glass-border)',
+        boxShadow: glow 
+          ? 'var(--shadow-glow), var(--shadow-lg)' 
+          : 'var(--shadow-lg)',
+        borderRadius: 'var(--radius-xl)',
+      }}
     >
       {/* 渐变覆盖层 */}
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none" />
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          borderRadius: 'var(--radius-xl)',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%, transparent 100%)',
+        }}
+      />
 
       {/* 发光效果（可选） */}
       {glow && (
-        <div className="absolute -inset-px rounded-xl bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-sm opacity-50" />
+        <div 
+          className="absolute -inset-px opacity-50"
+          style={{
+            borderRadius: 'var(--radius-xl)',
+            background: 'linear-gradient(135deg, rgba(0, 212, 170, 0.2) 0%, rgba(0, 160, 128, 0.15) 50%, rgba(0, 212, 170, 0.1) 100%)',
+            filter: 'blur(4px)',
+          }}
+        />
       )}
 
       {/* 内容 */}

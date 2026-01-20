@@ -7,7 +7,7 @@
 
 from fastapi import APIRouter
 
-from src.api.v1.user import auth, kyc, staking, subscriptions
+from src.api.v1.user import auth, kyc, staking, subscriptions, transactions_audit
 
 router = APIRouter()
 
@@ -23,3 +23,7 @@ router.include_router(staking.router, prefix="/staking", tags=["质押-用户"])
 # 认购操作
 router.include_router(subscriptions.router, prefix="/subscriptions", tags=["认购-用户"])
 
+# 交易审计
+router.include_router(
+    transactions_audit.router, prefix="/transactions/audit", tags=["交易审计-用户"]
+)

@@ -101,14 +101,19 @@ export default function AuditLogsPage() {
     try {
       const params = buildLogQueryParams();
       const response = await auditService.queryLogs(params);
-      setLogs(response.list_data);
+      setLogs(response.list_data || []);
       setLogsPagination((prev) => ({
         ...prev,
-        total: response.pagination.total,
+        total: response.pagination?.total || 0,
       }));
     } catch (error) {
-      console.error("Failed to fetch audit logs:", error);
-      message.error(t("admin.audit.loadError", "加载审计日志失败"));
+      // 只在非 401/403 错误时显示提示
+      const err = error as { response?: { status?: number } };
+      if (err.response?.status !== 401 && err.response?.status !== 403) {
+        console.error("Failed to fetch audit logs:", error);
+        message.error(t("admin.audit.loadError", "加载审计日志失败"));
+      }
+      setLogs([]);
     } finally {
       setLogsLoading(false);
     }
@@ -123,14 +128,19 @@ export default function AuditLogsPage() {
         page_size: txPagination.pageSize,
       };
       const response = await auditService.queryTransactions(params);
-      setTransactions(response.list_data);
+      setTransactions(response.list_data || []);
       setTxPagination((prev) => ({
         ...prev,
-        total: response.pagination.total,
+        total: response.pagination?.total || 0,
       }));
     } catch (error) {
-      console.error("Failed to fetch transactions:", error);
-      message.error(t("admin.audit.loadTxError", "加载交易记录失败"));
+      // 只在非 401/403 错误时显示提示（认证问题由全局处理）
+      const err = error as { response?: { status?: number } };
+      if (err.response?.status !== 401 && err.response?.status !== 403) {
+        console.error("Failed to fetch transactions:", error);
+        message.error(t("admin.audit.loadTxError", "加载交易记录失败"));
+      }
+      setTransactions([]);
     } finally {
       setTxLoading(false);
     }

@@ -3,7 +3,7 @@
  * Asset Admin List Component
  * Admin panel for managing RWA assets
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { 
   Table, Card, Select, Button, Tag, Space, Flex, Typography, Modal, 
   Form, Input, InputNumber, message, Popconfirm, Tooltip, Checkbox
@@ -11,7 +11,7 @@ import {
 import { 
   PlusOutlined, EditOutlined, ReloadOutlined, 
   PauseCircleOutlined, PlayCircleOutlined, DollarOutlined,
-  LinkOutlined
+  LinkOutlined, PictureOutlined
 } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import type { ColumnsType } from 'antd/es/table'
@@ -30,6 +30,9 @@ import {
   ASSET_STATUS_NAMES,
   ASSET_STATUS_COLORS
 } from '@/services/asset'
+import { MediaManager } from './media-manager'
+import { AssetStatusIndicator } from './asset-status-indicator'
+import { CreateAssetModal } from './create-asset-modal'
 
 const { Title, Text } = Typography
 
@@ -70,7 +73,6 @@ export function AssetAdminList() {
   const [selectedAsset, setSelectedAsset] = useState<AssetListItem | null>(null)
   
   // Loading states for mutations
-  const [isCreating, setIsCreating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [isUpdatingPrice, setIsUpdatingPrice] = useState(false)
@@ -86,8 +88,14 @@ export function AssetAdminList() {
   const [isUnbinding, setIsUnbinding] = useState(false)
   const [currentAssetDetail, setCurrentAssetDetail] = useState<AssetDetail | null>(null)
   
+  // 媒体管理状态
+  const [mediaModalOpen, setMediaModalOpen] = useState(false)
+  const [mediaAssetId, setMediaAssetId] = useState<number | null>(null)
+  
+  // 防止重复点击
+  const isOpeningCreateModal = useRef(false)
+  
   // Forms
-  const [createForm] = Form.useForm()
   const [editForm] = Form.useForm()
   const [priceForm] = Form.useForm()
 
@@ -126,6 +134,23 @@ export function AssetAdminList() {
       setIsLoadingProjects(false)
     }
   }, [])
+
+  // 打开创建 Modal（防重复点击）
+  const handleOpenCreateModal = useCallback(() => {
+    // 防止重复触发
+    if (isOpeningCreateModal.current || createModalOpen) {
+      console.log('[AssetAdminList] Prevented duplicate modal open')
+      return
+    }
+    isOpeningCreateModal.current = true
+    console.log('[AssetAdminList] Opening create modal')
+    setCreateModalOpen(true)
+    fetchAvailableProjects()
+    // 延迟重置标志
+    setTimeout(() => {
+      isOpeningCreateModal.current = false
+    }, 300)
+  }, [createModalOpen, fetchAvailableProjects])
 
   // 打开绑定模态框时加载项目列表和资产详情
   const handleOpenBindModal = useCallback(async (asset: AssetListItem) => {
@@ -207,41 +232,6 @@ export function AssetAdminList() {
   }, [selectedAsset, contractsToUnbind, t, fetchAssets])
 
   const refetch = fetchAssets
-
-  // Create asset
-  const handleCreate = async (values: AssetCreateRequest & { bind_projects?: string[] }) => {
-    setIsCreating(true)
-    try {
-      // 提取 bind_projects，不发送给创建 API
-      const { bind_projects, ...createData } = values
-      
-      // 1. 创建资产
-      const newAsset = await assetService.createAsset(createData)
-      
-      // 2. 绑定选中的项目合约
-      if (bind_projects && bind_projects.length > 0) {
-        for (const project of bind_projects) {
-          try {
-            // undefined 表示绑定该项目下所有可用合约
-            await assetService.bindProjectContracts(newAsset.id, project, undefined, project !== 'common')
-          } catch (bindErr) {
-            console.error(`Failed to bind project ${project}:`, bindErr)
-          }
-        }
-        message.success(t('admin.assets.createAndBindSuccess', { count: bind_projects.length }))
-      } else {
-        message.success(t('admin.assets.createSuccess'))
-      }
-      
-      setCreateModalOpen(false)
-      createForm.resetFields()
-      refetch()
-    } catch (error) {
-      message.error((error as Error).message || t('common.error'))
-    } finally {
-      setIsCreating(false)
-    }
-  }
 
   // Update asset
   const handleUpdate = async (id: number, values: AssetUpdateRequest) => {
@@ -372,6 +362,15 @@ export function AssetAdminList() {
       ),
     },
     {
+      title: '可见性',
+      key: 'visibility',
+      width: 80,
+      align: 'center' as const,
+      render: (_, record) => (
+        <AssetStatusIndicator asset={record} compact />
+      ),
+    },
+    {
       title: t('admin.assets.price'),
       dataIndex: 'current_price',
       key: 'current_price',
@@ -407,7 +406,7 @@ export function AssetAdminList() {
     {
       title: t('admin.assets.actions'),
       key: 'actions',
-      width: 200,
+      width: 240,
       render: (_, record) => (
         <Space>
           <Tooltip title={t('common.edit')}>
@@ -422,6 +421,16 @@ export function AssetAdminList() {
               size="small"
               icon={<DollarOutlined />}
               onClick={() => openPriceModal(record)}
+            />
+          </Tooltip>
+          <Tooltip title="媒体管理">
+            <Button
+              size="small"
+              icon={<PictureOutlined />}
+              onClick={() => {
+                setMediaAssetId(record.id)
+                setMediaModalOpen(true)
+              }}
             />
           </Tooltip>
           <Tooltip title={t('admin.assets.bindContracts')}>
@@ -499,10 +508,7 @@ export function AssetAdminList() {
             <Button 
               type="primary" 
               icon={<PlusOutlined />}
-              onClick={() => {
-                setCreateModalOpen(true)
-                fetchAvailableProjects()
-              }}
+              onClick={handleOpenCreateModal}
             >
               {t('admin.assets.create')}
             </Button>
@@ -531,156 +537,13 @@ export function AssetAdminList() {
       </Flex>
 
       {/* Create Modal */}
-      <Modal
-        title={t('admin.assets.createTitle')}
+      <CreateAssetModal
         open={createModalOpen}
-        onCancel={() => {
-          setCreateModalOpen(false)
-          createForm.resetFields()
-        }}
-        onOk={() => createForm.submit()}
-        confirmLoading={isCreating}
-        width={700}
-      >
-        <Form
-          form={createForm}
-          layout="vertical"
-          onFinish={handleCreate}
-        >
-          <Form.Item
-            name="name"
-            label={t('admin.assets.form.name')}
-            rules={[{ required: true, message: t('admin.assets.form.nameRequired') }]}
-          >
-            <Input placeholder={t('admin.assets.form.namePlaceholder')} />
-          </Form.Item>
-
-          <Form.Item
-            name="symbol"
-            label={t('admin.assets.form.symbol')}
-            rules={[{ required: true, message: t('admin.assets.form.symbolRequired') }]}
-          >
-            <Input placeholder="RWA001" style={{ textTransform: 'uppercase' }} />
-          </Form.Item>
-
-          <Form.Item
-            name="asset_type"
-            label={t('admin.assets.form.type')}
-            rules={[{ required: true }]}
-            initialValue="real_estate"
-          >
-            <Select options={ASSET_TYPE_OPTIONS} />
-          </Form.Item>
-
-          <Form.Item name="description" label={t('admin.assets.form.description')}>
-            <Input.TextArea rows={3} />
-          </Form.Item>
-
-          <Form.Item name="location" label={t('admin.assets.form.location')}>
-            <Input placeholder={t('admin.assets.form.locationPlaceholder')} />
-          </Form.Item>
-
-          <Form.Item name="image_url" label={t('admin.assets.form.imageUrl')}>
-            <Input placeholder="https://..." />
-          </Form.Item>
-
-          <Form.Item
-            name="total_supply"
-            label={t('admin.assets.form.totalSupply')}
-            rules={[{ required: true, message: t('admin.assets.form.totalSupplyRequired') }]}
-          >
-            <InputNumber
-              style={{ width: '100%' }}
-              min={0}
-              prefix="$"
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            />
-          </Form.Item>
-
-          <Form.Item 
-            name="min_subscription" 
-            label={t('admin.assets.form.minSubscription')}
-            initialValue={100}
-          >
-            <InputNumber style={{ width: '100%' }} min={0} prefix="$" />
-          </Form.Item>
-
-          <Form.Item 
-            name="current_price" 
-            label={t('admin.assets.form.currentPrice')}
-            initialValue={1}
-          >
-            <InputNumber style={{ width: '100%' }} min={0} prefix="$" precision={2} />
-          </Form.Item>
-
-          <Space size="large">
-            <Form.Item 
-              name="apy_3m" 
-              label={t('admin.assets.form.apy3m')}
-              initialValue={10}
-            >
-              <InputNumber min={0} max={100} suffix="%" />
-            </Form.Item>
-            <Form.Item 
-              name="apy_6m" 
-              label={t('admin.assets.form.apy6m')}
-              initialValue={12}
-            >
-              <InputNumber min={0} max={100} suffix="%" />
-            </Form.Item>
-            <Form.Item 
-              name="apy_12m" 
-              label={t('admin.assets.form.apy12m')}
-              initialValue={15}
-            >
-              <InputNumber min={0} max={100} suffix="%" />
-            </Form.Item>
-          </Space>
-
-          <Form.Item 
-            name="bind_projects" 
-            label={t('admin.assets.form.bindProjects')}
-            tooltip={t('admin.assets.form.bindProjectsTooltip')}
-          >
-            <Select
-              mode="multiple"
-              placeholder={t('admin.assets.form.selectProjects')}
-              loading={isLoadingProjects}
-              options={availableProjects.map(p => ({
-                value: p.project,
-                label: `${p.project} (${p.contract_count} ${t('admin.assets.contracts')})`
-              }))}
-            />
-          </Form.Item>
-
-          {/* 显示将要绑定的合约预览 */}
-          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.bind_projects !== cur.bind_projects}>
-            {({ getFieldValue }) => {
-              const selectedProjects = getFieldValue('bind_projects') || []
-              if (selectedProjects.length === 0) return null
-              
-              return (
-                <Card size="small" title={t('admin.assets.contractsToBindTitle')} style={{ marginBottom: 16 }}>
-                  <Flex wrap="wrap" gap={8}>
-                    {availableProjects
-                      .filter(p => selectedProjects.includes(p.project))
-                      .flatMap(p => p.contracts
-                        .filter(c => c.is_available)
-                        .map(c => (
-                          <Tooltip key={`${p.project}-${c.contract_name}`} title={c.contract_address}>
-                            <Tag color={c.contract_type === 'common' ? 'blue' : c.contract_type === 'mock' ? 'cyan' : 'green'}>
-                              {c.contract_name}
-                            </Tag>
-                          </Tooltip>
-                        )))
-                    }
-                  </Flex>
-                </Card>
-              )
-            }}
-          </Form.Item>
-        </Form>
-      </Modal>
+        onClose={() => setCreateModalOpen(false)}
+        onSuccess={fetchAssets}
+        availableProjects={availableProjects}
+        isLoadingProjects={isLoadingProjects}
+      />
 
       {/* Edit Modal */}
       <Modal
@@ -695,6 +558,7 @@ export function AssetAdminList() {
         onOk={() => editForm.submit()}
         confirmLoading={isUpdating}
         width={700}
+        destroyOnHidden
       >
         <Form
           form={editForm}
@@ -826,6 +690,7 @@ export function AssetAdminList() {
         }}
         onOk={() => priceForm.submit()}
         confirmLoading={isUpdatingPrice}
+        destroyOnHidden
       >
         {selectedAsset && (
           <Form
@@ -885,6 +750,7 @@ export function AssetAdminList() {
         okButtonProps={{ disabled: !selectedBindProject || selectedContracts.length === 0 }}
         confirmLoading={isBinding}
         width={600}
+        destroyOnHidden
       >
         {selectedAsset && (
           <Flex vertical gap={16}>
@@ -1091,6 +957,19 @@ export function AssetAdminList() {
           </Flex>
         )}
       </Modal>
+
+      {/* 媒体管理模态框 */}
+      {mediaAssetId && (
+        <MediaManager
+          assetId={mediaAssetId}
+          visible={mediaModalOpen}
+          onClose={() => {
+            setMediaModalOpen(false)
+            setMediaAssetId(null)
+          }}
+          onUpdate={() => fetchAssets()}
+        />
+      )}
     </Card>
   )
 }

@@ -47,9 +47,7 @@ VANKE_PROJECT = ProjectConfig(
             contract_class_name="VankeRWAToken",
             scope="project",
             contract_type="token",
-            constructor_args={
-                "_address_provider": "$PROVIDER",
-            },
+            constructor_args={},
             provider_deps=["KYC_MANAGER"],
             register_to_provider=True,
             provider_key=VankeProviderKey.RWA_TOKEN,
@@ -72,9 +70,7 @@ VANKE_PROJECT = ProjectConfig(
             contract_class_name="VankeSubscription",
             scope="project",
             contract_type="defi",
-            constructor_args={
-                "_address_provider": "$PROVIDER",
-            },
+            constructor_args={},
             provider_deps=["KYC_MANAGER", "USDT", "VANKE_RWA_TOKEN"],
             register_to_provider=True,
             provider_key=VankeProviderKey.SUBSCRIPTION,
@@ -86,9 +82,7 @@ VANKE_PROJECT = ProjectConfig(
             contract_class_name="VankeStaking",
             scope="project",
             contract_type="defi",
-            constructor_args={
-                "_address_provider": "$PROVIDER",
-            },
+            constructor_args={},
             provider_deps=[
                 "KYC_MANAGER",
                 "VANKE_RWA_TOKEN",
@@ -106,7 +100,6 @@ VANKE_PROJECT = ProjectConfig(
             scope="project",
             contract_type="defi",
             constructor_args={
-                "_address_provider": "$PROVIDER",
                 "_lp_token": ZERO_ADDRESS,  # 外部 LP token，后续设置
             },
             provider_deps=["KYC_MANAGER", "VANKE_PLATFORM_TOKEN"],

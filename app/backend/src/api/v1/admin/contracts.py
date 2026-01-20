@@ -4,11 +4,13 @@
 路由前缀: /api/v1/admin/contracts
 """
 
-from falib.utils.handlers import success_response
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 from typing import Optional
 
+from falib.utils.handlers import success_response
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+
+from src.services.asset.validators import ContractValidator
 from src.services.contract.service import ContractService, get_contract_service
 from src.shared.security import require_admin
 
@@ -16,6 +18,7 @@ router = APIRouter()
 
 
 # ============ Request/Response Schemas ============
+
 
 class PrepareRegisterRequest(BaseModel):
     contract_name: str
@@ -39,7 +42,39 @@ class ConfirmUnregisterRequest(BaseModel):
     tx_hash: str
 
 
+class ValidateContractRequest(BaseModel):
+    """合约地址验证请求"""
+
+    addresses: list[str] = Field(
+        ..., min_length=1, max_length=10, description="要验证的合约地址列表，最多10个"
+    )
+    check_rwa_binding: bool = Field(
+        default=False, description="是否检查 RWA Token 绑定状态"
+    )
+    rwa_token_name: Optional[str] = Field(
+        default=None, description="RWA Token 名称，check_rwa_binding=True 时必填"
+    )
+
+
+class ContractValidationResult(BaseModel):
+    """单个合约验证结果"""
+
+    address: str
+    format_valid: bool
+    exists_on_chain: bool
+    message: str
+
+
+class ValidateContractResponse(BaseModel):
+    """合约验证响应"""
+
+    results: dict[str, ContractValidationResult]
+    all_valid: bool
+    rwa_binding: Optional[dict] = None
+
+
 # ============ Endpoints ============
+
 
 @router.get(
     "/status",
@@ -150,14 +185,14 @@ async def confirm_register(
     """
     from src.services.audit.service import audit_service
     from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-    
+
     try:
         result = await service.confirm_register(
             contract_name=request.contract_name,
             provider_key=request.provider_key,
             tx_hash=request.tx_hash,
         )
-        
+
         # 记录审计日志
         await audit_service.log_async(
             category=AuditCategory.CONTRACT,
@@ -174,7 +209,7 @@ async def confirm_register(
                 "tx_hash": request.tx_hash,
             },
         )
-        
+
         return success_response(object_data=result)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -223,14 +258,14 @@ async def confirm_unregister(
     """
     from src.services.audit.service import audit_service
     from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-    
+
     try:
         result = await service.confirm_unregister(
             contract_name=request.contract_name,
             provider_key=request.provider_key,
             tx_hash=request.tx_hash,
         )
-        
+
         # 记录审计日志
         await audit_service.log_async(
             category=AuditCategory.CONTRACT,
@@ -247,7 +282,7 @@ async def confirm_unregister(
                 "tx_hash": request.tx_hash,
             },
         )
-        
+
         return success_response(object_data=result)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -271,3 +306,69 @@ async def get_provider_status(
     """
     result = await service.get_provider_status(category=category)
     return success_response(object_data=result)
+
+
+@router.post(
+    "/validate",
+    summary="验证合约地址",
+    description="验证合约地址格式和链上存在性",
+    response_model=None,
+)
+async def validate_contracts(
+    request: ValidateContractRequest,
+    _admin=Depends(require_admin),
+):
+    """
+    验证合约地址
+
+    支持批量验证（最多10个地址），检查：
+    1. 地址格式是否正确 (0x + 40位十六进制)
+    2. 链上是否存在代码 (区分合约地址和EOA)
+    3. 可选：检查 RWA Token 绑定状态
+
+    Returns:
+        验证结果字典，每个地址的验证状态
+    """
+    # 批量验证合约地址
+    validation_results = await ContractValidator.validate_contracts_batch(
+        request.addresses
+    )
+
+    # 构建响应
+    results = {}
+    all_valid = True
+
+    for address, (format_ok, exists, message) in validation_results.items():
+        results[address] = ContractValidationResult(
+            address=address,
+            format_valid=format_ok,
+            exists_on_chain=exists,
+            message=message,
+        )
+        if not format_ok or not exists:
+            all_valid = False
+
+    # 可选: 检查 RWA Token 绑定
+    rwa_binding = None
+    if request.check_rwa_binding and request.rwa_token_name:
+        (
+            is_bound,
+            msg,
+            bound_address,
+        ) = await ContractValidator.validate_rwa_token_binding(
+            contract_addresses=request.addresses,
+            rwa_token_name=request.rwa_token_name,
+        )
+        rwa_binding = {
+            "is_bound": is_bound,
+            "message": msg,
+            "bound_address": bound_address,
+        }
+
+    response = ValidateContractResponse(
+        results=results,
+        all_valid=all_valid,
+        rwa_binding=rwa_binding,
+    )
+
+    return success_response(object_data=response.model_dump())

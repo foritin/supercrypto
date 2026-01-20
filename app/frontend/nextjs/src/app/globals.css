@@ -33,6 +33,34 @@
   --color-info: #1890ff;
 
   /* ============================================
+     Design Tokens - 设计令牌系统
+     基于 2025-2026 行业最佳实践
+     ============================================ */
+
+  /* Spacing System - 间距系统 (4px 基准) */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 48px;
+
+  /* Border Radius - 圆角系统 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+
+  /* Transitions - 过渡动画 (使用 cubic-bezier 缓动) */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ============================================
      Header Layout Variables
      ============================================ */
 
@@ -41,10 +69,10 @@
   --header-padding-x: 48px;
   --header-padding-y: 0;
   --header-background: transparent;
-  --header-background-scrolled: rgba(26, 26, 46, 0.95);
-  --header-backdrop-scrolled: blur(20px);
-  --header-border-scrolled: 1px solid rgba(0, 212, 170, 0.2);
-  --header-shadow-scrolled: 0 4px 20px rgba(0, 0, 0, 0.3);
+  /* 使用纯色背景，避免 backdrop-filter 的性能问题 */
+  --header-background-scrolled: rgba(10, 15, 13, 0.98);
+  --header-border-scrolled: 1px solid rgba(0, 212, 170, 0.15);
+  --header-shadow-scrolled: 0 2px 20px rgba(0, 0, 0, 0.4);
 
   /* Logo */
   --logo-size: 52px;
@@ -58,7 +86,8 @@
   --menu-item-padding-x: 20px;
   --menu-item-padding-y: 0;
   --menu-max-width: 600px;
-  --menu-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 只对 background, border, box-shadow 过渡，避免 backdrop-filter 过渡造成卡顿 */
+  --menu-transition: background 0.25s ease, border-bottom 0.25s ease, box-shadow 0.25s ease;
 
   /* Spacing */
   --header-space: 16px;
@@ -175,6 +204,21 @@
 
 html {
   scroll-behavior: smooth;
+  /* 强制始终显示滚动条 */
+  overflow-y: scroll !important;
+}
+
+/* 强制阻止 Ant Design Modal 修改样式导致的页面抖动 */
+html, 
+html[style],
+html.ant-scrolling-effect,
+body,
+body[style],
+body.ant-scrolling-effect {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+  overflow-y: scroll !important;
+  width: 100% !important;
 }
 
 body {
@@ -476,7 +520,51 @@ body {
   background: rgba(0, 212, 170, 0.15) !important;
 }
 
-/* Table */
+/* 表单错误状态 */
+.ant-input-status-error,
+.ant-input-affix-wrapper-status-error,
+.ant-select-status-error .ant-select-selector,
+.ant-input-number-status-error,
+.ant-picker-status-error {
+  border-color: var(--color-error) !important;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.1) !important;
+}
+
+.ant-input-status-error:focus,
+.ant-input-affix-wrapper-status-error.ant-input-affix-wrapper-focused,
+.ant-select-status-error.ant-select-focused .ant-select-selector,
+.ant-input-number-status-error:focus,
+.ant-picker-status-error.ant-picker-focused {
+  border-color: var(--color-error) !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 77, 79, 0.2),
+    0 0 20px rgba(255, 77, 79, 0.2) !important;
+}
+
+/* 表单成功状态 */
+.ant-input-status-success,
+.ant-input-affix-wrapper-status-success {
+  border-color: var(--color-success) !important;
+}
+
+/* 表单警告状态 */
+.ant-input-status-warning,
+.ant-input-affix-wrapper-status-warning {
+  border-color: var(--color-warning) !important;
+}
+
+/* 表单帮助文本 */
+.ant-form-item-explain-error {
+  color: var(--color-error) !important;
+  font-size: 12px;
+  margin-top: var(--spacing-xs);
+}
+
+.ant-form-item-explain-warning {
+  color: var(--color-warning) !important;
+}
+
+/* Table - Admin 表格增强 */
 .ant-table {
   background: transparent !important;
 }
@@ -489,12 +577,15 @@ body {
   text-transform: uppercase;
   font-size: 12px;
   letter-spacing: 0.5px;
+  padding: var(--spacing-md) var(--spacing-lg) !important;
 }
 
 .ant-table-tbody > tr > td {
   background: var(--bg-card) !important;
   color: var(--text-primary) !important;
   border-bottom: 1px solid var(--border-color) !important;
+  padding: var(--spacing-md) var(--spacing-lg) !important;
+  transition: var(--transition-fast);
 }
 
 .ant-table-tbody > tr:hover > td {
@@ -503,6 +594,32 @@ body {
 
 .ant-table-tbody > tr.ant-table-row-selected > td {
   background: rgba(0, 212, 170, 0.1) !important;
+}
+
+/* 表格行点击效果 */
+.ant-table-tbody > tr {
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.ant-table-tbody > tr:active > td {
+  background: rgba(0, 212, 170, 0.15) !important;
+}
+
+/* 表格内操作按钮统一样式 */
+.ant-table-tbody .ant-btn-text {
+  color: var(--text-tertiary) !important;
+  transition: var(--transition-fast);
+}
+
+.ant-table-tbody .ant-btn-text:hover {
+  color: var(--color-primary) !important;
+  background: rgba(0, 212, 170, 0.1) !important;
+}
+
+/* 表格分页器 */
+.ant-table-pagination {
+  margin-top: var(--spacing-lg) !important;
 }
 
 /* Tags */
@@ -577,32 +694,55 @@ body {
   background: var(--bg-elevated) !important;
 }
 
-/* Modal */
+/* Modal - 玻璃态增强 */
 .ant-modal-content {
-  background: var(--bg-card) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 16px !important;
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-lg), 0 0 40px rgba(0, 0, 0, 0.3) !important;
 }
 
 .ant-modal-header {
   background: transparent !important;
   border-bottom: 1px solid var(--border-color) !important;
+  padding: var(--spacing-lg) var(--spacing-xl) !important;
 }
 
 .ant-modal-title {
   color: var(--text-primary) !important;
+  font-weight: 600 !important;
 }
 
 .ant-modal-close {
   color: var(--text-tertiary) !important;
+  transition: var(--transition-fast);
 }
 
 .ant-modal-close:hover {
   color: var(--text-primary) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.ant-modal-body {
+  padding: var(--spacing-xl) !important;
 }
 
 .ant-modal-footer {
   border-top: 1px solid var(--border-color) !important;
+  padding: var(--spacing-lg) var(--spacing-xl) !important;
+}
+
+/* Modal 遮罩层 */
+.ant-modal-mask {
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* Modal 内部的 Card 不需要入场动画，避免双重动画 */
+.ant-modal .ant-card,
+.ant-modal-content .ant-card {
+  animation: none !important;
 }
 
 /* Dropdown */
@@ -2613,4 +2753,13 @@ input:focus:not(:focus-visible) {
 .ant-menu-horizontal .ant-menu-submenu-title {
   font-size: var(--menu-font-size) !important;
   padding: var(--menu-item-padding-y) var(--menu-item-padding-x) !important;
+}
+/* ============================================
+   Premium Create Asset Modal
+   ============================================ */
+.premium-create-modal .ant-modal-content {
+  background: linear-gradient(180deg, rgba(20, 30, 25, 0.98) 0%, rgba(15, 22, 18, 0.98) 100%) !important;
+  border: 1px solid rgba(0, 212, 170, 0.15);
+  border-radius: 16px;
+  overflow: hidden;
 }

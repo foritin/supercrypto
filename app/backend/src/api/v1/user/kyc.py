@@ -20,7 +20,7 @@ from src.shared.schemas.base import ApiResponse
 from src.shared.security import require_user
 from src.shared.services.minio_service import get_minio_service
 
-logger = get_logger(__name__)
+logger = get_logger("kyc.api")
 
 router = APIRouter()
 
@@ -139,4 +139,3 @@ async def apply_kyc(
     data.wallet_address = wallet_address
     result = await service.apply(data)
     return ApiResponse(data=result, message="KYC application submitted successfully")
-

@@ -43,7 +43,7 @@ const common = {
     sessionRevoked: "您已被管理员强制下线",
   },
   footer: {
-    copyright: "© {{year}} ApprovePlatform. 保留所有权利。",
+    copyright: "© {{year}} SlimCrypto. 保留所有权利。",
     terms: "服务条款",
     privacy: "隐私政策",
   },

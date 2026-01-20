@@ -16,11 +16,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from falib.utils.log import get_logger
-
 from src.models.project_registry import ContractDeploymentStatus, ProjectContractConfig
+
 from src.shared.schemas.enums import ContractRegistryStatus
 
-logger = get_logger("project_registry.binding_sync")
+logger = get_logger("contract.binding")
 
 
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
@@ -55,7 +55,7 @@ class ProjectSyncResult:
 class BindingSyncService:
     """
     合约绑定状态同步服务
-    
+
     支持两种模式:
     1. 手动模式: 通过 API 传入绑定信息更新
     2. 链上模式: 自动从链上读取绑定地址（需要 Web3 配置）
@@ -99,14 +99,20 @@ class BindingSyncService:
 
         try:
             # 获取部署状态记录
-            deployment = await ContractDeploymentStatus.filter(
-                config__project_name=project_name,
-                config__contract_name=contract_name,
-                network=network,
-            ).select_related("config").first()
+            deployment = (
+                await ContractDeploymentStatus.filter(
+                    config__project_name=project_name,
+                    config__contract_name=contract_name,
+                    network=network,
+                )
+                .select_related("config")
+                .first()
+            )
 
             if not deployment:
-                result.error = f"未找到部署记录: {project_name}/{contract_name}@{network}"
+                result.error = (
+                    f"未找到部署记录: {project_name}/{contract_name}@{network}"
+                )
                 return result
 
             # 更新绑定
@@ -116,7 +122,9 @@ class BindingSyncService:
 
             for dep_name, address in bindings.items():
                 is_zero = address == ZERO_ADDRESS
-                is_bound = address != ZERO_ADDRESS or deployment.config.allow_zero_address
+                is_bound = (
+                    address != ZERO_ADDRESS or deployment.config.allow_zero_address
+                )
 
                 old_binding = current_bindings.get(dep_name, {})
                 new_binding = {
@@ -250,10 +258,14 @@ class BindingSyncService:
         start_time = time.time()
 
         # 查询所有已部署的合约
-        deployments = await ContractDeploymentStatus.filter(
-            config__project_name=project_name,
-            network=network,
-        ).select_related("config").all()
+        deployments = (
+            await ContractDeploymentStatus.filter(
+                config__project_name=project_name,
+                network=network,
+            )
+            .select_related("config")
+            .all()
+        )
 
         results = []
         synced = 0
@@ -340,11 +352,15 @@ class BindingSyncService:
         Returns:
             绑定状态字典，包含地址和绑定信息
         """
-        deployment = await ContractDeploymentStatus.filter(
-            config__project_name=project_name,
-            config__contract_name=contract_name,
-            network=network,
-        ).select_related("config").first()
+        deployment = (
+            await ContractDeploymentStatus.filter(
+                config__project_name=project_name,
+                config__contract_name=contract_name,
+                network=network,
+            )
+            .select_related("config")
+            .first()
+        )
 
         if not deployment:
             return None
@@ -355,7 +371,9 @@ class BindingSyncService:
             "status": deployment.status.value if deployment.status else None,
             "is_deployed": deployment.is_deployed,
             "bindings": deployment.bindings or {},
-            "updated_at": deployment.updated_at.isoformat() if deployment.updated_at else None,
+            "updated_at": deployment.updated_at.isoformat()
+            if deployment.updated_at
+            else None,
         }
 
 

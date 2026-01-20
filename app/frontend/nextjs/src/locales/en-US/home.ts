@@ -28,7 +28,7 @@ const home = {
       apy: "Max APY",
     },
     features: {
-      title: "Why Choose ApprovePlatform",
+      title: "Why Choose SlimCrypto",
       subtitle: "Built on blockchain technology with security, transparency, and high yields at its core",
       security: {
         title: "Bank-Grade Security",

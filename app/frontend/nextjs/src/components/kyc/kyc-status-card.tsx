@@ -37,7 +37,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
     return (
       <Card>
         <Result
-          icon={<ShieldCheck width={64} height={64} style={{ color: '#d9d9d9' }} aria-hidden="true" />}
+          icon={<ShieldCheck width={64} height={64} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />}
           title={t('kyc.connectWalletFirst')}
           subTitle={t('kyc.connectWalletDescription')}
         />
@@ -95,7 +95,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
         return (
           <Result
             status="success"
-            icon={<ShieldCheck width={64} height={64} style={{ color: '#52c41a' }} aria-hidden="true" />}
+            icon={<ShieldCheck width={64} height={64} style={{ color: 'var(--color-success)' }} aria-hidden="true" />}
             title={t('kyc.approved.title')}
             subTitle={
               <Flex vertical gap={8}>
@@ -116,7 +116,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
       case KycStatus.PENDING:
         return (
           <Result
-            icon={<Clock width={64} height={64} style={{ color: '#1677ff' }} aria-hidden="true" />}
+            icon={<Clock width={64} height={64} style={{ color: 'var(--color-info)' }} aria-hidden="true" />}
             title={t('kyc.pending.title')}
             subTitle={
               <Flex vertical gap={8}>
@@ -140,7 +140,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
         return (
           <Result
             status="error"
-            icon={<XCircle width={64} height={64} style={{ color: '#ff4d4f' }} aria-hidden="true" />}
+            icon={<XCircle width={64} height={64} style={{ color: 'var(--color-error)' }} aria-hidden="true" />}
             title={t('kyc.rejected.title')}
             subTitle={
               <Flex vertical gap={8}>
@@ -167,7 +167,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
       default:
         return (
           <div style={{ textAlign: 'center', padding: '24px 0' }}>
-            <ShieldCheck width={64} height={64} style={{ color: '#d9d9d9', marginBottom: 24 }} aria-hidden="true" />
+            <ShieldCheck width={64} height={64} style={{ color: 'var(--text-muted)', marginBottom: 24 }} aria-hidden="true" />
             <Title level={4}>{t('kyc.notStarted.title')}</Title>
             <Paragraph type="secondary" style={{ maxWidth: 400, margin: '0 auto 24px' }}>
               {t('kyc.notStarted.description')}

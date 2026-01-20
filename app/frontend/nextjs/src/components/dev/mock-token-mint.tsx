@@ -35,6 +35,7 @@ import {
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
+  useChainId,
 } from "wagmi";
 import { parseUnits, formatUnits } from "viem";
 import {
@@ -45,6 +46,7 @@ import {
 } from "@/contracts/mock-token";
 import { devToolsService, type TokenRecipient } from "@/services/dev-tools";
 import { useCurrentUser } from "@/hooks";
+import { transactionAuditService } from "@/services/transaction-audit";
 
 const { Text } = Typography;
 
@@ -60,6 +62,7 @@ export function MockTokenMint() {
   const { t } = useTranslation();
   const { message: messageApi } = App.useApp();
   const { isConnected, address } = useAccount();
+  const chainId = useChainId();
   const { isAdmin } = useCurrentUser();
   const [selectedToken, setSelectedToken] = useState<MockTokenType>("MockUSDT");
   const [mintAmount, setMintAmount] = useState<number>(1000);
@@ -219,6 +222,18 @@ export function MockTokenMint() {
           onSuccess: (hash) => {
             console.log("Mint transaction submitted:", hash);
             setCurrentStep("confirming_mint");
+            // Record mint transaction audit
+            transactionAuditService.recordContractCall({
+              txHash: hash,
+              chainId,
+              network: "local",
+              fromAddress: address,
+              contractAddress: tokenAddress,
+              contractName: selectedToken,
+              functionName: "mint",
+              functionArgs: { to: address, amount: amount.toString() },
+              description: `[Dev] Mint ${mintAmount} ${tokenInfo.symbol}`,
+            });
           },
           onError: (error) => {
             console.error("Mint error:", error);
@@ -254,6 +269,18 @@ export function MockTokenMint() {
           onSuccess: (hash) => {
             console.log("Transfer transaction submitted:", hash);
             setCurrentStep("confirming_transfer");
+            // Record transfer transaction audit
+            transactionAuditService.recordContractCall({
+              txHash: hash,
+              chainId,
+              network: "local",
+              fromAddress: address!,
+              contractAddress: tokenAddress,
+              contractName: selectedToken,
+              functionName: "transfer",
+              functionArgs: { to: selectedRecipient, amount: amount.toString() },
+              description: `[Dev] Transfer ${mintAmount} ${tokenInfo.symbol} to ${selectedRecipient?.slice(0, 6)}...${selectedRecipient?.slice(-4)}`,
+            });
           },
           onError: (error) => {
             console.error("Transfer error:", error);

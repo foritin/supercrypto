@@ -16,7 +16,7 @@ from falib.adapter.redis import RedisAdapter
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
 
-logger = get_logger("shared.session")
+logger = get_logger("auth.session")
 
 
 class SessionService:
@@ -295,8 +295,7 @@ class SessionService:
                 current_version = 0
                 for _, data in sessions:
                     version = data.get("token_version", 1)
-                    if version > current_version:
-                        current_version = version
+                    current_version = max(current_version, version)
 
                 new_version = current_version + 1
                 affected_count = len(sessions)
@@ -313,7 +312,9 @@ class SessionService:
         )
         return new_version, affected_count
 
-    async def get_token_version(self, wallet_address: str, session_id: str) -> Optional[int]:
+    async def get_token_version(
+        self, wallet_address: str, session_id: str
+    ) -> Optional[int]:
         """
         获取 session 的 token 版本号
 
