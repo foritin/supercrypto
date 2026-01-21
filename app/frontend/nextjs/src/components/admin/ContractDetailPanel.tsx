@@ -1,16 +1,36 @@
 /**
  * Contract Detail Panel Component
  * 合约详情侧边面板 - Premium UI Design
+ * 已迁移至 shadcn/ui 组件
  */
 'use client';
 
 import { useState } from 'react';
-import { Drawer, Button, Space, Typography, Alert, Modal } from 'antd';
-import { SyncOutlined, DeleteOutlined, ExclamationCircleOutlined, CopyOutlined, CheckOutlined } from '@ant-design/icons';
-import { FileCode2, Clock, Layers, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { FileCode2, Clock, Layers, GitBranch, RefreshCw, Trash2, AlertTriangle, Copy, Check, X } from 'lucide-react';
 import { GraphNode } from '@/services/contract-graph';
-import { getStatusBgColor, STATUS_COLORS_RAW } from '@/lib/theme-colors';
+import { getStatusBgColor } from '@/lib/theme-colors';
+
+// shadcn/ui 组件
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ContractDetailPanelProps {
   open: boolean;
@@ -84,227 +104,139 @@ export function ContractDetailPanel({
 
   return (
     <>
-      <Drawer
-        title={null}
-        placement="right"
-        width={480}
-        onClose={onClose}
-        open={open}
-        closable={false}
-        rootStyle={{ zIndex: 2147483648 }}
-        styles={{
-          body: { padding: 0 },
-          header: { display: 'none' },
-          wrapper: { 
-            zIndex: 2147483648,
-            background: 'linear-gradient(180deg, rgba(10, 10, 15, 0.98) 0%, rgba(15, 15, 22, 0.98) 100%)',
-          },
-        }}
-      >
-        {/* 顶部渐变装饰 */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 200,
-          background: `linear-gradient(180deg, ${statusColors.bg} 0%, transparent 100%)`,
-          pointerEvents: 'none',
-        }} />
-
-        {/* 头部区域 */}
-        <div style={{
-          position: 'relative',
-          padding: '24px 24px 20px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-        }}>
-          {/* 关闭按钮 */}
-          <button
-            onClick={onClose}
+      <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+        <SheetContent 
+          side="right" 
+          className="w-[480px] sm:max-w-[480px] p-0 border-l border-white/10 overflow-y-auto"
+        >
+          {/* 顶部渐变装饰 */}
+          <div 
+            className="absolute top-0 left-0 right-0 h-[200px] pointer-events-none"
             style={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              width: 32,
-              height: 32,
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: 8,
-              background: 'rgba(255, 255, 255, 0.05)',
-              color: 'rgba(255, 255, 255, 0.6)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
+              background: `linear-gradient(180deg, ${statusColors.bg} 0%, transparent 100%)`,
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            }}
-          >
-            ✕
-          </button>
+          />
 
-          {/* 图标和标题 */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-            <div style={{
-              width: 56,
-              height: 56,
-              borderRadius: 14,
-              background: `linear-gradient(135deg, ${statusColors.bg} 0%, rgba(255, 255, 255, 0.02) 100%)`,
-              border: `1px solid ${statusColors.border}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <FileCode2 size={28} style={{ color: statusColors.text }} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h3 style={{
-                margin: 0,
-                fontSize: 20,
-                fontWeight: 600,
-                color: '#fff',
-                marginBottom: 8,
-              }}>
-                {node.label}
-              </h3>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{
-                  padding: '4px 10px',
-                  borderRadius: 6,
-                  fontSize: 12,
-                  fontWeight: 500,
-                  background: statusColors.bg,
+          {/* 头部区域 */}
+          <div className="relative px-6 pt-6 pb-5 border-b border-white/[0.06]">
+            {/* 图标和标题 */}
+            <div className="flex items-start gap-4 pr-8">
+              <div 
+                className="w-14 h-14 rounded-[14px] flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: `linear-gradient(135deg, ${statusColors.bg} 0%, rgba(255, 255, 255, 0.02) 100%)`,
                   border: `1px solid ${statusColors.border}`,
-                  color: statusColors.text,
-                }}>
-                  {t(`admin.contracts.status.${node.status}`)}
-                </span>
-                <span style={{
-                  padding: '4px 10px',
-                  borderRadius: 6,
-                  fontSize: 12,
-                  fontWeight: 500,
-                  background: projectColors.bg,
-                  border: `1px solid ${projectColors.border}`,
-                  color: projectColors.text,
-                }}>
-                  {getProjectLabel(node.project)}
-                </span>
+                }}
+              >
+                <FileCode2 size={28} style={{ color: statusColors.text }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <SheetHeader className="space-y-0 text-left">
+                  <SheetTitle className="text-xl font-semibold text-white mb-2">
+                    {node.label}
+                  </SheetTitle>
+                  <SheetDescription className="sr-only">
+                    {t('admin.contracts.detail.description', '合约详情面板')}
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="flex gap-2 flex-wrap">
+                  <span 
+                    className="px-2.5 py-1 rounded-md text-xs font-medium"
+                    style={{
+                      background: statusColors.bg,
+                      border: `1px solid ${statusColors.border}`,
+                      color: statusColors.text,
+                    }}
+                  >
+                    {t(`admin.contracts.status.${node.status}`)}
+                  </span>
+                  <span 
+                    className="px-2.5 py-1 rounded-md text-xs font-medium"
+                    style={{
+                      background: projectColors.bg,
+                      border: `1px solid ${projectColors.border}`,
+                      color: projectColors.text,
+                    }}
+                  >
+                    {getProjectLabel(node.project)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* 内容区域 */}
-        <div style={{ padding: 24, position: 'relative' }}>
-          {/* 状态警告 */}
-          {hasIssue && (
-            <Alert
-              message={node.status === 'not_registered'
-                ? t('admin.contracts.detail.notRegisteredWarning')
-                : t('admin.contracts.detail.missingDepsWarning')}
-              description={node.status === 'not_registered'
-                ? t('admin.contracts.detail.notRegisteredDesc')
-                : t('admin.contracts.detail.missingDepsDesc')}
-              type="warning"
-              showIcon
-              style={{ marginBottom: 20, borderRadius: 12 }}
-            />
-          )}
+          {/* 内容区域 */}
+          <div className="relative p-6">
+            {/* 状态警告 */}
+            {hasIssue && (
+              <Alert variant="warning" className="mb-5 rounded-xl">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>
+                  {node.status === 'not_registered'
+                    ? t('admin.contracts.detail.notRegisteredWarning')
+                    : t('admin.contracts.detail.missingDepsWarning')}
+                </AlertTitle>
+                <AlertDescription>
+                  {node.status === 'not_registered'
+                    ? t('admin.contracts.detail.notRegisteredDesc')
+                    : t('admin.contracts.detail.missingDepsDesc')}
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {/* 信息卡片 */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-            borderRadius: 16,
-            overflow: 'hidden',
-          }}>
-            {/* 合约地址 */}
-            <div style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 8,
-              }}>
-                <span style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.45)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {t('admin.contracts.detail.contractAddress')}
-                </span>
-                <button
-                  onClick={handleCopyAddress}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: copied ? '#52c41a' : 'rgba(255, 255, 255, 0.45)',
-                    cursor: 'pointer',
-                    padding: 4,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    fontSize: 12,
-                  }}
-                >
-                  {copied ? <CheckOutlined /> : <CopyOutlined />}
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
+            {/* 信息卡片 */}
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden">
+              {/* 合约地址 */}
+              <div className="p-4 px-5 border-b border-white/[0.06]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-white/45 uppercase tracking-wider">
+                    {t('admin.contracts.detail.contractAddress')}
+                  </span>
+                  <button
+                    onClick={handleCopyAddress}
+                    className="flex items-center gap-1 text-xs bg-transparent border-none cursor-pointer p-1 transition-colors"
+                    style={{ color: copied ? '#52c41a' : 'rgba(255, 255, 255, 0.45)' }}
+                  >
+                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    {copied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+                <code className="block text-[13px] font-mono text-white/85 break-all leading-relaxed">
+                  {node.address}
+                </code>
               </div>
-              <code style={{
-                display: 'block',
-                fontSize: 13,
-                fontFamily: 'JetBrains Mono, Monaco, monospace',
-                color: 'rgba(255, 255, 255, 0.85)',
-                wordBreak: 'break-all',
-                lineHeight: 1.5,
-              }}>
-                {node.address}
-              </code>
+
+              {/* 其他信息 */}
+              <div className="grid grid-cols-2">
+                <InfoItem
+                  icon={<Layers size={16} />}
+                  label={t('admin.contracts.detail.contractType')}
+                  value={getContractTypeLabel(node.type)}
+                />
+                <InfoItem
+                  icon={<GitBranch size={16} />}
+                  label={t('admin.contracts.detail.dependencyStatus')}
+                  value={t(`admin.contracts.status.${node.status}`)}
+                  valueColor={statusColors.text}
+                />
+                <InfoItem
+                  icon={<Clock size={16} />}
+                  label={t('admin.contracts.detail.deployedAt')}
+                  value={node.deployedAt ? new Date(node.deployedAt).toLocaleString() : '-'}
+                  span={2}
+                />
+              </div>
             </div>
 
-            {/* 其他信息 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-              <InfoItem
-                icon={<Layers size={16} />}
-                label={t('admin.contracts.detail.contractType')}
-                value={getContractTypeLabel(node.type)}
-              />
-              <InfoItem
-                icon={<GitBranch size={16} />}
-                label={t('admin.contracts.detail.dependencyStatus')}
-                value={t(`admin.contracts.status.${node.status}`)}
-                valueColor={statusColors.text}
-              />
-              <InfoItem
-                icon={<Clock size={16} />}
-                label={t('admin.contracts.detail.deployedAt')}
-                value={node.deployedAt ? new Date(node.deployedAt).toLocaleString() : '-'}
-                span={2}
-              />
-            </div>
-          </div>
-
-          {/* 操作按钮 */}
-          <div style={{ marginTop: 24 }}>
-            <Space orientation="vertical" style={{ width: '100%' }} size={12}>
+            {/* 操作按钮 */}
+            <div className="mt-6 flex flex-col gap-3">
               {hasIssue && node.status === 'not_registered' && onUpdateDependency && (
                 <Button
-                  type="primary"
-                  icon={<SyncOutlined spin={isRegistering} />}
                   onClick={onUpdateDependency}
-                  loading={isRegistering}
-                  block
-                  size="large"
-                  style={{ height: 48, borderRadius: 12, fontWeight: 500 }}
+                  disabled={isRegistering}
+                  className="h-12 rounded-xl font-medium"
                 >
+                  <RefreshCw className={`h-4 w-4 ${isRegistering ? 'animate-spin' : ''}`} />
                   {isRegistering
                     ? t('admin.contracts.detail.registering')
                     : t('admin.contracts.detail.registerToProvider')}
@@ -313,15 +245,12 @@ export function ContractDetailPanel({
 
               {canUnregister && (
                 <Button
-                  danger
-                  icon={<DeleteOutlined />}
+                  variant="destructive"
                   onClick={() => setUnregisterModalOpen(true)}
-                  loading={isUnregistering}
-                  block
-                  size="large"
-                  style={{ height: 48, borderRadius: 12, fontWeight: 500 }}
-                  disabled={isRegistering}
+                  disabled={isUnregistering || isRegistering}
+                  className="h-12 rounded-xl font-medium"
                 >
+                  <Trash2 className="h-4 w-4" />
                   {isUnregistering
                     ? t('admin.contracts.unregister.unregistering', '解除注册中...')
                     : t('admin.contracts.unregister.button', '解除注册')}
@@ -329,56 +258,60 @@ export function ContractDetailPanel({
               )}
 
               <Button 
-                onClick={onClose} 
-                block 
-                size="large"
-                style={{ 
-                  height: 48, 
-                  borderRadius: 12, 
-                  fontWeight: 500,
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                }}
+                variant="outline"
+                onClick={onClose}
                 disabled={isRegistering || isUnregistering}
+                className="h-12 rounded-xl font-medium bg-white/[0.04] border-white/10 hover:bg-white/[0.08]"
               >
                 {t('admin.contracts.detail.close')}
               </Button>
-            </Space>
+            </div>
           </div>
-        </div>
-      </Drawer>
+        </SheetContent>
+      </Sheet>
 
       {/* 解除注册确认对话框 */}
-      <Modal
-        title={
-          <Space>
-            <ExclamationCircleOutlined style={{ color: '#faad14' }} />
-            {t('admin.contracts.unregister.confirmTitle', '确认解除注册')}
-          </Space>
-        }
-        open={unregisterModalOpen}
-        onOk={handleUnregisterConfirm}
-        onCancel={() => setUnregisterModalOpen(false)}
-        okText={t('admin.contracts.unregister.confirm', '确认解除注册')}
-        cancelText={t('admin.contracts.unregister.cancel', '取消')}
-        okButtonProps={{ danger: true }}
-        zIndex={2147483649}
-      >
-        <Alert
-          type="warning"
-          showIcon
-          message={t('admin.contracts.unregister.warning', '警告：此操作将解除合约注册')}
-          description={t(
-            'admin.contracts.unregister.warningDesc',
-            '您即将解除注册合约 {{name}}。此操作会将 AddressProvider 中的地址设置为零地址。',
-            { name: node?.label }
-          )}
-          style={{ marginBottom: 16 }}
-        />
-        <Typography.Text type="secondary">
-          {t('admin.contracts.unregister.warningNote', '解除注册后，依赖此合约的其他合约可能无法正常工作。')}
-        </Typography.Text>
-      </Modal>
+      <AlertDialog open={unregisterModalOpen} onOpenChange={setUnregisterModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-[#faad14]" />
+              {t('admin.contracts.unregister.confirmTitle', '确认解除注册')}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <Alert variant="warning">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>
+                    {t('admin.contracts.unregister.warning', '警告：此操作将解除合约注册')}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {t(
+                      'admin.contracts.unregister.warningDesc',
+                      '您即将解除注册合约 {{name}}。此操作会将 AddressProvider 中的地址设置为零地址。',
+                      { name: node?.label }
+                    )}
+                  </AlertDescription>
+                </Alert>
+                <p className="text-sm text-muted-foreground">
+                  {t('admin.contracts.unregister.warningNote', '解除注册后，依赖此合约的其他合约可能无法正常工作。')}
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {t('admin.contracts.unregister.cancel', '取消')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUnregisterConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('admin.contracts.unregister.confirm', '确认解除注册')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -398,29 +331,20 @@ function InfoItem({
   span?: number;
 }) {
   return (
-    <div style={{
-      padding: '16px 20px',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-      borderRight: span === 1 ? '1px solid rgba(255, 255, 255, 0.06)' : 'none',
-      gridColumn: span === 2 ? '1 / -1' : undefined,
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        marginBottom: 6,
-        color: 'rgba(255, 255, 255, 0.45)',
-      }}>
+    <div 
+      className={`p-4 px-5 border-b border-white/[0.06] ${span === 1 ? 'border-r border-white/[0.06]' : ''}`}
+      style={{ gridColumn: span === 2 ? '1 / -1' : undefined }}
+    >
+      <div className="flex items-center gap-1.5 mb-1.5 text-white/45">
         {icon}
-        <span style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <span className="text-xs uppercase tracking-wider">
           {label}
         </span>
       </div>
-      <div style={{ 
-        fontSize: 14, 
-        fontWeight: 500, 
-        color: valueColor || 'rgba(255, 255, 255, 0.85)',
-      }}>
+      <div 
+        className="text-sm font-medium"
+        style={{ color: valueColor || 'rgba(255, 255, 255, 0.85)' }}
+      >
         {value}
       </div>
     </div>

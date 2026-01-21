@@ -1,38 +1,43 @@
 "use client";
 
+/**
+ * Admin Contracts Page
+ * 管理员合约管理页面 - 查看合约状态、注册/解除注册合约
+ * 
+ * 已迁移到 shadcn/ui 组件:
+ * - Typography -> Tailwind typography
+ * - Card -> shadcn/ui Card
+ * - Table -> DataTable (子组件)
+ * - Tag -> Badge (子组件)
+ * - Button -> shadcn/ui Button
+ * - Space/Flex -> Tailwind flex
+ * - Modal -> Dialog
+ * - Form -> react-hook-form
+ * - Input -> shadcn/ui Input
+ * - Tooltip -> shadcn/ui Tooltip (子组件)
+ * - Alert -> shadcn/ui Alert
+ * - Tabs -> shadcn/ui Tabs
+ * - App.useApp().message -> sonner notification
+ * - @ant-design/icons -> lucide-react
+ */
+
 import { useState, useMemo, useEffect, useCallback } from "react";
-import {
-  Typography,
-  Card,
-  Table,
-  Tag,
-  Button,
-  Space,
-  Flex,
-  Modal,
-  Form,
-  Input,
-  Tooltip,
-  Alert,
-  Badge,
-  Divider,
-  App,
-  Tabs,
-} from "antd";
-import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ExclamationCircleOutlined,
-  DeleteOutlined,
-  WarningOutlined,
-  ApiOutlined,
-  ApartmentOutlined,
-  TableOutlined,
-  ReloadOutlined,
-} from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useAccount, useWalletClient, usePublicClient, useSwitchChain, useChainId } from "wagmi";
 import { parseAbi } from "viem";
+import { useForm } from "react-hook-form";
+import {
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Trash2,
+  AlertTriangle,
+  Cable,
+  GitBranch,
+  Table as TableIcon,
+  RefreshCw,
+} from "lucide-react";
+
 import { useCurrentUser } from "@/hooks";
 import { RequireAdmin } from "@/components/auth";
 import {
@@ -44,6 +49,8 @@ import {
   ADDRESS_PROVIDER_ABI,
 } from "@/services/contract";
 import { transactionAuditService } from "@/services/transaction-audit";
+import { notification } from "@/lib/notification";
+
 import { ContractDependencyGraph } from "@/components/admin/ContractDependencyGraph";
 import { ContractDependencyTree } from "@/components/admin/ContractDependencyTree";
 import { ContractDetailPanel } from "@/components/admin/ContractDetailPanel";
@@ -52,7 +59,26 @@ import { ContractTableList } from "@/components/admin/ContractTableList";
 import { ContractStatusLegend } from "@/components/admin/ContractStatusLegend";
 import { Node } from "reactflow";
 
-const { Title, Text, Paragraph } = Typography;
+// shadcn/ui 组件
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+} from "@/components/ui/form";
 
 // 注册状态颜色映射（纯 Provider 模式）
 const STATUS_COLORS = {
@@ -65,16 +91,21 @@ const STATUS_COLORS = {
 
 // 状态图标映射
 const STATUS_ICONS = {
-  synced: <CheckCircleOutlined />,
-  mismatch: <ExclamationCircleOutlined />,
-  not_registered: <WarningOutlined />,
-  not_deployed: <CloseCircleOutlined />,
-  unknown: <ExclamationCircleOutlined />,
+  synced: <CheckCircle className="h-4 w-4" />,
+  mismatch: <AlertCircle className="h-4 w-4" />,
+  not_registered: <AlertTriangle className="h-4 w-4" />,
+  not_deployed: <XCircle className="h-4 w-4" />,
+  unknown: <AlertCircle className="h-4 w-4" />,
 };
+
+// 表单类型定义
+interface UpdateFormValues {
+  setFunction: string;
+  newAddress: string;
+}
 
 export default function AdminContractsPage() {
   const { t } = useTranslation();
-  const { message } = App.useApp();
   const { isConnected, chain, address } = useAccount();
   const chainId = useChainId();
   const { isAdmin } = useCurrentUser();
@@ -90,7 +121,14 @@ export default function AdminContractsPage() {
   const [selectedDependency, setSelectedDependency] =
     useState<DependencyStatusItem | null>(null);
   const [resetConfirmText, setResetConfirmText] = useState("");
-  const [form] = Form.useForm();
+
+  // react-hook-form
+  const form = useForm<UpdateFormValues>({
+    defaultValues: {
+      setFunction: "",
+      newAddress: "",
+    },
+  });
 
   // 视图切换状态
   const [viewMode, setViewMode] = useState<"table" | "graph">("table");
@@ -216,12 +254,9 @@ export default function AdminContractsPage() {
   }, [contractStatus, filters]);
 
   // 更新地址
-  const handleUpdate = async (values: {
-    setFunction: string;
-    newAddress: string;
-  }) => {
+  const handleUpdate = async (values: UpdateFormValues) => {
     if (!selectedContract || !walletClient || !publicClient || !address) {
-      message.error("Invalid state");
+      notification.error("Invalid state");
       return;
     }
 
@@ -277,15 +312,15 @@ export default function AdminContractsPage() {
         new_address: values.newAddress,
       });
 
-      message.success(
+      notification.success(
         `${t("admin.contracts.updateSuccess")} TX: ${hash.slice(0, 10)}...`
       );
       setUpdateModalOpen(false);
       setSelectedDependency(null);
-      form.resetFields();
+      form.reset();
       refetch();
     } catch (error) {
-      message.error(
+      notification.error(
         `${t("admin.contracts.updateFailed")}: ${(error as Error).message}`
       );
     } finally {
@@ -305,13 +340,13 @@ export default function AdminContractsPage() {
       } else {
         await contractAdminService.resetAllDeployments("RESET ALL");
       }
-      message.success(t("admin.contracts.resetSuccess"));
+      notification.success(t("admin.contracts.resetSuccess"));
       setResetModalOpen(false);
       setResetProject(null);
       setResetConfirmText("");
       refetch();
     } catch (error) {
-      message.error(
+      notification.error(
         `${t("admin.contracts.resetFailed")}: ${(error as Error).message}`
       );
     } finally {
@@ -326,18 +361,15 @@ export default function AdminContractsPage() {
   ) => {
     setSelectedContract(contract);
     setSelectedDependency(dependency);
-    form.setFieldsValue({
-      providerKey: dependency.key,
-      contractName: dependency.contract,
-      currentAddress: dependency.address,
-    });
+    form.setValue("setFunction", dependency.key || "");
+    form.setValue("newAddress", dependency.address || "");
     setUpdateModalOpen(true);
   };
 
   // 处理注册合约到 Provider (前端钱包签名模式)
   const handleRegisterToProvider = async (contractName: string) => {
     if (!walletClient || !publicClient) {
-      message.error(t("admin.contracts.register.walletNotConnected"));
+      notification.error(t("admin.contracts.register.walletNotConnected"));
       return;
     }
 
@@ -345,16 +377,16 @@ export default function AdminContractsPage() {
     const HARDHAT_CHAIN_ID = 31337;
     if (chain?.id !== HARDHAT_CHAIN_ID) {
       try {
-        message.loading(t("admin.contracts.register.switchingNetwork") || "Switching to Hardhat network...", 0);
+        notification.loading(t("admin.contracts.register.switchingNetwork") || "Switching to Hardhat network...", 0);
         await switchChainAsync({ chainId: HARDHAT_CHAIN_ID });
-        message.destroy();
+        notification.destroy();
       } catch (switchError) {
-        message.destroy();
+        notification.destroy();
         const err = switchError as { code?: number; message?: string };
         if (err.code === 4001 || err.message?.includes('rejected')) {
-          message.warning(t("admin.contracts.register.switchRejected") || "Network switch rejected. Please switch to Hardhat network manually.");
+          notification.warning(t("admin.contracts.register.switchRejected") || "Network switch rejected. Please switch to Hardhat network manually.");
         } else {
-          message.error(t("admin.contracts.register.switchFailed") || "Failed to switch network. Please switch to Hardhat network manually in MetaMask.");
+          notification.error(t("admin.contracts.register.switchFailed") || "Failed to switch network. Please switch to Hardhat network manually in MetaMask.");
         }
         return;
       }
@@ -375,7 +407,7 @@ export default function AdminContractsPage() {
       });
 
       if (!providerCode || providerCode === "0x") {
-        message.error(
+        notification.error(
           t("admin.contracts.register.providerNotDeployed", {
             address: prepareData.provider_address.slice(0, 10) + "...",
           }) || `AddressProvider 合约未部署或地址无效: ${prepareData.provider_address.slice(0, 10)}...`
@@ -393,7 +425,7 @@ export default function AdminContractsPage() {
         }) as string;
       } catch (ownerError) {
         console.error("[Register] Failed to read owner:", ownerError);
-        message.error(
+        notification.error(
           t("admin.contracts.register.ownerReadFailed") || 
           `无法读取 AddressProvider 的 owner，请确认合约地址正确: ${prepareData.provider_address.slice(0, 10)}...`
         );
@@ -402,7 +434,7 @@ export default function AdminContractsPage() {
 
       const walletAddress = walletClient.account?.address;
       if (!walletAddress || walletAddress.toLowerCase() !== owner.toLowerCase()) {
-        message.error(
+        notification.error(
           t("admin.contracts.register.notOwner", {
             owner: owner.slice(0, 10) + "...",
           })
@@ -411,7 +443,7 @@ export default function AdminContractsPage() {
       }
 
       // 4. 钱包签名发送交易
-      message.loading(t("admin.contracts.register.signing"), 0);
+      notification.loading(t("admin.contracts.register.signing"), 0);
 
       const hash = await walletClient.writeContract({
         address: prepareData.provider_address as `0x${string}`,
@@ -437,8 +469,8 @@ export default function AdminContractsPage() {
         description: `[Admin] Register ${contractName} to AddressProvider`,
       });
 
-      message.destroy();
-      message.loading(t("admin.contracts.register.confirming"), 0);
+      notification.destroy();
+      notification.loading(t("admin.contracts.register.confirming"), 0);
 
       // 5. 等待交易确认
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
@@ -457,8 +489,8 @@ export default function AdminContractsPage() {
         tx_hash: hash,
       });
 
-      message.destroy();
-      message.success(
+      notification.destroy();
+      notification.success(
         t("admin.contracts.register.success", {
           name: contractName,
           tx: hash.slice(0, 10) + "...",
@@ -471,9 +503,9 @@ export default function AdminContractsPage() {
       setSelectedListContract(null);
       refetch();
     } catch (error) {
-      message.destroy();
+      notification.destroy();
       const errorMessage = (error as Error).message || "Unknown error";
-      message.error(
+      notification.error(
         t("admin.contracts.register.failed", { error: errorMessage })
       );
     } finally {
@@ -484,7 +516,7 @@ export default function AdminContractsPage() {
   // 处理解除注册合约 (前端钱包签名模式)
   const handleUnregisterFromProvider = async (contractName: string) => {
     if (!walletClient || !publicClient) {
-      message.error(t("admin.contracts.unregister.walletNotConnected", "请先连接钱包"));
+      notification.error(t("admin.contracts.unregister.walletNotConnected", "请先连接钱包"));
       return;
     }
 
@@ -492,16 +524,16 @@ export default function AdminContractsPage() {
     const HARDHAT_CHAIN_ID = 31337;
     if (chain?.id !== HARDHAT_CHAIN_ID) {
       try {
-        message.loading(t("admin.contracts.register.switchingNetwork") || "Switching to Hardhat network...", 0);
+        notification.loading(t("admin.contracts.register.switchingNetwork") || "Switching to Hardhat network...", 0);
         await switchChainAsync({ chainId: HARDHAT_CHAIN_ID });
-        message.destroy();
+        notification.destroy();
       } catch (switchError) {
-        message.destroy();
+        notification.destroy();
         const err = switchError as { code?: number; message?: string };
         if (err.code === 4001 || err.message?.includes('rejected')) {
-          message.warning(t("admin.contracts.register.switchRejected") || "Network switch rejected.");
+          notification.warning(t("admin.contracts.register.switchRejected") || "Network switch rejected.");
         } else {
-          message.error(t("admin.contracts.register.switchFailed") || "Failed to switch network.");
+          notification.error(t("admin.contracts.register.switchFailed") || "Failed to switch network.");
         }
         return;
       }
@@ -522,7 +554,7 @@ export default function AdminContractsPage() {
       });
 
       if (!providerCode || providerCode === "0x") {
-        message.error(
+        notification.error(
           t("admin.contracts.unregister.providerNotDeployed", "AddressProvider 合约未部署")
         );
         return;
@@ -538,13 +570,13 @@ export default function AdminContractsPage() {
         }) as string;
       } catch (ownerError) {
         console.error("[Unregister] Failed to read owner:", ownerError);
-        message.error(t("admin.contracts.unregister.ownerReadFailed", "无法读取 owner"));
+        notification.error(t("admin.contracts.unregister.ownerReadFailed", "无法读取 owner"));
         return;
       }
 
       const walletAddress = walletClient.account?.address;
       if (!walletAddress || walletAddress.toLowerCase() !== owner.toLowerCase()) {
-        message.error(
+        notification.error(
           t("admin.contracts.unregister.notOwner", {
             defaultValue: "只有 owner 可以解除注册",
             owner: owner.slice(0, 10) + "...",
@@ -554,7 +586,7 @@ export default function AdminContractsPage() {
       }
 
       // 4. 钱包签名发送交易
-      message.loading(t("admin.contracts.unregister.signing", "签名中..."), 0);
+      notification.loading(t("admin.contracts.unregister.signing", "签名中..."), 0);
 
       const hash = await walletClient.writeContract({
         address: prepareData.provider_address as `0x${string}`,
@@ -580,8 +612,8 @@ export default function AdminContractsPage() {
         description: `[Admin] Unregister ${contractName} from AddressProvider`,
       });
 
-      message.destroy();
-      message.loading(t("admin.contracts.unregister.confirming", "确认交易中..."), 0);
+      notification.destroy();
+      notification.loading(t("admin.contracts.unregister.confirming", "确认交易中..."), 0);
 
       // 5. 等待交易确认
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
@@ -600,8 +632,8 @@ export default function AdminContractsPage() {
         tx_hash: hash,
       });
 
-      message.destroy();
-      message.success(
+      notification.destroy();
+      notification.success(
         t("admin.contracts.unregister.success", {
           defaultValue: "解除注册成功: {{name}}, TX: {{tx}}",
           name: contractName,
@@ -615,9 +647,9 @@ export default function AdminContractsPage() {
       setSelectedListContract(null);
       refetch();
     } catch (error) {
-      message.destroy();
+      notification.destroy();
       const errorMessage = (error as Error).message || "Unknown error";
-      message.error(
+      notification.error(
         t("admin.contracts.unregister.failed", {
           defaultValue: "解除注册失败: {{error}}",
           error: errorMessage,
@@ -639,7 +671,7 @@ export default function AdminContractsPage() {
       ? resetProject.toUpperCase()
       : "RESET ALL";
     if (resetConfirmText !== expectedText) {
-      message.error(
+      notification.error(
         t("admin.contracts.resetConfirmError", { text: expectedText })
       );
       return;
@@ -649,225 +681,251 @@ export default function AdminContractsPage() {
 
   return (
     <RequireAdmin>
-      <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+      <div className="max-w-[1400px] mx-auto">
         {/* Page Header with Refresh Button */}
-        <div style={{ marginBottom: 32, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div className="mb-8 flex justify-between items-start">
           <div>
-            <Title level={2} style={{ marginBottom: 8 }}>
+            <h2 className="text-2xl font-bold mb-2">
               {t("admin.contracts.title")}
-            </Title>
-            <Text style={{ color: "rgba(255, 255, 255, 0.65)" }}>
+            </h2>
+            <p className="text-white/65">
               {t("admin.contracts.subtitle")}
-            </Text>
+            </p>
           </div>
           <Button
-            icon={<ReloadOutlined spin={isLoading} />}
+            variant="outline"
             onClick={fetchContractStatus}
-            loading={isLoading}
+            disabled={isLoading}
           >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             {t("admin.contracts.refresh")}
           </Button>
         </div>
 
         {/* View Toggle Tabs */}
-        <Tabs
-          activeKey={viewMode}
-          onChange={(key) => setViewMode(key as "table" | "graph")}
-          items={[
-            {
-              key: "table",
-              label: (
-                <Space>
-                  <TableOutlined />
-                  {t("admin.contracts.table.listView")}
-                </Space>
-              ),
-              children: (
-                <>
-                  {/* 状态图例 */}
-                  <ContractStatusLegend />
+        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "table" | "graph")}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="table" className="flex items-center gap-2">
+              <TableIcon className="h-4 w-4" />
+              {t("admin.contracts.table.listView")}
+            </TabsTrigger>
+            <TabsTrigger value="graph" className="flex items-center gap-2">
+              <GitBranch className="h-4 w-4" />
+              {t("admin.contracts.table.treeView")}
+            </TabsTrigger>
+          </TabsList>
 
-                  {/* 筛选栏（包含显示已解绑 Checkbox） */}
-                  <ContractFilterBar
-                    filters={filters}
-                    onFiltersChange={setFilters}
-                    onReset={() => setFilters(DEFAULT_FILTERS)}
-                  />
+          <TabsContent value="table">
+            {/* 状态图例 */}
+            <ContractStatusLegend />
 
-                  {/* 表格列表 */}
-                  <ContractTableList
-                    contractStatus={filteredContractStatus}
-                    loading={isLoading}
-                    onContractClick={(contract) => {
-                      setSelectedListContract(contract);
-                      // 将 ContractStatusItem 转换为 Node 格式供详情面板使用
-                      setSelectedGraphNode({
-                        id: contract.name,
-                        data: {
-                          id: contract.name,
-                          label: contract.name,
-                          address: contract.address || '',
-                          project: contract.project,
-                          status: contract.registration_status,
-                          type: contract.scope === 'global' ? 'common' : 'exclusive',
-                          deployedAt: contract.deployed_at,
-                          providerAddress: contract.provider_address,
-                          lastSynced: contract.last_synced,
-                          isRegistered: contract.registration_status === 'synced',
-                          providerKey: contract.provider_key,
-                        },
-                      } as Node);
-                      setDetailPanelOpen(true);
-                    }}
-                  />
-                </>
-              ),
-            },
-            {
-              key: "graph",
-              label: (
-                <Space>
-                  <ApartmentOutlined />
-                  {t("admin.contracts.table.treeView")}
-                </Space>
-              ),
-              children: (
-                /* Dependency Tree View - Compact */
-                <>
-                  {/* 筛选栏（包含显示已解绑 Checkbox） */}
-                  <ContractFilterBar
-                    filters={filters}
-                    onFiltersChange={setFilters}
-                    onReset={() => setFilters(DEFAULT_FILTERS)}
-                  />
-                  <ContractDependencyTree
-                    showDeleted={filters.showDeleted}
-                    onContractClick={(contractId) => {
-                      // Find contract node data from all contracts
-                      const nodeData = allContracts.find(
-                        (c) => c.name === contractId
-                      );
-                      if (nodeData) {
-                        // Create a mock node for compatibility
-                        setSelectedGraphNode({
-                          id: contractId,
-                          data: {
-                            id: contractId,
-                            label: contractId,
-                            address: nodeData.address || '',
-                            project: nodeData.project || 'common',
-                            status: nodeData.registration_status,
-                            type: nodeData.scope === 'global' ? 'common' : 'exclusive',
-                            deployedAt: nodeData.deployed_at || null,
-                            providerAddress: nodeData.provider_address,
-                            lastSynced: nodeData.last_synced,
-                            isRegistered: nodeData.registration_status === 'synced',
-                            providerKey: nodeData.provider_key,
-                          },
-                        } as Node);
-                        setDetailPanelOpen(true);
-                      }
-                    }}
-                  />
-                </>
-              ),
-            },
-          ]}
-        />
+            {/* 筛选栏（包含显示已解绑 Checkbox） */}
+            <ContractFilterBar
+              filters={filters}
+              onFiltersChange={setFilters}
+              onReset={() => setFilters(DEFAULT_FILTERS)}
+            />
+
+            {/* 表格列表 */}
+            <ContractTableList
+              contractStatus={filteredContractStatus}
+              loading={isLoading}
+              onContractClick={(contract) => {
+                setSelectedListContract(contract);
+                // 将 ContractStatusItem 转换为 Node 格式供详情面板使用
+                setSelectedGraphNode({
+                  id: contract.name,
+                  data: {
+                    id: contract.name,
+                    label: contract.name,
+                    address: contract.address || '',
+                    project: contract.project,
+                    status: contract.registration_status,
+                    type: contract.scope === 'global' ? 'common' : 'exclusive',
+                    deployedAt: contract.deployed_at,
+                    providerAddress: contract.provider_address,
+                    lastSynced: contract.last_synced,
+                    isRegistered: contract.registration_status === 'synced',
+                    providerKey: contract.provider_key,
+                  },
+                } as Node);
+                setDetailPanelOpen(true);
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="graph">
+            {/* 筛选栏（包含显示已解绑 Checkbox） */}
+            <ContractFilterBar
+              filters={filters}
+              onFiltersChange={setFilters}
+              onReset={() => setFilters(DEFAULT_FILTERS)}
+            />
+            <ContractDependencyTree
+              showDeleted={filters.showDeleted}
+              onContractClick={(contractId) => {
+                // Find contract node data from all contracts
+                const nodeData = allContracts.find(
+                  (c) => c.name === contractId
+                );
+                if (nodeData) {
+                  // Create a mock node for compatibility
+                  setSelectedGraphNode({
+                    id: contractId,
+                    data: {
+                      id: contractId,
+                      label: contractId,
+                      address: nodeData.address || '',
+                      project: nodeData.project || 'common',
+                      status: nodeData.registration_status,
+                      type: nodeData.scope === 'global' ? 'common' : 'exclusive',
+                      deployedAt: nodeData.deployed_at || null,
+                      providerAddress: nodeData.provider_address,
+                      lastSynced: nodeData.last_synced,
+                      isRegistered: nodeData.registration_status === 'synced',
+                      providerKey: nodeData.provider_key,
+                    },
+                  } as Node);
+                  setDetailPanelOpen(true);
+                }
+              }}
+            />
+          </TabsContent>
+        </Tabs>
 
         {/* Update Modal */}
-        <Modal
-          title={t("admin.contracts.updateModal.title")}
-          open={updateModalOpen}
-          onCancel={() => {
-            setUpdateModalOpen(false);
+        <Dialog open={updateModalOpen} onOpenChange={(open) => {
+          setUpdateModalOpen(open);
+          if (!open) {
             setSelectedDependency(null);
-            form.resetFields();
-          }}
-          onOk={() => form.submit()}
-          confirmLoading={isUpdating}
-        >
-          {selectedDependency && (
-            <Alert
-              type="info"
-              message={t("admin.contracts.updateModal.info")}
-              description={
-                <div>
-                  <div>
-                    <strong>{t("admin.contracts.updateModal.from")}:</strong>{" "}
-                    {selectedDependency.address}
+            form.reset();
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("admin.contracts.updateModal.title")}</DialogTitle>
+            </DialogHeader>
+            
+            {selectedDependency && (
+              <Alert variant="info" className="mb-4">
+                <Cable className="h-4 w-4" />
+                <AlertTitle>{t("admin.contracts.updateModal.info")}</AlertTitle>
+                <AlertDescription>
+                  <div className="mt-2 space-y-1">
+                    <div>
+                      <strong>{t("admin.contracts.updateModal.from")}:</strong>{" "}
+                      <span className="font-mono text-xs">{selectedDependency.address}</span>
+                    </div>
+                    <div>
+                      <strong>{t("admin.contracts.updateModal.contract")}:</strong>{" "}
+                      {selectedDependency.contract}
+                    </div>
                   </div>
-                  <div>
-                    <strong>{t("admin.contracts.updateModal.contract")}:</strong>{" "}
-                    {selectedDependency.contract}
-                  </div>
-                </div>
-              }
-              style={{ marginBottom: 16 }}
-            />
-          )}
-          <Form form={form} layout="vertical" onFinish={handleUpdate}>
-            <Form.Item
-              name="setFunction"
-              label={t("admin.contracts.updateModal.setFunction")}
-              rules={[{ required: true }]}
-            >
-              <Input disabled />
-            </Form.Item>
-            <Form.Item
-              name="newAddress"
-              label={t("admin.contracts.updateModal.newAddress")}
-              rules={[{ required: true }]}
-            >
-              <Input disabled />
-            </Form.Item>
-          </Form>
-        </Modal>
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleUpdate)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="setFunction"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("admin.contracts.updateModal.setFunction")}</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="newAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("admin.contracts.updateModal.newAddress")}</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setUpdateModalOpen(false)}
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  <Button type="submit" disabled={isUpdating}>
+                    {isUpdating ? t("common.loading") : t("common.confirm")}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
 
         {/* Reset Modal */}
-        <Modal
-          title={
-            <Space>
-              <WarningOutlined style={{ color: "#ff4d4f" }} />
-              {t("admin.contracts.resetModal.title")}
-            </Space>
-          }
-          open={resetModalOpen}
-          onCancel={() => {
-            setResetModalOpen(false);
+        <Dialog open={resetModalOpen} onOpenChange={(open) => {
+          setResetModalOpen(open);
+          if (!open) {
             setResetProject(null);
             setResetConfirmText("");
-          }}
-          onOk={confirmReset}
-          confirmLoading={isResetting}
-          okButtonProps={{ danger: true }}
-          okText={t("admin.contracts.resetModal.confirm")}
-        >
-          <Alert
-            type="error"
-            message={t("admin.contracts.resetModal.warning")}
-            description={
-              resetProject
-                ? t("admin.contracts.resetModal.projectWarning", {
-                    project: resetProject,
-                  })
-                : t("admin.contracts.resetModal.allWarning")
-            }
-            style={{ marginBottom: 16 }}
-          />
-          <Paragraph>
-            {t("admin.contracts.resetModal.confirmText", {
-              text: resetProject ? resetProject.toUpperCase() : "RESET ALL",
-            })}
-          </Paragraph>
-          <Input
-            value={resetConfirmText}
-            onChange={(e) => setResetConfirmText(e.target.value)}
-            placeholder={
-              resetProject ? resetProject.toUpperCase() : "RESET ALL"
-            }
-          />
-        </Modal>
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                {t("admin.contracts.resetModal.title")}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>{t("admin.contracts.resetModal.warning")}</AlertTitle>
+              <AlertDescription>
+                {resetProject
+                  ? t("admin.contracts.resetModal.projectWarning", {
+                      project: resetProject,
+                    })
+                  : t("admin.contracts.resetModal.allWarning")}
+              </AlertDescription>
+            </Alert>
+            
+            <p className="text-sm text-white/65 mb-4">
+              {t("admin.contracts.resetModal.confirmText", {
+                text: resetProject ? resetProject.toUpperCase() : "RESET ALL",
+              })}
+            </p>
+            
+            <Input
+              value={resetConfirmText}
+              onChange={(e) => setResetConfirmText(e.target.value)}
+              placeholder={resetProject ? resetProject.toUpperCase() : "RESET ALL"}
+            />
+            
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setResetModalOpen(false)}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmReset}
+                disabled={isResetting}
+              >
+                {isResetting ? t("common.loading") : t("admin.contracts.resetModal.confirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Contract Detail Panel (for Graph View and List View) */}
         <ContractDetailPanel

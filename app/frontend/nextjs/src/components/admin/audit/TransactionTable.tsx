@@ -1,22 +1,27 @@
 /**
  * TransactionTable Component
- * 交易审计表格组件
+ * 交易审计表格组件 - 使用 shadcn/ui 和 @tanstack/react-table
  */
 'use client';
 
 import React from 'react';
-import { Table, Tooltip, Typography, Space } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+import { ColumnDef } from '@tanstack/react-table';
+import { Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { ColumnsType } from 'antd/es/table';
+import { DataTable } from '@/components/ui/data-table';
+import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { TransactionAudit, TransactionAuditType } from '@/services/audit';
 import { AddressDisplay } from './web3/AddressDisplay';
 import { TxHashLink } from './web3/TxHashLink';
 import { TokenAmount } from './web3/TokenAmount';
 import { ChainBadge } from './web3/ChainBadge';
 import { TxStatusBadge } from './web3/TxStatusBadge';
-
-const { Text } = Typography;
 
 interface TransactionTableProps {
   data: TransactionAudit[];
@@ -65,66 +70,72 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const columns: ColumnsType<TransactionAudit> = [
+  // 定义列配置
+  const columns: ColumnDef<TransactionAudit>[] = [
     {
-      title: t('admin.audit.txTable.time', '时间'),
-      dataIndex: 'created_at',
-      key: 'created_at',
-      width: 160,
-      render: (value: string) => (
-        <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 13 }}>
-          {formatDateTime(value)}
-        </Text>
+      accessorKey: 'created_at',
+      header: t('admin.audit.txTable.time', '时间'),
+      size: 160,
+      cell: ({ row }) => (
+        <span className="text-[13px] text-white/85">
+          {formatDateTime(row.original.created_at)}
+        </span>
       ),
     },
     {
-      title: t('admin.audit.txTable.txHash', '交易哈希'),
-      dataIndex: 'tx_hash',
-      key: 'tx_hash',
-      width: 160,
-      render: (value: string, record) => (
-        <TxHashLink txHash={value} chainId={record.chain_id} />
+      accessorKey: 'tx_hash',
+      header: t('admin.audit.txTable.txHash', '交易哈希'),
+      size: 160,
+      cell: ({ row }) => (
+        <TxHashLink txHash={row.original.tx_hash} chainId={row.original.chain_id} />
       ),
     },
     {
-      title: t('admin.audit.txTable.chain', '链'),
-      key: 'chain',
-      width: 100,
-      render: (_, record) => (
-        <ChainBadge chainId={record.chain_id} network={record.network} />
+      id: 'chain',
+      header: t('admin.audit.txTable.chain', '链'),
+      size: 100,
+      cell: ({ row }) => (
+        <ChainBadge chainId={row.original.chain_id} network={row.original.network} />
       ),
     },
     {
-      title: t('admin.audit.txTable.type', '类型'),
-      dataIndex: 'tx_type',
-      key: 'tx_type',
-      width: 120,
-      render: (value: TransactionAuditType) => (
-        <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
-          {t(`admin.audit.txType.${value}`, TX_TYPE_LABELS[value] || value)}
-        </Text>
-      ),
+      accessorKey: 'tx_type',
+      header: t('admin.audit.txTable.type', '类型'),
+      size: 120,
+      cell: ({ row }) => {
+        const txType = row.original.tx_type;
+        return (
+          <span className="text-white/85">
+            {t(`admin.audit.txType.${txType}`, TX_TYPE_LABELS[txType] || txType)}
+          </span>
+        );
+      },
     },
     {
-      title: t('admin.audit.txTable.from', '发送方'),
-      dataIndex: 'from_address',
-      key: 'from_address',
-      width: 150,
-      render: (value: string) => <AddressDisplay address={value} />,
+      accessorKey: 'from_address',
+      header: t('admin.audit.txTable.from', '发送方'),
+      size: 150,
+      cell: ({ row }) => <AddressDisplay address={row.original.from_address} />,
     },
     {
-      title: t('admin.audit.txTable.to', '接收方'),
-      dataIndex: 'to_address',
-      key: 'to_address',
-      width: 150,
-      render: (value: string | null) => 
-        value ? <AddressDisplay address={value} /> : <Text type="secondary">-</Text>,
+      accessorKey: 'to_address',
+      header: t('admin.audit.txTable.to', '接收方'),
+      size: 150,
+      cell: ({ row }) => {
+        const toAddress = row.original.to_address;
+        return toAddress ? (
+          <AddressDisplay address={toAddress} />
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        );
+      },
     },
     {
-      title: t('admin.audit.txTable.amount', '金额'),
-      key: 'amount',
-      width: 140,
-      render: (_, record) => {
+      id: 'amount',
+      header: t('admin.audit.txTable.amount', '金额'),
+      size: 140,
+      cell: ({ row }) => {
+        const record = row.original;
         // 优先显示 Token 金额
         if (record.token_amount && record.token_symbol) {
           return (
@@ -145,77 +156,103 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             />
           );
         }
-        return <Text type="secondary">-</Text>;
+        return <span className="text-muted-foreground">-</span>;
       },
     },
     {
-      title: t('admin.audit.txTable.gas', 'Gas'),
-      key: 'gas',
-      width: 100,
-      render: (_, record) => {
+      id: 'gas',
+      header: t('admin.audit.txTable.gas', 'Gas'),
+      size: 100,
+      cell: ({ row }) => {
+        const record = row.original;
         if (record.gas_used) {
           return (
-            <Tooltip title={`Gas Used: ${record.gas_used}`}>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 12 }}>
-                {record.gas_used.toLocaleString()}
-              </Text>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-white/65 text-xs cursor-default">
+                    {record.gas_used.toLocaleString()}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Gas Used: {record.gas_used}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         }
         if (record.gas_limit) {
           return (
-            <Tooltip title={`Gas Limit: ${record.gas_limit}`}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                ~{record.gas_limit.toLocaleString()}
-              </Text>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-muted-foreground text-xs cursor-default">
+                    ~{record.gas_limit.toLocaleString()}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Gas Limit: {record.gas_limit}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         }
-        return <Text type="secondary">-</Text>;
+        return <span className="text-muted-foreground">-</span>;
       },
     },
     {
-      title: t('admin.audit.txTable.status', '状态'),
-      dataIndex: 'status',
-      key: 'status',
-      width: 110,
-      render: (value) => <TxStatusBadge status={value} />,
+      accessorKey: 'status',
+      header: t('admin.audit.txTable.status', '状态'),
+      size: 110,
+      cell: ({ row }) => <TxStatusBadge status={row.original.status} />,
     },
     {
-      title: t('admin.audit.txTable.actions', '操作'),
-      key: 'actions',
-      width: 80,
-      fixed: 'right',
-      render: (_, record) => (
-        <Tooltip title={t('admin.audit.txTable.viewDetail', '查看详情')}>
-          <a onClick={() => onViewDetail?.(record)}>
-            <EyeOutlined style={{ fontSize: 16 }} />
-          </a>
-        </Tooltip>
+      id: 'actions',
+      header: t('admin.audit.txTable.actions', '操作'),
+      size: 80,
+      cell: ({ row }) => (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => onViewDetail?.(row.original)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('admin.audit.txTable.viewDetail', '查看详情')}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       ),
     },
   ];
 
+  // 转换分页配置
+  const paginationConfig = pagination ? {
+    pageIndex: pagination.current - 1, // DataTable 使用 0-based index
+    pageSize: pagination.pageSize,
+    pageCount: Math.ceil(pagination.total / pagination.pageSize),
+    onPageChange: (page: number) => pagination.onChange(page + 1, pagination.pageSize),
+    onPageSizeChange: (size: number) => pagination.onChange(1, size),
+  } : undefined;
+
   return (
-    <Table<TransactionAudit>
-      columns={columns}
-      dataSource={data}
-      rowKey="id"
-      loading={loading}
-      scroll={{ x: 1400 }}
-      pagination={pagination ? {
-        current: pagination.current,
-        pageSize: pagination.pageSize,
-        total: pagination.total,
-        onChange: pagination.onChange,
-        showSizeChanger: true,
-        showQuickJumper: true,
-        showTotal: (total) => t('admin.audit.txTable.total', '共 {{total}} 条', { total }),
-      } : false}
-      style={{
-        background: 'rgba(15, 15, 26, 0.6)',
-        borderRadius: 12,
-      }}
-    />
+    <div 
+      className="rounded-xl overflow-hidden"
+      style={{ background: 'rgba(15, 15, 26, 0.6)' }}
+    >
+      <DataTable<TransactionAudit, unknown>
+        columns={columns}
+        data={data}
+        loading={loading}
+        pagination={paginationConfig}
+        emptyMessage={t('admin.audit.txTable.total', '暂无交易记录')}
+      />
+    </div>
   );
 };

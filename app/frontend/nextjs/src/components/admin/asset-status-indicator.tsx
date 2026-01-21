@@ -10,15 +10,22 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Tag, Tooltip, Space, Badge } from 'antd'
+import { Badge } from '@/components/ui/badge'
 import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ExclamationCircleOutlined,
-  EyeOutlined,
-  EyeInvisibleOutlined,
-} from '@ant-design/icons'
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Eye,
+  EyeOff,
+} from 'lucide-react'
 import type { AssetDetail, AssetListItem } from '@/services/asset'
+import { cn } from '@/lib/utils'
 
 // 状态类型
 type StatusType = 'success' | 'error' | 'warning'
@@ -73,25 +80,39 @@ function hasContractBinding(asset: AssetListItem | AssetDetail): boolean {
 function getStatusIcon(status: StatusType) {
   switch (status) {
     case 'success':
-      return <CheckCircleOutlined style={{ color: '#52c41a' }} />
+      return <CheckCircle className="h-3.5 w-3.5 text-[#00D4AA]" />
     case 'error':
-      return <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+      return <XCircle className="h-3.5 w-3.5 text-destructive" />
     case 'warning':
-      return <ExclamationCircleOutlined style={{ color: '#faad14' }} />
+      return <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />
   }
 }
 
 /**
- * 获取状态颜色
+ * 获取 Badge variant
  */
-function getStatusColor(status: StatusType): string {
+function getBadgeVariant(status: StatusType): 'default' | 'destructive' | 'secondary' | 'outline' {
   switch (status) {
     case 'success':
-      return 'success'
+      return 'default'
     case 'error':
-      return 'error'
+      return 'destructive'
     case 'warning':
-      return 'warning'
+      return 'secondary'
+  }
+}
+
+/**
+ * 获取 Badge 样式类
+ */
+function getBadgeClassName(status: StatusType): string {
+  switch (status) {
+    case 'success':
+      return 'bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30 hover:bg-[#00D4AA]/30'
+    case 'error':
+      return 'bg-destructive/20 text-destructive border-destructive/30 hover:bg-destructive/30'
+    case 'warning':
+      return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30 hover:bg-yellow-500/30'
   }
 }
 
@@ -165,68 +186,107 @@ export function AssetStatusIndicator({
       : statusItems.filter(s => s.status !== 'success').map(s => s.message)
 
     return (
-      <Tooltip
-        title={
-          computedVisibility ? (
-            '用户可见'
-          ) : (
-            <div>
-              <div style={{ marginBottom: 4 }}>用户不可见：</div>
-              <ul style={{ margin: 0, paddingLeft: 16 }}>
-                {issues.map((issue, i) => (
-                  <li key={i}>{issue}</li>
-                ))}
-              </ul>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="inline-flex items-center gap-1.5 cursor-default">
+              {computedVisibility ? (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-[#00D4AA] opacity-75 animate-ping" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00D4AA]" />
+                  </span>
+                  <Eye className="h-4 w-4 text-[#00D4AA]" />
+                </>
+              ) : (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive" />
+                  </span>
+                  <EyeOff className="h-4 w-4 text-destructive" />
+                </>
+              )}
             </div>
-          )
-        }
-      >
-        {computedVisibility ? (
-          <Badge status="success" text={<EyeOutlined style={{ color: '#52c41a' }} />} />
-        ) : (
-          <Badge status="error" text={<EyeInvisibleOutlined style={{ color: '#ff4d4f' }} />} />
-        )}
-      </Tooltip>
+          </TooltipTrigger>
+          <TooltipContent>
+            {computedVisibility ? (
+              <span>用户可见</span>
+            ) : (
+              <div>
+                <div className="mb-1 font-medium">用户不可见：</div>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  {issues.map((issue, i) => (
+                    <li key={i} className="text-muted-foreground">{issue}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     )
   }
 
   // 完整模式
   return (
-    <Space orientation="vertical" size={4}>
-      {/* 状态项 */}
-      {statusItems.map((item) => (
-        <Tooltip key={item.key} title={item.message}>
-          <Tag
-            color={getStatusColor(item.status)}
-            icon={getStatusIcon(item.status)}
-            style={{ margin: 0 }}
-          >
-            {item.label}
-            {item.required && item.status !== 'success' && (
-              <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>
-            )}
-          </Tag>
-        </Tooltip>
-      ))}
+    <TooltipProvider>
+      <div className="flex flex-col gap-1">
+        {/* 状态项 */}
+        {statusItems.map((item) => (
+          <Tooltip key={item.key}>
+            <TooltipTrigger asChild>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'cursor-default gap-1.5 justify-start',
+                  getBadgeClassName(item.status)
+                )}
+              >
+                {getStatusIcon(item.status)}
+                <span>{item.label}</span>
+                {item.required && item.status !== 'success' && (
+                  <span className="text-destructive ml-0.5">*</span>
+                )}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span>{item.message}</span>
+            </TooltipContent>
+          </Tooltip>
+        ))}
 
-      {/* 可见性汇总 */}
-      {showVisibility && (
-        <Tooltip
-          title={
-            computedVisibility
-              ? '满足所有可见性条件'
-              : `不可见原因: ${visibilityIssues.join(', ') || statusItems.filter(s => s.status !== 'success').map(s => s.label).join(', ')}`
-          }
-        >
-          <Tag
-            color={computedVisibility ? 'success' : 'error'}
-            icon={computedVisibility ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-          >
-            {computedVisibility ? '用户可见' : '用户不可见'}
-          </Tag>
-        </Tooltip>
-      )}
-    </Space>
+        {/* 可见性汇总 */}
+        {showVisibility && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'cursor-default gap-1.5 justify-start',
+                  computedVisibility
+                    ? 'bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30 hover:bg-[#00D4AA]/30'
+                    : 'bg-destructive/20 text-destructive border-destructive/30 hover:bg-destructive/30'
+                )}
+              >
+                {computedVisibility ? (
+                  <Eye className="h-3.5 w-3.5" />
+                ) : (
+                  <EyeOff className="h-3.5 w-3.5" />
+                )}
+                <span>{computedVisibility ? '用户可见' : '用户不可见'}</span>
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span>
+                {computedVisibility
+                  ? '满足所有可见性条件'
+                  : `不可见原因: ${visibilityIssues.join(', ') || statusItems.filter(s => s.status !== 'success').map(s => s.label).join(', ')}`}
+              </span>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    </TooltipProvider>
   )
 }
 

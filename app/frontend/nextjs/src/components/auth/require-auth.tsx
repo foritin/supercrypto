@@ -18,10 +18,12 @@
  * - <RequireAuth check={() => someCondition}>...</RequireAuth> // 自定义检查
  */
 import { ReactNode, useEffect, useState, useMemo, useCallback } from 'react'
-import { Spin, Button, Skeleton, message } from 'antd'
 import { Loader2, Lock, Wallet, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { notification } from '@/lib/notification'
 import { useCurrentUser, useKycStatus } from '@/hooks'
 import { KycStatus } from '@/services/kyc'
 
@@ -67,7 +69,7 @@ function useAuthLogoutListener() {
   
   const handleLogout = useCallback((event: CustomEvent<{ message?: string }>) => {
     const logoutMessage = event.detail?.message || t('auth.sessionExpired')
-    message.warning(logoutMessage)
+    notification.warning(logoutMessage)
     
     // 跳转到首页
     if (window.location.pathname !== '/') {
@@ -191,109 +193,45 @@ export function RequireAuth({
     switch (reason) {
       case 'wallet':
         return (
-          <div 
-            style={{ 
-              minHeight: '80vh',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '40px 24px',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
+          <div className="min-h-[80vh] flex items-center justify-center p-6 md:p-10 relative overflow-hidden">
             {/* 背景装饰 */}
             <div 
+              className="absolute top-[10%] left-[10%] w-[400px] h-[400px] rounded-full pointer-events-none"
               style={{
-                position: 'absolute',
-                top: '10%',
-                left: '10%',
-                width: 400,
-                height: 400,
                 background: 'radial-gradient(circle, rgba(0, 212, 170, 0.08) 0%, transparent 70%)',
-                borderRadius: '50%',
                 filter: 'blur(60px)',
-                pointerEvents: 'none',
               }}
             />
             <div 
+              className="absolute bottom-[20%] right-[15%] w-[300px] h-[300px] rounded-full pointer-events-none"
               style={{
-                position: 'absolute',
-                bottom: '20%',
-                right: '15%',
-                width: 300,
-                height: 300,
                 background: 'radial-gradient(circle, rgba(255, 215, 0, 0.06) 0%, transparent 70%)',
-                borderRadius: '50%',
                 filter: 'blur(60px)',
-                pointerEvents: 'none',
               }}
             />
             
             {/* 主内容卡片 */}
-            <div 
-              className="glass-card-enhanced"
-              style={{
-                maxWidth: 480,
-                width: '100%',
-                padding: '48px 40px',
-                textAlign: 'center',
-                position: 'relative',
-                zIndex: 1,
-              }}
-            >
+            <div className="glass-card-enhanced max-w-[480px] w-full p-10 md:p-12 text-center relative z-10">
               {/* 图标容器 */}
-              <div 
-                className="icon-box icon-box-primary"
-                style={{
-                  width: 88,
-                  height: 88,
-                  margin: '0 auto 28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Wallet width={44} height={44} style={{ color: '#00D4AA' }} aria-hidden="true" />
+              <div className="icon-box icon-box-primary w-[88px] h-[88px] mx-auto mb-7 flex items-center justify-center">
+                <Wallet className="w-11 h-11 text-primary" aria-hidden="true" />
               </div>
               
               {/* 标题 */}
-              <h2 
-                style={{
-                  fontSize: 28,
-                  fontWeight: 700,
-                  color: '#fff',
-                  marginBottom: 12,
-                  letterSpacing: '-0.02em',
-                }}
-              >
+              <h2 className="text-[28px] font-bold text-white mb-3 tracking-tight">
                 {t('auth.walletRequired')}
               </h2>
               
               {/* 描述 */}
-              <p 
-                style={{
-                  fontSize: 16,
-                  color: 'rgba(255, 255, 255, 0.65)',
-                  marginBottom: 32,
-                  lineHeight: 1.6,
-                }}
-              >
+              <p className="text-base text-white/65 mb-8 leading-relaxed">
                 {t('auth.walletRequiredDescription')}
               </p>
               
               {/* 按钮 */}
               <Button 
-                type="primary" 
-                size="large"
+                size="lg"
                 onClick={goHome}
-                style={{
-                  height: 52,
-                  padding: '0 40px',
-                  fontSize: 16,
-                  fontWeight: 600,
-                  borderRadius: 12,
-                }}
+                className="h-[52px] px-10 text-base font-semibold rounded-xl"
               >
                 {t('common.backToHome')}
               </Button>
@@ -303,109 +241,45 @@ export function RequireAuth({
       
       case 'kyc':
         return (
-          <div 
-            style={{ 
-              minHeight: '80vh',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '40px 24px',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
+          <div className="min-h-[80vh] flex items-center justify-center p-6 md:p-10 relative overflow-hidden">
             {/* 背景装饰 */}
             <div 
+              className="absolute top-[15%] right-[10%] w-[350px] h-[350px] rounded-full pointer-events-none"
               style={{
-                position: 'absolute',
-                top: '15%',
-                right: '10%',
-                width: 350,
-                height: 350,
                 background: 'radial-gradient(circle, rgba(250, 173, 20, 0.08) 0%, transparent 70%)',
-                borderRadius: '50%',
                 filter: 'blur(60px)',
-                pointerEvents: 'none',
               }}
             />
             <div 
+              className="absolute bottom-[15%] left-[15%] w-[280px] h-[280px] rounded-full pointer-events-none"
               style={{
-                position: 'absolute',
-                bottom: '15%',
-                left: '15%',
-                width: 280,
-                height: 280,
                 background: 'radial-gradient(circle, rgba(0, 212, 170, 0.06) 0%, transparent 70%)',
-                borderRadius: '50%',
                 filter: 'blur(60px)',
-                pointerEvents: 'none',
               }}
             />
             
             {/* 主内容卡片 */}
-            <div 
-              className="glass-card-enhanced"
-              style={{
-                maxWidth: 480,
-                width: '100%',
-                padding: '48px 40px',
-                textAlign: 'center',
-                position: 'relative',
-                zIndex: 1,
-              }}
-            >
+            <div className="glass-card-enhanced max-w-[480px] w-full p-10 md:p-12 text-center relative z-10">
               {/* 图标容器 */}
-              <div 
-                className="icon-box icon-box-gold"
-                style={{
-                  width: 88,
-                  height: 88,
-                  margin: '0 auto 28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <ShieldCheck width={44} height={44} style={{ color: '#FFD700' }} aria-hidden="true" />
+              <div className="icon-box icon-box-gold w-[88px] h-[88px] mx-auto mb-7 flex items-center justify-center">
+                <ShieldCheck className="w-11 h-11 text-[#FFD700]" aria-hidden="true" />
               </div>
               
               {/* 标题 */}
-              <h2 
-                style={{
-                  fontSize: 28,
-                  fontWeight: 700,
-                  color: '#fff',
-                  marginBottom: 12,
-                  letterSpacing: '-0.02em',
-                }}
-              >
+              <h2 className="text-[28px] font-bold text-white mb-3 tracking-tight">
                 {t('auth.kycRequired')}
               </h2>
               
               {/* 描述 */}
-              <p 
-                style={{
-                  fontSize: 16,
-                  color: 'rgba(255, 255, 255, 0.65)',
-                  marginBottom: 32,
-                  lineHeight: 1.6,
-                }}
-              >
+              <p className="text-base text-white/65 mb-8 leading-relaxed">
                 {t('auth.kycRequiredDescription')}
               </p>
               
               {/* 按钮 */}
               <Button 
-                type="primary" 
-                size="large"
+                size="lg"
                 onClick={() => router.push('/kyc')}
-                style={{
-                  height: 52,
-                  padding: '0 40px',
-                  fontSize: 16,
-                  fontWeight: 600,
-                  borderRadius: 12,
-                }}
+                className="h-[52px] px-10 text-base font-semibold rounded-xl"
               >
                 {t('auth.goToKyc')}
               </Button>
@@ -415,112 +289,51 @@ export function RequireAuth({
       
       case 'admin':
         return (
-          <div 
-            style={{ 
-              minHeight: '80vh',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '40px 24px',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
+          <div className="min-h-[80vh] flex items-center justify-center p-6 md:p-10 relative overflow-hidden">
             {/* 背景装饰 */}
             <div 
+              className="absolute top-[20%] left-[20%] w-[320px] h-[320px] rounded-full pointer-events-none"
               style={{
-                position: 'absolute',
-                top: '20%',
-                left: '20%',
-                width: 320,
-                height: 320,
                 background: 'radial-gradient(circle, rgba(255, 77, 79, 0.08) 0%, transparent 70%)',
-                borderRadius: '50%',
                 filter: 'blur(60px)',
-                pointerEvents: 'none',
               }}
             />
             <div 
+              className="absolute bottom-[10%] right-[20%] w-[260px] h-[260px] rounded-full pointer-events-none"
               style={{
-                position: 'absolute',
-                bottom: '10%',
-                right: '20%',
-                width: 260,
-                height: 260,
                 background: 'radial-gradient(circle, rgba(24, 144, 255, 0.06) 0%, transparent 70%)',
-                borderRadius: '50%',
                 filter: 'blur(60px)',
-                pointerEvents: 'none',
               }}
             />
             
             {/* 主内容卡片 */}
-            <div 
-              className="glass-card-enhanced"
-              style={{
-                maxWidth: 480,
-                width: '100%',
-                padding: '48px 40px',
-                textAlign: 'center',
-                position: 'relative',
-                zIndex: 1,
-              }}
-            >
+            <div className="glass-card-enhanced max-w-[480px] w-full p-10 md:p-12 text-center relative z-10">
               {/* 图标容器 */}
               <div 
+                className="w-[88px] h-[88px] mx-auto mb-7 flex items-center justify-center rounded-[20px] transition-all duration-300"
                 style={{
-                  width: 88,
-                  height: 88,
-                  margin: '0 auto 28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
                   background: 'linear-gradient(135deg, rgba(255, 77, 79, 0.15) 0%, rgba(255, 77, 79, 0.05) 100%)',
                   border: '1px solid rgba(255, 77, 79, 0.3)',
-                  borderRadius: 20,
-                  transition: 'all 0.3s ease',
                 }}
               >
-                <Lock width={44} height={44} style={{ color: '#ff4d4f' }} aria-hidden="true" />
+                <Lock className="w-11 h-11 text-[#ff4d4f]" aria-hidden="true" />
               </div>
               
               {/* 标题 */}
-              <h2 
-                style={{
-                  fontSize: 28,
-                  fontWeight: 700,
-                  color: '#fff',
-                  marginBottom: 12,
-                  letterSpacing: '-0.02em',
-                }}
-              >
+              <h2 className="text-[28px] font-bold text-white mb-3 tracking-tight">
                 {t('auth.adminRequired')}
               </h2>
               
               {/* 描述 */}
-              <p 
-                style={{
-                  fontSize: 16,
-                  color: 'rgba(255, 255, 255, 0.65)',
-                  marginBottom: 32,
-                  lineHeight: 1.6,
-                }}
-              >
+              <p className="text-base text-white/65 mb-8 leading-relaxed">
                 {t('auth.adminRequiredDescription')}
               </p>
               
               {/* 按钮 */}
               <Button 
-                type="primary" 
-                size="large"
+                size="lg"
                 onClick={goHome}
-                style={{
-                  height: 52,
-                  padding: '0 40px',
-                  fontSize: 16,
-                  fontWeight: 600,
-                  borderRadius: 12,
-                }}
+                className="h-[52px] px-10 text-base font-semibold rounded-xl"
               >
                 {t('common.backToHome')}
               </Button>
@@ -530,96 +343,38 @@ export function RequireAuth({
       
       default:
         return (
-          <div 
-            style={{ 
-              minHeight: '80vh',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '40px 24px',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
+          <div className="min-h-[80vh] flex items-center justify-center p-6 md:p-10 relative overflow-hidden">
             {/* 背景装饰 */}
             <div 
+              className="absolute top-[15%] left-[15%] w-[300px] h-[300px] rounded-full pointer-events-none"
               style={{
-                position: 'absolute',
-                top: '15%',
-                left: '15%',
-                width: 300,
-                height: 300,
                 background: 'radial-gradient(circle, rgba(24, 144, 255, 0.08) 0%, transparent 70%)',
-                borderRadius: '50%',
                 filter: 'blur(60px)',
-                pointerEvents: 'none',
               }}
             />
             
             {/* 主内容卡片 */}
-            <div 
-              className="glass-card-enhanced"
-              style={{
-                maxWidth: 480,
-                width: '100%',
-                padding: '48px 40px',
-                textAlign: 'center',
-                position: 'relative',
-                zIndex: 1,
-              }}
-            >
+            <div className="glass-card-enhanced max-w-[480px] w-full p-10 md:p-12 text-center relative z-10">
               {/* 图标容器 */}
-              <div 
-                className="icon-box icon-box-blue"
-                style={{
-                  width: 88,
-                  height: 88,
-                  margin: '0 auto 28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Lock width={44} height={44} style={{ color: '#1890ff' }} aria-hidden="true" />
+              <div className="icon-box icon-box-blue w-[88px] h-[88px] mx-auto mb-7 flex items-center justify-center">
+                <Lock className="w-11 h-11 text-[#1890ff]" aria-hidden="true" />
               </div>
               
               {/* 标题 */}
-              <h2 
-                style={{
-                  fontSize: 28,
-                  fontWeight: 700,
-                  color: '#fff',
-                  marginBottom: 12,
-                  letterSpacing: '-0.02em',
-                }}
-              >
+              <h2 className="text-[28px] font-bold text-white mb-3 tracking-tight">
                 {t('auth.accessDenied')}
               </h2>
               
               {/* 描述 */}
-              <p 
-                style={{
-                  fontSize: 16,
-                  color: 'rgba(255, 255, 255, 0.65)',
-                  marginBottom: 32,
-                  lineHeight: 1.6,
-                }}
-              >
+              <p className="text-base text-white/65 mb-8 leading-relaxed">
                 {authResult.message || t('auth.accessDeniedDescription')}
               </p>
               
               {/* 按钮 */}
               <Button 
-                type="primary" 
-                size="large"
+                size="lg"
                 onClick={goHome}
-                style={{
-                  height: 52,
-                  padding: '0 40px',
-                  fontSize: 16,
-                  fontWeight: 600,
-                  borderRadius: 12,
-                }}
+                className="h-[52px] px-10 text-base font-semibold rounded-xl"
               >
                 {t('common.backToHome')}
               </Button>
@@ -632,16 +387,9 @@ export function RequireAuth({
   // 0. 在 hydration 完成前显示骨架屏，避免服务端/客户端不匹配
   if (!isHydrated) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: 400,
-        flexDirection: 'column',
-        gap: 16,
-      }}>
-        <Skeleton.Avatar active size={48} />
-        <Skeleton.Input active style={{ width: 200 }} />
+      <div className="flex justify-center items-center min-h-[400px] flex-col gap-4">
+        <Skeleton className="w-12 h-12 rounded-full" />
+        <Skeleton className="w-[200px] h-4" />
       </div>
     )
   }
@@ -649,18 +397,9 @@ export function RequireAuth({
   // 1. 正在加载（包括首次加载）
   if (isLoading || (needsWallet && !hasInitiallyLoaded && isConnected)) {
     return loadingRender ?? (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: 400,
-        flexDirection: 'column',
-        gap: 16,
-      }}>
-        <Spin 
-          indicator={<Loader2 width={32} height={32} style={{ color: '#00D4AA' }} className="animate-spin" aria-hidden="true" />} 
-        />
-        <span style={{ color: 'rgba(255, 255, 255, 0.45)' }}>
+      <div className="flex justify-center items-center min-h-[400px] flex-col gap-4">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" aria-hidden="true" />
+        <span className="text-white/45">
           {getLoadingMessage()}
         </span>
       </div>
@@ -672,13 +411,8 @@ export function RequireAuth({
     if (redirectTo) {
       // 重定向中，显示加载
       return loadingRender ?? (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          minHeight: 400,
-        }}>
-          <Spin indicator={<Loader2 width={32} height={32} className="animate-spin" aria-hidden="true" />} />
+        <div className="flex justify-center items-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin" aria-hidden="true" />
         </div>
       )
     }

@@ -1,15 +1,18 @@
 'use client'
 /**
  * KYC Status Card Component
- * Displays the current KYC status and provides actions
+ * 显示当前 KYC 状态并提供操作按钮
+ * 
+ * 已从 Ant Design 迁移到 shadcn/ui
  */
-import { Card, Button, Badge, Space, Flex, Typography, Spin, Alert, Result } from 'antd'
 import {
   ShieldCheck,
   Clock,
   XCircle,
   ArrowRight,
-  RotateCw
+  RotateCw,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAccount } from 'wagmi'
@@ -17,10 +20,31 @@ import { useKycStatus, useKycApply, getKycStatusInfo } from '@/hooks/use-kyc-sta
 import { KycStatus } from '@/services/kyc'
 import { useRouter } from 'next/navigation'
 
-const { Title, Text, Paragraph } = Typography
+// shadcn/ui 组件
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 
 interface KycStatusCardProps {
   onStartKyc?: () => void
+}
+
+/**
+ * 获取状态对应的 Badge 变体
+ */
+function getStatusBadgeVariant(status: KycStatus): 'default' | 'secondary' | 'destructive' | 'outline' {
+  switch (status) {
+    case KycStatus.APPROVED:
+      return 'default' // 主色调 (绿色)
+    case KycStatus.PENDING:
+      return 'secondary'
+    case KycStatus.REJECTED:
+      return 'destructive'
+    default:
+      return 'outline'
+  }
 }
 
 export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
@@ -32,49 +56,65 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
   
   const statusInfo = getKycStatusInfo(status)
 
-  // Not connected - show connect wallet message
+  // 未连接钱包 - 显示连接钱包提示
   if (!isConnected) {
     return (
       <Card>
-        <Result
-          icon={<ShieldCheck width={64} height={64} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />}
-          title={t('kyc.connectWalletFirst')}
-          subTitle={t('kyc.connectWalletDescription')}
-        />
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <ShieldCheck 
+            className="w-16 h-16 text-muted-foreground mb-6" 
+            aria-hidden="true" 
+          />
+          <h3 className="text-lg font-semibold mb-2">
+            {t('kyc.connectWalletFirst')}
+          </h3>
+          <p className="text-muted-foreground text-center max-w-sm">
+            {t('kyc.connectWalletDescription')}
+          </p>
+        </CardContent>
       </Card>
     )
   }
 
-  // Loading state
+  // 加载状态
   if (isLoading) {
     return (
       <Card>
-        <div style={{ textAlign: 'center', padding: 40 }}>
-          <Spin size="large" />
-          <Paragraph style={{ marginTop: 16 }}>{t('common.loading')}</Paragraph>
-        </div>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Skeleton className="w-16 h-16 rounded-full mb-6" />
+          <Skeleton className="h-6 w-48 mb-2" />
+          <Skeleton className="h-4 w-64" />
+        </CardContent>
       </Card>
     )
   }
 
-  // Error state
+  // 错误状态
   if (isError) {
     return (
       <Card>
-        <Alert
-          type="error"
-          message={t('kyc.error.loadFailed')}
-          action={
-            <Button size="small" icon={<RotateCw width={14} height={14} aria-hidden="true" />} onClick={() => refetch()}>
-              {t('common.retry')}
-            </Button>
-          }
-        />
+        <CardContent className="py-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{t('kyc.error.loadFailed')}</AlertTitle>
+            <AlertDescription className="flex items-center justify-between mt-2">
+              <span>{t('common.tryAgainLater')}</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => refetch()}
+              >
+                <RotateCw className="w-4 h-4 mr-2" aria-hidden="true" />
+                {t('common.retry')}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </CardContent>
       </Card>
     )
   }
 
-  // Handle start KYC
+  // 处理开始 KYC
   const handleStartKyc = () => {
     if (onStartKyc) {
       onStartKyc()
@@ -88,126 +128,164 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
     }
   }
 
-  // Render based on status
+  // 根据状态渲染内容
   const renderContent = () => {
     switch (status) {
       case KycStatus.APPROVED:
         return (
-          <Result
-            status="success"
-            icon={<ShieldCheck width={64} height={64} style={{ color: 'var(--color-success)' }} aria-hidden="true" />}
-            title={t('kyc.approved.title')}
-            subTitle={
-              <Flex vertical gap={8}>
-                <Text>{t('kyc.approved.description')}</Text>
-                {kycData?.reviewed_at && (
-                  <Text type="secondary">
-                    {t('kyc.approved.date', { date: new Date(kycData.reviewed_at).toLocaleDateString() })}
-                  </Text>
-                )}
-                {kycData?.is_accredited && (
-                  <Badge status="success" text={t('kyc.accreditedInvestor')} />
-                )}
-              </Flex>
-            }
-          />
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="w-16 h-16 rounded-full bg-[#00D4AA]/20 flex items-center justify-center mb-6">
+              <CheckCircle2 
+                className="w-10 h-10 text-[#00D4AA]" 
+                aria-hidden="true" 
+              />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">
+              {t('kyc.approved.title')}
+            </h3>
+            <p className="text-muted-foreground text-center mb-4">
+              {t('kyc.approved.description')}
+            </p>
+            <div className="flex flex-col items-center gap-2">
+              {kycData?.reviewed_at && (
+                <p className="text-sm text-muted-foreground">
+                  {t('kyc.approved.date', { 
+                    date: new Date(kycData.reviewed_at).toLocaleDateString() 
+                  })}
+                </p>
+              )}
+              {kycData?.is_accredited && (
+                <Badge variant="default" className="bg-[#00D4AA]">
+                  {t('kyc.accreditedInvestor')}
+                </Badge>
+              )}
+            </div>
+          </div>
         )
 
       case KycStatus.PENDING:
         return (
-          <Result
-            icon={<Clock width={64} height={64} style={{ color: 'var(--color-info)' }} aria-hidden="true" />}
-            title={t('kyc.pending.title')}
-            subTitle={
-              <Flex vertical gap={8}>
-                <Text>{t('kyc.pending.description')}</Text>
-                {kycData?.submitted_at && (
-                  <Text type="secondary">
-                    {t('kyc.pending.submitted', { date: new Date(kycData.submitted_at).toLocaleDateString() })}
-                  </Text>
-                )}
-              </Flex>
-            }
-            extra={
-              <Button icon={<RotateCw width={16} height={16} aria-hidden="true" />} onClick={() => refetch()}>
-                {t('kyc.pending.refresh')}
-              </Button>
-            }
-          />
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="w-16 h-16 rounded-full bg-[#1677ff]/20 flex items-center justify-center mb-6">
+              <Clock 
+                className="w-10 h-10 text-[#1677ff]" 
+                aria-hidden="true" 
+              />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">
+              {t('kyc.pending.title')}
+            </h3>
+            <p className="text-muted-foreground text-center mb-4">
+              {t('kyc.pending.description')}
+            </p>
+            {kycData?.submitted_at && (
+              <p className="text-sm text-muted-foreground mb-4">
+                {t('kyc.pending.submitted', { 
+                  date: new Date(kycData.submitted_at).toLocaleDateString() 
+                })}
+              </p>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={() => refetch()}
+            >
+              <RotateCw className="w-4 h-4 mr-2" aria-hidden="true" />
+              {t('kyc.pending.refresh')}
+            </Button>
+          </div>
         )
 
       case KycStatus.REJECTED:
         return (
-          <Result
-            status="error"
-            icon={<XCircle width={64} height={64} style={{ color: 'var(--color-error)' }} aria-hidden="true" />}
-            title={t('kyc.rejected.title')}
-            subTitle={
-              <Flex vertical gap={8}>
-                <Text>{t('kyc.rejected.description')}</Text>
-                {kycData?.reject_reason && (
-                  <Alert
-                    type="error"
-                    message={t('kyc.rejected.reason')}
-                    description={kycData.reject_reason}
-                    style={{ textAlign: 'left', marginTop: 8 }}
-                  />
-                )}
-              </Flex>
-            }
-            extra={
-              <Button type="primary" onClick={handleStartKyc} loading={isApplying}>
-                {t('kyc.rejected.reapply')}
-              </Button>
-            }
-          />
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mb-6">
+              <XCircle 
+                className="w-10 h-10 text-destructive" 
+                aria-hidden="true" 
+              />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">
+              {t('kyc.rejected.title')}
+            </h3>
+            <p className="text-muted-foreground text-center mb-4">
+              {t('kyc.rejected.description')}
+            </p>
+            {kycData?.reject_reason && (
+              <Alert variant="destructive" className="mb-4 text-left max-w-md">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t('kyc.rejected.reason')}</AlertTitle>
+                <AlertDescription>
+                  {kycData.reject_reason}
+                </AlertDescription>
+              </Alert>
+            )}
+            <Button 
+              onClick={handleStartKyc} 
+              disabled={isApplying}
+            >
+              {isApplying ? (
+                <RotateCw className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
+              ) : null}
+              {t('kyc.rejected.reapply')}
+            </Button>
+          </div>
         )
 
       case KycStatus.NOT_STARTED:
       default:
         return (
-          <div style={{ textAlign: 'center', padding: '24px 0' }}>
-            <ShieldCheck width={64} height={64} style={{ color: 'var(--text-muted)', marginBottom: 24 }} aria-hidden="true" />
-            <Title level={4}>{t('kyc.notStarted.title')}</Title>
-            <Paragraph type="secondary" style={{ maxWidth: 400, margin: '0 auto 24px' }}>
+          <div className="flex flex-col items-center justify-center py-8">
+            <ShieldCheck 
+              className="w-16 h-16 text-muted-foreground mb-6" 
+              aria-hidden="true" 
+            />
+            <h3 className="text-lg font-semibold mb-2">
+              {t('kyc.notStarted.title')}
+            </h3>
+            <p className="text-muted-foreground text-center max-w-md mb-6">
               {t('kyc.notStarted.description')}
-            </Paragraph>
-            <Flex vertical gap={16} style={{ width: '100%' }}>
-              <div>
-                <Title level={5}>{t('kyc.notStarted.requirements')}</Title>
-                <ul style={{ textAlign: 'left', maxWidth: 300, margin: '0 auto' }}>
-                  <li>{t('kyc.notStarted.req1')}</li>
-                  <li>{t('kyc.notStarted.req2')}</li>
-                  <li>{t('kyc.notStarted.req3')}</li>
-                </ul>
-              </div>
-              <Button
-                type="primary"
-                size="large"
-                icon={<ArrowRight width={16} height={16} aria-hidden="true" />}
-                onClick={handleStartKyc}
-                loading={isApplying}
-              >
-                {t('kyc.notStarted.startButton')}
-              </Button>
-            </Flex>
+            </p>
+            <div className="w-full max-w-sm mb-6">
+              <h4 className="text-sm font-medium mb-3 text-center">
+                {t('kyc.notStarted.requirements')}
+              </h4>
+              <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+                <li>{t('kyc.notStarted.req1')}</li>
+                <li>{t('kyc.notStarted.req2')}</li>
+                <li>{t('kyc.notStarted.req3')}</li>
+              </ul>
+            </div>
+            <Button 
+              size="lg"
+              onClick={handleStartKyc}
+              disabled={isApplying}
+            >
+              {isApplying ? (
+                <RotateCw className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
+              ) : (
+                <ArrowRight className="w-4 h-4 mr-2" aria-hidden="true" />
+              )}
+              {t('kyc.notStarted.startButton')}
+            </Button>
           </div>
         )
     }
   }
 
   return (
-    <Card
-      title={
-        <Space>
-          <ShieldCheck width={16} height={16} aria-hidden="true" />
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="flex items-center gap-2 text-base font-medium">
+          <ShieldCheck className="w-4 h-4" aria-hidden="true" />
           {t('kyc.title')}
-          <Badge status={statusInfo.antdStatus} text={t(statusInfo.label)} />
-        </Space>
-      }
-    >
-      {renderContent()}
+        </CardTitle>
+        <Badge variant={getStatusBadgeVariant(status)}>
+          {t(statusInfo.label)}
+        </Badge>
+      </CardHeader>
+      <CardContent>
+        {renderContent()}
+      </CardContent>
     </Card>
   )
 }
-

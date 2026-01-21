@@ -7,51 +7,68 @@
  * - 实时预览将要绑定的合约
  * - 符合 Premium UI 设计风格
  * 
- * 重构说明:
- * - 从单文件拆分为模块目录结构
- * - 提取 FormSection、MediaUploadSection、ProjectBindingSection 为独立组件
- * - 类型定义和常量移至 types.ts
+ * 迁移说明:
+ * - 从 Ant Design Modal 迁移到 shadcn/ui Dialog
+ * - 从 Ant Design Form 迁移到 react-hook-form + zod
+ * - 替换所有 Ant Design 组件为 shadcn/ui 等效组件
+ * 
+ * @validates Requirements 8.3, 8.4
  */
 'use client'
 
-import { useState } from 'react'
-import {
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Button,
-  Space,
-  Typography,
-  Tag,
-  Tooltip,
-  Row,
-  Col,
-  message,
-} from 'antd'
-import {
-  PlusOutlined,
-  InfoCircleOutlined,
-  DollarOutlined,
-  BankOutlined,
-} from '@ant-design/icons'
+import { useState, useMemo } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
-import type { UploadFile } from 'antd'
+import { Plus, DollarSign, Building2, Info, Loader2 } from 'lucide-react'
+
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+
+import { notification } from '@/lib/notification'
+import {
+  createAssetModalSchema,
+  createAssetModalDefaultValues,
+  ASSET_TYPE_NAMES,
+  type CreateAssetModalFormValues,
+} from '@/lib/validations/asset'
 import {
   assetService,
   type AssetCreateRequest,
   type AssetType,
-  ASSET_TYPE_NAMES,
 } from '@/services/asset'
 
 import { FormSection } from './FormSection'
 import { MediaUploadSection } from './MediaUploadSection'
 import { ProjectBindingSection } from './ProjectBindingSection'
-import type { CreateAssetModalProps, AssetFormValues } from './types'
-
-const { Text, Title } = Typography
-const { TextArea } = Input
+import type { CreateAssetModalProps, UploadFileItem } from './types'
 
 // 资产类型选项
 const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
@@ -70,23 +87,38 @@ export function CreateAssetModal({
   isLoadingProjects,
 }: CreateAssetModalProps) {
   const { t } = useTranslation()
-  const [form] = Form.useForm()
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   // 媒体文件状态
-  const [coverFile, setCoverFile] = useState<UploadFile[]>([])
-  const [galleryFiles, setGalleryFiles] = useState<UploadFile[]>([])
+  const [coverFile, setCoverFile] = useState<UploadFileItem[]>([])
+  const [galleryFiles, setGalleryFiles] = useState<UploadFileItem[]>([])
+
+  // Initialize react-hook-form with zod validation
+  const form = useForm<CreateAssetModalFormValues>({
+    resolver: zodResolver(createAssetModalSchema),
+    defaultValues: createAssetModalDefaultValues,
+  })
+
+  // Watch selected projects for contract preview
+  const selectedProjects = form.watch('bind_projects') || []
+
+  // 获取选中项目的合约列表
+  const selectedContracts = useMemo(() => {
+    return availableProjects
+      .filter((p) => selectedProjects.includes(p.project))
+      .flatMap((p) => p.contracts.filter((c) => c.is_available))
+  }, [availableProjects, selectedProjects])
 
   // 重置表单
   const handleClose = () => {
-    form.resetFields()
+    form.reset(createAssetModalDefaultValues)
     setCoverFile([])
     setGalleryFiles([])
     onClose()
   }
 
   // 提交表单
-  const handleSubmit = async (values: AssetFormValues) => {
+  const handleSubmit = async (values: CreateAssetModalFormValues) => {
     setIsSubmitting(true)
     try {
       // 提取 bind_projects，不包含在 createData 中
@@ -113,9 +145,14 @@ export function CreateAssetModal({
       if (bind_projects && bind_projects.length > 0) {
         for (const project of bind_projects) {
           try {
-            await assetService.bindProjectContracts(newAsset.id, project, undefined, project !== 'common')
+            await assetService.bindProjectContracts(
+              newAsset.id, 
+              project, 
+              undefined, 
+              project !== 'common'
+            )
           } catch (bindErr) {
-            console.error(`Failed to bind project ${project}:`, bindErr)
+            console.error('Failed to bind project ' + project + ':', bindErr)
           }
         }
       }
@@ -150,12 +187,14 @@ export function CreateAssetModal({
         }
       }
 
-      message.success(t('admin.assets.createSuccess', '资产创建成功'))
+      notification.success(t('admin.assets.createSuccess', '资产创建成功'))
       handleClose()
       onSuccess()
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : t('admin.assets.createFailed', '创建失败')
-      message.error(errorMessage)
+      const errMsg = error instanceof Error 
+        ? error.message 
+        : t('admin.assets.createFailed', '创建失败')
+      notification.error(errMsg)
     } finally {
       setIsSubmitting(false)
     }
@@ -165,256 +204,461 @@ export function CreateAssetModal({
   const beforeUpload = (file: File, maxSize: number = 5 * 1024 * 1024) => {
     const isValidSize = file.size <= maxSize
     if (!isValidSize) {
-      message.error(t('admin.assets.form.fileSizeError', { size: maxSize / 1024 / 1024 }))
+      notification.error(
+        t('admin.assets.form.fileSizeError', { size: maxSize / 1024 / 1024 })
+      )
     }
-    return false // 阻止自动上传
+    return !isValidSize // Return true to prevent upload if invalid
   }
 
-  // 监听选中的项目
-  const selectedProjects = Form.useWatch('bind_projects', form) || []
-
-  // 获取选中项目的合约列表
-  const selectedContracts = availableProjects
-    .filter((p) => selectedProjects.includes(p.project))
-    .flatMap((p) => p.contracts.filter((c) => c.is_available))
+  // Handle projects change
+  const handleProjectsChange = (projects: string[]) => {
+    form.setValue('bind_projects', projects)
+  }
 
   return (
-    <Modal
-      title={null}
-      open={open}
-      onCancel={handleClose}
-      width={800}
-      footer={null}
-      destroyOnHidden
-      className="premium-create-modal"
-      centered
-      styles={{
-        body: { 
-          padding: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: 'calc(100vh - 100px)',
-        },
-      }}
-    >
-      {/* 头部 - 固定 */}
-      <div className="shrink-0 px-7 pt-6 pb-5 border-b border-white/[0.06] rounded-t-2xl"
-        style={{
-          background: 'linear-gradient(180deg, rgba(0, 212, 170, 0.08) 0%, transparent 100%)',
-        }}
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+      <DialogContent 
+        className="max-w-[800px] p-0 gap-0 max-h-[calc(100vh-100px)] flex flex-col"
       >
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center border border-web3-success/30"
-            style={{
-              background: 'linear-gradient(135deg, rgba(0, 212, 170, 0.2) 0%, rgba(0, 212, 170, 0.05) 100%)',
-            }}
-          >
-            <PlusOutlined className="text-[22px] text-web3-success" />
-          </div>
-          <div>
-            <Title level={4} style={{ margin: 0, color: '#fff' }}>
-              {t('admin.assets.createTitle', 'Create New Asset')}
-            </Title>
-            <Text type="secondary" style={{ fontSize: 13 }}>
-              {t('admin.assets.createSubtitle', '填写资产信息，媒体文件可在创建后管理')}
-            </Text>
-          </div>
-        </div>
-      </div>
-
-      {/* 表单内容 - 可滚动区域 */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-7 py-6">
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          initialValues={{
-            asset_type: 'real_estate',
-            min_subscription: 100,
-            current_price: 1,
-            apy_3m: 10,
-            apy_6m: 12,
-            apy_12m: 15,
+        {/* 头部 - 固定 */}
+        <div 
+          className="shrink-0 px-7 pt-6 pb-5 border-b border-white/[0.06] rounded-t-xl"
+          style={{
+            background: 
+              'linear-gradient(180deg, rgba(0, 212, 170, 0.08) 0%, transparent 100%)',
           }}
         >
-          {/* 基本信息 */}
-          <FormSection
-            icon={<BankOutlined />}
-            title={t('admin.assets.section.basicInfo', '基本信息')}
-            description={t('admin.assets.section.basicInfoDesc', '资产的基本属性信息')}
-          >
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="name"
-                  label={t('admin.assets.form.name', 'Asset Name')}
-                  rules={[{ required: true, message: t('admin.assets.form.nameRequired') }]}
-                >
-                  <Input placeholder={t('admin.assets.form.namePlaceholder', 'e.g., Manhattan Luxury Apartment')} />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="symbol"
-                  label={t('admin.assets.form.symbol', 'Token Symbol')}
-                  rules={[{ required: true, message: t('admin.assets.form.symbolRequired') }]}
-                >
-                  <Input placeholder="RWA001" style={{ textTransform: 'uppercase' }} maxLength={10} />
-                </Form.Item>
-              </Col>
-            </Row>
+          <div className="flex items-center gap-3.5">
+            <div 
+              className="w-12 h-12 rounded-xl flex items-center justify-center border border-web3-success/30"
+              style={{
+                background: 
+                  'linear-gradient(135deg, rgba(0, 212, 170, 0.2) 0%, rgba(0, 212, 170, 0.05) 100%)',
+              }}
+            >
+              <Plus className="w-[22px] h-[22px] text-web3-success" />
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-white m-0">
+                {t('admin.assets.createTitle', 'Create New Asset')}
+              </h4>
+              <p className="text-[13px] text-muted-foreground m-0">
+                {t('admin.assets.createSubtitle', '填写资产信息，媒体文件可在创建后管理')}
+              </p>
+            </div>
+          </div>
+        </div>
 
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="asset_type"
-                  label={t('admin.assets.form.type', 'Asset Type')}
-                  rules={[{ required: true }]}
-                >
-                  <Select options={ASSET_TYPE_OPTIONS} />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="location" label={t('admin.assets.form.location', 'Location')}>
-                  <Input placeholder={t('admin.assets.form.locationPlaceholder', 'e.g., New York, NY')} />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Form.Item name="description" label={t('admin.assets.form.description', 'Description')}>
-              <TextArea
-                rows={3}
-                placeholder={t('admin.assets.form.descriptionPlaceholder', '资产描述信息...')}
-                showCount
-                maxLength={500}
-              />
-            </Form.Item>
-          </FormSection>
-
-          {/* 财务信息 */}
-          <FormSection
-            icon={<DollarOutlined />}
-            title={t('admin.assets.section.financial', '财务信息')}
-            description={t('admin.assets.section.financialDesc', '定价与供应量设置')}
-          >
-            <Row gutter={16}>
-              <Col span={8}>
-                <Form.Item
-                  name="total_supply"
-                  label={t('admin.assets.form.totalSupply', 'Total Supply')}
-                  rules={[{ required: true, message: t('admin.assets.form.totalSupplyRequired') }]}
-                >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    min={0}
-                    prefix="$"
-                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    parser={(value) => Number(value?.replace(/\$\s?|(,*)/g, '') || 0) as 0}
+        {/* 表单内容 - 可滚动区域 */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-7 py-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-0">
+              {/* 基本信息 */}
+              <FormSection
+                icon={<Building2 className="w-5 h-5" />}
+                title={t('admin.assets.section.basicInfo', '基本信息')}
+                description={t('admin.assets.section.basicInfoDesc', '资产的基本属性信息')}
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('admin.assets.form.name', 'Asset Name')}
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder={t(
+                              'admin.assets.form.namePlaceholder', 
+                              'e.g., Manhattan Luxury Apartment'
+                            )} 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item name="min_subscription" label={t('admin.assets.form.minSubscription', 'Min. Subscription')}>
-                  <InputNumber style={{ width: '100%' }} min={0} prefix="$" />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item name="current_price" label={t('admin.assets.form.currentPrice', 'Current Price')}>
-                  <InputNumber style={{ width: '100%' }} min={0} prefix="$" precision={2} />
-                </Form.Item>
-              </Col>
-            </Row>
-          </FormSection>
+                  <FormField
+                    control={form.control}
+                    name="symbol"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('admin.assets.form.symbol', 'Token Symbol')}
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="RWA001" 
+                            className="uppercase"
+                            maxLength={10}
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-          {/* APY 设置 */}
-          <FormSection
-            icon={<DollarOutlined />}
-            title={t('admin.assets.section.apy', 'APY Settings')}
-            description={t('admin.assets.section.apyDesc', '不同锁定期的年化收益率')}
-            extra={
-              <Tag color="green" style={{ margin: 0 }}>
-                {t('admin.assets.required', '必填')}
-              </Tag>
-            }
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <FormField
+                    control={form.control}
+                    name="asset_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('admin.assets.form.type', 'Asset Type')}
+                        </FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select asset type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {ASSET_TYPE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('admin.assets.form.location', 'Location')}
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder={t(
+                              'admin.assets.form.locationPlaceholder', 
+                              'e.g., New York, NY'
+                            )} 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="mt-4">
+                      <FormLabel>
+                        {t('admin.assets.form.description', 'Description')}
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder={t(
+                            'admin.assets.form.descriptionPlaceholder', 
+                            '资产描述信息...'
+                          )}
+                          className="min-h-[80px] resize-none"
+                          maxLength={500}
+                          {...field}
+                        />
+                      </FormControl>
+                      <div className="flex justify-end">
+                        <span className="text-xs text-muted-foreground">
+                          {(field.value || '').length}/500
+                        </span>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </FormSection>
+
+              {/* 财务信息 */}
+              <FormSection
+                icon={<DollarSign className="w-5 h-5" />}
+                title={t('admin.assets.section.financial', '财务信息')}
+                description={t('admin.assets.section.financialDesc', '定价与供应量设置')}
+              >
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="total_supply"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('admin.assets.form.totalSupply', 'Total Supply')}
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                              $
+                            </span>
+                            <Input
+                              type="number"
+                              className="pl-7"
+                              min={0}
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="min_subscription"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('admin.assets.form.minSubscription', 'Min. Subscription')}
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                              $
+                            </span>
+                            <Input
+                              type="number"
+                              className="pl-7"
+                              min={0}
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="current_price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t('admin.assets.form.currentPrice', 'Current Price')}
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                              $
+                            </span>
+                            <Input
+                              type="number"
+                              className="pl-7"
+                              min={0}
+                              step={0.01}
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </FormSection>
+
+              {/* APY 设置 */}
+              <FormSection
+                icon={<DollarSign className="w-5 h-5" />}
+                title={t('admin.assets.section.apy', 'APY Settings')}
+                description={t('admin.assets.section.apyDesc', '不同锁定期的年化收益率')}
+                extra={
+                  <Badge 
+                    variant="default" 
+                    className="bg-green-500/20 text-green-400 border-green-500/30"
+                  >
+                    {t('admin.assets.required', '必填')}
+                  </Badge>
+                }
+              >
+                <div className="grid grid-cols-3 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="apy_3m"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <span>3M APY</span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {t(
+                                    'admin.assets.form.apy3mTooltip', 
+                                    '3个月锁定期年化收益率'
+                                  )}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              className="pr-7"
+                              min={0}
+                              max={100}
+                              step={0.01}
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                              %
+                            </span>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="apy_6m"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <span>6M APY</span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {t(
+                                    'admin.assets.form.apy6mTooltip', 
+                                    '6个月锁定期年化收益率'
+                                  )}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              className="pr-7"
+                              min={0}
+                              max={100}
+                              step={0.01}
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                              %
+                            </span>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="apy_12m"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <span>12M APY</span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {t(
+                                    'admin.assets.form.apy12mTooltip', 
+                                    '12个月锁定期年化收益率'
+                                  )}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              className="pr-7"
+                              min={0}
+                              max={100}
+                              step={0.01}
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                              %
+                            </span>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </FormSection>
+
+              {/* 媒体上传 */}
+              <MediaUploadSection
+                coverFile={coverFile}
+                galleryFiles={galleryFiles}
+                onCoverChange={setCoverFile}
+                onGalleryChange={setGalleryFiles}
+                beforeUpload={beforeUpload}
+              />
+
+              {/* 项目绑定 */}
+              <ProjectBindingSection
+                availableProjects={availableProjects}
+                isLoadingProjects={isLoadingProjects}
+                selectedProjects={selectedProjects}
+                selectedContracts={selectedContracts}
+                onProjectsChange={handleProjectsChange}
+              />
+            </form>
+          </Form>
+        </div>
+
+        {/* 底部按钮 - 固定 */}
+        <div className="shrink-0 px-7 py-4 border-t border-white/[0.06] flex justify-end gap-3">
+          <Button variant="outline" onClick={handleClose} type="button">
+            {t('common.cancel', 'Cancel')}
+          </Button>
+          <Button 
+            onClick={form.handleSubmit(handleSubmit)} 
+            disabled={isSubmitting}
           >
-            <Row gutter={24}>
-              <Col span={8}>
-                <Form.Item
-                  name="apy_3m"
-                  label={
-                    <Space>
-                      <span>3M APY</span>
-                      <Tooltip title={t('admin.assets.form.apy3mTooltip', '3个月锁定期年化收益率')}>
-                        <InfoCircleOutlined className="text-white/45" />
-                      </Tooltip>
-                    </Space>
-                  }
-                  rules={[{ required: true, message: t('admin.assets.form.apy3mRequired') }]}
-                >
-                  <InputNumber style={{ width: '100%' }} min={0} max={100} precision={2} suffix="%" />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item
-                  name="apy_6m"
-                  label={
-                    <Space>
-                      <span>6M APY</span>
-                      <Tooltip title={t('admin.assets.form.apy6mTooltip', '6个月锁定期年化收益率')}>
-                        <InfoCircleOutlined className="text-white/45" />
-                      </Tooltip>
-                    </Space>
-                  }
-                  rules={[{ required: true, message: t('admin.assets.form.apy6mRequired') }]}
-                >
-                  <InputNumber style={{ width: '100%' }} min={0} max={100} precision={2} suffix="%" />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item
-                  name="apy_12m"
-                  label={
-                    <Space>
-                      <span>12M APY</span>
-                      <Tooltip title={t('admin.assets.form.apy12mTooltip', '12个月锁定期年化收益率')}>
-                        <InfoCircleOutlined className="text-white/45" />
-                      </Tooltip>
-                    </Space>
-                  }
-                  rules={[{ required: true, message: t('admin.assets.form.apy12mRequired') }]}
-                >
-                  <InputNumber style={{ width: '100%' }} min={0} max={100} precision={2} suffix="%" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </FormSection>
-
-          {/* 媒体上传 */}
-          <MediaUploadSection
-            coverFile={coverFile}
-            galleryFiles={galleryFiles}
-            onCoverChange={setCoverFile}
-            onGalleryChange={setGalleryFiles}
-            beforeUpload={beforeUpload}
-          />
-
-          {/* 项目绑定 */}
-          <ProjectBindingSection
-            availableProjects={availableProjects}
-            isLoadingProjects={isLoadingProjects}
-            selectedProjects={selectedProjects}
-            selectedContracts={selectedContracts}
-          />
-        </Form>
-      </div>
-
-      {/* 底部按钮 - 固定 */}
-      <div className="shrink-0 px-7 py-4 border-t border-white/[0.06] flex justify-end gap-3">
-        <Button onClick={handleClose}>{t('common.cancel', 'Cancel')}</Button>
-        <Button type="primary" onClick={() => form.submit()} loading={isSubmitting}>
-          {t('admin.assets.createButton', 'Create Asset')}
-        </Button>
-      </div>
-    </Modal>
+            {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {t('admin.assets.createButton', 'Create Asset')}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

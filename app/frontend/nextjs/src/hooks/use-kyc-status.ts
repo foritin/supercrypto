@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAccount } from 'wagmi'
 import { kycService, KycStatus, type KycStatusResponse, type KycApplyRequest } from '@/services/kyc'
-import { message } from 'antd'
+import { toast } from 'sonner'
 
 /**
  * Hook to get KYC status for the connected wallet
@@ -69,11 +69,11 @@ export function useKycApply() {
           wallet_address: address.toLowerCase(),
           ...data,
         })
-        message.success('KYC application submitted')
+        toast.success('KYC application submitted')
         options?.onSuccess?.()
       } catch (err) {
         setError(err as Error)
-        message.error('Failed to submit KYC application')
+        toast.error('Failed to submit KYC application')
         throw err
       } finally {
         setIsLoading(false)

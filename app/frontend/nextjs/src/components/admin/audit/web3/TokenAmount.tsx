@@ -5,10 +5,13 @@
 'use client';
 
 import React from 'react';
-import { Typography, Tooltip } from 'antd';
 import { formatUnits } from 'viem';
-
-const { Text } = Typography;
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface TokenAmountProps {
   amount: string | bigint;
@@ -71,28 +74,29 @@ export const TokenAmount: React.FC<TokenAmountProps> = ({
   const displayAmount = formatAmount();
   const fullAmount = getFullAmount();
 
+  const content = (
+    <span className="font-mono text-[13px] text-white/85">
+      {displayAmount}
+      {showSymbol && (
+        <span className="ml-1 text-[12px] text-white/55">{symbol}</span>
+      )}
+    </span>
+  );
+
+  if (showFull) {
+    return content;
+  }
+
   return (
-    <Tooltip title={showFull ? undefined : `${fullAmount} ${symbol}`}>
-      <Text
-        style={{
-          fontFamily: 'monospace',
-          fontSize: 13,
-          color: 'rgba(255, 255, 255, 0.85)',
-        }}
-      >
-        {displayAmount}
-        {showSymbol && (
-          <Text
-            style={{
-              marginLeft: 4,
-              fontSize: 12,
-              color: 'rgba(255, 255, 255, 0.55)',
-            }}
-          >
-            {symbol}
-          </Text>
-        )}
-      </Text>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent>
+          <p className="font-mono text-xs">
+            {fullAmount} {symbol}
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };

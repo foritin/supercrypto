@@ -121,23 +121,9 @@
   margin: 0 0 36px 0;
 }
 
-/* CTA Button */
+/* CTA Button - 基础样式，主要样式通过 Tailwind 类在组件中定义 */
 .sp-cta-button {
-  background: linear-gradient(135deg, #00D4AA 0%, #00A080 100%) !important;
-  border: none !important;
-  color: #0a0a0f !important;
-  border-radius: 28px !important;
-  padding: 0 32px !important;
-  height: 48px !important;
-  font-size: 15px !important;
-  font-weight: 600 !important;
-  box-shadow: 0 4px 20px rgba(0, 212, 170, 0.3) !important;
-  transition: all 0.3s ease !important;
-}
-
-.sp-cta-button:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 6px 28px rgba(0, 212, 170, 0.4) !important;
+  /* 保留基础样式作为后备 */
 }
 
 /* Responsive */

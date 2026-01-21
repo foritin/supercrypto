@@ -5,10 +5,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Typography, Tooltip, message, Space } from 'antd';
-import { CopyOutlined, CheckOutlined, LinkOutlined } from '@ant-design/icons';
-
-const { Text, Link } = Typography;
+import { Copy, Check, ExternalLink } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { notification } from '@/lib/notification';
 
 interface TxHashLinkProps {
   txHash: string;
@@ -52,60 +56,61 @@ const TxHashLink: React.FC<TxHashLinkProps> = ({
     try {
       await navigator.clipboard.writeText(txHash);
       setCopied(true);
-      message.success('已复制交易哈希');
+      notification.success('已复制交易哈希');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      message.error('复制失败');
+      notification.error('复制失败');
     }
   };
 
   const explorerUrl = EXPLORER_URLS[chainId];
   const displayHash = shortenHash(txHash);
 
+  const content = (
+    <span className="inline-flex items-center gap-1">
+      {explorerUrl ? (
+        <a
+          href={`${explorerUrl}${txHash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 font-mono text-[13px] text-primary hover:text-primary/80 transition-colors"
+        >
+          {displayHash}
+          <ExternalLink className="h-[11px] w-[11px]" />
+        </a>
+      ) : (
+        <span className="font-mono text-[13px] text-white/85">
+          {displayHash}
+        </span>
+      )}
+      {copyable && (
+        <span
+          onClick={handleCopy}
+          className="text-white/45 text-[12px] cursor-pointer hover:text-white/65 transition-colors"
+        >
+          {copied ? (
+            <Check className="h-3 w-3 text-green-500" />
+          ) : (
+            <Copy className="h-3 w-3" />
+          )}
+        </span>
+      )}
+    </span>
+  );
+
+  if (showFull) {
+    return content;
+  }
+
   return (
-    <Tooltip title={showFull ? undefined : txHash}>
-      <Space size={4}>
-        {explorerUrl ? (
-          <Link
-            href={`${explorerUrl}${txHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontFamily: 'monospace',
-              fontSize: 13,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            {displayHash}
-            <LinkOutlined style={{ fontSize: 11 }} />
-          </Link>
-        ) : (
-          <Text
-            style={{
-              fontFamily: 'monospace',
-              fontSize: 13,
-              color: 'rgba(255, 255, 255, 0.85)',
-            }}
-          >
-            {displayHash}
-          </Text>
-        )}
-        {copyable && (
-          <span
-            onClick={handleCopy}
-            style={{
-              color: 'rgba(255, 255, 255, 0.45)',
-              fontSize: 12,
-              cursor: 'pointer',
-            }}
-          >
-            {copied ? <CheckOutlined style={{ color: '#52c41a' }} /> : <CopyOutlined />}
-          </span>
-        )}
-      </Space>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent>
+          <p className="font-mono text-xs">{txHash}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

@@ -9,11 +9,10 @@
 
 import { useProjects, syncProjectConfig } from '@/hooks/useProjectStatus';
 import { ProjectCard } from '@/components/project-registry/ProjectCard';
-import { Alert, Button, Spin, Row, Col, Typography, Space, Empty } from 'antd';
-import { ReloadOutlined, FolderOpenOutlined } from '@ant-design/icons';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { RefreshCw, FolderOpen, AlertCircle, Inbox } from 'lucide-react';
 import { useState } from 'react';
-
-const { Title, Text } = Typography;
 
 export default function ProjectsPage() {
   const { data, error, isLoading, refetch } = useProjects('local');
@@ -36,72 +35,68 @@ export default function ProjectsPage() {
 
   if (isLoading) {
     return (
-      <div style={{ padding: 32, textAlign: 'center' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: 16 }}>
-          <Text type="secondary">加载项目列表...</Text>
-        </div>
+      <div className="p-8 text-center">
+        <RefreshCw className="h-8 w-8 animate-spin mx-auto text-primary" />
+        <p className="mt-4 text-muted-foreground">加载项目列表...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: 32 }}>
-        <Alert
-          type="error"
-          message="加载失败"
-          description={error instanceof Error ? error.message : '未知错误'}
-          showIcon
-        />
+      <div className="p-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>加载失败</AlertTitle>
+          <AlertDescription>
+            {error instanceof Error ? error.message : '未知错误'}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="p-6">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Space>
-          <FolderOpenOutlined style={{ fontSize: 28, color: '#1890ff' }} />
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <FolderOpen className="h-7 w-7 text-primary" />
           <div>
-            <Title level={3} style={{ margin: 0 }}>项目注册表</Title>
-            <Text type="secondary">管理和监控项目合约部署状态</Text>
+            <h1 className="text-2xl font-bold">项目注册表</h1>
+            <p className="text-muted-foreground text-sm">管理和监控项目合约部署状态</p>
           </div>
-        </Space>
-        <Space>
-          <Text type="secondary">共 {data?.projects.length || 0} 个项目</Text>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-muted-foreground text-sm">
+            共 {data?.projects.length || 0} 个项目
+          </span>
           <Button
-            icon={<ReloadOutlined spin={!!syncing} />}
+            variant="outline"
             onClick={handleSyncAll}
-            loading={!!syncing}
+            disabled={!!syncing}
           >
+            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? `同步 ${syncing}...` : '全部同步'}
           </Button>
-        </Space>
+        </div>
       </div>
 
       {/* Projects Grid */}
       {data?.projects.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={
-            <span>
-              暂无项目配置<br />
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                请在 config.dev.yaml 中配置 project_registry.projects
-              </Text>
-            </span>
-          }
-        />
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Inbox className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">暂无项目配置</p>
+          <p className="text-muted-foreground text-xs mt-1">
+            请在 config.dev.yaml 中配置 project_registry.projects
+          </p>
+        </div>
       ) : (
-        <Row gutter={[16, 16]}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {data?.projects.map((project) => (
-            <Col key={project.name} xs={24} sm={12} lg={8}>
-              <ProjectCard project={project} />
-            </Col>
+            <ProjectCard key={project.name} project={project} />
           ))}
-        </Row>
+        </div>
       )}
     </div>
   );

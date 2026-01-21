@@ -7,11 +7,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Card, Typography } from 'antd';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ProjectStatusBadge } from './ProjectStatusBadge';
 import type { ProjectSummary } from '@/types/project-registry';
-
-const { Text, Paragraph } = Typography;
 
 interface ProjectCardProps {
   project: ProjectSummary;
@@ -19,32 +17,31 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   return (
-    <Link href={`/projects/${project.name}`} style={{ textDecoration: 'none' }}>
-      <Card
-        hoverable
-        title={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text strong style={{ textTransform: 'capitalize' }}>{project.name}</Text>
+    <Link href={`/projects/${project.name}`} className="no-underline block h-full">
+      <Card className="h-full cursor-pointer hover:shadow-lg transition-shadow">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex justify-between items-center">
+            <span className="font-semibold capitalize">{project.name}</span>
             <ProjectStatusBadge readiness={project.readiness} />
-          </div>
-        }
-        style={{ height: '100%' }}
-      >
-        {project.description && (
-          <Paragraph ellipsis={{ rows: 2 }} type="secondary" style={{ marginBottom: 12 }}>
-            {project.description}
-          </Paragraph>
-        )}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text type="secondary">
-            合约数量: <Text strong>{project.contract_count}</Text>
-          </Text>
-          {project.primary_contract && (
-            <Text code style={{ fontSize: 12 }}>
-              {project.primary_contract}
-            </Text>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {project.description && (
+            <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
+              {project.description}
+            </p>
           )}
-        </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground text-sm">
+              合约数量: <span className="font-semibold text-foreground">{project.contract_count}</span>
+            </span>
+            {project.primary_contract && (
+              <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                {project.primary_contract}
+              </code>
+            )}
+          </div>
+        </CardContent>
       </Card>
     </Link>
   );

@@ -5,7 +5,13 @@
 'use client';
 
 import React from 'react';
-import { Tag, Tooltip } from 'antd';
+import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ChainBadgeProps {
   chainId: number;
@@ -45,18 +51,25 @@ export const ChainBadge: React.FC<ChainBadgeProps> = ({
   const displayText = showName ? config.name : config.shortName;
 
   return (
-    <Tooltip title={config.name}>
-      <Tag
-        style={{
-          backgroundColor: `${config.color}20`,
-          borderColor: `${config.color}40`,
-          color: config.color,
-          fontWeight: 500,
-          fontSize: 11,
-        }}
-      >
-        {displayText}
-      </Tag>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge
+            variant="outline"
+            className="font-medium text-[11px]"
+            style={{
+              backgroundColor: `${config.color}20`,
+              borderColor: `${config.color}40`,
+              color: config.color,
+            }}
+          >
+            {displayText}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{config.name}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };

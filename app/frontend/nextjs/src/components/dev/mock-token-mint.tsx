@@ -3,33 +3,24 @@
  * Mock Token Mint Component - Web3 Dark Theme
  * Developer tool for minting and transferring test tokens
  * Only available to admin users
+ * 
+ * Migrated from Ant Design to shadcn/ui
+ * @validates Requirements 16.13
  */
 import { useState, useEffect, useRef } from "react";
-import {
-  Card,
-  Button,
-  Space,
-  Flex,
-  Typography,
-  InputNumber,
-  Select,
-  Statistic,
-  Row,
-  Col,
-  App,
-  Divider,
-  Alert,
-  Steps,
-} from "antd";
-import {
-  DollarOutlined,
-  SendOutlined,
-  ReloadOutlined,
-  PlusOutlined,
-  UserOutlined,
-  WalletOutlined,
-} from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
+import {
+  DollarSign,
+  Send,
+  RefreshCw,
+  Plus,
+  User,
+  Wallet,
+  AlertTriangle,
+  Loader2,
+  Check,
+  Circle,
+} from "lucide-react";
 import {
   useAccount,
   useReadContract,
@@ -38,6 +29,18 @@ import {
   useChainId,
 } from "wagmi";
 import { parseUnits, formatUnits } from "viem";
+
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { notification } from "@/lib/notification";
 import {
   MOCK_TOKEN_ADDRESSES,
   MOCK_TOKEN_INFO,
@@ -47,8 +50,6 @@ import {
 import { devToolsService, type TokenRecipient } from "@/services/dev-tools";
 import { useCurrentUser } from "@/hooks";
 import { transactionAuditService } from "@/services/transaction-audit";
-
-const { Text } = Typography;
 
 type MintStep =
   | "idle"
@@ -60,12 +61,11 @@ type MintStep =
 
 export function MockTokenMint() {
   const { t } = useTranslation();
-  const { message: messageApi } = App.useApp();
   const { isConnected, address } = useAccount();
   const chainId = useChainId();
   const { isAdmin } = useCurrentUser();
   const [selectedToken, setSelectedToken] = useState<MockTokenType>("MockUSDT");
-  const [mintAmount, setMintAmount] = useState<number>(1000);
+  const [mintAmount, setMintAmount] = useState<string>("1000");
   const [selectedRecipient, setSelectedRecipient] = useState<string | null>(
     null
   );
@@ -164,7 +164,7 @@ export function MockTokenMint() {
           }
         | undefined;
       if (!ethereum || !ethereum.request) {
-        messageApi.error("MetaMask not installed");
+        notification.error("MetaMask not installed");
         return;
       }
 
@@ -181,11 +181,11 @@ export function MockTokenMint() {
       });
 
       if (wasAdded) {
-        messageApi.success(`${tokenInfo.symbol} added to wallet!`);
+        notification.success(`${tokenInfo.symbol} added to wallet!`);
       }
     } catch (error) {
       console.error("Failed to add token:", error);
-      messageApi.error("Failed to add token to wallet");
+      notification.error("Failed to add token to wallet");
     }
   };
 
@@ -195,11 +195,14 @@ export function MockTokenMint() {
     return formatUnits(balance as bigint, tokenInfo.decimals);
   };
 
+  // Parse mint amount
+  const parsedMintAmount = parseFloat(mintAmount) || 0;
+
   // Handle mint to admin first, then transfer to recipient
   const handleMintAndTransfer = async () => {
-    if (!address || !mintAmount || !selectedRecipient) return;
+    if (!address || !parsedMintAmount || !selectedRecipient) return;
 
-    const amount = parseUnits(mintAmount.toString(), tokenInfo.decimals);
+    const amount = parseUnits(parsedMintAmount.toString(), tokenInfo.decimals);
 
     console.log("=== Mint & Transfer Debug ===");
     console.log("Token Address:", tokenAddress);
@@ -232,12 +235,12 @@ export function MockTokenMint() {
               contractName: selectedToken,
               functionName: "mint",
               functionArgs: { to: address, amount: amount.toString() },
-              description: `[Dev] Mint ${mintAmount} ${tokenInfo.symbol}`,
+              description: `[Dev] Mint ${parsedMintAmount} ${tokenInfo.symbol}`,
             });
           },
           onError: (error) => {
             console.error("Mint error:", error);
-            messageApi.error(error.message || t("common.error"));
+            notification.error(error.message || t("common.error"));
             setCurrentStep("idle");
           },
         }
@@ -250,9 +253,9 @@ export function MockTokenMint() {
 
   // Handle transfer after mint is confirmed
   const handleTransfer = async () => {
-    if (!address || !mintAmount || !selectedRecipient) return;
+    if (!address || !parsedMintAmount || !selectedRecipient) return;
 
-    const amount = parseUnits(mintAmount.toString(), tokenInfo.decimals);
+    const amount = parseUnits(parsedMintAmount.toString(), tokenInfo.decimals);
 
     setCurrentStep("transferring");
 
@@ -279,12 +282,12 @@ export function MockTokenMint() {
               contractName: selectedToken,
               functionName: "transfer",
               functionArgs: { to: selectedRecipient, amount: amount.toString() },
-              description: `[Dev] Transfer ${mintAmount} ${tokenInfo.symbol} to ${selectedRecipient?.slice(0, 6)}...${selectedRecipient?.slice(-4)}`,
+              description: `[Dev] Transfer ${parsedMintAmount} ${tokenInfo.symbol} to ${selectedRecipient?.slice(0, 6)}...${selectedRecipient?.slice(-4)}`,
             });
           },
           onError: (error) => {
             console.error("Transfer error:", error);
-            messageApi.error(error.message || t("common.error"));
+            notification.error(error.message || t("common.error"));
             setCurrentStep("idle");
           },
         }
@@ -302,9 +305,9 @@ export function MockTokenMint() {
 
       if (currentStep === "confirming_mint") {
         // Mint confirmed, now transfer
-        messageApi.success(
+        notification.success(
           t("dev.mockToken.mintSuccess", {
-            amount: mintAmount,
+            amount: parsedMintAmount,
             symbol: tokenInfo.symbol,
           })
         );
@@ -313,9 +316,9 @@ export function MockTokenMint() {
         setTimeout(() => handleTransfer(), 500);
       } else if (currentStep === "confirming_transfer") {
         // Transfer confirmed, done!
-        messageApi.success(
+        notification.success(
           t("dev.mockToken.transferSuccess", {
-            amount: mintAmount,
+            amount: parsedMintAmount,
             symbol: tokenInfo.symbol,
             recipient:
               selectedRecipient?.slice(0, 6) +
@@ -337,70 +340,105 @@ export function MockTokenMint() {
     }
   }, [isConfirmed, txHash, currentStep]);
 
-  // Get current step index for Steps component
-  const getStepIndex = () => {
-    switch (currentStep) {
-      case "idle":
-        return 0;
-      case "minting":
-      case "confirming_mint":
-        return 0;
-      case "transferring":
-      case "confirming_transfer":
-        return 1;
-      case "done":
-        return 2;
-      default:
-        return 0;
-    }
-  };
-
-  const getStepStatus = (
-    stepKey: string
-  ): "wait" | "process" | "finish" | "error" => {
+  // Get step status for custom Steps component
+  const getStepStatus = (stepKey: "mint" | "transfer" | "done") => {
     if (currentStep === "idle") return "wait";
 
-    const stepIndex = getStepIndex();
-    const keyIndex = stepKey === "mint" ? 0 : stepKey === "transfer" ? 1 : 2;
+    const stepOrder = { mint: 0, transfer: 1, done: 2 };
+    const currentOrder = {
+      idle: -1,
+      minting: 0,
+      confirming_mint: 0,
+      transferring: 1,
+      confirming_transfer: 1,
+      done: 2,
+    };
 
-    if (keyIndex < stepIndex) return "finish";
-    if (keyIndex === stepIndex) return "process";
+    const stepIndex = stepOrder[stepKey];
+    const currentIndex = currentOrder[currentStep];
+
+    if (stepIndex < currentIndex) return "finish";
+    if (stepIndex === currentIndex) return "process";
     return "wait";
+  };
+
+  // Step indicator component
+  const StepIndicator = ({
+    status,
+    title,
+  }: {
+    status: "wait" | "process" | "finish";
+    title: string;
+  }) => {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <div
+          className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+            status === "finish"
+              ? "bg-primary text-primary-foreground"
+              : status === "process"
+              ? "bg-primary/20 border-2 border-primary text-primary"
+              : "bg-white/10 text-muted-foreground"
+          }`}
+        >
+          {status === "finish" ? (
+            <Check className="h-3 w-3" />
+          ) : status === "process" ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Circle className="h-3 w-3" />
+          )}
+        </div>
+        <span
+          className={`text-xs ${
+            status === "process" ? "text-primary" : "text-muted-foreground"
+          }`}
+        >
+          {title}
+        </span>
+      </div>
+    );
   };
 
   if (!isConnected) {
     return (
-      <Card
-        title={
-          <Space>
-            <DollarOutlined style={{ color: "#00D4AA" }} />
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <DollarSign className="h-4 w-4 text-primary" />
             {t("dev.mockToken.title")}
-          </Space>
-        }
-      >
-        <Text style={{ color: "rgba(255,255,255,0.45)" }}>
-          {t("kyc.connectWalletFirst")}
-        </Text>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">{t("kyc.connectWalletFirst")}</p>
+        </CardContent>
       </Card>
     );
   }
 
   if (!isAdmin) {
     return (
-      <Card
-        title={
-          <Space>
-            <DollarOutlined style={{ color: "#00D4AA" }} />
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <DollarSign className="h-4 w-4 text-primary" />
             {t("dev.mockToken.title")}
-          </Space>
-        }
-      >
-        <Alert
-          type="warning"
-          message={t("dev.mockToken.adminOnly")}
-          description={t("dev.mockToken.adminOnlyDesc")}
-          showIcon
-        />
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Warning Alert */}
+          <div className="flex items-start gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
+            <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-yellow-500">
+                {t("dev.mockToken.adminOnly")}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {t("dev.mockToken.adminOnlyDesc")}
+              </span>
+            </div>
+          </div>
+        </CardContent>
       </Card>
     );
   }
@@ -408,218 +446,206 @@ export function MockTokenMint() {
   const isProcessing = currentStep !== "idle" && currentStep !== "done";
 
   return (
-    <Card
-      title={
-        <Space>
-          <DollarOutlined style={{ color: "#00D4AA" }} />
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          <DollarSign className="h-4 w-4 text-primary" />
           {t("dev.mockToken.title")}
-        </Space>
-      }
-      extra={
+        </CardTitle>
         <Button
-          icon={<ReloadOutlined />}
-          size="small"
+          variant="outline"
+          size="sm"
           onClick={() => {
             refetchBalance();
             refetchRecipients();
           }}
-          loading={isBalanceLoading || isLoadingRecipients}
-        />
-      }
-    >
-      <Flex vertical gap={16} style={{ width: "100%" }}>
-        <Text style={{ color: "rgba(255,255,255,0.65)" }}>
+          disabled={isBalanceLoading || isLoadingRecipients}
+        >
+          {isBalanceLoading || isLoadingRecipients ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
+        </Button>
+      </CardHeader>
+
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-muted-foreground text-sm">
           {t("dev.mockToken.description")}
-        </Text>
+        </p>
 
         {/* Token Selection */}
-        <div>
-          <Text strong style={{ color: "#fff" }}>
+        <div className="flex flex-col gap-2">
+          <label className="font-medium text-foreground text-sm">
             {t("dev.mockToken.selectToken")}:
-          </Text>
+          </label>
           <Select
             value={selectedToken}
-            onChange={setSelectedToken}
-            style={{ width: "100%", marginTop: 8 }}
+            onValueChange={(value) => setSelectedToken(value as MockTokenType)}
             disabled={isProcessing}
-            options={[
-              {
-                value: "MockUSDT",
-                label: `${MOCK_TOKEN_INFO.MockUSDT.symbol} - ${MOCK_TOKEN_INFO.MockUSDT.name}`,
-              },
-              {
-                value: "MockUSDC",
-                label: `${MOCK_TOKEN_INFO.MockUSDC.symbol} - ${MOCK_TOKEN_INFO.MockUSDC.name}`,
-              },
-            ]}
-          />
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="MockUSDT">
+                {MOCK_TOKEN_INFO.MockUSDT.symbol} -{" "}
+                {MOCK_TOKEN_INFO.MockUSDT.name}
+              </SelectItem>
+              <SelectItem value="MockUSDC">
+                {MOCK_TOKEN_INFO.MockUSDC.symbol} -{" "}
+                {MOCK_TOKEN_INFO.MockUSDC.name}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Admin Balance */}
-        <Card size="small" style={{ background: "rgba(0, 212, 170, 0.05)" }}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Statistic
-                title={
-                  <Text style={{ color: "rgba(255,255,255,0.45)" }}>
-                    {t("dev.mockToken.adminBalance")}
-                  </Text>
-                }
-                value={
-                  isBalanceLoading ? "-" : formatBalance(adminBalance as bigint)
-                }
-                suffix={tokenInfo.symbol}
-                precision={2}
-                styles={{ content: { color: "#00D4AA" } }}
-              />
-            </Col>
-            <Col span={12}>
-              <Statistic
-                title={
-                  <Text style={{ color: "rgba(255,255,255,0.45)" }}>
-                    {t("dev.mockToken.decimals")}
-                  </Text>
-                }
-                value={tokenInfo.decimals}
-                styles={{ content: { color: "#fff" } }}
-              />
-            </Col>
-          </Row>
-        </Card>
+        <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">
+                {t("dev.mockToken.adminBalance")}
+              </span>
+              <span className="text-xl font-semibold text-primary">
+                {isBalanceLoading
+                  ? "-"
+                  : formatBalance(adminBalance as bigint)}{" "}
+                <span className="text-sm font-normal">{tokenInfo.symbol}</span>
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">
+                {t("dev.mockToken.decimals")}
+              </span>
+              <span className="text-xl font-semibold text-foreground">
+                {tokenInfo.decimals}
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* Add to Wallet Button */}
-        <Button icon={<PlusOutlined />} onClick={addTokenToWallet} block>
+        <Button variant="outline" onClick={addTokenToWallet} className="w-full">
+          <Plus className="h-4 w-4 mr-2" />
           {t("dev.mockToken.addToWallet", { symbol: tokenInfo.symbol })}
         </Button>
 
-        <Divider
-          style={{ borderColor: "rgba(255,255,255,0.08)", margin: "12px 0" }}
-        />
+        {/* Divider */}
+        <div className="border-t border-white/10 my-2" />
 
         {/* Recipient Selection */}
-        <div>
-          <Text strong style={{ color: "#fff" }}>
-            <UserOutlined style={{ marginRight: 8 }} />
+        <div className="flex flex-col gap-2">
+          <label className="font-medium text-foreground text-sm flex items-center gap-2">
+            <User className="h-4 w-4" />
             {t("dev.mockToken.selectRecipient")}:
-          </Text>
+          </label>
           <Select
-            value={selectedRecipient}
-            onChange={setSelectedRecipient}
-            style={{ width: "100%", marginTop: 8 }}
-            placeholder={t("dev.mockToken.selectRecipientPlaceholder")}
-            disabled={isProcessing}
-            loading={isLoadingRecipients}
-            options={
-              recipients?.map((r) => ({
-                value: r.address,
-                label: r.label,
-              })) || []
-            }
-            showSearch
-            filterOption={(input, option) =>
-              (option?.label as string)
-                ?.toLowerCase()
-                .includes(input.toLowerCase()) ||
-              (option?.value as string)
-                ?.toLowerCase()
-                .includes(input.toLowerCase())
-            }
-          />
+            value={selectedRecipient || ""}
+            onValueChange={setSelectedRecipient}
+            disabled={isProcessing || isLoadingRecipients}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue
+                placeholder={t("dev.mockToken.selectRecipientPlaceholder")}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {recipients?.map((r) => (
+                <SelectItem key={r.address} value={r.address}>
+                  {r.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Recipient Balance */}
         {selectedRecipient && (
-          <Card size="small" style={{ background: "rgba(255, 215, 0, 0.05)" }}>
-            <Statistic
-              title={
-                <Text style={{ color: "rgba(255,255,255,0.45)" }}>
-                  {t("dev.mockToken.recipientBalance")}
-                </Text>
-              }
-              value={formatBalance(recipientBalance as bigint)}
-              suffix={tokenInfo.symbol}
-              precision={2}
-              styles={{ content: { color: "#FFD700" } }}
-            />
-          </Card>
+          <div className="rounded-lg bg-yellow-500/5 border border-yellow-500/20 p-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">
+                {t("dev.mockToken.recipientBalance")}
+              </span>
+              <span className="text-xl font-semibold text-yellow-500">
+                {formatBalance(recipientBalance as bigint)}{" "}
+                <span className="text-sm font-normal">{tokenInfo.symbol}</span>
+              </span>
+            </div>
+          </div>
         )}
 
         {/* Mint Amount */}
-        <div>
-          <Text strong style={{ color: "#fff" }}>
+        <div className="flex flex-col gap-2">
+          <label className="font-medium text-foreground text-sm">
             {t("dev.mockToken.mintAmount")}:
-          </Text>
-          <Space.Compact style={{ width: "100%", marginTop: 8 }}>
-            <InputNumber
+          </label>
+          <div className="flex gap-2">
+            <Input
+              type="number"
               value={mintAmount}
-              onChange={(v) => setMintAmount(v || 0)}
+              onChange={(e) => setMintAmount(e.target.value)}
               min={1}
               max={1000000}
-              style={{ width: "100%" }}
               disabled={isProcessing}
+              className="flex-1"
             />
-            <Button disabled style={{ pointerEvents: "none" }}>
+            <Button variant="outline" disabled className="pointer-events-none">
               {tokenInfo.symbol}
             </Button>
-          </Space.Compact>
+          </div>
         </div>
 
         {/* Process Steps */}
         {currentStep !== "idle" && (
-          <Steps
-            size="small"
-            current={getStepIndex()}
-            items={[
-              {
-                title: t("dev.mockToken.step.mint"),
-                status: getStepStatus("mint"),
-              },
-              {
-                title: t("dev.mockToken.step.transfer"),
-                status: getStepStatus("transfer"),
-              },
-              {
-                title: t("dev.mockToken.step.done"),
-                status: getStepStatus("done"),
-              },
-            ]}
-          />
+          <div className="flex items-center justify-between px-4 py-3 bg-white/5 rounded-lg">
+            <StepIndicator
+              status={getStepStatus("mint")}
+              title={t("dev.mockToken.step.mint")}
+            />
+            <div className="flex-1 h-px bg-white/10 mx-2" />
+            <StepIndicator
+              status={getStepStatus("transfer")}
+              title={t("dev.mockToken.step.transfer")}
+            />
+            <div className="flex-1 h-px bg-white/10 mx-2" />
+            <StepIndicator
+              status={getStepStatus("done")}
+              title={t("dev.mockToken.step.done")}
+            />
+          </div>
         )}
 
         {/* Mint & Transfer Button */}
         <Button
-          type="primary"
-          icon={<SendOutlined />}
           onClick={handleMintAndTransfer}
-          loading={isProcessing}
-          disabled={!mintAmount || mintAmount <= 0 || !selectedRecipient}
-          block
-          style={{ height: 44 }}
+          disabled={!parsedMintAmount || parsedMintAmount <= 0 || !selectedRecipient || isProcessing}
+          className="w-full h-11"
         >
-          {isProcessing
-            ? currentStep === "minting" || currentStep === "confirming_mint"
-              ? t("dev.mockToken.minting")
-              : t("dev.mockToken.transferring")
-            : t("dev.mockToken.mintAndTransfer")}
+          {isProcessing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {currentStep === "minting" || currentStep === "confirming_mint"
+                ? t("dev.mockToken.minting")
+                : t("dev.mockToken.transferring")}
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4 mr-2" />
+              {t("dev.mockToken.mintAndTransfer")}
+            </>
+          )}
         </Button>
 
         {/* Transaction Status */}
         {txHash && (
-          <Text
-            style={{
-              color: "rgba(255,255,255,0.45)",
-              fontSize: 12,
-              wordBreak: "break-all",
-            }}
-          >
-            Tx: {txHash}
-          </Text>
+          <p className="text-muted-foreground text-xs break-all">Tx: {txHash}</p>
         )}
 
-        <Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 12 }}>
+        <p className="text-muted-foreground/60 text-xs">
           {t("dev.mockToken.note")}
-        </Text>
-      </Flex>
+        </p>
+      </CardContent>
     </Card>
   );
 }

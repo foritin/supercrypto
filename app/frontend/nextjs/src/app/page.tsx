@@ -2,25 +2,14 @@
 
 import React from "react";
 import {
-  Layout,
-  Typography,
-  Card,
-  Button,
-  Row,
-  Col,
-  Statistic,
-  Flex,
-} from "antd";
-import {
-  SafetyOutlined,
-  ThunderboltOutlined,
-  GlobalOutlined,
-  RocketOutlined,
-  DollarOutlined,
-  TrophyOutlined,
-  ArrowRightOutlined,
-  BankOutlined,
-} from "@ant-design/icons";
+  Shield,
+  Zap,
+  Globe,
+  Rocket,
+  DollarSign,
+  Trophy,
+  Building2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
 import { useScrollReveal, useScrollRevealDelay } from "@/hooks/useScrollReveal";
@@ -30,11 +19,9 @@ import { useMagneticButton } from "@/hooks/useMagneticButton";
 import { useTypewriter } from "@/hooks/useTypewriter";
 import { RippleButton } from "@/components/ui/RippleButton";
 import { YieldCalculator } from "@/components/calculator/YieldCalculator";
-import { LogoWall } from "@/components/logo-wall/LogoWall";
+import { Card, CardContent } from "@/components/ui/card";
 import { PartnersMarquee, INSTITUTION_PARTNERS, ServiceProviders } from "@/components/partners";
-
-const { Content } = Layout;
-const { Title, Paragraph, Text } = Typography;
+import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -67,8 +54,9 @@ export default function HomePage() {
 
   // Phase 11: 打字机效果 - 纯 CSS 动画
   // 优化：使用长度接近的词，减少视觉位移
+  const dynamicWords = t('home.dynamicWords', { returnObjects: true }) as string[];
   const { text: dynamicText, animationKey } = useTypewriter(
-    t('home.dynamicWords', { returnObjects: true }),
+    Array.isArray(dynamicWords) ? dynamicWords : [],
     { wordDuration: 3000, loop: true }
   );
 
@@ -102,233 +90,144 @@ export default function HomePage() {
 
         {/* Hero Content */}
         <div
-          className="hero-content fade-in-stagger"
-          style={{
-            position: 'relative',
-            zIndex: 2,
-          }}
+          className="hero-content fade-in-stagger relative z-[2]"
         >
-          <div
-            style={{
-              maxWidth: 1200,
-              margin: "0 auto",
-              textAlign: "center",
-              padding: "60px 24px",
-            }}
-          >
-            <Flex vertical align="center" gap={32}>
-              {/* Badge */}
+          <div className="max-w-[1200px] mx-auto text-center py-[60px] px-6">
+            {/* Upper section - fixed height container to prevent layout shift */}
+            <div className="flex flex-col items-center gap-8">
+              {/* Badge - Minimal Tag Style */}
               <div>
                 <span
-                  style={{
-                    display: "inline-block",
-                    padding: "12px 28px",
-                    background:
-                      "linear-gradient(135deg, rgba(0, 212, 170, 0.15) 0%, rgba(0, 160, 128, 0.1) 100%)",
-                    border: "1px solid rgba(0, 212, 170, 0.4)",
-                    borderRadius: 30,
-                    color: "#00D4AA",
-                    fontSize: 16,
-                    fontWeight: 600,
-                    letterSpacing: "0.5px",
-                    boxShadow: "0 0 20px rgba(0, 212, 170, 0.15)",
-                  }}
+                  className="inline-flex items-center gap-2 py-2 px-5 bg-white/[0.06] backdrop-blur-sm rounded-lg text-[13px] font-medium tracking-[1.5px] uppercase text-white/70"
                 >
-                  🚀 {t("home.badge")}
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA] animate-pulse" />
+                  {t("home.badge")}
                 </span>
               </div>
 
-              {/* Main Title */}
+              {/* Main Title - Two Lines */}
               <div>
-                <Title
-                  level={1}
-                  style={{
-                    fontSize: "clamp(48px, 8vw, 96px)",
-                    fontWeight: 800,
-                    marginBottom: 0,
-                    lineHeight: 1.1,
-                    letterSpacing: "-0.02em",
-                  }}
+                <h1
+                  className="text-[clamp(48px,8vw,96px)] font-extrabold mb-0 leading-[1.1] tracking-[-0.02em] text-white text-center"
                 >
-                  {t('home.heroTitle.unlock')}{' '}
-                  <span
-                    key={animationKey}
-                    className="gold-text typewriter-text"
-                    style={{
-                      display: 'inline-block',
-                      minWidth: '220px',
-                      height: '1.2em',
-                      textAlign: 'left',
-                      verticalAlign: 'bottom',
-                    }}
-                  >
-                    {dynamicText}
+                  {/* Line 1: Bridge + Dynamic Word */}
+                  <span className="block whitespace-nowrap">
+                    {t('home.heroTitle.unlock')}{' '}
+                    <span
+                      key={animationKey}
+                      className="inline-block min-w-[280px] bg-gradient-to-r from-[#C9A962] via-[#E8D5A3] to-[#C9A962] bg-clip-text text-transparent typewriter-text"
+                    >
+                      {dynamicText}
+                    </span>
                   </span>
-                  {' '}{t('home.heroTitle.onWeb3')}
-                </Title>
+                  {/* Line 2: to DeFi Yields */}
+                  <span className="block">
+                    {t('home.heroTitle.onWeb3')}
+                  </span>
+                </h1>
               </div>
 
-              {/* Subtitle */}
-              <Paragraph
-                style={{
-                  fontSize: 22,
-                  color: "rgba(255, 255, 255, 0.7)",
-                  maxWidth: 750,
-                  margin: "0 auto",
-                  lineHeight: 1.6,
-                }}
+              {/* Subtitle with highlighted keywords */}
+              <p
+                className="text-[20px] text-white/60 max-w-[700px] mx-auto leading-[1.7]"
               >
-                {t("home.subtitle")}
-              </Paragraph>
+                <span className="text-white/80 font-medium">Institutional-grade security</span>
+                {" · "}
+                <span className="text-white/80 font-medium">Liquid</span>
+                {" · "}
+                <span className="text-white/80 font-medium">Transparent</span>
+                <br />
+                <span className="mt-2 inline-block">
+                  Earn up to{" "}
+                  <span className="bg-gradient-to-r from-[#C9A962] to-[#E8D5A3] bg-clip-text text-transparent font-semibold">
+                    15% APY
+                  </span>
+                  {" "}backed by tokenized real-world assets.
+                </span>
+              </p>
 
-              {/* CTA Buttons */}
-              <Flex gap={16} wrap="wrap" justify="center">
-                <RippleButton
+              {/* CTA Buttons - Premium Web3 Design */}
+              <div className="flex flex-wrap gap-4 justify-center mt-2">
+                {/* Primary CTA - Premium gradient button */}
+                <button
                   ref={primaryCtaRef}
-                  type="primary"
-                  size="large"
-                  icon={<RocketOutlined />}
                   onClick={() => router.push("/assets")}
-                  className="magnetic-button"
+                  className="group relative min-w-[180px] h-[56px] px-10 rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                   style={{
-                    height: 64,
-                    padding: "0 52px",
-                    fontSize: 20,
-                    fontWeight: 600,
-                    borderRadius: 14,
-                    boxShadow: "0 0 30px rgba(0, 212, 170, 0.3)",
+                    background: 'linear-gradient(135deg, #00D4AA 0%, #00B896 100%)',
+                    boxShadow: '0 4px 24px rgba(0, 212, 170, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
                   }}
                 >
-                  {t("home.cta.primary")}
-                </RippleButton>
-                <RippleButton
+                  {/* Shine overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                  <span className="relative z-10 flex items-center justify-center gap-3 text-[16px] font-semibold text-[#0a0f0d]">
+                    <Rocket className="w-5 h-5" />
+                    {t("home.cta.primary")}
+                  </span>
+                </button>
+
+                {/* Secondary CTA - Subtle outline button */}
+                <button
                   ref={secondaryCtaRef}
-                  size="large"
                   onClick={() => router.push("/portfolio")}
-                  className="magnetic-button"
-                  style={{
-                    height: 64,
-                    padding: "0 52px",
-                    fontSize: 20,
-                    borderRadius: 14,
-                    background: "rgba(255, 255, 255, 0.05)",
-                    borderColor: "rgba(255, 255, 255, 0.2)",
-                  }}
+                  className="group min-w-[180px] h-[56px] px-10 rounded-xl text-[16px] font-semibold text-white/85 bg-white/[0.04] border border-white/[0.15] backdrop-blur-sm transition-all duration-300 hover:bg-white/[0.08] hover:border-white/25 hover:text-white active:scale-[0.98]"
                 >
                   {t("home.cta.secondary")}
-                </RippleButton>
-              </Flex>
+                </button>
+              </div>
+            </div>
 
-              {/* Stats Section - Plain Text Style (Securitize-inspired) */}
-              <div
-                style={{
-                  marginTop: 80,
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  flexWrap: "nowrap",  // 禁止换行
-                  gap: 48,
-                  width: "100%",
-                  maxWidth: 1100,  // 增大最大宽度
-                }}
-              >
-                {/* TVL Stat */}
-                <div style={{ textAlign: "center" }}>
-                  <Text
-                    style={{
-                      color: "rgba(255, 255, 255, 0.7)",
-                      fontSize: 18,
-                      textTransform: "uppercase",
-                      letterSpacing: "1px",
-                      marginRight: 10,
-                    }}
-                  >
-                    {t("home.stats.tvl")}:
-                  </Text>
-                  <Text
-                    ref={tvlCount.ref}
-                    style={{
-                      color: "#00D4AA",
-                      fontSize: 38,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {tvlCount.count}
-                  </Text>
-                </div>
-
-                {/* Separator */}
-                <div
-                  style={{
-                    width: 1,
-                    height: 48,
-                    background: "rgba(255, 255, 255, 0.1)",
-                  }}
-                  className="stats-separator"
-                />
-
-                {/* Users Stat */}
-                <div style={{ textAlign: "center" }}>
-                  <Text
-                    style={{
-                      color: "rgba(255, 255, 255, 0.7)",
-                      fontSize: 18,
-                      textTransform: "uppercase",
-                      letterSpacing: "1px",
-                      marginRight: 10,
-                    }}
-                  >
-                    {t("home.stats.users")}:
-                  </Text>
-                  <Text
-                    ref={usersCount.ref}
-                    style={{
-                      color: "#00D4AA",
-                      fontSize: 38,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {usersCount.count}
-                  </Text>
-                </div>
-
-                {/* Separator */}
-                <div
-                  style={{
-                    width: 1,
-                    height: 48,
-                    background: "rgba(255, 255, 255, 0.1)",
-                  }}
-                  className="stats-separator"
-                />
-
-                {/* Assets Stat */}
-                <div style={{ textAlign: "center" }}>
-                  <Text
-                    style={{
-                      color: "rgba(255, 255, 255, 0.7)",
-                      fontSize: 18,
-                      textTransform: "uppercase",
-                      letterSpacing: "1px",
-                      marginRight: 10,
-                    }}
-                  >
-                    {t("home.stats.assets")}:
-                  </Text>
-                  <Text
-                    ref={assetsCount.ref}
-                    style={{
-                      color: "#00D4AA",
-                      fontSize: 38,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {assetsCount.count}
-                  </Text>
-                </div>
+            {/* Stats Section - Separate container, won't be affected by title changes */}
+            <div
+              className="flex justify-center items-center flex-wrap gap-20 w-full max-w-[1100px] mx-auto"
+              style={{ marginTop: '120px' }}
+            >
+              {/* TVL Stat */}
+              <div className="flex items-baseline gap-4">
+                <span className="text-white/70 text-lg uppercase tracking-[1px]">
+                  {t("home.stats.tvl")}
+                </span>
+                <span
+                  ref={tvlCount.ref}
+                  className="text-[#00D4AA] text-[38px] font-bold"
+                >
+                  {tvlCount.count}
+                </span>
               </div>
 
-            </Flex>
+              {/* Separator */}
+              <div className="w-px h-12 bg-white/10" />
+
+              {/* Users Stat */}
+              <div className="flex items-baseline gap-4">
+                <span className="text-white/70 text-lg uppercase tracking-[1px]">
+                  {t("home.stats.users")}
+                </span>
+                <span
+                  ref={usersCount.ref}
+                  className="text-[#00D4AA] text-[38px] font-bold"
+                >
+                  {usersCount.count}
+                </span>
+              </div>
+
+              {/* Separator */}
+              <div className="w-px h-12 bg-white/10" />
+
+              {/* Assets Stat */}
+              <div className="flex items-baseline gap-4">
+                <span className="text-white/70 text-lg uppercase tracking-[1px]">
+                  {t("home.stats.assets")}
+                </span>
+                <span
+                  ref={assetsCount.ref}
+                  className="text-[#00D4AA] text-[38px] font-bold"
+                >
+                  {assetsCount.count}
+                </span>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -346,193 +245,167 @@ export default function HomePage() {
       {/* Features Section */}
       <section
         ref={featuresSection.ref as React.RefObject<HTMLDivElement>}
-        className={`dot-pattern-bg scroll-reveal ${featuresSection.isVisible ? 'is-visible' : ''}`}
-        style={{ padding: "100px 24px" }}
+        className={cn(
+          "w-full dot-pattern-bg scroll-reveal py-[100px] px-6 flex justify-center",
+          featuresSection.isVisible && 'is-visible'
+        )}
       >
-        <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative" }}>
+        <div className="w-full max-w-[1200px] relative">
           <div
-            style={{ textAlign: "center", marginBottom: 72 }}
-            className="fade-in-stagger"
+            className="text-center mb-[72px] fade-in-stagger"
           >
-            <Text
-              style={{
-                color: "#00D4AA",
-                fontSize: 14,
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "2px",
-              }}
+            <span
+              className="text-[#00D4AA] text-sm font-semibold uppercase tracking-[2px]"
             >
               Features
-            </Text>
-            <Title level={2} style={{ marginTop: 16, marginBottom: 16 }}>
+            </span>
+            <h2 className="mt-4 mb-4 text-3xl md:text-4xl font-bold text-white">
               {t("home.features.title")}
-            </Title>
-            <Paragraph
-              style={{
-                fontSize: 18,
-                color: "rgba(255, 255, 255, 0.65)",
-                maxWidth: 600,
-                margin: "0 auto",
-              }}
+            </h2>
+            <p
+              className="text-lg text-white/65 max-w-[600px] mx-auto"
             >
               {t("home.features.subtitle")}
-            </Paragraph>
+            </p>
           </div>
 
-          <Row gutter={[32, 32]}>
-            <Col
-              xs={24}
-              md={8}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div
               ref={feature1.ref as React.RefObject<HTMLDivElement>}
-              className={`scroll-reveal ${feature1.isVisible ? 'is-visible' : ''}`}
+              className={cn(
+                "scroll-reveal",
+                feature1.isVisible && 'is-visible'
+              )}
             >
               <Card
-                hoverable
-                className="glass-card-enhanced"
-                style={{ height: "100%" }}
+                className="glass-card-enhanced h-full cursor-pointer"
               >
-                <Flex vertical gap={20}>
-                  <div className="icon-box icon-box-primary">
-                    <SafetyOutlined
-                      style={{ fontSize: 28, color: "#00D4AA" }}
-                    />
+                <CardContent className="p-6">
+                  <div className="flex flex-col gap-5">
+                    <div className="icon-box icon-box-primary">
+                      <Shield
+                        className="w-7 h-7 text-[#00D4AA]"
+                      />
+                    </div>
+                    <h4 className="text-xl font-semibold text-white m-0">
+                      {t("home.features.security.title")}
+                    </h4>
+                    <span
+                      className="text-white/65 leading-[1.7]"
+                    >
+                      {t("home.features.security.description")}
+                    </span>
                   </div>
-                  <Title level={4} style={{ margin: 0 }}>
-                    {t("home.features.security.title")}
-                  </Title>
-                  <Text
-                    style={{
-                      color: "rgba(255, 255, 255, 0.65)",
-                      lineHeight: 1.7,
-                    }}
-                  >
-                    {t("home.features.security.description")}
-                  </Text>
-                </Flex>
+                </CardContent>
               </Card>
-            </Col>
-            <Col
-              xs={24}
-              md={8}
+            </div>
+            <div
               ref={feature2.ref as React.RefObject<HTMLDivElement>}
-              className={`scroll-reveal ${feature2.isVisible ? 'is-visible' : ''}`}
+              className={cn(
+                "scroll-reveal",
+                feature2.isVisible && 'is-visible'
+              )}
             >
               <Card
-                hoverable
-                className="glass-card-enhanced"
-                style={{ height: "100%" }}
+                className="glass-card-enhanced h-full cursor-pointer"
               >
-                <Flex vertical gap={20}>
-                  <div className="icon-box icon-box-gold">
-                    <DollarOutlined
-                      style={{ fontSize: 28, color: "#FFD700" }}
-                    />
+                <CardContent className="p-6">
+                  <div className="flex flex-col gap-5">
+                    <div className="icon-box icon-box-gold">
+                      <DollarSign
+                        className="w-7 h-7 text-[#FFD700]"
+                      />
+                    </div>
+                    <h4 className="text-xl font-semibold text-white m-0">
+                      {t("home.features.returns.title")}
+                    </h4>
+                    <span
+                      className="text-white/65 leading-[1.7]"
+                    >
+                      {t("home.features.returns.description")}
+                    </span>
                   </div>
-                  <Title level={4} style={{ margin: 0 }}>
-                    {t("home.features.returns.title")}
-                  </Title>
-                  <Text
-                    style={{
-                      color: "rgba(255, 255, 255, 0.65)",
-                      lineHeight: 1.7,
-                    }}
-                  >
-                    {t("home.features.returns.description")}
-                  </Text>
-                </Flex>
+                </CardContent>
               </Card>
-            </Col>
-            <Col
-              xs={24}
-              md={8}
+            </div>
+            <div
               ref={feature3.ref as React.RefObject<HTMLDivElement>}
-              className={`scroll-reveal ${feature3.isVisible ? 'is-visible' : ''}`}
+              className={cn(
+                "scroll-reveal",
+                feature3.isVisible && 'is-visible'
+              )}
             >
               <Card
-                hoverable
-                className="glass-card-enhanced"
-                style={{ height: "100%" }}
+                className="glass-card-enhanced h-full cursor-pointer"
               >
-                <Flex vertical gap={20}>
-                  <div className="icon-box icon-box-blue">
-                    <GlobalOutlined
-                      style={{ fontSize: 28, color: "#1890ff" }}
-                    />
+                <CardContent className="p-6">
+                  <div className="flex flex-col gap-5">
+                    <div className="icon-box icon-box-blue">
+                      <Globe
+                        className="w-7 h-7 text-[#1890ff]"
+                      />
+                    </div>
+                    <h4 className="text-xl font-semibold text-white m-0">
+                      {t("home.features.global.title")}
+                    </h4>
+                    <span
+                      className="text-white/65 leading-[1.7]"
+                    >
+                      {t("home.features.global.description")}
+                    </span>
                   </div>
-                  <Title level={4} style={{ margin: 0 }}>
-                    {t("home.features.global.title")}
-                  </Title>
-                  <Text
-                    style={{
-                      color: "rgba(255, 255, 255, 0.65)",
-                      lineHeight: 1.7,
-                    }}
-                  >
-                    {t("home.features.global.description")}
-                  </Text>
-                </Flex>
+                </CardContent>
               </Card>
-            </Col>
-          </Row>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* How It Works Section */}
       <section
         ref={howItWorksSection.ref as React.RefObject<HTMLDivElement>}
-        className={`hex-pattern-bg scroll-reveal ${howItWorksSection.isVisible ? 'is-visible' : ''}`}
-        style={{ padding: "100px 24px" }}
+        className={cn(
+          "w-full hex-pattern-bg scroll-reveal py-[100px] px-6 flex justify-center",
+          howItWorksSection.isVisible && 'is-visible'
+        )}
       >
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div className="w-full max-w-[1200px]">
           <div
-            style={{ textAlign: "center", marginBottom: 72 }}
-            className="fade-in-stagger"
+            className="text-center mb-[72px] fade-in-stagger"
           >
-            <Text
-              style={{
-                color: "#FFD700",
-                fontSize: 14,
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "2px",
-              }}
+            <span
+              className="text-[#FFD700] text-sm font-semibold uppercase tracking-[2px]"
             >
               How It Works
-            </Text>
-            <Title level={2} style={{ marginTop: 16, marginBottom: 16 }}>
+            </span>
+            <h2 className="mt-4 mb-4 text-3xl md:text-4xl font-bold text-white">
               {t("home.howItWorks.title")}
-            </Title>
-            <Paragraph
-              style={{
-                fontSize: 18,
-                color: "rgba(255, 255, 255, 0.65)",
-                maxWidth: 600,
-                margin: "0 auto",
-              }}
+            </h2>
+            <p
+              className="text-lg text-white/65 max-w-[600px] mx-auto"
             >
               {t("home.howItWorks.subtitle")}
-            </Paragraph>
+            </p>
           </div>
 
-          <Row gutter={[48, 48]} align="top">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
             {[
               {
-                icon: <BankOutlined />,
+                icon: <Building2 className="w-10 h-10" />,
                 step: 1,
                 titleKey: "home.howItWorks.step1.title",
                 descKey: "home.howItWorks.step1.description",
                 color: "#00D4AA",
               },
               {
-                icon: <ThunderboltOutlined />,
+                icon: <Zap className="w-10 h-10" />,
                 step: 2,
                 titleKey: "home.howItWorks.step2.title",
                 descKey: "home.howItWorks.step2.description",
                 color: "#FFD700",
               },
               {
-                icon: <TrophyOutlined />,
+                icon: <Trophy className="w-10 h-10" />,
                 step: 3,
                 titleKey: "home.howItWorks.step3.title",
                 descKey: "home.howItWorks.step3.description",
@@ -541,138 +414,106 @@ export default function HomePage() {
             ].map((item, index) => {
               const stepRef = index === 0 ? step1 : index === 1 ? step2 : step3;
               return (
-                <Col
-                  xs={24}
-                  md={8}
+                <div
                   key={item.step}
                   ref={stepRef.ref as React.RefObject<HTMLDivElement>}
-                  className={`scroll-reveal ${stepRef.isVisible ? 'is-visible' : ''}`}
-                >
-                <div style={{ textAlign: "center", position: "relative" }}>
-                  {/* Connecting Line */}
-                  {index < 2 && (
-                    <div
-                      style={{
-                        display: "none",
-                        position: "absolute",
-                        top: 44,
-                        left: "calc(50% + 50px)",
-                        width: "calc(100% - 100px)",
-                        height: 2,
-                        background: `linear-gradient(90deg, ${item.color}40 0%, rgba(255,255,255,0.1) 100%)`,
-                      }}
-                    />
+                  className={cn(
+                    "scroll-reveal",
+                    stepRef.isVisible && 'is-visible'
                   )}
-                  <div
-                    style={{
-                      width: 88,
-                      height: 88,
-                      background: `linear-gradient(135deg, rgba(17, 25, 22, 0.9) 0%, rgba(26, 36, 30, 0.9) 100%)`,
-                      border: `2px solid ${item.color}40`,
-                      borderRadius: 24,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 28px",
-                      position: "relative",
-                      boxShadow: `0 0 40px ${item.color}15`,
-                      transition: "all 0.3s ease",
-                    }}
-                  >
-                    <span
+                >
+                  <div className="text-center relative">
+                    {/* Connecting Line */}
+                    {index < 2 && (
+                      <div
+                        className="hidden absolute top-11 left-[calc(50%+50px)] w-[calc(100%-100px)] h-0.5"
+                        style={{
+                          background: `linear-gradient(90deg, ${item.color}40 0%, rgba(255,255,255,0.1) 100%)`,
+                        }}
+                      />
+                    )}
+                    <div
+                      className="w-[88px] h-[88px] bg-gradient-to-br from-[rgba(17,25,22,0.9)] to-[rgba(26,36,30,0.9)] rounded-3xl flex items-center justify-center mx-auto mb-7 relative transition-all duration-300"
                       style={{
-                        position: "absolute",
-                        top: -14,
-                        right: -14,
-                        width: 36,
-                        height: 36,
-                        background: `linear-gradient(135deg, ${item.color} 0%, ${item.color}CC 100%)`,
-                        borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 16,
-                        fontWeight: 700,
-                        color: "var(--bg-dark)",
-                        boxShadow: `0 0 20px ${item.color}50`,
+                        border: `2px solid ${item.color}40`,
+                        boxShadow: `0 0 40px ${item.color}15`,
                       }}
                     >
-                      {item.step}
+                      <span
+                        className="absolute -top-3.5 -right-3.5 w-9 h-9 rounded-full flex items-center justify-center text-base font-bold text-[var(--bg-dark)]"
+                        style={{
+                          background: `linear-gradient(135deg, ${item.color} 0%, ${item.color}CC 100%)`,
+                          boxShadow: `0 0 20px ${item.color}50`,
+                        }}
+                      >
+                        {item.step}
+                      </span>
+                      {React.cloneElement(
+                        item.icon as React.ReactElement<{
+                          style?: React.CSSProperties;
+                          className?: string;
+                        }>,
+                        {
+                          style: { color: item.color },
+                        }
+                      )}
+                    </div>
+                    <h4 className="text-xl font-semibold text-white mb-3">
+                      {t(item.titleKey)}
+                    </h4>
+                    <span
+                      className="text-white/65 leading-[1.7]"
+                    >
+                      {t(item.descKey)}
                     </span>
-                    {React.cloneElement(
-                      item.icon as React.ReactElement<{
-                        style?: React.CSSProperties;
-                      }>,
-                      {
-                        style: { fontSize: 40, color: item.color },
-                      }
-                    )}
                   </div>
-                  <Title level={4} style={{ marginBottom: 12 }}>
-                    {t(item.titleKey)}
-                  </Title>
-                  <Text
-                    style={{
-                      color: "rgba(255, 255, 255, 0.65)",
-                      lineHeight: 1.7,
-                    }}
-                  >
-                    {t(item.descKey)}
-                  </Text>
                 </div>
-              </Col>
               );
             })}
-          </Row>
+          </div>
         </div>
       </section>
 
       {/* Phase 11: Yield Calculator Section */}
       <section
         ref={calculatorSection.ref as React.RefObject<HTMLDivElement>}
-        className={`hex-pattern-bg scroll-reveal ${calculatorSection.isVisible ? 'is-visible' : ''}`}
-        style={{ padding: "100px 24px" }}
+        className={cn(
+          "w-full hex-pattern-bg scroll-reveal py-[100px] px-6 flex justify-center",
+          calculatorSection.isVisible && 'is-visible'
+        )}
       >
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }} className="fade-in-stagger">
-            <Text
-              style={{
-                color: "#FFD700",
-                fontSize: 14,
-                fontWeight: 600,
-                letterSpacing: "2px",
-                textTransform: "uppercase",
-              }}
+        <div className="w-full max-w-[1200px]">
+          <div className="text-center mb-12 fade-in-stagger">
+            <span
+              className="text-[#FFD700] text-sm font-semibold tracking-[2px] uppercase"
             >
               Calculate Your Earnings
-            </Text>
-            <Title level={2} style={{ marginTop: 16, marginBottom: 16 }}>
+            </span>
+            <h2 className="mt-4 mb-4 text-3xl md:text-4xl font-bold text-white">
               Yield Calculator
-            </Title>
-            <Paragraph
-              style={{
-                fontSize: 18,
-                color: "rgba(255, 255, 255, 0.65)",
-                maxWidth: 600,
-                margin: "0 auto",
-              }}
+            </h2>
+            <p
+              className="text-lg text-white/65 max-w-[600px] mx-auto"
             >
               See your potential returns with our interactive yield calculator
-            </Paragraph>
+            </p>
           </div>
 
-          <Row gutter={[32, 32]} justify="center">
-            <Col xs={24} lg={16}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 justify-center">
+            <div className="lg:col-span-8 lg:col-start-3">
               <YieldCalculator />
-            </Col>
-          </Row>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Phase 11: Ecosystem / Logo Wall Section - 区块链生态 */}
       <section
         ref={ecosystemSection.ref as React.RefObject<HTMLDivElement>}
-        className={`hex-pattern-bg scroll-reveal ${ecosystemSection.isVisible ? 'is-visible' : ''}`}
+        className={cn(
+          "hex-pattern-bg scroll-reveal",
+          ecosystemSection.isVisible && 'is-visible'
+        )}
       >
         <ServiceProviders
           title={t("home.partners.blockchains.title")}
@@ -683,50 +524,30 @@ export default function HomePage() {
       {/* Final CTA Section */}
       <section
         ref={ctaSection.ref as React.RefObject<HTMLDivElement>}
-        className={`cta-section scroll-reveal ${ctaSection.isVisible ? 'is-visible' : ''}`}
+        className={cn(
+          "cta-section scroll-reveal",
+          ctaSection.isVisible && 'is-visible'
+        )}
       >
         <div
-          style={{
-            maxWidth: 800,
-            margin: "0 auto",
-            textAlign: "center",
-            position: "relative",
-            zIndex: 1,
-          }}
+          className="max-w-[800px] mx-auto text-center relative z-[1]"
         >
-          <Title
-            level={2}
-            style={{
-              marginBottom: 20,
-              fontSize: "clamp(28px, 4vw, 42px)",
-            }}
+          <h2
+            className="mb-5 text-[clamp(28px,4vw,42px)] font-bold text-white"
           >
             {t("home.finalCta.title")}
-          </Title>
-          <Paragraph
-            style={{
-              fontSize: 18,
-              color: "rgba(255, 255, 255, 0.7)",
-              marginBottom: 40,
-              lineHeight: 1.7,
-            }}
+          </h2>
+          <p
+            className="text-lg text-white/70 mb-10 leading-[1.7]"
           >
             {t("home.finalCta.description")}
-          </Paragraph>
+          </p>
           <RippleButton
-            type="primary"
-            size="large"
-            icon={<RocketOutlined />}
+            variant="default"
             onClick={() => router.push("/assets")}
-            style={{
-              height: 60,
-              padding: "0 56px",
-              fontSize: 18,
-              fontWeight: 600,
-              borderRadius: 14,
-              boxShadow: "0 0 40px rgba(0, 212, 170, 0.35)",
-            }}
+            className="h-[60px] px-14 text-lg font-semibold rounded-[14px] shadow-[0_0_40px_rgba(0,212,170,0.35)]"
           >
+            <Rocket className="w-5 h-5 mr-2" />
             {t("home.finalCta.button")}
           </RippleButton>
         </div>

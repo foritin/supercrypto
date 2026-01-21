@@ -18,12 +18,18 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import Dagre from '@dagrejs/dagre';
-import { Typography, Skeleton, Alert, Empty, Tooltip } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { contractGraphService, type GraphNode } from '@/services/contract-graph';
-
-const { Text } = Typography;
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { AlertCircle, Inbox } from 'lucide-react';
 
 // ============================================
 // Dark Fintech Theme - Web3 配色方案
@@ -85,186 +91,198 @@ function ContractNode({ data }: { data: GraphNode }) {
   const isGlobal = data.project === 'common' || !data.project;
 
   return (
-    <div className="contract-node">
-      {/* 发光边框效果 - 使用状态颜色 */}
-      <div 
-        className="node-glow"
-        style={{ 
-          background: `linear-gradient(135deg, ${status.color}30 0%, transparent 60%)`,
-        }} 
-      />
-      
-      {/* 主体内容 */}
-      <div 
-        className="node-content"
-        style={{
-          borderColor: `${status.color}50`,
-        }}
-      >
-        {/* Handles */}
-        <Handle 
-          type="target" 
-          position={Position.Top} 
-          className="node-handle"
-          style={{ background: status.color }}
-        />
-        <Handle 
-          type="source" 
-          position={Position.Bottom} 
-          className="node-handle"
-          style={{ background: status.color }}
-        />
-
-        {/* 顶部：状态条 */}
+    <TooltipProvider>
+      <div className="contract-node">
+        {/* 发光边框效果 - 使用状态颜色 */}
         <div 
-          className="status-bar"
+          className="node-glow"
           style={{ 
-            background: `linear-gradient(90deg, ${status.color} 0%, ${status.color}60 100%)`,
+            background: `linear-gradient(135deg, ${status.color}30 0%, transparent 60%)`,
+          }} 
+        />
+        
+        {/* 主体内容 */}
+        <div 
+          className="node-content"
+          style={{
+            borderColor: `${status.color}50`,
           }}
         >
-          <div 
-            className="status-dot"
+          {/* Handles */}
+          <Handle 
+            type="target" 
+            position={Position.Top} 
+            className="node-handle"
             style={{ background: status.color }}
           />
-          <span className="status-text">{statusText}</span>
-        </div>
+          <Handle 
+            type="source" 
+            position={Position.Bottom} 
+            className="node-handle"
+            style={{ background: status.color }}
+          />
 
-        {/* 合约名称 */}
-        <Tooltip title={data.label}>
-          <div className="node-name">{data.label}</div>
-        </Tooltip>
-
-        {/* 标签行 */}
-        <div className="node-tags">
-          <span 
-            className="tag project-tag"
+          {/* 顶部：状态条 */}
+          <div 
+            className="status-bar"
             style={{ 
-              background: isGlobal 
-                ? 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)' 
-                : 'linear-gradient(135deg, #34D399 0%, #10B981 100%)',
+              background: `linear-gradient(90deg, ${status.color} 0%, ${status.color}60 100%)`,
             }}
           >
-            {isGlobal ? 'GLOBAL' : data.project?.toUpperCase()}
-          </span>
-          {data.module && (
-            <span className="tag module-tag">{data.module}</span>
+            <div 
+              className="status-dot"
+              style={{ background: status.color }}
+            />
+            <span className="status-text">{statusText}</span>
+          </div>
+
+          {/* 合约名称 */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="node-name">{data.label}</div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{data.label}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          {/* 标签行 */}
+          <div className="node-tags">
+            <span 
+              className="tag project-tag"
+              style={{ 
+                background: isGlobal 
+                  ? 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)' 
+                  : 'linear-gradient(135deg, #34D399 0%, #10B981 100%)',
+              }}
+            >
+              {isGlobal ? 'GLOBAL' : data.project?.toUpperCase()}
+            </span>
+            {data.module && (
+              <span className="tag module-tag">{data.module}</span>
+            )}
+          </div>
+
+          {/* 地址 */}
+          {data.address && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="node-address">
+                  {data.address.slice(0, 8)}...{data.address.slice(-6)}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="font-mono">{data.address}</p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 
-        {/* 地址 */}
-        {data.address && (
-          <Tooltip title={data.address}>
-            <div className="node-address">
-              {data.address.slice(0, 8)}...{data.address.slice(-6)}
-            </div>
-          </Tooltip>
-        )}
+        <style>{`
+          .contract-node {
+            position: relative;
+            width: 220px;
+            cursor: pointer;
+          }
+          .node-glow {
+            position: absolute;
+            inset: -1px;
+            border-radius: 14px;
+            z-index: 0;
+          }
+          .node-content {
+            position: relative;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: ${THEME.bg.node};
+            border: 1px solid ${THEME.border.normal};
+            backdrop-filter: blur(12px);
+            z-index: 1;
+            transition: all 0.2s ease;
+          }
+          .contract-node:hover .node-content {
+            border-color: ${THEME.accent.primary};
+            box-shadow: 0 0 24px ${THEME.accent.primaryGlow};
+            transform: translateY(-2px);
+          }
+          .node-handle {
+            width: 8px !important;
+            height: 8px !important;
+            border: none !important;
+            transition: transform 0.2s;
+          }
+          .contract-node:hover .node-handle {
+            transform: scale(1.3);
+          }
+          .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin: -14px -16px 12px -16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+          }
+          .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+          }
+          .status-text {
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.9);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .node-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: ${THEME.text.primary};
+            margin-bottom: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .node-tags {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+          }
+          .tag {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .project-tag {
+            color: #fff;
+          }
+          .module-tag {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid ${THEME.border.subtle};
+            color: ${THEME.text.secondary};
+          }
+          .node-address {
+            font-size: 11px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            color: ${THEME.text.muted};
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            cursor: pointer;
+          }
+          .node-address:hover {
+            color: ${THEME.text.secondary};
+            background: rgba(0, 0, 0, 0.3);
+          }
+        `}</style>
       </div>
-
-      <style>{`
-        .contract-node {
-          position: relative;
-          width: 220px;
-          cursor: pointer;
-        }
-        .node-glow {
-          position: absolute;
-          inset: -1px;
-          border-radius: 14px;
-          z-index: 0;
-        }
-        .node-content {
-          position: relative;
-          padding: 14px 16px;
-          border-radius: 12px;
-          background: ${THEME.bg.node};
-          border: 1px solid ${THEME.border.normal};
-          backdrop-filter: blur(12px);
-          z-index: 1;
-          transition: all 0.2s ease;
-        }
-        .contract-node:hover .node-content {
-          border-color: ${THEME.accent.primary};
-          box-shadow: 0 0 24px ${THEME.accent.primaryGlow};
-          transform: translateY(-2px);
-        }
-        .node-handle {
-          width: 8px !important;
-          height: 8px !important;
-          border: none !important;
-          transition: transform 0.2s;
-        }
-        .contract-node:hover .node-handle {
-          transform: scale(1.3);
-        }
-        .status-bar {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 6px 10px;
-          border-radius: 6px;
-          margin: -14px -16px 12px -16px;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .status-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          flex-shrink: 0;
-        }
-        .status-text {
-          font-size: 11px;
-          font-weight: 600;
-          color: rgba(255,255,255,0.9);
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-        .node-name {
-          font-size: 14px;
-          font-weight: 600;
-          color: ${THEME.text.primary};
-          margin-bottom: 10px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .node-tags {
-          display: flex;
-          gap: 6px;
-          margin-bottom: 10px;
-          flex-wrap: wrap;
-        }
-        .tag {
-          font-size: 10px;
-          font-weight: 600;
-          padding: 3px 8px;
-          border-radius: 4px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-        .project-tag {
-          color: #fff;
-        }
-        .module-tag {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid ${THEME.border.subtle};
-          color: ${THEME.text.secondary};
-        }
-        .node-address {
-          font-size: 11px;
-          font-family: 'SF Mono', 'Fira Code', monospace;
-          color: ${THEME.text.muted};
-          padding: 4px 8px;
-          background: rgba(0, 0, 0, 0.2);
-          border-radius: 4px;
-          cursor: pointer;
-        }
-        .node-address:hover {
-          color: ${THEME.text.secondary};
-          background: rgba(0, 0, 0, 0.3);
-        }
-      `}</style>
-    </div>
+    </TooltipProvider>
   );
 }
 
@@ -418,38 +436,48 @@ export function ContractDependencyTree({ onContractClick, showDeleted = false }:
     [onContractClick]
   );
 
-  // Loading State
+  // Loading State - 使用 shadcn/ui Skeleton
   if (isLoading) {
     return (
       <div className="tree-container tree-loading">
-        <Skeleton active paragraph={{ rows: 10 }} />
+        <div className="flex flex-col gap-4 w-full max-w-md">
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-8 w-1/2" />
+          <Skeleton className="h-32 w-full" />
+        </div>
         <style>{containerStyles}</style>
       </div>
     );
   }
 
-  // Error State
+  // Error State - 使用 shadcn/ui Alert
   if (error) {
     return (
-      <div className="tree-container">
-        <Alert
-          type="error"
-          message={t('admin.contracts.tree.loadFailed')}
-          description={(error as Error).message}
-          showIcon
-        />
+      <div className="tree-container flex items-center justify-center p-8">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('admin.contracts.tree.loadFailed')}</AlertTitle>
+          <AlertDescription>
+            {(error as Error).message}
+          </AlertDescription>
+        </Alert>
         <style>{containerStyles}</style>
       </div>
     );
   }
 
-  // Empty State
+  // Empty State - 使用自定义空状态
   if (!graphData || graphData.nodes.length === 0) {
     return (
       <div className="tree-container tree-empty">
-        <Empty 
-          description={<span style={{ color: THEME.text.muted }}>{t('admin.contracts.tree.noData')}</span>} 
-        />
+        <div className="flex flex-col items-center justify-center gap-4">
+          <Inbox className="h-16 w-16" style={{ color: THEME.text.muted }} />
+          <p className="text-sm" style={{ color: THEME.text.muted }}>
+            {t('admin.contracts.tree.noData')}
+          </p>
+        </div>
         <style>{containerStyles}</style>
       </div>
     );
@@ -462,109 +490,111 @@ export function ContractDependencyTree({ onContractClick, showDeleted = false }:
   const pendingEdges = graphData.edges.length - registeredEdges;
 
   return (
-    <div className="tree-container">
-      <ReactFlow
-        nodes={nodes}
-        edges={rfEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={handleNodeClick}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
-        minZoom={0.2}
-        maxZoom={1.5}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={24}
-          size={1}
-          color="rgba(255, 255, 255, 0.03)"
-        />
-        
-        <Controls
-          className="rf-controls"
-          showInteractive={false}
-        />
+    <TooltipProvider>
+      <div className="tree-container">
+        <ReactFlow
+          nodes={nodes}
+          edges={rfEdges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={handleNodeClick}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
+          minZoom={0.2}
+          maxZoom={1.5}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={24}
+            size={1}
+            color="rgba(255, 255, 255, 0.03)"
+          />
+          
+          <Controls
+            className="rf-controls"
+            showInteractive={false}
+          />
 
-        <MiniMap
-          className="rf-minimap"
-          nodeColor={(node) => {
-            const data = node.data as unknown as GraphNode;
-            const status = STATUS_COLORS[data.status] || STATUS_COLORS.not_deployed;
-            return status.color;
-          }}
-          maskColor="rgba(0, 0, 0, 0.8)"
-          pannable
-          zoomable
-        />
+          <MiniMap
+            className="rf-minimap"
+            nodeColor={(node) => {
+              const data = node.data as unknown as GraphNode;
+              const status = STATUS_COLORS[data.status] || STATUS_COLORS.not_deployed;
+              return status.color;
+            }}
+            maskColor="rgba(0, 0, 0, 0.8)"
+            pannable
+            zoomable
+          />
 
-        {/* 顶部统计面板 */}
-        <Panel position="top-left" className="stats-panel">
-          <div className="stats-grid">
-            <div className="stat-item">
-              <span className="stat-value" style={{ color: THEME.accent.primary }}>{globalCount}</span>
-              <span className="stat-label">Global</span>
+          {/* 顶部统计面板 */}
+          <Panel position="top-left" className="stats-panel">
+            <div className="stats-grid">
+              <div className="stat-item">
+                <span className="stat-value" style={{ color: THEME.accent.primary }}>{globalCount}</span>
+                <span className="stat-label">Global</span>
+              </div>
+              <div className="stat-divider" />
+              <div className="stat-item">
+                <span className="stat-value" style={{ color: THEME.accent.secondary }}>{projectCount}</span>
+                <span className="stat-label">Project</span>
+              </div>
+              <div className="stat-divider" />
+              <div className="stat-item">
+                <span className="stat-value" style={{ color: THEME.accent.secondary }}>{registeredEdges}</span>
+                <span className="stat-label">Linked</span>
+              </div>
+              <div className="stat-divider" />
+              <div className="stat-item">
+                <span className="stat-value" style={{ color: THEME.accent.warning }}>{pendingEdges}</span>
+                <span className="stat-label">Pending</span>
+              </div>
             </div>
-            <div className="stat-divider" />
-            <div className="stat-item">
-              <span className="stat-value" style={{ color: THEME.accent.secondary }}>{projectCount}</span>
-              <span className="stat-label">Project</span>
-            </div>
-            <div className="stat-divider" />
-            <div className="stat-item">
-              <span className="stat-value" style={{ color: THEME.accent.secondary }}>{registeredEdges}</span>
-              <span className="stat-label">Linked</span>
-            </div>
-            <div className="stat-divider" />
-            <div className="stat-item">
-              <span className="stat-value" style={{ color: THEME.accent.warning }}>{pendingEdges}</span>
-              <span className="stat-label">Pending</span>
-            </div>
-          </div>
-        </Panel>
+          </Panel>
 
-        {/* 底部图例 */}
-        <Panel position="bottom-left" className="legend-panel">
-          <div className="legend-grid">
-            <div className="legend-section">
-              <Text className="legend-title">Status</Text>
-              <div className="legend-items">
-                <div className="legend-item">
-                  <span className="legend-dot" style={{ background: THEME.accent.secondary }} />
-                  <span>{t('admin.contracts.status.ready')}</span>
+          {/* 底部图例 */}
+          <Panel position="bottom-left" className="legend-panel">
+            <div className="legend-grid">
+              <div className="legend-section">
+                <span className="legend-title">Status</span>
+                <div className="legend-items">
+                  <div className="legend-item">
+                    <span className="legend-dot" style={{ background: THEME.accent.secondary }} />
+                    <span>{t('admin.contracts.status.ready')}</span>
+                  </div>
+                  <div className="legend-item">
+                    <span className="legend-dot" style={{ background: THEME.accent.warning }} />
+                    <span>{t('admin.contracts.status.notRegistered')}</span>
+                  </div>
+                  <div className="legend-item">
+                    <span className="legend-dot" style={{ background: THEME.accent.muted }} />
+                    <span>{t('admin.contracts.status.notDeployed')}</span>
+                  </div>
                 </div>
-                <div className="legend-item">
-                  <span className="legend-dot" style={{ background: THEME.accent.warning }} />
-                  <span>{t('admin.contracts.status.notRegistered')}</span>
-                </div>
-                <div className="legend-item">
-                  <span className="legend-dot" style={{ background: THEME.accent.muted }} />
-                  <span>{t('admin.contracts.status.notDeployed')}</span>
+              </div>
+              <div className="legend-section">
+                <span className="legend-title">Dependency</span>
+                <div className="legend-items">
+                  <div className="legend-item">
+                    <span className="legend-line solid" style={{ background: THEME.accent.secondary }} />
+                    <span>{t('admin.contracts.status.registered')}</span>
+                  </div>
+                  <div className="legend-item">
+                    <span className="legend-line dashed" style={{ background: THEME.accent.warning }} />
+                    <span>{t('admin.contracts.status.notRegistered')}</span>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="legend-section">
-              <Text className="legend-title">Dependency</Text>
-              <div className="legend-items">
-                <div className="legend-item">
-                  <span className="legend-line solid" style={{ background: THEME.accent.secondary }} />
-                  <span>{t('admin.contracts.status.registered')}</span>
-                </div>
-                <div className="legend-item">
-                  <span className="legend-line dashed" style={{ background: THEME.accent.warning }} />
-                  <span>{t('admin.contracts.status.notRegistered')}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Panel>
-      </ReactFlow>
+          </Panel>
+        </ReactFlow>
 
-      <style>{containerStyles}</style>
-      <style>{panelStyles}</style>
-    </div>
+        <style>{containerStyles}</style>
+        <style>{panelStyles}</style>
+      </div>
+    </TooltipProvider>
   );
 }
 

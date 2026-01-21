@@ -7,19 +7,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, Tag, Typography, Space } from 'antd';
-import { DownOutlined, RightOutlined } from '@ant-design/icons';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { ContractStatusBadge } from './ProjectStatusBadge';
+import { cn } from '@/lib/utils';
 import type { ContractStatusInfo, DependencyType } from '@/types/project-registry';
-
-const { Text } = Typography;
 
 interface ContractListProps {
   contracts: ContractStatusInfo[];
   deployableContracts: string[];
   blockingContracts: string[];
 }
-
 
 const typeColors: Record<DependencyType, string> = {
   primary: '#faad14',
@@ -35,6 +34,13 @@ const typeLabels: Record<DependencyType, string> = {
   optional: '可选',
 };
 
+// 依赖类型对应的 Badge 样式
+const typeBadgeStyles: Record<DependencyType, string> = {
+  primary: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
+  required: 'bg-red-500/20 text-red-400 border-red-500/40',
+  business: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
+  optional: 'bg-gray-500/20 text-gray-400 border-gray-500/40',
+};
 
 export function ContractList({
   contracts,
@@ -50,7 +56,7 @@ export function ContractList({
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="flex flex-col gap-2">
       {sortedContracts.map((contract) => {
         const isDeployable = deployableContracts.includes(contract.name);
         const isBlocking = blockingContracts.includes(contract.name);
@@ -59,100 +65,116 @@ export function ContractList({
         return (
           <Card
             key={contract.name}
-            size="small"
+            className={cn(
+              'p-3',
+              isBlocking && 'ring-2 ring-red-500/30',
+              isDeployable && !contract.is_deployed && !isBlocking && 'ring-2 ring-green-500/30'
+            )}
             style={{
               borderLeft: `4px solid ${typeColors[contract.dependency_type]}`,
-              boxShadow: isBlocking
-                ? '0 0 0 2px rgba(245, 34, 45, 0.3)'
-                : isDeployable && !contract.is_deployed
-                ? '0 0 0 2px rgba(82, 196, 26, 0.3)'
-                : undefined,
             }}
           >
             {/* 主行 */}
             <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                cursor: 'pointer',
-              }}
+              className="flex justify-between items-center cursor-pointer"
               onClick={() => setExpandedContract(isExpanded ? null : contract.name)}
             >
-              <Space>
-                {isExpanded ? <DownOutlined /> : <RightOutlined />}
-                <Text code strong>{contract.name}</Text>
-                <Tag color={typeColors[contract.dependency_type]}>
+              <div className="flex items-center gap-2">
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                )}
+                <code className="font-semibold text-sm bg-muted/50 px-1.5 py-0.5 rounded">
+                  {contract.name}
+                </code>
+                <Badge
+                  variant="outline"
+                  className={typeBadgeStyles[contract.dependency_type]}
+                >
                   {typeLabels[contract.dependency_type]}
-                </Tag>
-              </Space>
+                </Badge>
+              </div>
 
-              <Space>
-                {isBlocking && <Tag color="error">阻塞中</Tag>}
-                {isDeployable && !contract.is_deployed && <Tag color="success">可部署</Tag>}
+              <div className="flex items-center gap-2">
+                {isBlocking && (
+                  <Badge variant="destructive">阻塞中</Badge>
+                )}
+                {isDeployable && !contract.is_deployed && (
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/40">
+                    可部署
+                  </Badge>
+                )}
                 <ContractStatusBadge status={contract.status} />
-              </Space>
+              </div>
             </div>
 
             {/* 展开详情 */}
             {isExpanded && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0f0f0' }}>
+              <div className="mt-3 pt-3 border-t border-white/10">
                 {/* 地址 */}
                 {contract.address && (
-                  <div style={{ marginBottom: 8 }}>
-                    <Text type="secondary">地址: </Text>
-                    <Text code style={{ fontSize: 12 }}>
+                  <div className="mb-2">
+                    <span className="text-muted-foreground">地址: </span>
+                    <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded">
                       {contract.address.slice(0, 10)}...{contract.address.slice(-8)}
-                    </Text>
+                    </code>
                   </div>
                 )}
 
                 {/* 缺失必须依赖 */}
                 {contract.missing_required_deps.length > 0 && (
-                  <div style={{ marginBottom: 8 }}>
-                    <Text type="danger">缺失必须依赖: </Text>
-                    <Space size={4}>
+                  <div className="mb-2">
+                    <span className="text-red-400">缺失必须依赖: </span>
+                    <div className="inline-flex flex-wrap gap-1">
                       {contract.missing_required_deps.map((dep) => (
-                        <Tag key={dep} color="error">{dep}</Tag>
+                        <Badge key={dep} variant="destructive" className="text-xs">
+                          {dep}
+                        </Badge>
                       ))}
-                    </Space>
+                    </div>
                   </div>
                 )}
 
                 {/* 缺失可选依赖 */}
                 {contract.missing_optional_deps.length > 0 && (
-                  <div style={{ marginBottom: 8 }}>
-                    <Text type="warning">缺失可选依赖: </Text>
-                    <Space size={4}>
+                  <div className="mb-2">
+                    <span className="text-yellow-400">缺失可选依赖: </span>
+                    <div className="inline-flex flex-wrap gap-1">
                       {contract.missing_optional_deps.map((dep) => (
-                        <Tag key={dep} color="warning">{dep}</Tag>
+                        <Badge
+                          key={dep}
+                          variant="outline"
+                          className="bg-yellow-500/20 text-yellow-400 border-yellow-500/40 text-xs"
+                        >
+                          {dep}
+                        </Badge>
                       ))}
-                    </Space>
+                    </div>
                   </div>
                 )}
 
                 {/* 零地址绑定 */}
                 {contract.zero_bound_deps.length > 0 && (
-                  <div style={{ marginBottom: 8 }}>
-                    <Text style={{ color: '#fa8c16' }}>零地址绑定: </Text>
-                    <Space size={4}>
+                  <div className="mb-2">
+                    <span className="text-orange-400">零地址绑定: </span>
+                    <div className="inline-flex flex-wrap gap-1">
                       {contract.zero_bound_deps.map((dep) => (
-                        <Tag key={dep} color="orange">{dep}</Tag>
+                        <Badge
+                          key={dep}
+                          variant="outline"
+                          className="bg-orange-500/20 text-orange-400 border-orange-500/40 text-xs"
+                        >
+                          {dep}
+                        </Badge>
                       ))}
-                    </Space>
+                    </div>
                   </div>
                 )}
 
                 {/* 阻塞原因 */}
                 {contract.blocking_reason && (
-                  <div
-                    style={{
-                      padding: 8,
-                      background: '#fff2f0',
-                      borderRadius: 4,
-                      color: '#cf1322',
-                    }}
-                  >
+                  <div className="p-2 bg-red-500/10 rounded text-red-400 text-sm">
                     <strong>阻塞原因:</strong> {contract.blocking_reason}
                   </div>
                 )}

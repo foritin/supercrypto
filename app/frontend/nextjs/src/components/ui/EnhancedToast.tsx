@@ -3,11 +3,20 @@
  * ENHANCED TOAST - 增强型通知组件
  * 用途: 提供更好的视觉反馈和动画效果
  * 使用: EnhancedToast.success(), EnhancedToast.error(), etc.
+ * 
+ * 已迁移: Ant Design message → sonner toast
+ * @validates Requirements 16.11
  * ════════════════════════════════════════════════════════════════
  */
 
-import { message } from 'antd';
-import type { ArgsProps } from 'antd/es/message';
+import { notification, toast } from '@/lib/notification';
+import {
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Info,
+  Loader2,
+} from 'lucide-react';
 import React from 'react';
 
 // Toast 类型配置
@@ -15,149 +24,150 @@ interface ToastConfig {
   icon?: React.ReactNode;
   duration?: number;
   className?: string;
-  style?: React.CSSProperties;
+  description?: string;
 }
 
-// 成功图标
+// 自定义图标组件 - 使用 lucide-react 并添加动画效果
 const SuccessIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="10" r="10" fill="#52c41a" fillOpacity="0.2"/>
-    <path
-      d="M6 10L9 13L14 7"
-      stroke="#52c41a"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="toast-check-icon"
-    />
-  </svg>
+  <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#00D4AA]/20">
+    <CheckCircle className="w-4 h-4 text-[#00D4AA] animate-in zoom-in-50 duration-200" />
+  </div>
 );
 
-// 错误图标
 const ErrorIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="10" r="10" fill="#ff4d4f" fillOpacity="0.2"/>
-    <path
-      d="M7 7L13 13M13 7L7 13"
-      stroke="#ff4d4f"
-      strokeWidth="2"
-      strokeLinecap="round"
-      className="toast-cross-icon"
-    />
-  </svg>
+  <div className="flex items-center justify-center w-5 h-5 rounded-full bg-red-500/20">
+    <XCircle className="w-4 h-4 text-red-500 animate-in zoom-in-50 duration-200" />
+  </div>
 );
 
-// 警告图标
 const WarningIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="10" r="10" fill="#faad14" fillOpacity="0.2"/>
-    <path
-      d="M10 6V11M10 14V14.01"
-      stroke="#faad14"
-      strokeWidth="2"
-      strokeLinecap="round"
-      className="toast-warning-icon"
-    />
-  </svg>
+  <div className="flex items-center justify-center w-5 h-5 rounded-full bg-yellow-500/20">
+    <AlertTriangle className="w-4 h-4 text-yellow-500 animate-in zoom-in-50 duration-200" />
+  </div>
 );
 
-// 信息图标
 const InfoIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="10" r="10" fill="#1890ff" fillOpacity="0.2"/>
-    <path
-      d="M10 8V10M10 13V13.01M10 4C6.68629 4 4 6.68629 4 10C4 13.3137 6.68629 16 10 16C13.3137 16 16 13.3137 16 10C16 6.68629 13.3137 4 10 4Z"
-      stroke="#1890ff"
-      strokeWidth="2"
-      strokeLinecap="round"
-      className="toast-info-icon"
-    />
-  </svg>
+  <div className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500/20">
+    <Info className="w-4 h-4 text-blue-500 animate-in zoom-in-50 duration-200" />
+  </div>
 );
 
-// 加载图标
 const LoadingIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 20 20"
-    fill="none"
-    className="toast-loading-icon"
-  >
-    <circle
-      cx="10"
-      cy="10"
-      r="8"
-      stroke="#1890ff"
-      strokeWidth="2"
-      strokeOpacity="0.3"
-    />
-    <path
-      d="M10 2A8 8 0 0 1 18 10"
-      stroke="#1890ff"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-  </svg>
+  <div className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500/20">
+    <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+  </div>
 );
 
-// 基础配置
-const baseConfig: ArgsProps = {
-  duration: 3,
-  className: 'enhanced-toast',
-  style: {
-    borderRadius: '12px',
-    padding: '12px 20px',
-    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
-  },
-};
-
-// Enhanced Toast API
+// Enhanced Toast API - 使用 sonner toast
 export const EnhancedToast = {
+  /**
+   * 显示成功通知
+   * @param content - 通知内容
+   * @param config - 可选配置
+   * @returns Toast ID
+   */
   success: (content: React.ReactNode, config?: ToastConfig) => {
-    return message.success({
-      ...baseConfig,
-      icon: <SuccessIcon />,
-      content,
-      ...config,
+    return toast.success(String(content), {
+      icon: config?.icon ?? <SuccessIcon />,
+      duration: config?.duration ? config.duration * 1000 : 3000,
+      className: config?.className ?? 'enhanced-toast',
+      description: config?.description,
     });
   },
 
+  /**
+   * 显示错误通知
+   * @param content - 通知内容
+   * @param config - 可选配置
+   * @returns Toast ID
+   */
   error: (content: React.ReactNode, config?: ToastConfig) => {
-    return message.error({
-      ...baseConfig,
-      icon: <ErrorIcon />,
-      content,
-      duration: 4, // 错误消息显示更长时间
-      ...config,
+    return toast.error(String(content), {
+      icon: config?.icon ?? <ErrorIcon />,
+      duration: config?.duration ? config.duration * 1000 : 4000, // 错误消息显示更长时间
+      className: config?.className ?? 'enhanced-toast',
+      description: config?.description,
     });
   },
 
+  /**
+   * 显示警告通知
+   * @param content - 通知内容
+   * @param config - 可选配置
+   * @returns Toast ID
+   */
   warning: (content: React.ReactNode, config?: ToastConfig) => {
-    return message.warning({
-      ...baseConfig,
-      icon: <WarningIcon />,
-      content,
-      ...config,
+    return toast.warning(String(content), {
+      icon: config?.icon ?? <WarningIcon />,
+      duration: config?.duration ? config.duration * 1000 : 3000,
+      className: config?.className ?? 'enhanced-toast',
+      description: config?.description,
     });
   },
 
+  /**
+   * 显示信息通知
+   * @param content - 通知内容
+   * @param config - 可选配置
+   * @returns Toast ID
+   */
   info: (content: React.ReactNode, config?: ToastConfig) => {
-    return message.info({
-      ...baseConfig,
-      icon: <InfoIcon />,
-      content,
-      ...config,
+    return toast.info(String(content), {
+      icon: config?.icon ?? <InfoIcon />,
+      duration: config?.duration ? config.duration * 1000 : 3000,
+      className: config?.className ?? 'enhanced-toast',
+      description: config?.description,
     });
   },
 
+  /**
+   * 显示加载通知
+   * @param content - 通知内容
+   * @param config - 可选配置
+   * @returns Toast ID (用于后续关闭)
+   */
   loading: (content: React.ReactNode, config?: ToastConfig) => {
-    return message.loading({
-      ...baseConfig,
-      icon: <LoadingIcon />,
-      content,
-      duration: 0, // 持续显示直到手动关闭
-      ...config,
+    return toast.loading(String(content), {
+      icon: config?.icon ?? <LoadingIcon />,
+      duration: config?.duration ? config.duration * 1000 : Infinity, // 持续显示直到手动关闭
+      className: config?.className ?? 'enhanced-toast',
+      description: config?.description,
+    });
+  },
+
+  /**
+   * 关闭指定的 toast
+   * @param toastId - Toast ID
+   */
+  dismiss: (toastId?: string | number) => {
+    toast.dismiss(toastId);
+  },
+
+  /**
+   * 关闭所有 toast
+   */
+  destroy: () => {
+    toast.dismiss();
+  },
+
+  /**
+   * Promise 风格的 toast
+   * 显示加载状态，然后根据 Promise 结果显示成功或错误
+   * @param promise - 要跟踪的 Promise
+   * @param messages - 各状态的消息
+   */
+  promise: <T,>(
+    promise: Promise<T>,
+    messages: {
+      loading: string;
+      success: string | ((data: T) => string);
+      error: string | ((error: unknown) => string);
+    }
+  ) => {
+    return toast.promise(promise, {
+      loading: messages.loading,
+      success: messages.success,
+      error: messages.error,
     });
   },
 };

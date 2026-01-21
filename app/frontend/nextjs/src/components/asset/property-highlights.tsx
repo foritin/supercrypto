@@ -1,20 +1,7 @@
 "use client";
 
-import { Typography } from "antd";
-import {
-  DollarOutlined,
-  PercentageOutlined,
-  CalendarOutlined,
-  HomeOutlined,
-  EnvironmentOutlined,
-  BankOutlined,
-  TeamOutlined,
-  FieldTimeOutlined,
-} from "@ant-design/icons";
 import type { AssetDetail, AssetFeaturesData } from "@/services/asset";
 import { ASSET_TYPE_NAMES, PROPERTY_TYPE_NAMES, RENTAL_STATUS_NAMES } from "@/services/asset";
-
-const { Text } = Typography;
 
 interface PropertyHighlightsProps {
   asset: AssetDetail;
@@ -31,11 +18,11 @@ export function PropertyHighlights({ asset }: PropertyHighlightsProps) {
 
   // 左列：财务信息
   const financialItems = [
-    { label: "Token Type", value: "Standard Equity", icon: <BankOutlined /> },
-    { label: "Expected Income", value: asset.apy_12m > 0 ? asset.apy_12m.toFixed(1) + "%" : "-", icon: <PercentageOutlined /> },
-    { label: "Token Price", value: formatCurrency(asset.current_price), icon: <DollarOutlined /> },
-    { label: "Total Tokens", value: formatCurrency(asset.total_supply), icon: <DollarOutlined /> },
-    { label: "Min. Investment", value: formatCurrency(asset.min_subscription), icon: <DollarOutlined /> },
+    { label: "Token Type", value: "Standard Equity" },
+    { label: "Expected Income", value: asset.apy_12m > 0 ? asset.apy_12m.toFixed(1) + "%" : "-" },
+    { label: "Token Price", value: formatCurrency(asset.current_price) },
+    { label: "Total Tokens", value: formatCurrency(asset.total_supply) },
+    { label: "Min. Investment", value: formatCurrency(asset.min_subscription) },
   ];
 
   // 右列：物业信息
@@ -60,8 +47,8 @@ export function PropertyHighlights({ asset }: PropertyHighlightsProps) {
         <div className="highlights-column">
           {financialItems.map((item, idx) => (
             <div key={idx} className="highlight-row">
-              <Text className="highlight-label">{item.label}</Text>
-              <Text className="highlight-value">{item.value}</Text>
+              <span className="text-white/50 text-[13px]">{item.label}</span>
+              <span className="text-white font-medium text-right">{item.value}</span>
             </div>
           ))}
         </div>
@@ -70,8 +57,8 @@ export function PropertyHighlights({ asset }: PropertyHighlightsProps) {
         <div className="highlights-column">
           {propertyItems.map((item, idx) => (
             <div key={idx} className="highlight-row">
-              <Text className="highlight-label">{item.label}</Text>
-              <Text className="highlight-value">{item.value}</Text>
+              <span className="text-white/50 text-[13px]">{item.label}</span>
+              <span className="text-white font-medium text-right">{item.value}</span>
             </div>
           ))}
         </div>
@@ -108,15 +95,6 @@ export function PropertyHighlights({ asset }: PropertyHighlightsProps) {
         }
         .highlight-row:last-child {
           border-bottom: none;
-        }
-        :global(.highlight-label) {
-          color: rgba(255, 255, 255, 0.5) !important;
-          font-size: 13px;
-        }
-        :global(.highlight-value) {
-          color: #fff !important;
-          font-weight: 500;
-          text-align: right;
         }
       `}</style>
     </div>

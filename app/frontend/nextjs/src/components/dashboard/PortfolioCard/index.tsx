@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { Progress } from 'antd';
+import { Progress } from '@/components/ui/progress';
 
 interface Asset {
   id: string;
@@ -147,15 +147,9 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
 
               {/* 进度条 */}
               <Progress
-                percent={asset.progress}
-                strokeColor={{
-                  '0%': asset.type === 'rwa' ? '#6366F1' : '#10B981',
-                  '100%': asset.type === 'rwa' ? '#8B5CF6' : '#34D399',
-                }}
-                trailColor="rgba(255, 255, 255, 0.05)"
-                showInfo={false}
-                size="small"
-                className="group-hover:opacity-100 opacity-80 transition-opacity"
+                value={asset.progress}
+                className="h-1.5 group-hover:opacity-100 opacity-80 transition-opacity"
+                indicatorClassName={asset.type === 'rwa' ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'}
               />
             </motion.div>
           ))}

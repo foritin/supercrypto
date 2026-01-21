@@ -23,11 +23,7 @@ interface ContentWrapperProps {
 export function ContentWrapper({ children }: ContentWrapperProps) {
   return (
     <div
-      className="content-wrapper"
-      style={{
-        // 保持最小高度，避免 Footer 跳动
-        minHeight: "calc(100vh - 64px - 100px)",
-      }}
+      className="content-wrapper w-full"
     >
       {children}
     </div>

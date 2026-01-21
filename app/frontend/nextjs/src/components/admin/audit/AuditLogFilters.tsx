@@ -1,21 +1,29 @@
 /**
  * AuditLogFilters Component
  * 审计日志筛选组件 - 采用 ContractFilterBar 风格
+ * 已迁移至 shadcn/ui 组件
  */
 'use client';
 
 import React from 'react';
-import { Input, Select, DatePicker, Button, Space } from 'antd';
-import { SearchOutlined, ClearOutlined } from '@ant-design/icons';
+import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import dayjs, { Dayjs } from 'dayjs';
+import { type DateRange } from 'react-day-picker';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { 
   AuditCategory, 
   AuditAction, 
   AuditStatus,
 } from '@/services/audit';
-
-const { RangePicker } = DatePicker;
 
 export interface AuditFilters {
   search: string;
@@ -23,7 +31,7 @@ export interface AuditFilters {
   action: AuditAction | 'all';
   status: AuditStatus | 'all';
   operatorType: string;
-  dateRange: [Dayjs | null, Dayjs | null] | null;
+  dateRange: DateRange | undefined;
 }
 
 export const DEFAULT_AUDIT_FILTERS: AuditFilters = {
@@ -32,7 +40,7 @@ export const DEFAULT_AUDIT_FILTERS: AuditFilters = {
   action: 'all',
   status: 'all',
   operatorType: 'all',
-  dateRange: null,
+  dateRange: undefined,
 };
 
 interface AuditLogFiltersProps {
@@ -85,90 +93,90 @@ export const AuditLogFilters: React.FC<AuditLogFiltersProps> = ({
 
   return (
     <div
+      className="p-4 mb-4 rounded-xl border backdrop-blur-lg"
       style={{
-        padding: 16,
-        marginBottom: 16,
         background: 'rgba(15, 15, 26, 0.6)',
-        borderRadius: 12,
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(8px)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
       }}
     >
-      <Space size="middle" wrap style={{ width: '100%' }}>
+      <div className="flex flex-wrap items-center gap-3">
         {/* 搜索框 */}
-        <Input
-          placeholder={t('admin.audit.filters.searchPlaceholder', '搜索操作者/目标/描述')}
-          prefix={<SearchOutlined />}
-          allowClear
-          style={{ width: 200 }}
-          value={filters.search}
-          onChange={(e) => handleFieldChange('search', e.target.value)}
-        />
+        <div className="relative w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t('admin.audit.filters.searchPlaceholder', '搜索操作者/目标/描述')}
+            className="pl-9"
+            value={filters.search}
+            onChange={(e) => handleFieldChange('search', e.target.value)}
+          />
+        </div>
 
         {/* 类别筛选 */}
         <Select
-          placeholder={t('admin.audit.filters.categoryPlaceholder', '选择类别')}
-          style={{ width: 140 }}
           value={filters.category}
-          onChange={(value) => handleFieldChange('category', value)}
-          allowClear
-          onClear={() => handleFieldChange('category', 'all')}
+          onValueChange={(value) => handleFieldChange('category', value as AuditCategory | 'all')}
         >
-          {CATEGORY_OPTIONS.map((opt) => (
-            <Select.Option key={opt.value} value={opt.value}>
-              {t(opt.labelKey, opt.value === 'all' ? '全部类别' : opt.value)}
-            </Select.Option>
-          ))}
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder={t('admin.audit.filters.categoryPlaceholder', '选择类别')} />
+          </SelectTrigger>
+          <SelectContent>
+            {CATEGORY_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {t(opt.labelKey, opt.value === 'all' ? '全部类别' : opt.value)}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
 
         {/* 状态筛选 */}
         <Select
-          placeholder={t('admin.audit.filters.statusPlaceholder', '选择状态')}
-          style={{ width: 120 }}
           value={filters.status}
-          onChange={(value) => handleFieldChange('status', value)}
-          allowClear
-          onClear={() => handleFieldChange('status', 'all')}
+          onValueChange={(value) => handleFieldChange('status', value as AuditStatus | 'all')}
         >
-          {STATUS_OPTIONS.map((opt) => (
-            <Select.Option key={opt.value} value={opt.value}>
-              {t(opt.labelKey, opt.value === 'all' ? '全部状态' : opt.value)}
-            </Select.Option>
-          ))}
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder={t('admin.audit.filters.statusPlaceholder', '选择状态')} />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {t(opt.labelKey, opt.value === 'all' ? '全部状态' : opt.value)}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
 
         {/* 操作者类型筛选 */}
         <Select
-          placeholder={t('admin.audit.filters.operatorTypePlaceholder', '操作者类型')}
-          style={{ width: 120 }}
           value={filters.operatorType}
-          onChange={(value) => handleFieldChange('operatorType', value)}
-          allowClear
-          onClear={() => handleFieldChange('operatorType', 'all')}
+          onValueChange={(value) => handleFieldChange('operatorType', value)}
         >
-          {OPERATOR_TYPE_OPTIONS.map((opt) => (
-            <Select.Option key={opt.value} value={opt.value}>
-              {t(opt.labelKey, opt.value === 'all' ? '全部类型' : opt.value)}
-            </Select.Option>
-          ))}
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder={t('admin.audit.filters.operatorTypePlaceholder', '操作者类型')} />
+          </SelectTrigger>
+          <SelectContent>
+            {OPERATOR_TYPE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {t(opt.labelKey, opt.value === 'all' ? '全部类型' : opt.value)}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
 
         {/* 时间范围 */}
-        <RangePicker
-          placeholder={[
-            t('admin.audit.filters.startDate', '开始日期'),
-            t('admin.audit.filters.endDate', '结束日期'),
-          ]}
+        <DateRangePicker
           value={filters.dateRange}
-          onChange={(dates) => handleFieldChange('dateRange', dates)}
-          style={{ width: 260 }}
+          onChange={(range) => handleFieldChange('dateRange', range)}
+          placeholder={t('admin.audit.filters.dateRangePlaceholder', '选择日期范围')}
+          className="w-[260px]"
+          dateFormat="yyyy-MM-dd"
         />
 
         {/* 重置按钮 */}
-        <Button icon={<ClearOutlined />} onClick={onReset}>
+        <Button variant="outline" onClick={onReset}>
+          <X className="h-4 w-4 mr-1" />
           {t('admin.audit.filters.reset', '重置')}
         </Button>
-      </Space>
+      </div>
     </div>
   );
 };

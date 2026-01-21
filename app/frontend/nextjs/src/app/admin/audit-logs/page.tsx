@@ -2,13 +2,16 @@
 /**
  * 审计日志页面 - 重构版
  * 使用新的审计组件和服务
+ * 已迁移到 shadcn/ui + Tailwind CSS
  */
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { Typography, Button, Tabs, Space, App } from "antd";
-import { ReloadOutlined } from "@ant-design/icons";
+import { RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { RequireAdmin } from "@/components/auth";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   AuditStats,
   AuditLogFilters,
@@ -30,12 +33,9 @@ import {
   type TransactionAuditQueryParams,
 } from "@/services/audit";
 
-const { Title, Text } = Typography;
-
 export default function AuditLogsPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { message } = App.useApp();
 
   // Tab 状态
   const [activeTab, setActiveTab] = useState<"general" | "transactions">("general");
@@ -87,9 +87,9 @@ export default function AuditLogsPage() {
     if (filters.operatorType && filters.operatorType !== "all") {
       params.operator_type = filters.operatorType;
     }
-    if (filters.dateRange && filters.dateRange[0] && filters.dateRange[1]) {
-      params.start_time = filters.dateRange[0].toISOString();
-      params.end_time = filters.dateRange[1].toISOString();
+    if (filters.dateRange?.from && filters.dateRange?.to) {
+      params.start_time = filters.dateRange.from.toISOString();
+      params.end_time = filters.dateRange.to.toISOString();
     }
 
     return params;
@@ -111,13 +111,13 @@ export default function AuditLogsPage() {
       const err = error as { response?: { status?: number } };
       if (err.response?.status !== 401 && err.response?.status !== 403) {
         console.error("Failed to fetch audit logs:", error);
-        message.error(t("admin.audit.loadError", "加载审计日志失败"));
+        toast.error(t("admin.audit.loadError", "加载审计日志失败"));
       }
       setLogs([]);
     } finally {
       setLogsLoading(false);
     }
-  }, [buildLogQueryParams, message, t]);
+  }, [buildLogQueryParams, t]);
 
   // 获取交易审计
   const fetchTransactions = useCallback(async () => {
@@ -138,13 +138,13 @@ export default function AuditLogsPage() {
       const err = error as { response?: { status?: number } };
       if (err.response?.status !== 401 && err.response?.status !== 403) {
         console.error("Failed to fetch transactions:", error);
-        message.error(t("admin.audit.loadTxError", "加载交易记录失败"));
+        toast.error(t("admin.audit.loadTxError", "加载交易记录失败"));
       }
       setTransactions([]);
     } finally {
       setTxLoading(false);
     }
-  }, [txPagination.current, txPagination.pageSize, message, t]);
+  }, [txPagination.current, txPagination.pageSize, t]);
 
   // 获取统计数据
   const fetchStats = useCallback(async () => {
@@ -231,43 +231,39 @@ export default function AuditLogsPage() {
     if (filters.status && filters.status !== "all") {
       params.status = filters.status;
     }
-    if (filters.dateRange && filters.dateRange[0] && filters.dateRange[1]) {
-      params.start_time = filters.dateRange[0].toISOString();
-      params.end_time = filters.dateRange[1].toISOString();
+    if (filters.dateRange?.from && filters.dateRange?.to) {
+      params.start_time = filters.dateRange.from.toISOString();
+      params.end_time = filters.dateRange.to.toISOString();
     }
     return params;
   }, [filters]);
 
+  const isLoading = logsLoading || txLoading;
+
   return (
     <RequireAdmin>
-      <div style={{ maxWidth: 1600, margin: "0 auto", padding: "24px" }}>
+      <div className="max-w-[1600px] mx-auto p-6">
         {/* 页面标题 */}
-        <div
-          style={{
-            marginBottom: 24,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-          }}
-        >
+        <div className="mb-6 flex justify-between items-start">
           <div>
-            <Title level={2} style={{ marginBottom: 8 }}>
+            <h2 className="text-2xl font-semibold text-white mb-2">
               {t("admin.audit.pageTitle", "审计日志")}
-            </Title>
-            <Text style={{ color: "rgba(255, 255, 255, 0.65)" }}>
+            </h2>
+            <p className="text-white/65">
               {t("admin.audit.pageSubtitle", "查看所有系统操作和交易记录")}
-            </Text>
+            </p>
           </div>
-          <Space>
+          <div className="flex items-center gap-2">
             <AuditExport currentFilters={exportFilters as any} />
             <Button
-              icon={<ReloadOutlined spin={logsLoading || txLoading} />}
+              variant="outline"
               onClick={handleRefresh}
-              loading={logsLoading || txLoading}
+              disabled={isLoading}
             >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               {t("common.refresh", "刷新")}
             </Button>
-          </Space>
+          </div>
         </div>
 
         {/* 统计卡片 */}
@@ -279,58 +275,56 @@ export default function AuditLogsPage() {
 
         {/* Tab 切换 */}
         <Tabs
-          activeKey={activeTab}
-          onChange={(key) => setActiveTab(key as "general" | "transactions")}
-          items={[
-            {
-              key: "general",
-              label: t("admin.audit.tabs.general", "通用日志"),
-              children: (
-                <>
-                  {/* 筛选栏 */}
-                  <AuditLogFilters
-                    filters={filters}
-                    onFiltersChange={setFilters}
-                    onReset={() => setFilters(DEFAULT_AUDIT_FILTERS)}
-                  />
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as "general" | "transactions")}
+          className="mt-6"
+        >
+          <TabsList className="mb-4">
+            <TabsTrigger value="general">
+              {t("admin.audit.tabs.general", "通用日志")}
+            </TabsTrigger>
+            <TabsTrigger value="transactions">
+              {t("admin.audit.tabs.transactions", "交易日志")}
+            </TabsTrigger>
+          </TabsList>
 
-                  {/* 审计日志表格 */}
-                  <AuditLogTable
-                    data={logs}
-                    loading={logsLoading}
-                    pagination={{
-                      current: logsPagination.current,
-                      pageSize: logsPagination.pageSize,
-                      total: logsPagination.total,
-                      onChange: handleLogsPaginationChange,
-                    }}
-                    onViewDetail={handleViewLogDetail}
-                  />
-                </>
-              ),
-            },
-            {
-              key: "transactions",
-              label: t("admin.audit.tabs.transactions", "交易日志"),
-              children: (
-                <>
-                  {/* 交易表格 */}
-                  <TransactionTable
-                    data={transactions}
-                    loading={txLoading}
-                    pagination={{
-                      current: txPagination.current,
-                      pageSize: txPagination.pageSize,
-                      total: txPagination.total,
-                      onChange: handleTxPaginationChange,
-                    }}
-                    onViewDetail={handleViewTxDetail}
-                  />
-                </>
-              ),
-            },
-          ]}
-        />
+          <TabsContent value="general">
+            {/* 筛选栏 */}
+            <AuditLogFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              onReset={() => setFilters(DEFAULT_AUDIT_FILTERS)}
+            />
+
+            {/* 审计日志表格 */}
+            <AuditLogTable
+              data={logs}
+              loading={logsLoading}
+              pagination={{
+                current: logsPagination.current,
+                pageSize: logsPagination.pageSize,
+                total: logsPagination.total,
+                onChange: handleLogsPaginationChange,
+              }}
+              onViewDetail={handleViewLogDetail}
+            />
+          </TabsContent>
+
+          <TabsContent value="transactions">
+            {/* 交易表格 */}
+            <TransactionTable
+              data={transactions}
+              loading={txLoading}
+              pagination={{
+                current: txPagination.current,
+                pageSize: txPagination.pageSize,
+                total: txPagination.total,
+                onChange: handleTxPaginationChange,
+              }}
+              onViewDetail={handleViewTxDetail}
+            />
+          </TabsContent>
+        </Tabs>
 
         {/* 审计日志详情抽屉 */}
         <AuditLogDetail

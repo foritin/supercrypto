@@ -5,16 +5,17 @@
 'use client';
 
 import React from 'react';
-import { Tag } from 'antd';
+import { Badge } from '@/components/ui/badge';
 import { 
-  CheckCircleOutlined, 
-  CloseCircleOutlined, 
-  ClockCircleOutlined,
-  SyncOutlined,
-  StopOutlined,
-} from '@ant-design/icons';
+  CheckCircle, 
+  XCircle, 
+  Clock,
+  Loader2,
+  Ban,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { TransactionAuditStatus } from '@/services/audit';
+import { cn } from '@/lib/utils';
 
 interface TxStatusBadgeProps {
   status: TransactionAuditStatus;
@@ -22,33 +23,41 @@ interface TxStatusBadgeProps {
 
 // 状态配置
 const STATUS_CONFIG: Record<TransactionAuditStatus, {
-  color: string;
-  icon: React.ReactNode;
+  variant: 'default' | 'secondary' | 'destructive' | 'outline';
+  className: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconClassName?: string;
   labelKey: string;
 }> = {
   pending: {
-    color: 'processing',
-    icon: <SyncOutlined spin />,
+    variant: 'secondary',
+    className: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
+    icon: Loader2,
+    iconClassName: 'animate-spin',
     labelKey: 'admin.audit.txStatus.pending',
   },
   confirmed: {
-    color: 'success',
-    icon: <CheckCircleOutlined />,
+    variant: 'secondary',
+    className: 'bg-green-500/20 text-green-400 border-green-500/40',
+    icon: CheckCircle,
     labelKey: 'admin.audit.txStatus.confirmed',
   },
   failed: {
-    color: 'error',
-    icon: <CloseCircleOutlined />,
+    variant: 'destructive',
+    className: 'bg-red-500/20 text-red-400 border-red-500/40',
+    icon: XCircle,
     labelKey: 'admin.audit.txStatus.failed',
   },
   reverted: {
-    color: 'warning',
-    icon: <CloseCircleOutlined />,
+    variant: 'secondary',
+    className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
+    icon: XCircle,
     labelKey: 'admin.audit.txStatus.reverted',
   },
   dropped: {
-    color: 'default',
-    icon: <StopOutlined />,
+    variant: 'outline',
+    className: 'bg-gray-500/20 text-gray-400 border-gray-500/40',
+    icon: Ban,
     labelKey: 'admin.audit.txStatus.dropped',
   },
 };
@@ -57,10 +66,15 @@ export const TxStatusBadge: React.FC<TxStatusBadgeProps> = ({ status }) => {
   const { t } = useTranslation();
   
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+  const Icon = config.icon;
 
   return (
-    <Tag color={config.color} icon={config.icon}>
+    <Badge
+      variant={config.variant}
+      className={cn('inline-flex items-center gap-1', config.className)}
+    >
+      <Icon className={cn('h-3 w-3', config.iconClassName)} />
       {t(config.labelKey, status)}
-    </Tag>
+    </Badge>
   );
 };

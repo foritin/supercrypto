@@ -5,10 +5,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Typography, Tooltip, message } from 'antd';
-import { CopyOutlined, CheckOutlined } from '@ant-design/icons';
-
-const { Text } = Typography;
+import { Copy, Check } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { notification } from '@/lib/notification';
 
 interface AddressDisplayProps {
   address: string;
@@ -38,44 +42,48 @@ const AddressDisplay: React.FC<AddressDisplayProps> = ({
     try {
       await navigator.clipboard.writeText(address);
       setCopied(true);
-      message.success('已复制地址');
+      notification.success('已复制地址');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      message.error('复制失败');
+      notification.error('复制失败');
     }
   };
 
   const displayAddress = shortenAddress(address);
 
+  const content = (
+    <span
+      className={`inline-flex items-center gap-1 font-mono text-[13px] text-white/85 ${
+        copyable ? 'cursor-pointer' : 'cursor-default'
+      }`}
+      onClick={copyable ? handleCopy : undefined}
+    >
+      <span className="font-mono text-white/85">{displayAddress}</span>
+      {copyable && (
+        <span className="text-white/45 text-[12px] hover:text-white/65 transition-colors">
+          {copied ? (
+            <Check className="h-3 w-3 text-green-500" />
+          ) : (
+            <Copy className="h-3 w-3" />
+          )}
+        </span>
+      )}
+    </span>
+  );
+
+  if (showFull) {
+    return content;
+  }
+
   return (
-    <Tooltip title={showFull ? undefined : address}>
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 4,
-          fontFamily: 'monospace',
-          fontSize: 13,
-          color: 'rgba(255, 255, 255, 0.85)',
-          cursor: copyable ? 'pointer' : 'default',
-        }}
-        onClick={copyable ? handleCopy : undefined}
-      >
-        <Text
-          style={{
-            fontFamily: 'monospace',
-            color: 'rgba(255, 255, 255, 0.85)',
-          }}
-        >
-          {displayAddress}
-        </Text>
-        {copyable && (
-          <span style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: 12 }}>
-            {copied ? <CheckOutlined style={{ color: '#52c41a' }} /> : <CopyOutlined />}
-          </span>
-        )}
-      </span>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent>
+          <p className="font-mono text-xs">{address}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

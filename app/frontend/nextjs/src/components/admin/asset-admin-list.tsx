@@ -2,39 +2,90 @@
 /**
  * Asset Admin List Component
  * Admin panel for managing RWA assets
+ * 
+ * Migrated from Ant Design to shadcn/ui:
+ * - Table → DataTable (@tanstack/react-table)
+ * - Modal → Dialog (Radix)
+ * - Form → react-hook-form + zod
+ * - Popconfirm → AlertDialog
+ * - message → sonner toast (notification service)
+ * 
+ * @validates Requirements 8.1, 8.4, 8.5
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { 
-  Table, Card, Select, Button, Tag, Space, Flex, Typography, Modal, 
-  Form, Input, InputNumber, message, Popconfirm, Tooltip, Checkbox
-} from 'antd'
-import { 
-  PlusOutlined, EditOutlined, ReloadOutlined, 
-  PauseCircleOutlined, PlayCircleOutlined, DollarOutlined,
-  LinkOutlined, PictureOutlined
-} from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
-import type { ColumnsType } from 'antd/es/table'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { ColumnDef } from '@tanstack/react-table'
+import { 
+  Plus, Edit, RefreshCw, PauseCircle, PlayCircle, 
+  DollarSign, Link, Image, Loader2
+} from 'lucide-react'
+
+// shadcn/ui components
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { DataTable } from '@/components/ui/data-table'
+
+// Services and utilities
+import { notification } from '@/lib/notification'
 import { 
   assetService, 
   type AssetListItem, 
   type AssetDetail,
   type AssetStatus, 
   type AssetType,
-  type AssetCreateRequest,
   type AssetUpdateRequest,
   type ProjectContractInfo,
-  type ContractBindingItem,
-  type ContractBindingStatus,
   ASSET_TYPE_NAMES,
   ASSET_STATUS_NAMES,
-  ASSET_STATUS_COLORS
 } from '@/services/asset'
 import { MediaManager } from './media-manager'
 import { AssetStatusIndicator } from './asset-status-indicator'
 import { CreateAssetModal } from './create-asset-modal'
-
-const { Title, Text } = Typography
 
 // Asset type options
 const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
@@ -45,6 +96,14 @@ const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
   { value: 'other', label: ASSET_TYPE_NAMES.other },
 ]
 
+// Status badge variant mapping
+const STATUS_BADGE_VARIANTS: Record<AssetStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  active: 'default',
+  paused: 'secondary',
+  sold_out: 'outline',
+  closed: 'destructive',
+}
+
 interface PaginatedData {
   items: AssetListItem[]
   pagination: {
@@ -54,6 +113,32 @@ interface PaginatedData {
     total_pages: number
   }
 }
+
+// Edit form schema using zod
+const editAssetSchema = z.object({
+  name: z.string().min(1, '名称不能为空'),
+  symbol: z.string().min(1, '符号不能为空'),
+  description: z.string().optional(),
+  asset_type: z.enum(['real_estate', 'bond', 'commodity', 'equity', 'other']),
+  image_url: z.string().optional(),
+  document_url: z.string().optional(),
+  location: z.string().optional(),
+  total_supply: z.number().min(0, '总供应量不能为负数'),
+  min_subscription: z.number().min(0, '最小认购额不能为负数'),
+  apy_3m: z.number().min(0).max(100),
+  apy_6m: z.number().min(0).max(100),
+  apy_12m: z.number().min(0).max(100),
+})
+
+type EditAssetFormValues = z.infer<typeof editAssetSchema>
+
+// Price update form schema
+const priceUpdateSchema = z.object({
+  price: z.number().min(0, '价格不能为负数'),
+  source: z.enum(['manual', 'oracle', 'api']),
+})
+
+type PriceUpdateFormValues = z.infer<typeof priceUpdateSchema>
 
 export function AssetAdminList() {
   const { t } = useTranslation()
@@ -71,6 +156,10 @@ export function AssetAdminList() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [priceModalOpen, setPriceModalOpen] = useState(false)
   const [selectedAsset, setSelectedAsset] = useState<AssetListItem | null>(null)
+  
+  // AlertDialog state for status toggle confirmation
+  const [statusConfirmOpen, setStatusConfirmOpen] = useState(false)
+  const [assetToToggle, setAssetToToggle] = useState<AssetListItem | null>(null)
   
   // Loading states for mutations
   const [isUpdating, setIsUpdating] = useState(false)
@@ -94,10 +183,34 @@ export function AssetAdminList() {
   
   // 防止重复点击
   const isOpeningCreateModal = useRef(false)
-  
-  // Forms
-  const [editForm] = Form.useForm()
-  const [priceForm] = Form.useForm()
+
+  // react-hook-form for edit modal
+  const editForm = useForm<EditAssetFormValues>({
+    resolver: zodResolver(editAssetSchema),
+    defaultValues: {
+      name: '',
+      symbol: '',
+      description: '',
+      asset_type: 'real_estate',
+      image_url: '',
+      document_url: '',
+      location: '',
+      total_supply: 0,
+      min_subscription: 0,
+      apy_3m: 0,
+      apy_6m: 0,
+      apy_12m: 0,
+    },
+  })
+
+  // react-hook-form for price modal
+  const priceForm = useForm<PriceUpdateFormValues>({
+    resolver: zodResolver(priceUpdateSchema),
+    defaultValues: {
+      price: 0,
+      source: 'manual',
+    },
+  })
 
   // Fetch assets
   const fetchAssets = useCallback(async () => {
@@ -112,7 +225,7 @@ export function AssetAdminList() {
       setData(result)
     } catch (err) {
       console.error('Failed to fetch assets:', err)
-      message.error(t('common.error'))
+      notification.error(t('common.error'))
     } finally {
       setIsLoading(false)
     }
@@ -199,13 +312,13 @@ export function AssetAdminList() {
         selectedContracts,
         true
       )
-      message.success(t('admin.assets.bindSuccess', { project: selectedBindProject, count: selectedContracts.length }))
+      notification.success(t('admin.assets.bindSuccess', { project: selectedBindProject, count: selectedContracts.length }))
       setBindModalOpen(false)
       setSelectedBindProject(null)
       setSelectedContracts([])
       fetchAssets()
     } catch (err) {
-      message.error((err as Error).message || t('admin.assets.bindFailed'))
+      notification.error((err as Error).message || t('admin.assets.bindFailed'))
     } finally {
       setIsBinding(false)
     }
@@ -220,12 +333,12 @@ export function AssetAdminList() {
       const detail = await assetService.unbindContracts(selectedAsset.id, { 
         contract_names: contractsToUnbind 
       })
-      message.success(t('admin.assets.unbindContractsSuccess', { count: contractsToUnbind.length }))
+      notification.success(t('admin.assets.unbindContractsSuccess', { count: contractsToUnbind.length }))
       setContractsToUnbind([])
       setCurrentAssetDetail(detail)
       fetchAssets()
     } catch (err) {
-      message.error((err as Error).message || t('admin.assets.unbindFailed'))
+      notification.error((err as Error).message || t('admin.assets.unbindFailed'))
     } finally {
       setIsUnbinding(false)
     }
@@ -234,16 +347,18 @@ export function AssetAdminList() {
   const refetch = fetchAssets
 
   // Update asset
-  const handleUpdate = async (id: number, values: AssetUpdateRequest) => {
+  const handleUpdate = async (values: EditAssetFormValues) => {
+    if (!selectedAsset) return
     setIsUpdating(true)
     try {
-      await assetService.updateAsset(id, values)
-      message.success(t('admin.assets.updateSuccess'))
+      await assetService.updateAsset(selectedAsset.id, values as AssetUpdateRequest)
+      notification.success(t('admin.assets.updateSuccess'))
       setEditModalOpen(false)
       setSelectedAsset(null)
+      editForm.reset()
       refetch()
     } catch (error) {
-      message.error((error as Error).message || t('common.error'))
+      notification.error((error as Error).message || t('common.error'))
     } finally {
       setIsUpdating(false)
     }
@@ -254,27 +369,30 @@ export function AssetAdminList() {
     setIsUpdatingStatus(true)
     try {
       await assetService.updateAssetStatus(id, status)
-      message.success(t('admin.assets.statusUpdateSuccess'))
+      notification.success(t('admin.assets.statusUpdateSuccess'))
       refetch()
     } catch (error) {
-      message.error((error as Error).message || t('common.error'))
+      notification.error((error as Error).message || t('common.error'))
     } finally {
       setIsUpdatingStatus(false)
+      setStatusConfirmOpen(false)
+      setAssetToToggle(null)
     }
   }
 
   // Update price
-  const handlePriceUpdate = async (id: number, price: number, source: string) => {
+  const handlePriceUpdate = async (values: PriceUpdateFormValues) => {
+    if (!selectedAsset) return
     setIsUpdatingPrice(true)
     try {
-      await assetService.updateAssetPrice(id, price, source)
-      message.success(t('admin.assets.priceUpdateSuccess'))
+      await assetService.updateAssetPrice(selectedAsset.id, values.price, values.source)
+      notification.success(t('admin.assets.priceUpdateSuccess'))
       setPriceModalOpen(false)
       setSelectedAsset(null)
-      priceForm.resetFields()
+      priceForm.reset()
       refetch()
     } catch (error) {
-      message.error((error as Error).message || t('common.error'))
+      notification.error((error as Error).message || t('common.error'))
     } finally {
       setIsUpdatingPrice(false)
     }
@@ -286,14 +404,14 @@ export function AssetAdminList() {
     try {
       const detail = await assetService.getAsset(asset.id)
       setCurrentAssetDetail(detail)
-      editForm.setFieldsValue({
+      editForm.reset({
         name: detail.name,
         symbol: detail.symbol,
-        description: detail.description,
+        description: detail.description || '',
         asset_type: detail.asset_type,
-        image_url: detail.image_url,
-        document_url: detail.document_url,
-        location: detail.location,
+        image_url: detail.image_url || '',
+        document_url: detail.document_url || '',
+        location: detail.location || '',
         total_supply: detail.total_supply,
         min_subscription: detail.min_subscription,
         apy_3m: detail.apy_3m,
@@ -302,239 +420,302 @@ export function AssetAdminList() {
       })
       setEditModalOpen(true)
     } catch (err) {
-      message.error(t('common.error'))
+      notification.error(t('common.error'))
     }
   }
 
   // Open price modal
   const openPriceModal = (asset: AssetListItem) => {
     setSelectedAsset(asset)
-    priceForm.setFieldsValue({
+    priceForm.reset({
       price: asset.current_price,
       source: 'manual',
     })
     setPriceModalOpen(true)
   }
 
-  // Toggle status
-  const toggleStatus = (asset: AssetListItem) => {
-    const newStatus: AssetStatus = asset.status === 'active' ? 'paused' : 'active'
-    handleStatusUpdate(asset.id, newStatus)
+  // Toggle status - open confirmation dialog
+  const handleToggleStatusClick = (asset: AssetListItem) => {
+    setAssetToToggle(asset)
+    setStatusConfirmOpen(true)
   }
 
-  // Table columns
-  const columns: ColumnsType<AssetListItem> = [
+  // Confirm status toggle
+  const confirmToggleStatus = () => {
+    if (!assetToToggle) return
+    const newStatus: AssetStatus = assetToToggle.status === 'active' ? 'paused' : 'active'
+    handleStatusUpdate(assetToToggle.id, newStatus)
+  }
+
+  // Table columns using @tanstack/react-table ColumnDef
+  const columns: ColumnDef<AssetListItem>[] = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 60,
+      accessorKey: 'id',
+      header: 'ID',
+      size: 60,
     },
     {
-      title: t('admin.assets.name'),
-      dataIndex: 'name',
-      key: 'name',
-      render: (name: string, record) => (
-        <Flex vertical gap={0}>
-          <Text strong>{name}</Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>{record.symbol}</Text>
-        </Flex>
+      accessorKey: 'name',
+      header: t('admin.assets.name'),
+      cell: ({ row }) => (
+        <div className="flex flex-col">
+          <span className="font-semibold">{row.original.name}</span>
+          <span className="text-xs text-muted-foreground">{row.original.symbol}</span>
+        </div>
       ),
     },
     {
-      title: t('admin.assets.type'),
-      dataIndex: 'asset_type',
-      key: 'asset_type',
-      width: 120,
-      render: (type: AssetType) => (
-        <Tag color="blue">{ASSET_TYPE_NAMES[type]}</Tag>
+      accessorKey: 'asset_type',
+      header: t('admin.assets.type'),
+      size: 120,
+      cell: ({ row }) => (
+        <Badge variant="secondary">{ASSET_TYPE_NAMES[row.original.asset_type]}</Badge>
       ),
     },
     {
-      title: t('admin.assets.status'),
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status: AssetStatus) => (
-        <Tag color={ASSET_STATUS_COLORS[status]}>
-          {ASSET_STATUS_NAMES[status]}
-        </Tag>
+      accessorKey: 'status',
+      header: t('admin.assets.status'),
+      size: 100,
+      cell: ({ row }) => (
+        <Badge variant={STATUS_BADGE_VARIANTS[row.original.status]}>
+          {ASSET_STATUS_NAMES[row.original.status]}
+        </Badge>
       ),
     },
     {
-      title: '可见性',
-      key: 'visibility',
-      width: 80,
-      align: 'center' as const,
-      render: (_, record) => (
-        <AssetStatusIndicator asset={record} compact />
+      id: 'visibility',
+      header: '可见性',
+      size: 80,
+      cell: ({ row }) => (
+        <div className="text-center">
+          <AssetStatusIndicator asset={row.original} compact />
+        </div>
       ),
     },
     {
-      title: t('admin.assets.price'),
-      dataIndex: 'current_price',
-      key: 'current_price',
-      width: 100,
-      render: (price: number) => `$${price.toFixed(2)}`,
+      accessorKey: 'current_price',
+      header: t('admin.assets.price'),
+      size: 100,
+      cell: ({ row }) => `$${row.original.current_price.toFixed(2)}`,
     },
     {
-      title: t('admin.assets.apy'),
-      key: 'apy',
-      width: 150,
-      render: (_, record) => (
-        <Space size={4}>
-          <Tooltip title="3M">
-            <Tag>{record.apy_3m}%</Tag>
-          </Tooltip>
-          <Tooltip title="6M">
-            <Tag>{record.apy_6m}%</Tag>
-          </Tooltip>
-          <Tooltip title="12M">
-            <Tag>{record.apy_12m}%</Tag>
-          </Tooltip>
-        </Space>
-      ),
-    },
-    {
-      title: t('admin.assets.progress'),
-      key: 'progress',
-      width: 120,
-      render: (_, record) => (
-        <Text>{record.subscription_progress.toFixed(1)}%</Text>
-      ),
-    },
-    {
-      title: t('admin.assets.actions'),
-      key: 'actions',
-      width: 240,
-      render: (_, record) => (
-        <Space>
-          <Tooltip title={t('common.edit')}>
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => openEditModal(record)}
-            />
-          </Tooltip>
-          <Tooltip title={t('admin.assets.updatePrice')}>
-            <Button
-              size="small"
-              icon={<DollarOutlined />}
-              onClick={() => openPriceModal(record)}
-            />
-          </Tooltip>
-          <Tooltip title="媒体管理">
-            <Button
-              size="small"
-              icon={<PictureOutlined />}
-              onClick={() => {
-                setMediaAssetId(record.id)
-                setMediaModalOpen(true)
-              }}
-            />
-          </Tooltip>
-          <Tooltip title={t('admin.assets.bindContracts')}>
-            <Button
-              size="small"
-              icon={<LinkOutlined />}
-              onClick={() => handleOpenBindModal(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title={record.status === 'active' 
-              ? t('admin.assets.confirmPause')
-              : t('admin.assets.confirmResume')
-            }
-            onConfirm={() => toggleStatus(record)}
-            okText={t('common.confirm')}
-            cancelText={t('common.cancel')}
-          >
-            <Tooltip title={record.status === 'active' 
-              ? t('admin.assets.pause')
-              : t('admin.assets.resume')
-            }>
-              <Button
-                size="small"
-                icon={record.status === 'active' 
-                  ? <PauseCircleOutlined />
-                  : <PlayCircleOutlined />
-                }
-                danger={record.status === 'active'}
-                loading={isUpdatingStatus}
-              />
+      id: 'apy',
+      header: t('admin.assets.apy'),
+      size: 150,
+      cell: ({ row }) => (
+        <div className="flex gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs">{row.original.apy_3m}%</Badge>
+              </TooltipTrigger>
+              <TooltipContent>3M</TooltipContent>
             </Tooltip>
-          </Popconfirm>
-        </Space>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs">{row.original.apy_6m}%</Badge>
+              </TooltipTrigger>
+              <TooltipContent>6M</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs">{row.original.apy_12m}%</Badge>
+              </TooltipTrigger>
+              <TooltipContent>12M</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       ),
+    },
+    {
+      id: 'progress',
+      header: t('admin.assets.progress'),
+      size: 120,
+      cell: ({ row }) => (
+        <span>{row.original.subscription_progress.toFixed(1)}%</span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: t('admin.assets.actions'),
+      size: 240,
+      cell: ({ row }) => {
+        const record = row.original
+        return (
+          <div className="flex gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => openEditModal(record)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('common.edit')}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => openPriceModal(record)}
+                  >
+                    <DollarSign className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('admin.assets.updatePrice')}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      setMediaAssetId(record.id)
+                      setMediaModalOpen(true)
+                    }}
+                  >
+                    <Image className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>媒体管理</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleOpenBindModal(record)}
+                  >
+                    <Link className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('admin.assets.bindContracts')}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={record.status === 'active' ? 'destructive' : 'ghost'}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleToggleStatusClick(record)}
+                    disabled={isUpdatingStatus}
+                  >
+                    {isUpdatingStatus ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : record.status === 'active' ? (
+                      <PauseCircle className="h-4 w-4" />
+                    ) : (
+                      <PlayCircle className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {record.status === 'active' 
+                    ? t('admin.assets.pause')
+                    : t('admin.assets.resume')
+                  }
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )
+      },
     },
   ]
 
   // Status filter options
   const statusOptions = [
-    { value: undefined, label: t('admin.assets.allStatus') },
-    { value: 'active' as AssetStatus, label: ASSET_STATUS_NAMES.active },
-    { value: 'paused' as AssetStatus, label: ASSET_STATUS_NAMES.paused },
-    { value: 'sold_out' as AssetStatus, label: ASSET_STATUS_NAMES.sold_out },
-    { value: 'closed' as AssetStatus, label: ASSET_STATUS_NAMES.closed },
+    { value: 'all', label: t('admin.assets.allStatus') },
+    { value: 'active', label: ASSET_STATUS_NAMES.active },
+    { value: 'paused', label: ASSET_STATUS_NAMES.paused },
+    { value: 'sold_out', label: ASSET_STATUS_NAMES.sold_out },
+    { value: 'closed', label: ASSET_STATUS_NAMES.closed },
   ]
 
   return (
     <Card>
-      <Flex vertical gap={24} style={{ width: '100%' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>{t('admin.assets.title')}</Title>
-          <Space>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle>{t('admin.assets.title')}</CardTitle>
+          <div className="flex gap-2">
             <Select
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={statusOptions}
-              style={{ width: 130 }}
-              placeholder={t('admin.assets.filterByStatus')}
-            />
+              value={statusFilter || 'all'}
+              onValueChange={(value) => setStatusFilter(value === 'all' ? undefined : value as AssetStatus)}
+            >
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder={t('admin.assets.filterByStatus')} />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select
-              value={typeFilter}
-              onChange={setTypeFilter}
-              options={[
-                { value: undefined, label: t('admin.assets.allTypes') },
-                ...ASSET_TYPE_OPTIONS,
-              ]}
-              style={{ width: 130 }}
-              placeholder={t('admin.assets.filterByType')}
-            />
-            <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
+              value={typeFilter || 'all'}
+              onValueChange={(value) => setTypeFilter(value === 'all' ? undefined : value as AssetType)}
+            >
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder={t('admin.assets.filterByType')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('admin.assets.allTypes')}</SelectItem>
+                {ASSET_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
               {t('common.refresh')}
             </Button>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />}
-              onClick={handleOpenCreateModal}
-            >
+            <Button onClick={handleOpenCreateModal}>
+              <Plus className="h-4 w-4 mr-2" />
               {t('admin.assets.create')}
             </Button>
-          </Space>
+          </div>
         </div>
-
-        {/* Table */}
-        <Table
+      </CardHeader>
+      <CardContent>
+        {/* DataTable */}
+        <DataTable
           columns={columns}
-          dataSource={data?.items || []}
-          rowKey="id"
+          data={data?.items || []}
           loading={isLoading}
+          emptyMessage={t('common.noData')}
           pagination={{
-            current: page,
+            pageIndex: page - 1,
             pageSize,
-            total: data?.pagination.total || 0,
-            showSizeChanger: true,
-            showTotal: (total) => t('admin.assets.totalRecords', { total }),
-            onChange: (p, ps) => {
-              setPage(p)
-              setPageSize(ps)
-            },
+            pageCount: data?.pagination.total_pages || 1,
+            onPageChange: (p) => setPage(p + 1),
+            onPageSizeChange: setPageSize,
           }}
-          scroll={{ x: 1000 }}
         />
-      </Flex>
+      </CardContent>
 
       {/* Create Modal */}
       <CreateAssetModal
@@ -545,418 +726,617 @@ export function AssetAdminList() {
         isLoadingProjects={isLoadingProjects}
       />
 
-      {/* Edit Modal */}
-      <Modal
-        title={t('admin.assets.editTitle')}
-        open={editModalOpen}
-        onCancel={() => {
+      {/* Edit Modal - using Dialog */}
+      <Dialog open={editModalOpen} onOpenChange={(open) => {
+        if (!open) {
           setEditModalOpen(false)
           setSelectedAsset(null)
           setCurrentAssetDetail(null)
-          editForm.resetFields()
-        }}
-        onOk={() => editForm.submit()}
-        confirmLoading={isUpdating}
-        width={700}
-        destroyOnHidden
-      >
-        <Form
-          form={editForm}
-          layout="vertical"
-          onFinish={(values) => {
-            if (selectedAsset) {
-              handleUpdate(selectedAsset.id, values)
-            }
-          }}
-        >
-          <Form.Item
-            name="name"
-            label={t('admin.assets.form.name')}
-            rules={[{ required: true }]}
-          >
-            <Input />
-          </Form.Item>
+          editForm.reset()
+        }
+      }}>
+        <DialogContent className="max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('admin.assets.editTitle')}</DialogTitle>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(handleUpdate)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('admin.assets.form.name')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item
-            name="symbol"
-            label={t('admin.assets.form.symbol')}
-            rules={[{ required: true }]}
-          >
-            <Input style={{ textTransform: 'uppercase' }} />
-          </Form.Item>
+              <FormField
+                control={editForm.control}
+                name="symbol"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('admin.assets.form.symbol')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} className="uppercase" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item name="asset_type" label={t('admin.assets.form.type')}>
-            <Select options={ASSET_TYPE_OPTIONS} />
-          </Form.Item>
+              <FormField
+                control={editForm.control}
+                name="asset_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('admin.assets.form.type')}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {ASSET_TYPE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item name="description" label={t('admin.assets.form.description')}>
-            <Input.TextArea rows={3} />
-          </Form.Item>
+              <FormField
+                control={editForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('admin.assets.form.description')}</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item name="location" label={t('admin.assets.form.location')}>
-            <Input />
-          </Form.Item>
+              <FormField
+                control={editForm.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('admin.assets.form.location')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item name="image_url" label={t('admin.assets.form.imageUrl')}>
-            <Input />
-          </Form.Item>
+              <FormField
+                control={editForm.control}
+                name="image_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('admin.assets.form.imageUrl')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item name="total_supply" label={t('admin.assets.form.totalSupply')}>
-            <InputNumber
-              style={{ width: '100%' }}
-              min={0}
-              prefix="$"
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            />
-          </Form.Item>
+              <FormField
+                control={editForm.control}
+                name="total_supply"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('admin.assets.form.totalSupply')}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item name="min_subscription" label={t('admin.assets.form.minSubscription')}>
-            <InputNumber style={{ width: '100%' }} min={0} prefix="$" />
-          </Form.Item>
+              <FormField
+                control={editForm.control}
+                name="min_subscription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('admin.assets.form.minSubscription')}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Space size="large">
-            <Form.Item name="apy_3m" label={t('admin.assets.form.apy3m')}>
-              <InputNumber min={0} max={100} suffix="%" />
-            </Form.Item>
-            <Form.Item name="apy_6m" label={t('admin.assets.form.apy6m')}>
-              <InputNumber min={0} max={100} suffix="%" />
-            </Form.Item>
-            <Form.Item name="apy_12m" label={t('admin.assets.form.apy12m')}>
-              <InputNumber min={0} max={100} suffix="%" />
-            </Form.Item>
-          </Space>
+              <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="apy_3m"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('admin.assets.form.apy3m')}</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="apy_6m"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('admin.assets.form.apy6m')}</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="apy_12m"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('admin.assets.form.apy12m')}</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-          {/* 显示已绑定的合约（只读展示） */}
-          <Form.Item label={t('admin.assets.form.boundContracts')}>
-            {currentAssetDetail?.bound_contracts && currentAssetDetail.bound_contracts.length > 0 ? (
-              <Card 
-                size="small" 
-                style={{ background: 'rgba(0, 212, 170, 0.05)', borderColor: 'rgba(0, 212, 170, 0.3)' }}
-              >
-                <Flex vertical gap={8}>
-                  {/* 按类型分组显示 */}
-                  {['common', 'project'].map(type => {
-                    const contracts = currentAssetDetail.bound_contracts!.filter(c => c.contract_type === type)
-                    if (contracts.length === 0) return null
-                    
-                    const typeLabel = type === 'common' ? 'Common' : (currentAssetDetail.project || 'Project')
-                    const typeColor = type === 'common' ? 'processing' : 'success'
-                    
-                    return (
-                      <Flex key={type} vertical gap={6}>
-                        {/* 类型标题 */}
-                        <Tag color={typeColor} style={{ margin: 0, width: 'fit-content' }}>{typeLabel}</Tag>
-                        {/* 合约列表 */}
-                        <Flex vertical gap={4} style={{ marginLeft: 12 }}>
-                          {contracts.map(c => (
-                            <Flex 
-                              key={c.contract_name}
-                              align="center" 
-                              gap={8}
-                              style={{ padding: '4px 8px', borderRadius: 4 }}
-                            >
-                              <Text style={{ flex: 1 }}>
-                                {c.contract_name}
-                                {c.is_primary && ' ⭐'}
-                              </Text>
-                              <Tooltip title={c.contract_address}>
-                                <Text type="secondary" style={{ fontSize: 11, fontFamily: 'monospace' }}>
-                                  {c.contract_address.slice(0, 6)}...{c.contract_address.slice(-4)}
-                                </Text>
-                              </Tooltip>
-                            </Flex>
-                          ))}
-                        </Flex>
-                      </Flex>
-                    )
-                  })}
-                </Flex>
-              </Card>
-            ) : (
-              <Text type="secondary">{t('admin.assets.noContractsBound')}</Text>
-            )}
-          </Form.Item>
-        </Form>
-      </Modal>
+              {/* 显示已绑定的合约（只读展示） */}
+              <div className="space-y-2">
+                <FormLabel>{t('admin.assets.form.boundContracts')}</FormLabel>
+                {currentAssetDetail?.bound_contracts && currentAssetDetail.bound_contracts.length > 0 ? (
+                  <Card className="bg-primary/5 border-primary/30">
+                    <CardContent className="p-4 space-y-3">
+                      {/* 按类型分组显示 */}
+                      {['common', 'project'].map(type => {
+                        const contracts = currentAssetDetail.bound_contracts!.filter(c => c.contract_type === type)
+                        if (contracts.length === 0) return null
+                        
+                        const typeLabel = type === 'common' ? 'Common' : (currentAssetDetail.project || 'Project')
+                        
+                        return (
+                          <div key={type} className="space-y-2">
+                            {/* 类型标题 */}
+                            <Badge variant={type === 'common' ? 'secondary' : 'default'}>
+                              {typeLabel}
+                            </Badge>
+                            {/* 合约列表 */}
+                            <div className="ml-3 space-y-1">
+                              {contracts.map(c => (
+                                <div 
+                                  key={c.contract_name}
+                                  className="flex items-center gap-2 p-2 rounded"
+                                >
+                                  <span className="flex-1">
+                                    {c.contract_name}
+                                    {c.is_primary && ' ⭐'}
+                                  </span>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="text-xs text-muted-foreground font-mono">
+                                          {c.contract_address.slice(0, 6)}...{c.contract_address.slice(-4)}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>{c.contract_address}</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t('admin.assets.noContractsBound')}</p>
+                )}
+              </div>
 
-      {/* Price Update Modal */}
-      <Modal
-        title={t('admin.assets.updatePriceTitle')}
-        open={priceModalOpen}
-        onCancel={() => {
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button type="submit" disabled={isUpdating}>
+                  {isUpdating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {t('common.confirm')}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Price Update Modal - using Dialog */}
+      <Dialog open={priceModalOpen} onOpenChange={(open) => {
+        if (!open) {
           setPriceModalOpen(false)
           setSelectedAsset(null)
-          priceForm.resetFields()
-        }}
-        onOk={() => priceForm.submit()}
-        confirmLoading={isUpdatingPrice}
-        destroyOnHidden
-      >
-        {selectedAsset && (
-          <Form
-            form={priceForm}
-            layout="vertical"
-            onFinish={(values) => {
-              handlePriceUpdate(selectedAsset.id, values.price, values.source)
-            }}
-          >
-            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-              {t('admin.assets.currentPriceLabel')}: ${selectedAsset.current_price.toFixed(2)}
-            </Text>
+          priceForm.reset()
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('admin.assets.updatePriceTitle')}</DialogTitle>
+          </DialogHeader>
+          {selectedAsset && (
+            <Form {...priceForm}>
+              <form onSubmit={priceForm.handleSubmit(handlePriceUpdate)} className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {t('admin.assets.currentPriceLabel')}: ${selectedAsset.current_price.toFixed(2)}
+                </p>
 
-            <Form.Item
-              name="price"
-              label={t('admin.assets.newPrice')}
-              rules={[{ required: true, message: t('admin.assets.priceRequired') }]}
+                <FormField
+                  control={priceForm.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('admin.assets.newPrice')}</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={priceForm.control}
+                  name="source"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('admin.assets.priceSource')}</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="manual">Manual Update</SelectItem>
+                          <SelectItem value="oracle">Oracle</SelectItem>
+                          <SelectItem value="api">External API</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setPriceModalOpen(false)}>
+                    {t('common.cancel')}
+                  </Button>
+                  <Button type="submit" disabled={isUpdatingPrice}>
+                    {isUpdatingPrice && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {t('common.confirm')}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Status Toggle Confirmation - using AlertDialog */}
+      <AlertDialog open={statusConfirmOpen} onOpenChange={setStatusConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {assetToToggle?.status === 'active' 
+                ? t('admin.assets.confirmPause')
+                : t('admin.assets.confirmResume')
+              }
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {assetToToggle?.status === 'active'
+                ? t('admin.assets.pauseDescription', { name: assetToToggle?.name })
+                : t('admin.assets.resumeDescription', { name: assetToToggle?.name })
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmToggleStatus}
+              disabled={isUpdatingStatus}
             >
-              <InputNumber
-                style={{ width: '100%' }}
-                min={0}
-                precision={2}
-                prefix="$"
-              />
-            </Form.Item>
+              {isUpdatingStatus && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {t('common.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-            <Form.Item
-              name="source"
-              label={t('admin.assets.priceSource')}
-              initialValue="manual"
-            >
-              <Select
-                options={[
-                  { value: 'manual', label: 'Manual Update' },
-                  { value: 'oracle', label: 'Oracle' },
-                  { value: 'api', label: 'External API' },
-                ]}
-              />
-            </Form.Item>
-          </Form>
-        )}
-      </Modal>
-
-      {/* Project Contract Binding Modal */}
-      <Modal
-        title={t('admin.assets.bindContractsTitle')}
-        open={bindModalOpen}
-        onCancel={() => {
+      {/* Project Contract Binding Modal - using Dialog */}
+      <Dialog open={bindModalOpen} onOpenChange={(open) => {
+        if (!open) {
           setBindModalOpen(false)
           setSelectedAsset(null)
           setSelectedBindProject(null)
           setSelectedContracts([])
           setContractsToUnbind([])
           setCurrentAssetDetail(null)
-        }}
-        onOk={handleBindProject}
-        okButtonProps={{ disabled: !selectedBindProject || selectedContracts.length === 0 }}
-        confirmLoading={isBinding}
-        width={600}
-        destroyOnHidden
-      >
-        {selectedAsset && (
-          <Flex vertical gap={16}>
-            {/* 当前已绑定的合约（支持勾选解绑） */}
-            {currentAssetDetail?.bound_contracts && currentAssetDetail.bound_contracts.length > 0 && (
-              <Card 
-                size="small" 
-                title={
-                  <Flex justify="space-between" align="center">
-                    <span>{t('admin.assets.currentlyBound')}</span>
-                    {contractsToUnbind.length > 0 && (
-                      <Button 
-                        danger 
-                        size="small" 
-                        loading={isUnbinding}
-                        onClick={handleUnbindContracts}
-                      >
-                        {t('admin.assets.unbindSelected', { count: contractsToUnbind.length })}
-                      </Button>
-                    )}
-                  </Flex>
-                }
-                style={{ background: 'rgba(0, 212, 170, 0.05)', borderColor: 'rgba(0, 212, 170, 0.3)' }}
-              >
-                <Flex vertical gap={8}>
-                  {/* 按类型分组显示 */}
-                  {['common', 'project'].map(type => {
-                    const contracts = currentAssetDetail.bound_contracts!.filter(c => c.contract_type === type)
-                    if (contracts.length === 0) return null
-                    
-                    const typeLabel = type === 'common' ? 'Common' : (currentAssetDetail.project || 'Project')
-                    const typeColor = type === 'common' ? 'processing' : 'success'
-                    const allSelected = contracts.every(c => contractsToUnbind.includes(c.contract_name))
-                    const someSelected = contracts.some(c => contractsToUnbind.includes(c.contract_name))
-                    
-                    return (
-                      <Flex key={type} vertical gap={6}>
-                        {/* 类型标题（可全选） */}
-                        <Flex 
-                          align="center" 
-                          gap={8}
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => {
-                            const contractNames = contracts.map(c => c.contract_name)
-                            if (allSelected) {
-                              setContractsToUnbind(prev => prev.filter(n => !contractNames.includes(n)))
-                            } else {
-                              setContractsToUnbind(prev => [...new Set([...prev, ...contractNames])])
-                            }
-                          }}
+        }
+      }}>
+        <DialogContent className="max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{t('admin.assets.bindContractsTitle')}</DialogTitle>
+          </DialogHeader>
+          {selectedAsset && (
+            <div className="space-y-4">
+              {/* 当前已绑定的合约（支持勾选解绑） */}
+              {currentAssetDetail?.bound_contracts && currentAssetDetail.bound_contracts.length > 0 && (
+                <Card className="bg-primary/5 border-primary/30">
+                  <CardHeader className="py-3">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-sm">{t('admin.assets.currentlyBound')}</CardTitle>
+                      {contractsToUnbind.length > 0 && (
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={handleUnbindContracts}
+                          disabled={isUnbinding}
                         >
-                          <Checkbox 
-                            checked={allSelected}
-                            indeterminate={someSelected && !allSelected}
-                          />
-                          <Tag color={typeColor} style={{ margin: 0 }}>{typeLabel}</Tag>
-                        </Flex>
-                        {/* 合约列表 */}
-                        <Flex vertical gap={4} style={{ marginLeft: 24 }}>
-                          {contracts.map(c => {
-                            const isChecked = contractsToUnbind.includes(c.contract_name)
-                            return (
-                              <Flex 
-                                key={c.contract_name}
-                                align="center" 
-                                gap={8}
-                                style={{ 
-                                  padding: '4px 8px',
-                                  borderRadius: 4,
-                                  background: isChecked ? 'rgba(255, 77, 79, 0.08)' : 'transparent',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s'
-                                }}
-                                onClick={() => {
-                                  setContractsToUnbind(prev => 
-                                    isChecked 
-                                      ? prev.filter(n => n !== c.contract_name)
-                                      : [...prev, c.contract_name]
-                                  )
-                                }}
-                              >
-                                <Checkbox checked={isChecked} />
-                                <Text style={{ flex: 1 }}>
-                                  {c.contract_name}
-                                  {c.is_primary && ' ⭐'}
-                                </Text>
-                                <Tooltip title={c.contract_address}>
-                                  <Text type="secondary" style={{ fontSize: 11, fontFamily: 'monospace' }}>
-                                    {c.contract_address.slice(0, 6)}...{c.contract_address.slice(-4)}
-                                  </Text>
-                                </Tooltip>
-                              </Flex>
-                            )
-                          })}
-                        </Flex>
-                      </Flex>
-                    )
-                  })}
-                </Flex>
-              </Card>
-            )}
-
-            <Text>
-              {t('admin.assets.bindDescription', { asset: selectedAsset.name })}
-            </Text>
-            
-            <Select
-              placeholder={t('admin.assets.selectProject')}
-              loading={isLoadingProjects}
-              value={selectedBindProject}
-              onChange={handleSelectProject}
-              style={{ width: '100%' }}
-              options={availableProjects.map(p => ({
-                value: p.project,
-                label: (
-                  <Flex justify="space-between" align="center">
-                    <Text strong>{p.project}</Text>
-                    <Tag color={p.project === 'common' ? 'blue' : p.project === 'mock' ? 'cyan' : 'green'}>
-                      {p.contracts.filter(c => c.is_available).length}/{p.contract_count}
-                    </Tag>
-                  </Flex>
-                )
-              }))}
-            />
-
-            {selectedBindProject && (
-              <Card 
-                size="small" 
-                title={
-                  <Flex justify="space-between" align="center">
-                    <span>{t('admin.assets.contractsToBindTitle')}</span>
-                    <Text type="secondary" style={{ fontSize: 12, fontWeight: 'normal' }}>
-                      {t('admin.assets.selectedCount', { count: selectedContracts.length })}
-                    </Text>
-                  </Flex>
-                }
-              >
-                <Flex vertical gap={8}>
-                  {availableProjects
-                    .find(p => p.project === selectedBindProject)
-                    ?.contracts.map(contract => {
-                      const isChecked = selectedContracts.includes(contract.contract_name)
-                      const typeColor = contract.contract_type === 'common' ? '#1890ff' 
-                        : contract.contract_type === 'mock' ? '#13c2c2' 
-                        : '#52c41a'
+                          {isUnbinding && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                          {t('admin.assets.unbindSelected', { count: contractsToUnbind.length })}
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* 按类型分组显示 */}
+                    {['common', 'project'].map(type => {
+                      const contracts = currentAssetDetail.bound_contracts!.filter(c => c.contract_type === type)
+                      if (contracts.length === 0) return null
+                      
+                      const typeLabel = type === 'common' ? 'Common' : (currentAssetDetail.project || 'Project')
+                      const allSelected = contracts.every(c => contractsToUnbind.includes(c.contract_name))
+                      const someSelected = contracts.some(c => contractsToUnbind.includes(c.contract_name))
                       
                       return (
-                        <Flex 
-                          key={contract.contract_name} 
-                          align="center" 
-                          gap={12}
-                          style={{ 
-                            padding: '8px 12px',
-                            borderRadius: 6,
-                            background: isChecked ? 'rgba(0, 212, 170, 0.08)' : 'rgba(0, 0, 0, 0.02)',
-                            border: `1px solid ${isChecked ? 'rgba(0, 212, 170, 0.3)' : 'rgba(0, 0, 0, 0.06)'}`,
-                            cursor: contract.is_available ? 'pointer' : 'not-allowed',
-                            opacity: contract.is_available ? 1 : 0.5,
-                            transition: 'all 0.2s'
-                          }}
-                          onClick={() => {
-                            if (!contract.is_available) return
-                            setSelectedContracts(prev => 
-                              isChecked 
-                                ? prev.filter(n => n !== contract.contract_name)
-                                : [...prev, contract.contract_name]
-                            )
-                          }}
-                        >
-                          <Checkbox 
-                            checked={isChecked} 
-                            disabled={!contract.is_available}
-                          />
-                          <Flex vertical style={{ flex: 1 }}>
-                            <Flex align="center" gap={8}>
-                              <Text strong style={{ color: contract.is_available ? undefined : 'rgba(0,0,0,0.25)' }}>
-                                {contract.contract_name}
-                              </Text>
-                              <Tag 
-                                color={typeColor} 
-                                style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px' }}
-                              >
-                                {contract.contract_type}
-                              </Tag>
-                            </Flex>
-                            {!contract.is_available && contract.bound_to_asset && (
-                              <Text type="secondary" style={{ fontSize: 11 }}>
-                                {t('admin.assets.boundTo', { asset: contract.bound_to_asset })}
-                              </Text>
-                            )}
-                          </Flex>
-                          <Tooltip title={contract.contract_address}>
-                            <Text type="secondary" style={{ fontSize: 11, fontFamily: 'monospace' }}>
-                              {contract.contract_address.slice(0, 6)}...{contract.contract_address.slice(-4)}
-                            </Text>
-                          </Tooltip>
-                        </Flex>
+                        <div key={type} className="space-y-2">
+                          {/* 类型标题（可全选） */}
+                          <div 
+                            className="flex items-center gap-2 cursor-pointer"
+                            onClick={() => {
+                              const contractNames = contracts.map(c => c.contract_name)
+                              if (allSelected) {
+                                setContractsToUnbind(prev => prev.filter(n => !contractNames.includes(n)))
+                              } else {
+                                setContractsToUnbind(prev => [...new Set([...prev, ...contractNames])])
+                              }
+                            }}
+                          >
+                            <Checkbox 
+                              checked={allSelected}
+                              // @ts-expect-error - indeterminate is a valid prop
+                              indeterminate={someSelected && !allSelected}
+                            />
+                            <Badge variant={type === 'common' ? 'secondary' : 'default'}>
+                              {typeLabel}
+                            </Badge>
+                          </div>
+                          {/* 合约列表 */}
+                          <div className="ml-6 space-y-1">
+                            {contracts.map(c => {
+                              const isChecked = contractsToUnbind.includes(c.contract_name)
+                              return (
+                                <div 
+                                  key={c.contract_name}
+                                  className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
+                                    isChecked ? 'bg-destructive/10' : 'hover:bg-muted/50'
+                                  }`}
+                                  onClick={() => {
+                                    setContractsToUnbind(prev => 
+                                      isChecked 
+                                        ? prev.filter(n => n !== c.contract_name)
+                                        : [...prev, c.contract_name]
+                                    )
+                                  }}
+                                >
+                                  <Checkbox checked={isChecked} />
+                                  <span className="flex-1">
+                                    {c.contract_name}
+                                    {c.is_primary && ' ⭐'}
+                                  </span>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="text-xs text-muted-foreground font-mono">
+                                          {c.contract_address.slice(0, 6)}...{c.contract_address.slice(-4)}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>{c.contract_address}</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
                       )
-                    })
-                  }
-                </Flex>
-              </Card>
-            )}
-          </Flex>
-        )}
-      </Modal>
+                    })}
+                  </CardContent>
+                </Card>
+              )}
+
+              <p className="text-sm text-muted-foreground">
+                {t('admin.assets.bindDescription', { asset: selectedAsset.name })}
+              </p>
+
+              <Select
+                value={selectedBindProject || ''}
+                onValueChange={(value) => handleSelectProject(value || null)}
+                disabled={isLoadingProjects}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('admin.assets.selectProject')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableProjects.map(p => (
+                    <SelectItem key={p.project} value={p.project}>
+                      <div className="flex justify-between items-center w-full gap-4">
+                        <span className="font-medium">{p.project}</span>
+                        <Badge variant={p.project === 'common' ? 'secondary' : p.project === 'mock' ? 'outline' : 'default'}>
+                          {p.contracts.filter(c => c.is_available).length}/{p.contract_count}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {selectedBindProject && (
+                <Card>
+                  <CardHeader className="py-3">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-sm">{t('admin.assets.contractsToBindTitle')}</CardTitle>
+                      <span className="text-xs text-muted-foreground">
+                        {t('admin.assets.selectedCount', { count: selectedContracts.length })}
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {availableProjects
+                      .find(p => p.project === selectedBindProject)
+                      ?.contracts.map(contract => {
+                        const isChecked = selectedContracts.includes(contract.contract_name)
+                        
+                        return (
+                          <div 
+                            key={contract.contract_name} 
+                            className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                              !contract.is_available 
+                                ? 'opacity-50 cursor-not-allowed' 
+                                : isChecked 
+                                  ? 'bg-primary/10 border-primary/30' 
+                                  : 'hover:bg-muted/50 border-transparent'
+                            }`}
+                            onClick={() => {
+                              if (!contract.is_available) return
+                              setSelectedContracts(prev => 
+                                isChecked 
+                                  ? prev.filter(n => n !== contract.contract_name)
+                                  : [...prev, contract.contract_name]
+                              )
+                            }}
+                          >
+                            <Checkbox 
+                              checked={isChecked} 
+                              disabled={!contract.is_available}
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`font-medium ${!contract.is_available ? 'text-muted-foreground' : ''}`}>
+                                  {contract.contract_name}
+                                </span>
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-[10px] px-1 py-0"
+                                >
+                                  {contract.contract_type}
+                                </Badge>
+                              </div>
+                              {!contract.is_available && contract.bound_to_asset && (
+                                <p className="text-xs text-muted-foreground">
+                                  {t('admin.assets.boundTo', { asset: contract.bound_to_asset })}
+                                </p>
+                              )}
+                            </div>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="text-xs text-muted-foreground font-mono">
+                                    {contract.contract_address.slice(0, 6)}...{contract.contract_address.slice(-4)}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>{contract.contract_address}</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        )
+                      })
+                    }
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBindModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button 
+              onClick={handleBindProject}
+              disabled={!selectedBindProject || selectedContracts.length === 0 || isBinding}
+            >
+              {isBinding && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {t('common.confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 媒体管理模态框 */}
       {mediaAssetId && (

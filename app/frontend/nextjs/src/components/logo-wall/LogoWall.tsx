@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Row, Col } from 'antd';
 
 /**
  * ════════════════════════════════════════════════════════════════
@@ -66,13 +65,9 @@ export const LogoWall: React.FC<LogoWallProps> = ({
         </div>
 
         {/* Logos */}
-        <Row
-          gutter={[{ xs: 24, sm: 32, md: 48 }, 32]}
-          justify="center"
-          align="middle"
-        >
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-6 sm:gap-8 md:gap-12 justify-items-center">
           {logos.map((logo, index) => (
-            <Col key={logo.name} xs={6} sm={4} md={3}>
+            <div key={logo.name}>
               <div
                 className="logo-item"
                 style={{
@@ -125,9 +120,9 @@ export const LogoWall: React.FC<LogoWallProps> = ({
                   {logo.name}
                 </div>
               </div>
-            </Col>
+            </div>
           ))}
-        </Row>
+        </div>
 
         {/* Trust Message */}
         <div style={{ textAlign: 'center', marginTop: 40 }}>

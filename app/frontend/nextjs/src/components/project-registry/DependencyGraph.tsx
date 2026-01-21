@@ -21,14 +21,15 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-import { Card, Button, Spin, Typography } from 'antd';
-import { ClearOutlined } from '@ant-design/icons';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { RotateCcw, Loader2 } from 'lucide-react';
+
 import { ContractNode } from './ContractNode';
 import { DependencyEdge } from './DependencyEdge';
 import { useDependencyGraph } from '@/hooks/useProjectStatus';
 import type { DependencyType } from '@/types/project-registry';
 
-const { Text } = Typography;
 
 // 自定义节点类型
 const nodeTypes = {

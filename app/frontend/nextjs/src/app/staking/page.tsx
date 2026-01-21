@@ -1,47 +1,23 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  Card,
-  Row,
-  Col,
-  Typography,
-  Statistic,
-  Select,
-  InputNumber,
-  Button,
-  Table,
-  Tag,
-  Progress,
-  Modal,
-  Alert,
-  Empty,
-  Spin,
-  Space,
-  Segmented,
-  Tooltip,
-  Divider,
-  Flex,
-  message,
-  Steps,
-  Badge,
-} from "antd";
-import {
-  RocketOutlined,
-  ClockCircleOutlined,
-  TrophyOutlined,
-  InfoCircleOutlined,
-  LinkOutlined,
-  WarningOutlined,
-  GiftOutlined,
-  FireOutlined,
-  ThunderboltOutlined,
-  DollarOutlined,
-  PieChartOutlined,
-} from "@ant-design/icons";
+  Rocket,
+  Clock,
+  Trophy,
+  Info,
+  ExternalLink,
+  AlertTriangle,
+  Gift,
+  Flame,
+  Zap,
+  DollarSign,
+  PieChart,
+  CheckCircle,
+} from "lucide-react";
 import { useAccount } from "wagmi";
 import { useTranslation } from "react-i18next";
-import type { ColumnsType } from "antd/es/table";
+import { ColumnDef } from "@tanstack/react-table";
 
 import { RequireKyc } from "@/components/auth";
 import {
@@ -55,12 +31,109 @@ import {
   type StakingStatsResponse,
   type StakingStatus,
   type PLTTokenInfoResponse,
-  type TokenAllocation,
   STAKING_PERIODS,
   STAKING_STATUS_COLORS,
 } from "@/services/staking";
 
-const { Title, Text, Paragraph } = Typography;
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { DataTable } from "@/components/ui/data-table";
+import { Input } from "@/components/ui/input";
+import { notification } from "@/lib/notification";
+import { cn } from "@/lib/utils";
+
+// 统计卡片组件
+interface StatCardProps {
+  title: string;
+  value: number;
+  precision?: number;
+  suffix?: string;
+  prefix?: React.ReactNode;
+  valueClassName?: string;
+  formatter?: (value: number) => string;
+}
+
+function StatCard({
+  title,
+  value,
+  precision = 0,
+  suffix,
+  prefix,
+  valueClassName,
+  formatter,
+}: StatCardProps) {
+  const displayValue = formatter
+    ? formatter(value)
+    : value.toLocaleString(undefined, {
+        minimumFractionDigits: precision,
+        maximumFractionDigits: precision,
+      });
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <p className="text-sm text-muted-foreground mb-2">{title}</p>
+        <div
+          className={cn(
+            "text-2xl font-bold flex items-center gap-2",
+            valueClassName
+          )}
+        >
+          {prefix}
+          <span>
+            {displayValue}
+            {suffix && <span className="text-base ml-1">{suffix}</span>}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// 空状态组件
+function EmptyState({
+  message,
+  description,
+  children,
+}: {
+  message: string;
+  description?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
+      <span>{message}</span>
+      {description && (
+        <span className="text-sm text-muted-foreground/70">{description}</span>
+      )}
+      {children}
+    </div>
+  );
+}
 
 // 周期卡片组件
 function PeriodCard({
@@ -80,33 +153,68 @@ function PeriodCard({
 
   return (
     <Card
-      hoverable
+      className={cn(
+        "cursor-pointer transition-all hover:border-primary/50 relative",
+        selected && "border-primary border-2 bg-primary/5"
+      )}
       onClick={onClick}
-      style={{
-        cursor: "pointer",
-        borderColor: selected ? "#1890ff" : undefined,
-        borderWidth: selected ? 2 : 1,
-        background: selected ? "rgba(24, 144, 255, 0.05)" : undefined,
-        position: "relative",
-      }}
     >
       {recommended && (
-        <Badge.Ribbon text={t("staking.period.recommended")} color="gold" />
+        <div className="absolute -top-2 -right-2 z-10">
+          <Badge className="bg-yellow-500 text-black text-xs">
+            {t("staking.period.recommended")}
+          </Badge>
+        </div>
       )}
-      <Flex vertical align="center" gap={8}>
-        <Text strong style={{ fontSize: 24 }}>
-          {days}
-        </Text>
-        <Text type="secondary">{t("common.days")}</Text>
-        <Divider style={{ margin: "8px 0" }} />
-        <Text style={{ color: "#52c41a", fontSize: 18, fontWeight: 600 }}>
-          {multiplier}x
-        </Text>
-        <Text type="secondary" style={{ fontSize: 12 }}>
+      <CardContent className="p-4 flex flex-col items-center gap-2">
+        <span className="text-2xl font-bold">{days}</span>
+        <span className="text-sm text-muted-foreground">{t("common.days")}</span>
+        <div className="w-full h-px bg-border my-2" />
+        <span className="text-lg font-semibold text-green-400">{multiplier}x</span>
+        <span className="text-xs text-muted-foreground">
           {t("staking.stake.multiplier")}
-        </Text>
-      </Flex>
+        </span>
+      </CardContent>
     </Card>
+  );
+}
+
+// Alert 组件
+function AlertBox({
+  type,
+  message,
+  description,
+}: {
+  type: "success" | "warning" | "error" | "info";
+  message: string;
+  description?: string;
+}) {
+  const colorMap = {
+    success: "bg-green-500/10 border-green-500/30 text-green-400",
+    warning: "bg-yellow-500/10 border-yellow-500/30 text-yellow-400",
+    error: "bg-red-500/10 border-red-500/30 text-red-400",
+    info: "bg-blue-500/10 border-blue-500/30 text-blue-400",
+  };
+
+  const iconMap = {
+    success: <CheckCircle className="h-5 w-5" />,
+    warning: <AlertTriangle className="h-5 w-5" />,
+    error: <AlertTriangle className="h-5 w-5" />,
+    info: <Info className="h-5 w-5" />,
+  };
+
+  return (
+    <div className={cn("p-4 rounded-lg border", colorMap[type])}>
+      <div className="flex items-start gap-3">
+        {iconMap[type]}
+        <div className="flex flex-col gap-1">
+          <span className="font-medium">{message}</span>
+          {description && (
+            <span className="text-sm opacity-80">{description}</span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -128,7 +236,7 @@ export default function StakingPage() {
 
   // 质押表单状态
   const [selectedSubscription, setSelectedSubscription] = useState<
-    number | null
+    string | null
   >(null);
   const [selectedPeriod, setSelectedPeriod] = useState<number>(30);
   const [stakeAmount, setStakeAmount] = useState<number>(0);
@@ -193,7 +301,7 @@ export default function StakingPage() {
       setSubscriptions(activeSubscriptions);
     } catch (error) {
       console.error("Failed to load staking data:", error);
-      message.error(t("staking.error.loadFailed"));
+      notification.error(t("staking.error.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -217,7 +325,7 @@ export default function StakingPage() {
 
   // 获取选中的认购
   const selectedSubData = subscriptions.find(
-    (s) => s.id === selectedSubscription
+    (s) => s.id === Number(selectedSubscription)
   );
   const maxStakeAmount = selectedSubData?.rwa_token_amount || 0;
   const remainingLimit = limit?.remaining_limit || 0;
@@ -232,7 +340,7 @@ export default function StakingPage() {
   // 提交质押
   const handleStake = async () => {
     if (!selectedSubscription || stakeAmount <= 0) {
-      message.warning(t("staking.error.invalidAmount"));
+      notification.warning(t("staking.error.invalidAmount"));
       return;
     }
 
@@ -242,19 +350,19 @@ export default function StakingPage() {
       const txHash = `0x${Date.now().toString(16)}${"0".repeat(48)}`; // 模拟交易哈希
 
       await stakingService.createStaking({
-        subscription_id: selectedSubscription,
+        subscription_id: Number(selectedSubscription),
         amount: stakeAmount,
         period: selectedPeriod as 15 | 30 | 45 | 60,
         tx_hash: txHash,
       });
 
-      message.success(t("staking.stake.success"));
+      notification.success(t("staking.stake.success"));
       setSelectedSubscription(null);
       setStakeAmount(0);
       loadData();
     } catch (error) {
       console.error("Stake failed:", error);
-      message.error(t("staking.stake.failed"));
+      notification.error(t("staking.stake.failed"));
     } finally {
       setStaking(false);
     }
@@ -269,13 +377,13 @@ export default function StakingPage() {
       const txHash = `0x${Date.now().toString(16)}${"0".repeat(48)}`;
 
       await stakingService.unstake(selectedStaking.id, txHash);
-      message.success(t("staking.unstake.success"));
+      notification.success(t("staking.unstake.success"));
       setUnstakeModalVisible(false);
       setSelectedStaking(null);
       loadData();
     } catch (error) {
       console.error("Unstake failed:", error);
-      message.error(t("staking.unstake.failed"));
+      notification.error(t("staking.unstake.failed"));
     }
   };
 
@@ -286,133 +394,145 @@ export default function StakingPage() {
       const txHash = `0x${Date.now().toString(16)}${"0".repeat(48)}`;
 
       await stakingService.claimRewards(staking.id, txHash);
-      message.success(t("staking.claim.success"));
+      notification.success(t("staking.claim.success"));
       loadData();
     } catch (error) {
       console.error("Claim failed:", error);
-      message.error(t("staking.claim.failed"));
+      notification.error(t("staking.claim.failed"));
     }
   };
 
-  // 表格列
-  const columns: ColumnsType<StakingResponse> = [
-    {
-      title: t("staking.detail.amount"),
-      dataIndex: "amount",
-      key: "amount",
-      render: (amount: number) => (
-        <Text strong>{amount.toLocaleString()} tokens</Text>
-      ),
-    },
-    {
-      title: t("staking.detail.period"),
-      dataIndex: "period",
-      key: "period",
-      render: (period: number) => (
-        <Tag color="blue">
-          {period} {t("common.days")}
-        </Tag>
-      ),
-    },
-    {
-      title: t("staking.detail.multiplier"),
-      dataIndex: "multiplier",
-      key: "multiplier",
-      render: (multiplier: number) => (
-        <Text style={{ color: "#52c41a" }}>{multiplier}x</Text>
-      ),
-    },
-    {
-      title: t("staking.detail.progress"),
-      key: "progress",
-      render: (_, record) => {
-        const totalDays = record.period;
-        const passedDays = totalDays - record.days_remaining;
-        const percent = Math.min(100, (passedDays / totalDays) * 100);
-
-        return (
-          <Flex vertical gap={4}>
-            <Progress
-              percent={Math.round(percent)}
-              size="small"
-              status={record.is_matured ? "success" : "active"}
-            />
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {record.days_remaining > 0
-                ? `${record.days_remaining} ${t("common.days")} ${t(
-                    "staking.detail.daysRemaining"
-                  )}`
-                : t("staking.status.matured")}
-            </Text>
-          </Flex>
-        );
+  // 表格列定义
+  const columns: ColumnDef<StakingResponse>[] = useMemo(
+    () => [
+      {
+        accessorKey: "amount",
+        header: t("staking.detail.amount"),
+        cell: ({ row }) => (
+          <span className="font-semibold">
+            {row.original.amount.toLocaleString()} tokens
+          </span>
+        ),
       },
-    },
-    {
-      title: t("staking.detail.currentRewards"),
-      dataIndex: "current_rewards",
-      key: "current_rewards",
-      render: (rewards: number) => (
-        <Text style={{ color: "#faad14" }}>
-          <GiftOutlined /> {rewards.toFixed(4)} PLT
-        </Text>
-      ),
-    },
-    {
-      title: t("staking.detail.status"),
-      dataIndex: "status",
-      key: "status",
-      render: (status: StakingStatus) => (
-        <Tag color={STAKING_STATUS_COLORS[status]}>
-          {t(`staking.status.${status}`)}
-        </Tag>
-      ),
-    },
-    {
-      title: t("common.actions"),
-      key: "actions",
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => {
-              setSelectedStaking(record);
-              setDetailModalVisible(true);
-            }}
-          >
-            {t("common.details")}
-          </Button>
-          {record.status === "active" && (
+      {
+        accessorKey: "period",
+        header: t("staking.detail.period"),
+        cell: ({ row }) => (
+          <Badge variant="secondary" className="bg-blue-500/20 text-blue-400">
+            {row.original.period} {t("common.days")}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "multiplier",
+        header: t("staking.detail.multiplier"),
+        cell: ({ row }) => (
+          <span className="text-green-400">{row.original.multiplier}x</span>
+        ),
+      },
+      {
+        id: "progress",
+        header: t("staking.detail.progress"),
+        cell: ({ row }) => {
+          const totalDays = row.original.period;
+          const passedDays = totalDays - row.original.days_remaining;
+          const percent = Math.min(100, (passedDays / totalDays) * 100);
+
+          return (
+            <div className="flex flex-col gap-1 min-w-[120px]">
+              <Progress
+                value={percent}
+                indicatorColor={row.original.is_matured ? "#22c55e" : "#00D4AA"}
+                className="h-1.5"
+              />
+              <span className="text-xs text-muted-foreground">
+                {row.original.days_remaining > 0
+                  ? `${row.original.days_remaining} ${t("common.days")} ${t(
+                      "staking.detail.daysRemaining"
+                    )}`
+                  : t("staking.status.matured")}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "current_rewards",
+        header: t("staking.detail.currentRewards"),
+        cell: ({ row }) => (
+          <span className="text-yellow-400 flex items-center gap-1">
+            <Gift className="h-4 w-4" />
+            {row.original.current_rewards.toFixed(4)} PLT
+          </span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: t("staking.detail.status"),
+        cell: ({ row }) => {
+          const status = row.original.status;
+          const colorMap: Record<string, string> = {
+            active: "bg-blue-500/20 text-blue-400",
+            matured: "bg-green-500/20 text-green-400",
+            unstaked: "bg-gray-500/20 text-gray-400",
+            claimed: "bg-purple-500/20 text-purple-400",
+          };
+          return (
+            <Badge className={colorMap[status] || "bg-gray-500/20 text-gray-400"}>
+              {t(`staking.status.${status}`)}
+            </Badge>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: t("common.actions"),
+        cell: ({ row }) => (
+          <div className="flex gap-2">
             <Button
-              type="link"
-              size="small"
-              danger
+              variant="ghost"
+              size="sm"
               onClick={() => {
-                setSelectedStaking(record);
-                setUnstakeModalVisible(true);
+                setSelectedStaking(row.original);
+                setDetailModalVisible(true);
               }}
             >
-              {t("staking.unstake.title")}
+              {t("common.details")}
             </Button>
-          )}
-          {record.status === "matured" && record.pending_rewards > 0 && (
-            <Button
-              type="link"
-              size="small"
-              onClick={() => handleClaim(record)}
-            >
-              {t("staking.claim.title")}
-            </Button>
-          )}
-        </Space>
-      ),
-    },
-  ];
+            {row.original.status === "active" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-400 hover:text-red-300"
+                onClick={() => {
+                  setSelectedStaking(row.original);
+                  setUnstakeModalVisible(true);
+                }}
+              >
+                {t("staking.unstake.title")}
+              </Button>
+            )}
+            {row.original.status === "matured" &&
+              row.original.pending_rewards > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-primary"
+                  onClick={() => handleClaim(row.original)}
+                >
+                  {t("staking.claim.title")}
+                </Button>
+              )}
+          </div>
+        ),
+      },
+    ],
+    [t]
+  );
 
   return (
     <RequireKyc>
-      <div style={{ position: "relative", minHeight: "calc(100vh - 200px)" }}>
+      <div className="relative min-h-[calc(100vh-200px)]">
         {/* Background Orbs */}
         <div
           className="bg-orb bg-orb-gold animate-float"
@@ -423,744 +543,760 @@ export default function StakingPage() {
           style={{ bottom: "20%", left: "5%", opacity: 0.3 }}
         />
 
-        <Flex
-          vertical
-          gap={24}
-          style={{ padding: "24px 0", position: "relative", zIndex: 1 }}
-        >
+        <div className="flex flex-col gap-6 py-6 relative z-10">
           {/* 页面标题 */}
-          <Flex
-            justify="space-between"
-            align="center"
-            className="fade-in-stagger"
-          >
-            <Flex vertical>
-              <Title level={2} style={{ margin: 0 }}>
-                <FireOutlined style={{ marginRight: 8, color: "#fa541c" }} />
+          <div className="flex justify-between items-center fade-in-stagger">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-2xl font-bold flex items-center gap-2 m-0">
+                <Flame className="h-6 w-6 text-orange-500" />
                 {t("staking.title")}
-              </Title>
-              <Text type="secondary">{t("staking.subtitle")}</Text>
-            </Flex>
-          </Flex>
+              </h2>
+              <p className="text-muted-foreground">{t("staking.subtitle")}</p>
+            </div>
+          </div>
 
           {/* 统计卡片 */}
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title={t("staking.stats.totalStaked")}
-                  value={stats?.total_staked || 0}
-                  suffix="tokens"
-                  prefix={<RocketOutlined />}
-                  styles={{ content: { color: "#1890ff" } }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title={t("staking.stats.activeStakes")}
-                  value={stats?.active_stakes || 0}
-                  prefix={<ClockCircleOutlined />}
-                  styles={{ content: { color: "#722ed1" } }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title={t("staking.stats.totalRewards")}
-                  value={stats?.total_rewards_earned || 0}
-                  precision={4}
-                  suffix="PLT"
-                  prefix={<TrophyOutlined />}
-                  styles={{ content: { color: "#52c41a" } }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title={t("staking.stats.pendingRewards")}
-                  value={stats?.pending_rewards || 0}
-                  precision={4}
-                  suffix="PLT"
-                  prefix={<GiftOutlined />}
-                  styles={{ content: { color: "#faad14" } }}
-                />
-              </Card>
-            </Col>
-          </Row>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              title={t("staking.stats.totalStaked")}
+              value={stats?.total_staked || 0}
+              suffix="tokens"
+              prefix={<Rocket className="h-5 w-5" />}
+              valueClassName="text-blue-400"
+            />
+            <StatCard
+              title={t("staking.stats.activeStakes")}
+              value={stats?.active_stakes || 0}
+              prefix={<Clock className="h-5 w-5" />}
+              valueClassName="text-purple-400"
+            />
+            <StatCard
+              title={t("staking.stats.totalRewards")}
+              value={stats?.total_rewards_earned || 0}
+              precision={4}
+              suffix="PLT"
+              prefix={<Trophy className="h-5 w-5" />}
+              valueClassName="text-green-400"
+            />
+            <StatCard
+              title={t("staking.stats.pendingRewards")}
+              value={stats?.pending_rewards || 0}
+              precision={4}
+              suffix="PLT"
+              prefix={<Gift className="h-5 w-5" />}
+              valueClassName="text-yellow-400"
+            />
+          </div>
 
           {/* 今日限额 */}
           {limit && (
             <Card>
-              <Flex justify="space-between" align="center">
-                <Flex vertical>
-                  <Text strong>{t("staking.limit.title")}</Text>
-                  <Text type="secondary">
-                    {t("staking.info.dailyLimit", {
-                      amount: limit.total_limit.toLocaleString(),
-                    })}
-                  </Text>
-                </Flex>
-                <Progress
-                  type="circle"
-                  percent={Math.round(
-                    (limit.used_limit / limit.total_limit) * 100
-                  )}
-                  format={() => (
-                    <span style={{ fontSize: 14 }}>
-                      {limit.remaining_limit.toLocaleString()}
-                      <br />
-                      <span style={{ fontSize: 10, color: "#999" }}>
-                        {t("staking.limit.remaining")}
-                      </span>
+              <CardContent className="p-6">
+                <div className="flex justify-between items-center">
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold">{t("staking.limit.title")}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.info.dailyLimit", {
+                        amount: limit.total_limit.toLocaleString(),
+                      })}
                     </span>
-                  )}
-                  size={80}
-                  status={limit.is_exhausted ? "exception" : "active"}
-                />
-              </Flex>
-              {limit.is_exhausted && (
-                <Alert
-                  type="warning"
-                  message={t("staking.limit.exhausted")}
-                  description={t("staking.limit.exhaustedDesc")}
-                  style={{ marginTop: 16 }}
-                />
-              )}
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="relative w-20 h-20">
+                      <svg className="w-20 h-20 transform -rotate-90">
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r="36"
+                          stroke="currentColor"
+                          strokeWidth="8"
+                          fill="none"
+                          className="text-white/10"
+                        />
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r="36"
+                          stroke="currentColor"
+                          strokeWidth="8"
+                          fill="none"
+                          strokeDasharray={`${
+                            (limit.used_limit / limit.total_limit) * 226
+                          } 226`}
+                          className={
+                            limit.is_exhausted ? "text-red-500" : "text-primary"
+                          }
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-sm font-semibold">
+                          {limit.remaining_limit.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {t("staking.limit.remaining")}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {limit.is_exhausted && (
+                  <div className="mt-4">
+                    <AlertBox
+                      type="warning"
+                      message={t("staking.limit.exhausted")}
+                      description={t("staking.limit.exhaustedDesc")}
+                    />
+                  </div>
+                )}
+              </CardContent>
             </Card>
           )}
 
           {/* 新建质押 */}
-          <Card
-            title={
-              <Flex align="center" gap={8}>
-                <ThunderboltOutlined style={{ color: "#faad14" }} />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-400" />
                 {t("staking.stake.title")}
-              </Flex>
-            }
-          >
-            {loading ? (
-              <Spin />
-            ) : subscriptions.length === 0 ? (
-              <Empty
-                description={
-                  <Flex vertical align="center" gap={8}>
-                    <Text>{t("staking.stake.noSubscription")}</Text>
-                    <Text type="secondary">
-                      {t("staking.stake.noSubscriptionDesc")}
-                    </Text>
-                  </Flex>
-                }
-              >
-                <Button type="primary" href="/assets">
-                  {t("staking.stake.goToAssets")}
-                </Button>
-              </Empty>
-            ) : (
-              <Flex vertical gap={24}>
-                {/* 选择认购 */}
-                <div>
-                  <Text strong style={{ display: "block", marginBottom: 8 }}>
-                    {t("staking.stake.selectSubscription")}
-                  </Text>
-                  <Select
-                    style={{ width: "100%" }}
-                    placeholder={t("staking.stake.selectSubscription")}
-                    value={selectedSubscription}
-                    onChange={setSelectedSubscription}
-                    options={subscriptions.map((sub) => ({
-                      value: sub.id,
-                      label: (
-                        <Flex justify="space-between">
-                          <span>
-                            {sub.asset_name || `Asset #${sub.asset_id}`}
-                          </span>
-                          <span style={{ color: "#999" }}>
-                            {sub.rwa_token_amount.toLocaleString()} tokens
-                          </span>
-                        </Flex>
-                      ),
-                    }))}
-                  />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-10 w-full" />
                 </div>
+              ) : subscriptions.length === 0 ? (
+                <EmptyState
+                  message={t("staking.stake.noSubscription")}
+                  description={t("staking.stake.noSubscriptionDesc")}
+                >
+                  <Button className="mt-4" asChild>
+                    <a href="/assets">{t("staking.stake.goToAssets")}</a>
+                  </Button>
+                </EmptyState>
+              ) : (
+                <div className="flex flex-col gap-6">
+                  {/* 选择认购 */}
+                  <div>
+                    <label className="block font-semibold mb-2">
+                      {t("staking.stake.selectSubscription")}
+                    </label>
+                    <Select
+                      value={selectedSubscription || ""}
+                      onValueChange={setSelectedSubscription}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={t("staking.stake.selectSubscription")}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subscriptions.map((sub) => (
+                          <SelectItem key={sub.id} value={String(sub.id)}>
+                            <div className="flex justify-between items-center w-full gap-4">
+                              <span>
+                                {sub.asset_name || `Asset #${sub.asset_id}`}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {sub.rwa_token_amount.toLocaleString()} tokens
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                {/* 选择周期 */}
-                <div>
-                  <Text strong style={{ display: "block", marginBottom: 8 }}>
-                    {t("staking.stake.period")}
-                  </Text>
-                  <Row gutter={16}>
-                    {STAKING_PERIODS.map(({ period, multiplier }) => (
-                      <Col xs={12} sm={6} key={period}>
+                  {/* 选择周期 */}
+                  <div>
+                    <label className="block font-semibold mb-2">
+                      {t("staking.stake.period")}
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      {STAKING_PERIODS.map(({ period, multiplier }) => (
                         <PeriodCard
+                          key={period}
                           days={period}
                           multiplier={multiplier}
                           selected={selectedPeriod === period}
                           recommended={period === 30}
                           onClick={() => setSelectedPeriod(period)}
                         />
-                      </Col>
-                    ))}
-                  </Row>
-                </div>
+                      ))}
+                    </div>
+                  </div>
 
-                {/* 质押数量 */}
-                <div>
-                  <Flex
-                    justify="space-between"
-                    align="center"
-                    style={{ marginBottom: 8 }}
-                  >
-                    <Text strong>{t("staking.stake.amount")}</Text>
-                    {selectedSubscription && (
-                      <Text type="secondary">
-                        {t("staking.stake.available")}:{" "}
-                        {maxStakeAmount.toLocaleString()} tokens
-                      </Text>
-                    )}
-                  </Flex>
-                  <InputNumber
-                    style={{ width: "100%" }}
-                    placeholder={t("staking.stake.amountPlaceholder")}
-                    value={stakeAmount}
-                    onChange={(value) => setStakeAmount(value || 0)}
-                    min={0}
-                    max={effectiveMax}
-                    disabled={!selectedSubscription}
-                    addonAfter={
+                  {/* 质押数量 */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="font-semibold">
+                        {t("staking.stake.amount")}
+                      </label>
+                      {selectedSubscription && (
+                        <span className="text-sm text-muted-foreground">
+                          {t("staking.stake.available")}:{" "}
+                          {maxStakeAmount.toLocaleString()} tokens
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder={t("staking.stake.amountPlaceholder")}
+                        value={stakeAmount || ""}
+                        onChange={(e) =>
+                          setStakeAmount(Number(e.target.value) || 0)
+                        }
+                        min={0}
+                        max={effectiveMax}
+                        disabled={!selectedSubscription}
+                        className="flex-1"
+                      />
                       <Button
-                        type="link"
-                        size="small"
+                        variant="outline"
                         onClick={() => setStakeAmount(effectiveMax)}
                         disabled={!selectedSubscription}
                       >
                         MAX
                       </Button>
+                    </div>
+                  </div>
+
+                  {/* 预览 */}
+                  {stakeAmount > 0 && (
+                    <Card className="bg-green-500/5 border-green-500/20">
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm text-muted-foreground">
+                              {t("staking.stake.multiplier")}
+                            </span>
+                            <span className="text-xl font-bold text-green-400">
+                              {multiplier}x
+                            </span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm text-muted-foreground">
+                              {t("staking.stake.expectedRewards")}
+                            </span>
+                            <span className="text-xl font-bold text-yellow-400">
+                              {expectedRewards.toFixed(4)} PLT
+                            </span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm text-muted-foreground">
+                              {t("staking.stake.endDate")}
+                            </span>
+                            <span className="text-xl font-bold">
+                              {new Date(
+                                Date.now() + selectedPeriod * 24 * 60 * 60 * 1000
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* 提交按钮 */}
+                  <Button
+                    size="lg"
+                    className="w-full"
+                    disabled={
+                      !selectedSubscription ||
+                      stakeAmount <= 0 ||
+                      limit?.is_exhausted ||
+                      staking
                     }
-                  />
+                    onClick={handleStake}
+                  >
+                    {staking
+                      ? t("staking.stake.processing")
+                      : t("staking.stake.confirm")}
+                  </Button>
                 </div>
-
-                {/* 预览 */}
-                {stakeAmount > 0 && (
-                  <Card style={{ background: "rgba(82, 196, 26, 0.05)" }}>
-                    <Row gutter={16}>
-                      <Col span={8}>
-                        <Statistic
-                          title={t("staking.stake.multiplier")}
-                          value={multiplier}
-                          suffix="x"
-                          styles={{ content: { color: "#52c41a" } }}
-                        />
-                      </Col>
-                      <Col span={8}>
-                        <Statistic
-                          title={t("staking.stake.expectedRewards")}
-                          value={expectedRewards}
-                          precision={4}
-                          suffix="PLT"
-                          styles={{ content: { color: "#faad14" } }}
-                        />
-                      </Col>
-                      <Col span={8}>
-                        <Statistic
-                          title={t("staking.stake.endDate")}
-                          value={new Date(
-                            Date.now() + selectedPeriod * 24 * 60 * 60 * 1000
-                          ).toLocaleDateString()}
-                        />
-                      </Col>
-                    </Row>
-                  </Card>
-                )}
-
-                {/* 提交按钮 */}
-                <Button
-                  type="primary"
-                  size="large"
-                  block
-                  loading={staking}
-                  disabled={
-                    !selectedSubscription ||
-                    stakeAmount <= 0 ||
-                    limit?.is_exhausted
-                  }
-                  onClick={handleStake}
-                >
-                  {staking
-                    ? t("staking.stake.processing")
-                    : t("staking.stake.confirm")}
-                </Button>
-              </Flex>
-            )}
+              )}
+            </CardContent>
           </Card>
 
           {/* 质押列表 */}
-          <Card
-            title={t("staking.list.title")}
-            extra={
-              <Segmented
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>{t("staking.list.title")}</CardTitle>
+              <Tabs
                 value={statusFilter}
-                onChange={(value) => {
-                  setStatusFilter(value as string);
+                onValueChange={(value) => {
+                  setStatusFilter(value);
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
-                options={[
-                  { label: t("staking.list.all"), value: "all" },
-                  { label: t("staking.list.active"), value: "active" },
-                  { label: t("staking.list.matured"), value: "matured" },
-                  { label: t("staking.list.unstaked"), value: "unstaked" },
-                ]}
-              />
-            }
-          >
-            <Table
-              columns={columns}
-              dataSource={stakings}
-              rowKey="id"
-              loading={loading}
-              pagination={{
-                current: pagination.page,
-                pageSize: pagination.pageSize,
-                total: pagination.total,
-                onChange: (page, pageSize) =>
-                  setPagination({ page, pageSize, total: pagination.total }),
-              }}
-              locale={{
-                emptyText: (
-                  <Empty
-                    description={
-                      <Flex vertical align="center" gap={4}>
-                        <Text>{t("staking.list.empty")}</Text>
-                        <Text type="secondary">
-                          {t("staking.list.emptyDesc")}
-                        </Text>
-                      </Flex>
-                    }
-                  />
-                ),
-              }}
-            />
+              >
+                <TabsList>
+                  <TabsTrigger value="all">{t("staking.list.all")}</TabsTrigger>
+                  <TabsTrigger value="active">
+                    {t("staking.list.active")}
+                  </TabsTrigger>
+                  <TabsTrigger value="matured">
+                    {t("staking.list.matured")}
+                  </TabsTrigger>
+                  <TabsTrigger value="unstaked">
+                    {t("staking.list.unstaked")}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : stakings.length > 0 ? (
+                <DataTable
+                  columns={columns}
+                  data={stakings}
+                  pagination={{
+                    pageIndex: pagination.page - 1,
+                    pageSize: pagination.pageSize,
+                    pageCount: Math.ceil(pagination.total / pagination.pageSize),
+                    onPageChange: (page) =>
+                      setPagination((prev) => ({ ...prev, page: page + 1 })),
+                    onPageSizeChange: (size) =>
+                      setPagination((prev) => ({ ...prev, pageSize: size })),
+                  }}
+                  emptyMessage={t("staking.list.empty")}
+                />
+              ) : (
+                <EmptyState
+                  message={t("staking.list.empty")}
+                  description={t("staking.list.emptyDesc")}
+                />
+              )}
+            </CardContent>
           </Card>
 
           {/* PLT 代币信息 */}
           {pltInfo && (
-            <Card
-              title={
-                <Flex align="center" gap={8}>
-                  <DollarOutlined style={{ color: "#faad14" }} />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-yellow-400" />
                   {t("staking.plt.title")}
-                </Flex>
-              }
-            >
-              <Row gutter={[24, 24]}>
-                {/* 左侧：代币统计 */}
-                <Col xs={24} lg={12}>
-                  <Flex vertical gap={16}>
-                    <Text strong style={{ fontSize: 16 }}>
-                      {t("staking.plt.tokenInfo")}
-                    </Text>
-                    <Row gutter={[16, 16]}>
-                      <Col span={12}>
-                        <Statistic
-                          title={t("staking.plt.totalSupply")}
-                          value={pltInfo.total_supply}
-                          suffix="PLT"
-                          formatter={(value) => value?.toLocaleString()}
-                        />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic
-                          title={t("staking.plt.circulatingSupply")}
-                          value={pltInfo.circulating_supply}
-                          suffix="PLT"
-                          formatter={(value) => value?.toLocaleString()}
-                        />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic
-                          title={t("staking.plt.currentPrice")}
-                          value={pltInfo.current_price || 0}
-                          prefix="$"
-                          precision={4}
-                        />
-                      </Col>
-                      <Col span={12}>
-                        <Statistic
-                          title={t("staking.plt.marketCap")}
-                          value={pltInfo.market_cap || 0}
-                          prefix="$"
-                          formatter={(value) => value?.toLocaleString()}
-                        />
-                      </Col>
-                    </Row>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* 左侧：代币统计 */}
+                  <div className="flex flex-col gap-4">
+                    <h4 className="font-semibold">{t("staking.plt.tokenInfo")}</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">
+                          {t("staking.plt.totalSupply")}
+                        </span>
+                        <span className="text-lg font-semibold">
+                          {pltInfo.total_supply.toLocaleString()} PLT
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">
+                          {t("staking.plt.circulatingSupply")}
+                        </span>
+                        <span className="text-lg font-semibold">
+                          {pltInfo.circulating_supply.toLocaleString()} PLT
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">
+                          {t("staking.plt.currentPrice")}
+                        </span>
+                        <span className="text-lg font-semibold">
+                          ${(pltInfo.current_price || 0).toFixed(4)}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">
+                          {t("staking.plt.marketCap")}
+                        </span>
+                        <span className="text-lg font-semibold">
+                          ${(pltInfo.market_cap || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
 
-                    <Divider style={{ margin: "8px 0" }} />
+                    <div className="h-px bg-border my-2" />
 
-                    <Text strong style={{ fontSize: 16 }}>
-                      {t("staking.plt.stakingPool")}
-                    </Text>
-                    <Row gutter={[16, 16]}>
-                      <Col span={8}>
-                        <Statistic
-                          title={t("staking.plt.poolTotal")}
-                          value={pltInfo.staking_rewards_pool}
-                          suffix="PLT"
-                          styles={{ content: { fontSize: 16 } }}
-                          formatter={(value) =>
-                            (Number(value) / 1000000).toFixed(1) + "M"
-                          }
-                        />
-                      </Col>
-                      <Col span={8}>
-                        <Statistic
-                          title={t("staking.plt.poolDistributed")}
-                          value={pltInfo.staking_rewards_distributed}
-                          suffix="PLT"
-                          styles={{
-                            content: { fontSize: 16, color: "#52c41a" },
-                          }}
-                          formatter={(value) => value?.toLocaleString()}
-                        />
-                      </Col>
-                      <Col span={8}>
-                        <Statistic
-                          title={t("staking.plt.poolRemaining")}
-                          value={pltInfo.staking_rewards_remaining}
-                          suffix="PLT"
-                          styles={{
-                            content: { fontSize: 16, color: "#1890ff" },
-                          }}
-                          formatter={(value) =>
-                            (Number(value) / 1000000).toFixed(1) + "M"
-                          }
-                        />
-                      </Col>
-                    </Row>
+                    <h4 className="font-semibold">{t("staking.plt.stakingPool")}</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">
+                          {t("staking.plt.poolTotal")}
+                        </span>
+                        <span className="font-semibold">
+                          {(pltInfo.staking_rewards_pool / 1000000).toFixed(1)}M PLT
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">
+                          {t("staking.plt.poolDistributed")}
+                        </span>
+                        <span className="font-semibold text-green-400">
+                          {pltInfo.staking_rewards_distributed.toLocaleString()} PLT
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">
+                          {t("staking.plt.poolRemaining")}
+                        </span>
+                        <span className="font-semibold text-blue-400">
+                          {(pltInfo.staking_rewards_remaining / 1000000).toFixed(1)}M
+                          PLT
+                        </span>
+                      </div>
+                    </div>
 
                     <Progress
-                      percent={Math.round(
+                      value={Math.round(
                         (pltInfo.staking_rewards_distributed /
                           pltInfo.staking_rewards_pool) *
                           100
                       )}
-                      status="active"
-                      strokeColor="#52c41a"
+                      indicatorColor="#22c55e"
+                      showInfo
                       format={(percent) =>
                         `${percent}% ${t("staking.plt.poolDistributed")}`
                       }
                     />
-                  </Flex>
-                </Col>
+                  </div>
 
-                {/* 右侧：分配图表 */}
-                <Col xs={24} lg={12}>
-                  <Flex vertical gap={16}>
-                    <Text strong style={{ fontSize: 16 }}>
-                      <PieChartOutlined style={{ marginRight: 8 }} />
+                  {/* 右侧：分配图表 */}
+                  <div className="flex flex-col gap-4">
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <PieChart className="h-4 w-4" />
                       {t("staking.plt.distributionTitle")}
-                    </Text>
+                    </h4>
 
                     {/* 简易饼图使用 CSS */}
-                    <Flex justify="center">
+                    <div className="flex justify-center">
                       <div
+                        className="w-[200px] h-[200px] rounded-full shadow-lg"
                         style={{
-                          width: 200,
-                          height: 200,
-                          borderRadius: "50%",
                           background: `conic-gradient(
-                          ${pltInfo.distribution.allocations
-                            .map((a, i) => {
-                              const start = pltInfo.distribution.allocations
-                                .slice(0, i)
-                                .reduce((sum, x) => sum + x.percentage, 0);
-                              return `${a.color} ${start}% ${
-                                start + a.percentage
-                              }%`;
-                            })
-                            .join(", ")}
-                        )`,
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                            ${pltInfo.distribution.allocations
+                              .map((a, i) => {
+                                const start = pltInfo.distribution.allocations
+                                  .slice(0, i)
+                                  .reduce((sum, x) => sum + x.percentage, 0);
+                                return `${a.color} ${start}% ${
+                                  start + a.percentage
+                                }%`;
+                              })
+                              .join(", ")}
+                          )`,
                         }}
                       />
-                    </Flex>
+                    </div>
 
                     {/* 图例 */}
-                    <Row gutter={[8, 8]}>
-                      {pltInfo.distribution.allocations.map((alloc) => (
-                        <Col xs={12} key={alloc.name}>
-                          <Flex align="center" gap={8}>
-                            <div
-                              style={{
-                                width: 12,
-                                height: 12,
-                                borderRadius: 2,
-                                backgroundColor: alloc.color,
-                              }}
-                            />
-                            <Tooltip title={alloc.description}>
-                              <Text type="secondary" style={{ fontSize: 12 }}>
-                                {alloc.name}: {alloc.percentage}%
-                              </Text>
-                            </Tooltip>
-                          </Flex>
-                        </Col>
-                      ))}
-                    </Row>
+                    <div className="grid grid-cols-2 gap-2">
+                      <TooltipProvider>
+                        {pltInfo.distribution.allocations.map((alloc) => (
+                          <Tooltip key={alloc.name}>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2 cursor-help">
+                                <div
+                                  className="w-3 h-3 rounded-sm"
+                                  style={{ backgroundColor: alloc.color }}
+                                />
+                                <span className="text-xs text-muted-foreground">
+                                  {alloc.name}: {alloc.percentage}%
+                                </span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{alloc.description}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ))}
+                      </TooltipProvider>
+                    </div>
 
                     {/* APY */}
-                    <Flex justify="center" style={{ marginTop: 8 }}>
-                      <Card
-                        size="small"
-                        style={{
-                          background: "rgba(82, 196, 26, 0.1)",
-                          border: "none",
-                        }}
-                      >
-                        <Statistic
-                          title={t("staking.plt.averageApy")}
-                          value={pltInfo.average_apy}
-                          suffix="%"
-                          precision={2}
-                          styles={{
-                            content: { color: "#52c41a", fontSize: 24 },
-                          }}
-                        />
+                    <div className="flex justify-center mt-2">
+                      <Card className="bg-green-500/10 border-green-500/20">
+                        <CardContent className="p-4 flex flex-col items-center">
+                          <span className="text-sm text-muted-foreground">
+                            {t("staking.plt.averageApy")}
+                          </span>
+                          <span className="text-2xl font-bold text-green-400">
+                            {pltInfo.average_apy.toFixed(2)}%
+                          </span>
+                        </CardContent>
                       </Card>
-                    </Flex>
-                  </Flex>
-                </Col>
-              </Row>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           )}
 
           {/* 使用说明 */}
-          <Card
-            title={
-              <Flex align="center" gap={8}>
-                <InfoCircleOutlined />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5" />
                 {t("staking.info.howItWorks")}
-              </Flex>
-            }
-          >
-            <Steps
-              direction="vertical"
-              items={[
-                {
-                  title: t("staking.info.step1"),
-                  status: "finish",
-                },
-                {
-                  title: t("staking.info.step2"),
-                  status: "finish",
-                },
-                {
-                  title: t("staking.info.step3"),
-                  status: "finish",
-                },
-                {
-                  title: t("staking.info.step4"),
-                  status: "finish",
-                },
-              ]}
-            />
-            <Divider />
-            <Flex vertical gap={8}>
-              <Text type="secondary">
-                <InfoCircleOutlined style={{ marginRight: 8 }} />
-                {t("staking.info.rewards")}
-              </Text>
-              <Text type="secondary">
-                <WarningOutlined style={{ marginRight: 8, color: "#faad14" }} />
-                {t("staking.info.earlyUnstake")}
-              </Text>
-            </Flex>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                {/* 步骤说明 */}
+                <div className="flex flex-col gap-3">
+                  {[1, 2, 3, 4].map((step) => (
+                    <div key={step} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold">
+                        {step}
+                      </div>
+                      <span>{t(`staking.info.step${step}`)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="h-px bg-border my-2" />
+
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    {t("staking.info.rewards")}
+                  </p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-400" />
+                    {t("staking.info.earlyUnstake")}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
           </Card>
-        </Flex>
+        </div>
 
         {/* 详情弹窗 */}
-        <Modal
-          title={t("staking.detail.title")}
-          open={detailModalVisible}
-          onCancel={() => {
-            setDetailModalVisible(false);
-            setSelectedStaking(null);
-          }}
-          footer={null}
-          width={600}
-        >
-          {selectedStaking && (
-            <Flex vertical gap={16}>
-              <Row gutter={[16, 16]}>
-                <Col span={12}>
-                  <Text type="secondary">{t("staking.detail.stakingId")}</Text>
-                  <br />
-                  <Text strong>#{selectedStaking.id}</Text>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">{t("staking.detail.status")}</Text>
-                  <br />
-                  <Tag color={STAKING_STATUS_COLORS[selectedStaking.status]}>
-                    {t(`staking.status.${selectedStaking.status}`)}
-                  </Tag>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">{t("staking.detail.amount")}</Text>
-                  <br />
-                  <Text strong>
-                    {selectedStaking.amount.toLocaleString()} tokens
-                  </Text>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">{t("staking.detail.period")}</Text>
-                  <br />
-                  <Text strong>
-                    {selectedStaking.period} {t("common.days")}
-                  </Text>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">{t("staking.detail.startDate")}</Text>
-                  <br />
-                  <Text>
-                    {new Date(selectedStaking.start_date).toLocaleDateString()}
-                  </Text>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">{t("staking.detail.endDate")}</Text>
-                  <br />
-                  <Text>
-                    {new Date(selectedStaking.end_date).toLocaleDateString()}
-                  </Text>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">{t("staking.detail.multiplier")}</Text>
-                  <br />
-                  <Text style={{ color: "#52c41a" }}>
-                    {selectedStaking.multiplier}x
-                  </Text>
-                </Col>
-                <Col span={12}>
-                  <Text type="secondary">
-                    {t("staking.detail.daysRemaining")}
-                  </Text>
-                  <br />
-                  <Text>
-                    {selectedStaking.days_remaining} {t("common.days")}
-                  </Text>
-                </Col>
-              </Row>
+        <Dialog open={detailModalVisible} onOpenChange={setDetailModalVisible}>
+          <DialogContent className="max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>{t("staking.detail.title")}</DialogTitle>
+            </DialogHeader>
 
-              <Divider />
+            {selectedStaking && (
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.detail.stakingId")}
+                    </span>
+                    <span className="font-semibold">#{selectedStaking.id}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.detail.status")}
+                    </span>
+                    <Badge
+                      className={cn(
+                        "w-fit",
+                        selectedStaking.status === "active"
+                          ? "bg-blue-500/20 text-blue-400"
+                          : selectedStaking.status === "matured"
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-gray-500/20 text-gray-400"
+                      )}
+                    >
+                      {t(`staking.status.${selectedStaking.status}`)}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.detail.amount")}
+                    </span>
+                    <span className="font-semibold">
+                      {selectedStaking.amount.toLocaleString()} tokens
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.detail.period")}
+                    </span>
+                    <span className="font-semibold">
+                      {selectedStaking.period} {t("common.days")}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.detail.startDate")}
+                    </span>
+                    <span>
+                      {new Date(selectedStaking.start_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.detail.endDate")}
+                    </span>
+                    <span>
+                      {new Date(selectedStaking.end_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.detail.multiplier")}
+                    </span>
+                    <span className="text-green-400">
+                      {selectedStaking.multiplier}x
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.detail.daysRemaining")}
+                    </span>
+                    <span>
+                      {selectedStaking.days_remaining} {t("common.days")}
+                    </span>
+                  </div>
+                </div>
 
-              <Row gutter={[16, 16]}>
-                <Col span={8}>
-                  <Statistic
-                    title={t("staking.detail.expectedRewards")}
-                    value={selectedStaking.expected_rewards}
-                    precision={4}
-                    suffix="PLT"
-                  />
-                </Col>
-                <Col span={8}>
-                  <Statistic
-                    title={t("staking.detail.currentRewards")}
-                    value={selectedStaking.current_rewards}
-                    precision={4}
-                    suffix="PLT"
-                    styles={{ content: { color: "#faad14" } }}
-                  />
-                </Col>
-                <Col span={8}>
-                  <Statistic
-                    title={t("staking.detail.claimedRewards")}
-                    value={selectedStaking.claimed_rewards}
-                    precision={4}
-                    suffix="PLT"
-                    styles={{ content: { color: "#52c41a" } }}
-                  />
-                </Col>
-              </Row>
+                <div className="h-px bg-border" />
 
-              {selectedStaking.stake_tx_hash && (
-                <>
-                  <Divider />
-                  <Flex align="center" gap={8}>
-                    <Text type="secondary">{t("staking.detail.txHash")}:</Text>
-                    <Tooltip title={selectedStaking.stake_tx_hash}>
-                      <Text copyable ellipsis style={{ maxWidth: 200 }}>
-                        {selectedStaking.stake_tx_hash}
-                      </Text>
-                    </Tooltip>
-                    <Button
-                      type="link"
-                      size="small"
-                      icon={<LinkOutlined />}
-                      href={`https://etherscan.io/tx/${selectedStaking.stake_tx_hash}`}
-                      target="_blank"
-                    />
-                  </Flex>
-                </>
-              )}
-            </Flex>
-          )}
-        </Modal>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.detail.expectedRewards")}
+                    </span>
+                    <span className="text-lg font-semibold">
+                      {selectedStaking.expected_rewards.toFixed(4)} PLT
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.detail.currentRewards")}
+                    </span>
+                    <span className="text-lg font-semibold text-yellow-400">
+                      {selectedStaking.current_rewards.toFixed(4)} PLT
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.detail.claimedRewards")}
+                    </span>
+                    <span className="text-lg font-semibold text-green-400">
+                      {selectedStaking.claimed_rewards.toFixed(4)} PLT
+                    </span>
+                  </div>
+                </div>
+
+                {selectedStaking.stake_tx_hash && (
+                  <>
+                    <div className="h-px bg-border" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        {t("staking.detail.txHash")}:
+                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="font-mono text-sm truncate max-w-[200px]">
+                              {selectedStaking.stake_tx_hash}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{selectedStaking.stake_tx_hash}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        asChild
+                      >
+                        <a
+                          href={`https://etherscan.io/tx/${selectedStaking.stake_tx_hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* 解除质押弹窗 */}
-        <Modal
-          title={t("staking.unstake.title")}
-          open={unstakeModalVisible}
-          onCancel={() => {
-            setUnstakeModalVisible(false);
-            setSelectedStaking(null);
-          }}
-          onOk={handleUnstake}
-          okText={t("staking.unstake.confirm")}
-          okButtonProps={{ danger: true }}
-        >
-          {selectedStaking && (
-            <Flex vertical gap={16}>
-              <Alert
-                type={selectedStaking.is_matured ? "success" : "warning"}
-                message={
-                  selectedStaking.is_matured
-                    ? t("staking.unstake.warningMatured")
-                    : t("staking.unstake.warning")
-                }
-                description={
-                  !selectedStaking.is_matured &&
-                  t("staking.unstake.warningEarly", {
-                    percent: Math.round(
-                      (selectedStaking.days_remaining /
-                        selectedStaking.period) *
-                        100
-                    ),
-                  })
-                }
-              />
+        <Dialog open={unstakeModalVisible} onOpenChange={setUnstakeModalVisible}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("staking.unstake.title")}</DialogTitle>
+            </DialogHeader>
 
-              <Row gutter={[16, 16]}>
-                <Col span={12}>
-                  <Statistic
-                    title={t("staking.unstake.principal")}
-                    value={selectedStaking.amount}
-                    suffix="tokens"
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title={t("staking.unstake.rewards")}
-                    value={selectedStaking.current_rewards}
-                    precision={4}
-                    suffix="PLT"
-                    styles={{ content: { color: "#52c41a" } }}
-                  />
-                </Col>
-              </Row>
-            </Flex>
-          )}
-        </Modal>
+            {selectedStaking && (
+              <div className="flex flex-col gap-4">
+                <AlertBox
+                  type={selectedStaking.is_matured ? "success" : "warning"}
+                  message={
+                    selectedStaking.is_matured
+                      ? t("staking.unstake.warningMatured")
+                      : t("staking.unstake.warning")
+                  }
+                  description={
+                    !selectedStaking.is_matured
+                      ? t("staking.unstake.warningEarly", {
+                          percent: Math.round(
+                            (selectedStaking.days_remaining /
+                              selectedStaking.period) *
+                              100
+                          ),
+                        })
+                      : undefined
+                  }
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.unstake.principal")}
+                    </span>
+                    <span className="text-lg font-semibold">
+                      {selectedStaking.amount.toLocaleString()} tokens
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">
+                      {t("staking.unstake.rewards")}
+                    </span>
+                    <span className="text-lg font-semibold text-green-400">
+                      {selectedStaking.current_rewards.toFixed(4)} PLT
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setUnstakeModalVisible(false)}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button variant="destructive" onClick={handleUnstake}>
+                {t("staking.unstake.confirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </RequireKyc>
   );

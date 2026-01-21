@@ -1,36 +1,85 @@
 'use client'
 /**
  * KYC Required Guard Component
- * Wraps content that requires KYC verification
+ * 包装需要 KYC 验证的内容
+ * 
+ * 已从 Ant Design 迁移到 shadcn/ui
  */
 import { ReactNode } from 'react'
-import { Modal, Button, Result, Spin } from 'antd'
-import { SafetyCertificateOutlined, ArrowRightOutlined } from '@ant-design/icons'
+import { ShieldAlert, ArrowRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAccount } from 'wagmi'
 import { useKycStatus } from '@/hooks/use-kyc-status'
 
+// shadcn/ui 组件
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+
 interface KycRequiredGuardProps {
   children: ReactNode
   /**
-   * What to show when KYC is not approved
-   * - 'modal': Show a modal overlay (default)
-   * - 'inline': Show inline message
-   * - 'redirect': Redirect to KYC page (requires onRedirect)
+   * KYC 未通过时显示的模式
+   * - 'modal': 显示模态框覆盖层 (默认)
+   * - 'inline': 显示内联消息
+   * - 'redirect': 重定向到 KYC 页面 (需要 onRedirect)
    */
   mode?: 'modal' | 'inline' | 'redirect'
   /**
-   * Callback when user clicks "Go to KYC"
+   * 用户点击"前往 KYC"时的回调
    */
   onStartKyc?: () => void
   /**
-   * Custom title for the KYC required message
+   * KYC 必需消息的自定义标题
    */
   title?: string
   /**
-   * Custom description for the KYC required message
+   * KYC 必需消息的自定义描述
    */
   description?: string
+}
+
+/**
+ * KYC 必需消息组件
+ * 用于 inline 和 modal 模式
+ */
+function KycRequiredMessage({
+  title,
+  description,
+  onStartKyc,
+}: {
+  title: string
+  description: string
+  onStartKyc?: () => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="flex flex-col items-center justify-center py-8 px-4">
+      <div className="w-16 h-16 rounded-full bg-[#FFD700]/20 flex items-center justify-center mb-6">
+        <ShieldAlert 
+          className="w-10 h-10 text-[#FFD700]" 
+          aria-hidden="true" 
+        />
+      </div>
+      <h3 className="text-lg font-semibold mb-2 text-center">
+        {title}
+      </h3>
+      <p className="text-muted-foreground text-center max-w-sm mb-6">
+        {description}
+      </p>
+      <Button onClick={onStartKyc}>
+        <ArrowRight className="w-4 h-4 mr-2" aria-hidden="true" />
+        {t('kyc.guard.startButton')}
+      </Button>
+    </div>
+  )
 }
 
 export function KycRequiredGuard({
@@ -42,69 +91,74 @@ export function KycRequiredGuard({
 }: KycRequiredGuardProps) {
   const { t } = useTranslation()
   const { isConnected } = useAccount()
-  const { isLoading, isApproved, status } = useKycStatus()
+  const { isLoading, isApproved } = useKycStatus()
 
-  // Loading state
+  // 加载状态
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: 40 }}>
-        <Spin size="large" />
+      <div className="flex flex-col items-center justify-center py-12">
+        <Skeleton className="w-16 h-16 rounded-full mb-6" />
+        <Skeleton className="h-6 w-48 mb-2" />
+        <Skeleton className="h-4 w-64" />
       </div>
     )
   }
 
-  // Not connected - show the content but it won't work
+  // 未连接钱包 - 显示内容但功能不可用
   if (!isConnected) {
     return <>{children}</>
   }
 
-  // KYC approved - show content
+  // KYC 已通过 - 显示内容
   if (isApproved) {
     return <>{children}</>
   }
 
-  // KYC not approved - show guard
-  const kycMessage = (
-    <Result
-      icon={<SafetyCertificateOutlined style={{ color: 'var(--color-warning)' }} />}
-      title={title || t('kyc.guard.title')}
-      subTitle={description || t('kyc.guard.description')}
-      extra={
-        <Button
-          type="primary"
-          icon={<ArrowRightOutlined />}
-          onClick={onStartKyc}
-        >
-          {t('kyc.guard.startButton')}
-        </Button>
-      }
-    />
-  )
+  // KYC 未通过 - 显示守卫
+  const guardTitle = title || t('kyc.guard.title')
+  const guardDescription = description || t('kyc.guard.description')
 
+  // 内联模式
   if (mode === 'inline') {
-    return kycMessage
+    return (
+      <KycRequiredMessage
+        title={guardTitle}
+        description={guardDescription}
+        onStartKyc={onStartKyc}
+      />
+    )
   }
 
-  // Modal mode
+  // 模态框模式
   return (
     <>
       {children}
-      <Modal
-        open={true}
-        footer={null}
-        closable={false}
-        centered
-        maskClosable={false}
-        width={480}
-      >
-        {kycMessage}
-      </Modal>
+      <Dialog open={true}>
+        <DialogContent 
+          className="sm:max-w-md"
+          // 禁用关闭按钮和点击外部关闭
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          // 隐藏默认关闭按钮
+          hideCloseButton
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>{guardTitle}</DialogTitle>
+            <DialogDescription>{guardDescription}</DialogDescription>
+          </DialogHeader>
+          <KycRequiredMessage
+            title={guardTitle}
+            description={guardDescription}
+            onStartKyc={onStartKyc}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
 
 /**
- * Hook to check if KYC is required before action
+ * Hook 用于在操作前检查是否需要 KYC
  */
 export function useKycRequired() {
   const { isConnected } = useAccount()
@@ -117,4 +171,3 @@ export function useKycRequired() {
     status,
   }
 }
-

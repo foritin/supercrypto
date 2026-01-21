@@ -1,19 +1,14 @@
 'use client'
 
-import { Typography, Card, Space, Alert, Tabs } from 'antd'
-import { 
-  ToolOutlined, 
-  ThunderboltOutlined, 
-  DollarOutlined,
-  DeleteOutlined
-} from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
+import { Wrench, Zap, DollarSign, Trash2, AlertTriangle, XCircle } from 'lucide-react'
 import { RequireAdmin } from '@/components/auth'
 import { QuickKycPanel } from '@/components/dev/quick-kyc-panel'
 import { MockTokenMint } from '@/components/dev/mock-token-mint'
 import { DataResetPanel } from '@/components/dev/data-reset-panel'
-
-const { Title, Text } = Typography
+import { Card, CardContent } from '@/components/ui/card'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
 // Environment check - only show dev tools in local/test environment
 const ENV = process.env.NEXT_PUBLIC_ENV || 'local'
@@ -25,75 +20,69 @@ export default function DevToolsPage() {
   // 非开发环境直接返回不可用提示
   if (!IS_DEV_ENV) {
     return (
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '60px 24px' }}>
-        <Alert
-          type="error"
-          message={t('dev.notAvailable')}
-          description={t('dev.notAvailableDescription')}
-        />
+      <div className="max-w-[800px] mx-auto py-[60px] px-6">
+        <Alert variant="destructive">
+          <XCircle className="h-4 w-4" />
+          <AlertTitle>{t('dev.notAvailable')}</AlertTitle>
+          <AlertDescription>{t('dev.notAvailableDescription')}</AlertDescription>
+        </Alert>
       </div>
     )
   }
 
-  const tabItems = [
-    {
-      key: 'kyc',
-      label: (
-        <Space>
-          <ThunderboltOutlined />
-          {t('dev.quickKyc.title')}
-        </Space>
-      ),
-      children: <QuickKycPanel />,
-    },
-    {
-      key: 'token',
-      label: (
-        <Space>
-          <DollarOutlined />
-          {t('dev.mockToken.title')}
-        </Space>
-      ),
-      children: <MockTokenMint />,
-    },
-    {
-      key: 'reset',
-      label: (
-        <Space>
-          <DeleteOutlined />
-          {t('dev.dataReset.title')}
-        </Space>
-      ),
-      children: <DataResetPanel />,
-    },
-  ]
-
   return (
     <RequireAdmin>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <div className="max-w-[1200px] mx-auto">
         {/* Page Header */}
-        <div style={{ marginBottom: 32 }}>
-          <Title level={2} style={{ marginBottom: 8 }}>
-            <ToolOutlined style={{ marginRight: 12 }} />
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold text-white mb-2 flex items-center gap-3">
+            <Wrench className="h-6 w-6" />
             {t('dev.title')}
-          </Title>
-          <Text style={{ color: 'rgba(255, 255, 255, 0.65)' }}>
+          </h2>
+          <p className="text-white/65">
             {t('dev.subtitle')}
-          </Text>
+          </p>
         </div>
 
         {/* Warning */}
-        <Alert
-          type="warning"
-          message={t('dev.warning')}
-          description={t('dev.warningDescription', { env: ENV })}
-          style={{ marginBottom: 24 }}
-          showIcon
-        />
+        <Alert variant="warning" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>{t('dev.warning')}</AlertTitle>
+          <AlertDescription>{t('dev.warningDescription', { env: ENV })}</AlertDescription>
+        </Alert>
 
         {/* Tools */}
         <Card>
-          <Tabs items={tabItems} defaultActiveKey="kyc" />
+          <CardContent className="p-6">
+            <Tabs defaultValue="kyc">
+              <TabsList className="mb-4">
+                <TabsTrigger value="kyc" className="flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  {t('dev.quickKyc.title')}
+                </TabsTrigger>
+                <TabsTrigger value="token" className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  {t('dev.mockToken.title')}
+                </TabsTrigger>
+                <TabsTrigger value="reset" className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  {t('dev.dataReset.title')}
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="kyc">
+                <QuickKycPanel />
+              </TabsContent>
+              
+              <TabsContent value="token">
+                <MockTokenMint />
+              </TabsContent>
+              
+              <TabsContent value="reset">
+                <DataResetPanel />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
         </Card>
       </div>
     </RequireAdmin>

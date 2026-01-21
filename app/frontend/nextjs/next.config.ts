@@ -6,8 +6,8 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // 转译 Ant Design 相关包
-  transpilePackages: ['antd', '@ant-design/icons', '@ant-design/cssinjs'],
+  // 转译相关包
+  transpilePackages: [],
   
   // 环境变量
   env: {
@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
   // 实验性功能
   experimental: {
     // 优化包导入
-    optimizePackageImports: ['antd', '@ant-design/icons'],
+    optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
   },
 };
 

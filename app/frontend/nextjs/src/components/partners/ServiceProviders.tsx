@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button } from 'antd';
-import { ArrowRightOutlined } from '@ant-design/icons';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import './ServiceProviders.css';
 
 /**
@@ -157,12 +158,13 @@ export const ServiceProviders: React.FC<ServiceProvidersProps> = ({
 
         {/* CTA Button */}
         <Button
-          type="primary"
-          size="large"
-          className="sp-cta-button"
-          href={ctaLink}
+          size="lg"
+          className="sp-cta-button bg-gradient-to-br from-[#00D4AA] to-[#00A080] text-[#0a0a0f] border-none rounded-[28px] px-8 h-12 text-[15px] font-semibold shadow-[0_4px_20px_rgba(0,212,170,0.3)] hover:translate-y-[-2px] hover:shadow-[0_6px_28px_rgba(0,212,170,0.4)] transition-all duration-300"
+          asChild
         >
-          {ctaText} <ArrowRightOutlined />
+          <Link href={ctaLink}>
+            {ctaText} <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
         </Button>
       </div>
     </section>

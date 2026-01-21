@@ -23,13 +23,15 @@ import {
   useEdgesState,
   Position,
   NodeTypes,
+  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Tag, Space, Typography, Badge, Skeleton, Alert, Collapse, Divider } from 'antd';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, Copy, Check } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { contractGraphService, GraphNode } from '@/services/contract-graph';
-
-const { Text } = Typography;
 
 // Web3 配色方案
 const WEB3_COLORS = {
@@ -73,6 +75,37 @@ const WEB3_COLORS = {
     nodeBorder: 'rgba(255, 255, 255, 0.1)',
   },
 };
+
+// 可复制地址组件
+function CopyableAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1 text-[8px] font-mono text-white/50 hover:text-white/70 transition-colors"
+      title={copied ? '已复制' : '复制地址'}
+    >
+      <span>{address.slice(0, 8)}...{address.slice(-6)}</span>
+      {copied ? (
+        <Check className="w-2.5 h-2.5 text-emerald-500" />
+      ) : (
+        <Copy className="w-2.5 h-2.5" />
+      )}
+    </button>
+  );
+}
 
 // 自定义节点组件 - Web3 玻璃态风格（层次化布局优化）
 function Web3ContractNode({ data }: { data: GraphNode }) {
@@ -152,25 +185,18 @@ function Web3ContractNode({ data }: { data: GraphNode }) {
       />
 
       {/* 内容 */}
-      <Space orientation="vertical" size={6} style={{ width: '100%', position: 'relative', zIndex: 1 }}>
+      <div className="flex flex-col gap-1.5 w-full relative z-10">
         {/* 项目标签 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Tag
+        <div className="flex justify-between items-center">
+          <Badge
+            className="text-[9px] px-1.5 py-0.5 rounded uppercase font-semibold border-none text-white"
             style={{
-              margin: 0,
               background: nodeStyle.gradient,
-              border: 'none',
-              color: '#fff',
-              fontSize: 9,
-              padding: '2px 6px',
-              borderRadius: 4,
-              fontWeight: 600,
               boxShadow: `0 2px 6px ${nodeStyle.glowColor}40`,
-              textTransform: 'uppercase',
             }}
           >
             {data.project || 'unknown'}
-          </Tag>
+          </Badge>
 
           {/* 状态指示器 */}
           <div
@@ -191,48 +217,29 @@ function Web3ContractNode({ data }: { data: GraphNode }) {
         </div>
 
         {/* 合约名称 */}
-        <Text
-          strong
+        <span
+          className="text-xs font-bold text-white block overflow-hidden text-ellipsis whitespace-nowrap"
           style={{
-            fontSize: 12,
-            color: '#fff',
-            display: 'block',
             textShadow: '0 0 8px rgba(255, 255, 255, 0.4)',
             letterSpacing: '0.3px',
             lineHeight: '1.3',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
           }}
         >
           {data.label}
-        </Text>
+        </span>
 
         {/* 地址缩写 */}
         {data.address && (
-          <Text
-            copyable={{
-              text: data.address,
-              tooltips: ['复制地址', '已复制'],
-            }}
-            style={{
-              fontSize: 8,
-              fontFamily: 'monospace',
-              color: 'rgba(255, 255, 255, 0.5)',
-              display: 'block',
-            }}
-          >
-            {data.address.slice(0, 8)}...{data.address.slice(-6)}
-          </Text>
+          <CopyableAddress address={data.address} />
         )}
 
         {/* 状态文本 */}
-        <Text style={{ fontSize: 9, color: 'rgba(255, 255, 255, 0.6)' }}>
+        <span className="text-[9px] text-white/60">
           {data.status === 'ready' ? '已就绪' : 
            data.status === 'missing_deps' ? '缺少依赖' :
            data.status === 'not_registered' ? '未注册' : '未部署'}
-        </Text>
-      </Space>
+        </span>
+      </div>
 
       {/* 装饰性光晕 */}
       {isHovered && (
@@ -343,7 +350,6 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
     // 按项目排列，然后按层级排列
     const projectNames = Object.keys(projectGroups).sort();
     let xOffset = 100;
-    let currentProjectLevel = 0;
 
     projectNames.forEach((project, projectIndex) => {
       const projectNodes = projectGroups[project];
@@ -431,25 +437,20 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
         source: edge.source,
         target: edge.target,
         label: (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}>
-            <Text style={{ fontSize: 9, color: labelColor, fontWeight: 500 }}>
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] font-medium" style={{ color: labelColor }}>
               {edge.key || edge.target}
-            </Text>
-            <Tag style={{
-              margin: 0,
-              fontSize: 8,
-              padding: '0 4px',
-              borderRadius: 4,
-              background: isRegistered ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-              border: `1px solid ${labelColor}`,
-              color: labelColor,
-            }}>
+            </span>
+            <Badge
+              className="text-[8px] px-1 py-0 rounded"
+              style={{
+                background: isRegistered ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                border: `1px solid ${labelColor}`,
+                color: labelColor,
+              }}
+            >
               {labelText}
-            </Tag>
+            </Badge>
           </div>
         ),
         labelStyle: {
@@ -472,7 +473,7 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
         },
         animated,
         markerEnd: {
-          type: 'arrowclosed',
+          type: MarkerType.ArrowClosed,
           color: strokeColor,
           width: 20,
           height: 20,
@@ -528,57 +529,56 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
 
   if (isLoading) {
     return (
-      <div style={{
-        width: '100%',
-        height: 'calc(100vh - 280px)',
-        minHeight: 600,
-        background: WEB3_COLORS.background.dark,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 16,
-      }}>
-        <Skeleton active paragraph={{ rows: 4 }} />
+      <div 
+        className="w-full flex items-center justify-center rounded-2xl"
+        style={{
+          height: 'calc(100vh - 280px)',
+          minHeight: 600,
+          background: WEB3_COLORS.background.dark,
+        }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <Skeleton className="h-8 w-48 bg-white/10" />
+          <Skeleton className="h-4 w-64 bg-white/10" />
+          <Skeleton className="h-4 w-56 bg-white/10" />
+          <Skeleton className="h-4 w-60 bg-white/10" />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        width: '100%',
-        height: 'calc(100vh - 280px)',
-        minHeight: 600,
-        background: WEB3_COLORS.background.dark,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 16,
-      }}>
-        <Alert
-          type="error"
-          message="加载失败"
-          description={(error as Error).message || '无法加载合约依赖关系图数据'}
-          showIcon
-          style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none' }}
-        />
+      <div 
+        className="w-full flex items-center justify-center rounded-2xl"
+        style={{
+          height: 'calc(100vh - 280px)',
+          minHeight: 600,
+          background: WEB3_COLORS.background.dark,
+        }}
+      >
+        <Alert variant="destructive" className="max-w-md bg-red-500/10 border-red-500/30">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>加载失败</AlertTitle>
+          <AlertDescription>
+            {(error as Error).message || '无法加载合约依赖关系图数据'}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   if (!graphData || graphData.nodes.length === 0) {
     return (
-      <div style={{
-        width: '100%',
-        height: 'calc(100vh - 280px)',
-        minHeight: 600,
-        background: WEB3_COLORS.background.dark,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 16,
-      }}>
-        <Text style={{ color: 'rgba(255, 255, 255, 0.5)' }}>暂无合约数据</Text>
+      <div 
+        className="w-full flex items-center justify-center rounded-2xl"
+        style={{
+          height: 'calc(100vh - 280px)',
+          minHeight: 600,
+          background: WEB3_COLORS.background.dark,
+        }}
+      >
+        <span className="text-white/50">暂无合约数据</span>
       </div>
     );
   }
@@ -609,61 +609,40 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
       `}</style>
 
       {/* 图例 */}
-      <div style={{
-        marginBottom: 16,
-        padding: 12,
-        background: 'rgba(15, 15, 26, 0.6)',
-        borderRadius: 12,
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(8px)',
-      }}>
-        <Space size="large" wrap>
-          <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12 }}>
+      <div className="mb-4 p-3 rounded-xl border border-white/10 backdrop-blur-lg" style={{ background: 'rgba(15, 15, 26, 0.6)' }}>
+        <div className="flex flex-wrap items-center gap-6">
+          <span className="text-white/70 text-xs">
             <strong>连线说明：</strong>
-          </Text>
-          <Space size={16}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{
-                width: 30,
-                height: 2,
-                background: '#10B981',
-                borderRadius: 1,
-              }} />
-              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11 }}>已绑定</Text>
+          </span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <div className="w-[30px] h-0.5 bg-emerald-500 rounded-sm" />
+              <span className="text-white/60 text-[11px]">已绑定</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{
-                width: 30,
-                height: 2,
-                background: '#F59E0B',
-                borderRadius: 1,
-                background: 'repeating-linear-gradient(90deg, #F59E0B 0, #F59E0B 4px, transparent 4px, transparent 8px)',
-              }} />
-              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11 }}>已部署未绑定</Text>
+            <div className="flex items-center gap-1.5">
+              <div 
+                className="w-[30px] h-0.5 rounded-sm"
+                style={{ background: 'repeating-linear-gradient(90deg, #F59E0B 0, #F59E0B 4px, transparent 4px, transparent 8px)' }}
+              />
+              <span className="text-white/60 text-[11px]">已部署未绑定</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{
-                width: 30,
-                height: 2,
-                background: '#EF4444',
-                borderRadius: 1,
-                animation: 'status-pulse 1s ease-in-out infinite',
-              }} />
-              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11 }}>需要更新</Text>
+            <div className="flex items-center gap-1.5">
+              <div 
+                className="w-[30px] h-0.5 bg-red-500 rounded-sm"
+                style={{ animation: 'status-pulse 1s ease-in-out infinite' }}
+              />
+              <span className="text-white/60 text-[11px]">需要更新</span>
             </div>
-          </Space>
-        </Space>
+          </div>
+        </div>
       </div>
 
       <div
+        className="w-full rounded-2xl overflow-hidden border border-white/10"
         style={{
-          width: '100%',
           height: 'calc(100vh - 380px)',
           minHeight: 600,
           background: WEB3_COLORS.background.dark,
-          borderRadius: 16,
-          overflow: 'hidden',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
           boxShadow: '0 0 40px rgba(0, 0, 0, 0.5), inset 0 0 60px rgba(0, 240, 255, 0.05)',
         }}
       >

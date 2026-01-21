@@ -1,16 +1,14 @@
 import { ReactNode } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
-import { ConfigProvider } from 'antd'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/test/mocks/i18n'
 
 // Wrapper component with all providers
+// Note: Ant Design ConfigProvider has been removed as part of shadcn/ui migration
 function AllProviders({ children }: { children: ReactNode }) {
   return (
     <I18nextProvider i18n={i18n}>
-      <ConfigProvider>
-        {children}
-      </ConfigProvider>
+      {children}
     </I18nextProvider>
   )
 }

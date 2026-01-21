@@ -1,21 +1,21 @@
 const home = {
   home: {
-    badge: "Next-Gen RWA Investment Platform",
+    badge: "Institutional-Grade RWA Platform",
     heroTitle: {
-      unlock: "Unlock",
-      onWeb3: "On Web3",
+      unlock: "Bridge",
+      onWeb3: "to DeFi Yields",
     },
     dynamicWords: [
-      "DeFi Strategies",
-      "Staking Rewards",
-      "Smart Investing",
+      "Real Assets",
+      "Stable Yields",
+      "Smart Capital",
     ],
     title: {
       line1: "The Fastest",
       highlight: "Way",
       line2: "to Invest in Real World Assets",
     },
-    subtitle: "Tokenize real-world assets with institutional-grade security. Earn up to 15% APY with flexible lock periods and complete transparency.",
+    subtitle: "Institutional-grade security meets DeFi innovation. Earn up to 15% APY backed by tokenized real-world assets with complete transparency.",
     cta: {
       primary: "Explore Assets",
       secondary: "My Portfolio",

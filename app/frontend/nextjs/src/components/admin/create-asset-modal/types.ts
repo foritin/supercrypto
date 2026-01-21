@@ -1,24 +1,12 @@
 /**
  * CreateAssetModal 类型定义
+ * Migrated from Ant Design to shadcn/ui
  */
-import type { UploadFile } from 'antd'
 import type { AssetType, ProjectContractInfo } from '@/services/asset'
+import type { CreateAssetModalFormValues } from '@/lib/validations/asset'
 
-// 表单值类型定义
-export interface AssetFormValues {
-  name: string
-  symbol: string
-  asset_type: AssetType
-  description?: string
-  location?: string
-  total_supply: number
-  min_subscription?: number
-  current_price?: number
-  apy_3m?: number
-  apy_6m?: number
-  apy_12m?: number
-  bind_projects?: string[]
-}
+// Re-export form values type for convenience
+export type { CreateAssetModalFormValues as AssetFormValues }
 
 // 媒体类型配置
 export const MEDIA_CATEGORIES = {
@@ -29,6 +17,16 @@ export const MEDIA_CATEGORIES = {
 } as const
 
 export type MediaCategory = keyof typeof MEDIA_CATEGORIES
+
+// File type for upload (replacing Ant Design UploadFile)
+export interface UploadFileItem {
+  uid: string
+  name: string
+  status?: 'uploading' | 'done' | 'error' | 'removed'
+  url?: string
+  originFileObj?: File
+  preview?: string
+}
 
 // Modal Props
 export interface CreateAssetModalProps {
@@ -50,10 +48,10 @@ export interface FormSectionProps {
 
 // 媒体上传区域 Props
 export interface MediaUploadSectionProps {
-  coverFile: UploadFile[]
-  galleryFiles: UploadFile[]
-  onCoverChange: (fileList: UploadFile[]) => void
-  onGalleryChange: (fileList: UploadFile[]) => void
+  coverFile: UploadFileItem[]
+  galleryFiles: UploadFileItem[]
+  onCoverChange: (fileList: UploadFileItem[]) => void
+  onGalleryChange: (fileList: UploadFileItem[]) => void
   beforeUpload: (file: File, maxSize?: number) => boolean
 }
 
@@ -68,4 +66,5 @@ export interface ProjectBindingSectionProps {
     contract_type?: string
     is_available: boolean
   }>
+  onProjectsChange: (projects: string[]) => void
 }

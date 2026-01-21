@@ -1,6 +1,6 @@
 /**
  * Contract Filter Bar Component
- * 合约筛选栏组件
+ * 合约筛选栏组件 - 已迁移至 shadcn/ui 组件
  *
  * 筛选条件:
  * - 搜索框 (合约名称)
@@ -12,9 +12,25 @@
  */
 'use client';
 
-import { Form, Input, Select, Button, Space, Checkbox, Tooltip } from 'antd';
-import { SearchOutlined, ClearOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { Search, X, HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Label } from '@/components/ui/label';
 
 export interface ContractFilters {
   search: string;              // 搜索关键词
@@ -38,6 +54,32 @@ interface ContractFilterBarProps {
   onReset: () => void;
 }
 
+// 项目选项
+const PROJECT_OPTIONS = [
+  { value: 'all', labelKey: 'admin.contracts.filters.allProjects' },
+  { value: 'common', labelKey: 'admin.contracts.filters.common' },
+  { value: 'mock', labelKey: 'admin.contracts.filters.mock' },
+  { value: 'vanke', labelKey: 'admin.contracts.filters.vanke' },
+  { value: 'fake', labelKey: 'admin.contracts.filters.fake' },
+];
+
+// 状态选项
+const STATUS_OPTIONS = [
+  { value: 'all', labelKey: 'admin.contracts.filters.allStatus' },
+  { value: 'synced', labelKey: 'admin.contracts.status.synced' },
+  { value: 'mismatch', labelKey: 'admin.contracts.status.mismatch' },
+  { value: 'not_registered', labelKey: 'admin.contracts.status.notRegistered' },
+  { value: 'not_deployed', labelKey: 'admin.contracts.status.notDeployed' },
+];
+
+// 类型选项
+const TYPE_OPTIONS = [
+  { value: 'all', labelKey: 'admin.contracts.filters.allTypes' },
+  { value: 'exclusive', labelKey: 'admin.contracts.filters.exclusive' },
+  { value: 'common', labelKey: 'admin.contracts.filters.commonType' },
+  { value: 'mock', labelKey: 'admin.contracts.filters.mockType' },
+];
+
 export function ContractFilterBar({
   filters,
   onFiltersChange,
@@ -55,95 +97,109 @@ export function ContractFilterBar({
 
   return (
     <div
+      className="p-4 mb-4 rounded-xl border backdrop-blur-lg"
       style={{
-        padding: 16,
-        marginBottom: 16,
         background: 'var(--glass-bg)',
-        borderRadius: 12,
-        border: '1px solid var(--glass-border)',
-        backdropFilter: 'var(--glass-blur)',
+        borderColor: 'var(--glass-border)',
       }}
     >
-      <Space size="middle" wrap style={{ width: '100%' }}>
+      <div className="flex flex-wrap items-center gap-3">
         {/* 搜索框 */}
-        <Input
-          placeholder={t('admin.contracts.filters.searchPlaceholder')}
-          prefix={<SearchOutlined />}
-          allowClear
-          style={{ width: 200 }}
-          value={filters.search}
-          onChange={(e) => handleFieldChange('search', e.target.value)}
-        />
+        <div className="relative w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t('admin.contracts.filters.searchPlaceholder')}
+            className="pl-9"
+            value={filters.search}
+            onChange={(e) => handleFieldChange('search', e.target.value)}
+          />
+        </div>
 
         {/* 项目下拉 */}
         <Select
-          placeholder={t('admin.contracts.filters.projectPlaceholder')}
-          style={{ width: 140 }}
-          value={filters.project || undefined}
-          onChange={(value) => handleFieldChange('project', value)}
-          allowClear
+          value={filters.project || 'all'}
+          onValueChange={(value) => handleFieldChange('project', value)}
         >
-          <Select.Option value="all">{t('admin.contracts.filters.allProjects')}</Select.Option>
-          <Select.Option value="common">{t('admin.contracts.filters.common')}</Select.Option>
-          <Select.Option value="mock">{t('admin.contracts.filters.mock')}</Select.Option>
-          <Select.Option value="vanke">{t('admin.contracts.filters.vanke')}</Select.Option>
-          <Select.Option value="fake">{t('admin.contracts.filters.fake')}</Select.Option>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder={t('admin.contracts.filters.projectPlaceholder')} />
+          </SelectTrigger>
+          <SelectContent>
+            {PROJECT_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {t(opt.labelKey, opt.value === 'all' ? '全部项目' : opt.value)}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
 
-        {/* 状态下拉（纯 Provider 模式） */}
+        {/* 状态下拉 */}
         <Select
-          placeholder={t('admin.contracts.filters.statusPlaceholder')}
-          style={{ width: 140 }}
-          value={filters.status || undefined}
-          onChange={(value) => handleFieldChange('status', value)}
-          allowClear
+          value={filters.status || 'all'}
+          onValueChange={(value) => handleFieldChange('status', value)}
         >
-          <Select.Option value="all">{t('admin.contracts.filters.allStatus')}</Select.Option>
-          <Select.Option value="synced">{t('admin.contracts.status.synced')}</Select.Option>
-          <Select.Option value="mismatch">{t('admin.contracts.status.mismatch')}</Select.Option>
-          <Select.Option value="not_registered">{t('admin.contracts.status.notRegistered')}</Select.Option>
-          <Select.Option value="not_deployed">{t('admin.contracts.status.notDeployed')}</Select.Option>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder={t('admin.contracts.filters.statusPlaceholder')} />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {t(opt.labelKey, opt.value === 'all' ? '全部状态' : opt.value)}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
 
         {/* 类型下拉 */}
         <Select
-          placeholder={t('admin.contracts.filters.typePlaceholder')}
-          style={{ width: 140 }}
-          value={filters.type || undefined}
-          onChange={(value) => handleFieldChange('type', value)}
-          allowClear
+          value={filters.type || 'all'}
+          onValueChange={(value) => handleFieldChange('type', value)}
         >
-          <Select.Option value="all">{t('admin.contracts.filters.allTypes')}</Select.Option>
-          <Select.Option value="exclusive">{t('admin.contracts.filters.exclusive')}</Select.Option>
-          <Select.Option value="common">{t('admin.contracts.filters.commonType')}</Select.Option>
-          <Select.Option value="mock">{t('admin.contracts.filters.mockType')}</Select.Option>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder={t('admin.contracts.filters.typePlaceholder')} />
+          </SelectTrigger>
+          <SelectContent>
+            {TYPE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {t(opt.labelKey, opt.value === 'all' ? '全部类型' : opt.value)}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
 
         {/* 重置按钮 */}
-        <Button icon={<ClearOutlined />} onClick={handleReset}>
+        <Button variant="outline" onClick={handleReset}>
+          <X className="h-4 w-4 mr-1" />
           {t('admin.contracts.filters.reset')}
         </Button>
 
         {/* 分隔线 */}
-        <div style={{ 
-          width: 1, 
-          height: 24, 
-          background: 'rgba(255, 255, 255, 0.15)',
-          margin: '0 4px',
-        }} />
+        <div className="w-px h-6 bg-white/15 mx-1" />
 
         {/* 显示已解绑 Checkbox */}
-        <Tooltip title={t('admin.contracts.filters.showDeletedTooltip')}>
-          <Checkbox
-            checked={filters.showDeleted}
-            onChange={(e) => handleFieldChange('showDeleted', e.target.checked)}
-            style={{ color: 'rgba(255, 255, 255, 0.65)' }}
-          >
-            {t('admin.contracts.filters.showDeleted')}
-            <QuestionCircleOutlined style={{ marginLeft: 4, fontSize: 12, opacity: 0.6 }} />
-          </Checkbox>
-        </Tooltip>
-      </Space>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="showDeleted"
+                  checked={filters.showDeleted}
+                  onCheckedChange={(checked) => handleFieldChange('showDeleted', checked === true)}
+                />
+                <Label
+                  htmlFor="showDeleted"
+                  className="text-sm text-muted-foreground cursor-pointer flex items-center gap-1"
+                >
+                  {t('admin.contracts.filters.showDeleted')}
+                  <HelpCircle className="h-3 w-3 opacity-60" />
+                </Label>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('admin.contracts.filters.showDeletedTooltip')}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
     </div>
   );
 }

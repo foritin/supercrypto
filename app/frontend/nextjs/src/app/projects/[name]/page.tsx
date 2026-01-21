@@ -22,31 +22,23 @@ import {
   DeploymentPlan,
   DependencyGraph,
 } from '@/components/project-registry';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import {
-  Card,
-  Button,
-  Spin,
-  Alert,
-  Row,
-  Col,
-  Typography,
-  Space,
-  Statistic,
-} from 'antd';
-import {
-  ArrowLeftOutlined,
-  ReloadOutlined,
-  DatabaseOutlined,
-  LinkOutlined,
-  FileTextOutlined,
-  ClockCircleOutlined,
-  ThunderboltOutlined,
-  CheckCircleOutlined,
-  WarningOutlined,
-  ApartmentOutlined,
-} from '@ant-design/icons';
-
-const { Title, Text, Paragraph } = Typography;
+  ArrowLeft,
+  RefreshCw,
+  Database,
+  Link2,
+  FileText,
+  Clock,
+  Zap,
+  CheckCircle,
+  AlertTriangle,
+  GitBranch,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -90,181 +82,219 @@ export default function ProjectDetailPage() {
 
   if (isLoading) {
     return (
-      <div style={{ padding: 32, textAlign: 'center' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: 16 }}>
-          <Text type="secondary">加载项目详情...</Text>
-        </div>
+      <div className="p-8 text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+        <p className="mt-4 text-muted-foreground">加载项目详情...</p>
       </div>
     );
   }
 
   if (error || !status) {
     return (
-      <div style={{ padding: 32 }}>
+      <div className="p-8">
         <Link href="/projects">
-          <Button icon={<ArrowLeftOutlined />} style={{ marginBottom: 16 }}>
+          <Button variant="outline" className="mb-4">
+            <ArrowLeft className="h-4 w-4" />
             返回项目列表
           </Button>
         </Link>
-        <Alert
-          type="error"
-          message="加载失败"
-          description={error instanceof Error ? error.message : '项目不存在'}
-          showIcon
-        />
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>加载失败</AlertTitle>
+          <AlertDescription>
+            {error instanceof Error ? error.message : '项目不存在'}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="p-6">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
-        <Space>
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+        <div className="flex items-center gap-3">
           <Link href="/projects">
-            <Button icon={<ArrowLeftOutlined />}>返回</Button>
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4" />
+              返回
+            </Button>
           </Link>
-          <Title level={3} style={{ margin: 0, textTransform: 'capitalize' }}>
+          <h1 className="text-2xl font-bold capitalize">
             {status.project_name}
-          </Title>
+          </h1>
           <ProjectStatusBadge readiness={status.readiness} />
-        </Space>
+        </div>
 
-        <Space>
+        <div className="flex items-center gap-2">
           <Button
-            icon={<DatabaseOutlined spin={syncing && syncType === 'config'} />}
+            variant="outline"
             onClick={handleSyncConfig}
-            loading={syncing && syncType === 'config'}
+            disabled={syncing && syncType === 'config'}
           >
+            {syncing && syncType === 'config' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Database className="h-4 w-4" />
+            )}
             同步配置
           </Button>
           <Button
-            icon={<LinkOutlined spin={syncing && syncType === 'bindings'} />}
+            variant="outline"
             onClick={handleSyncBindings}
-            loading={syncing && syncType === 'bindings'}
+            disabled={syncing && syncType === 'bindings'}
           >
+            {syncing && syncType === 'bindings' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Link2 className="h-4 w-4" />
+            )}
             同步绑定
           </Button>
-        </Space>
+        </div>
       </div>
 
       {/* Summary */}
-      <Card size="small" style={{ marginBottom: 24, background: '#fafafa' }}>
-        <Paragraph type="secondary" style={{ margin: 0 }}>
-          {status.summary}
-        </Paragraph>
+      <Card className="mb-6 bg-muted/30">
+        <CardContent className="py-4">
+          <p className="text-muted-foreground">{status.summary}</p>
+        </CardContent>
       </Card>
 
       {/* Stats Grid */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic
-              title="总合约数"
-              value={status.statistics.total_contracts}
-              prefix={<FileTextOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic
-              title="已注册"
-              value={status.statistics.registered_count}
-              prefix={<ClockCircleOutlined style={{ color: '#1890ff' }} />}
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic
-              title="已部署"
-              value={status.statistics.deployed_count}
-              prefix={<ThunderboltOutlined style={{ color: '#722ed1' }} />}
-              valueStyle={{ color: '#722ed1' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card>
-            <Statistic
-              title="已激活"
-              value={status.statistics.active_count}
-              prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-              valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">总合约数</p>
+                <p className="text-2xl font-bold">{status.statistics.total_contracts}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-blue-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">已注册</p>
+                <p className="text-2xl font-bold text-blue-500">{status.statistics.registered_count}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Zap className="h-5 w-5 text-purple-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">已部署</p>
+                <p className="text-2xl font-bold text-purple-500">{status.statistics.deployed_count}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-[#00D4AA]" />
+              <div>
+                <p className="text-sm text-muted-foreground">已激活</p>
+                <p className="text-2xl font-bold text-[#00D4AA]">{status.statistics.active_count}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Main Content Grid */}
-      <Row gutter={[24, 24]}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Contract List */}
-        <Col xs={24} lg={16}>
-          <Card title={<Space><FileTextOutlined />合约列表</Space>}>
-            <ContractList
-              contracts={status.contracts}
-              deployableContracts={status.deployable_contracts}
-              blockingContracts={status.blocking_contracts}
-            />
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                合约列表
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ContractList
+                contracts={status.contracts}
+                deployableContracts={status.deployable_contracts}
+                blockingContracts={status.blocking_contracts}
+              />
+            </CardContent>
           </Card>
 
           {/* Dependency Graph */}
-          <Card
-            title={<Space><ApartmentOutlined />依赖关系图</Space>}
-            style={{ marginTop: 24 }}
-            bodyStyle={{ padding: 0, overflow: 'hidden' }}
-          >
-            <DependencyGraph projectName={name} network="local" />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GitBranch className="h-5 w-5" />
+                依赖关系图
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 overflow-hidden">
+              <DependencyGraph projectName={name} network="local" />
+            </CardContent>
           </Card>
-        </Col>
+        </div>
 
         {/* Sidebar */}
-        <Col xs={24} lg={8}>
-          <Space orientation="vertical" style={{ width: '100%' }} size={16}>
-            {/* Deployment Plan */}
-            {deploymentPlan && (
-              <DeploymentPlan plan={deploymentPlan} />
-            )}
+        <div className="space-y-4">
+          {/* Deployment Plan */}
+          {deploymentPlan && (
+            <DeploymentPlan plan={deploymentPlan} />
+          )}
 
-            {/* Blocking Contracts */}
-            {status.blocking_contracts.length > 0 && (
-              <Card
-                title={<Space><WarningOutlined style={{ color: '#f5222d' }} />阻塞合约</Space>}
-                size="small"
-                style={{ borderColor: '#ffccc7' }}
-              >
-                <Space orientation="vertical" style={{ width: '100%' }}>
-                  {status.blocking_contracts.map((contractName) => (
-                    <Text key={contractName} code style={{ background: '#fff2f0', display: 'block', padding: '4px 8px' }}>
-                      {contractName}
-                    </Text>
-                  ))}
-                </Space>
-              </Card>
-            )}
+          {/* Blocking Contracts */}
+          {status.blocking_contracts.length > 0 && (
+            <Card className="border-destructive/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  阻塞合约
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {status.blocking_contracts.map((contractName) => (
+                  <div
+                    key={contractName}
+                    className="px-3 py-2 rounded-md bg-destructive/10 font-mono text-sm"
+                  >
+                    {contractName}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Deployable Contracts */}
-            {status.deployable_contracts.length > 0 && (
-              <Card
-                title={<Space><CheckCircleOutlined style={{ color: '#52c41a' }} />可部署合约</Space>}
-                size="small"
-                style={{ borderColor: '#b7eb8f' }}
-              >
-                <Space orientation="vertical" style={{ width: '100%' }}>
-                  {status.deployable_contracts.map((contractName) => (
-                    <Text key={contractName} code style={{ background: '#f6ffed', display: 'block', padding: '4px 8px' }}>
-                      {contractName}
-                    </Text>
-                  ))}
-                </Space>
-              </Card>
-            )}
-          </Space>
-        </Col>
-      </Row>
+          {/* Deployable Contracts */}
+          {status.deployable_contracts.length > 0 && (
+            <Card className="border-[#00D4AA]/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <CheckCircle className="h-4 w-4 text-[#00D4AA]" />
+                  可部署合约
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {status.deployable_contracts.map((contractName) => (
+                  <div
+                    key={contractName}
+                    className="px-3 py-2 rounded-md bg-[#00D4AA]/10 font-mono text-sm"
+                  >
+                    {contractName}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

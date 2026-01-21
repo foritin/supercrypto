@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Image as AntImage, Button } from "antd";
+import { useState, useCallback, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import {
-  LeftOutlined,
-  RightOutlined,
-  ExpandOutlined,
-  PlayCircleOutlined,
-} from "@ant-design/icons";
-import type { AssetMediaItem, MediaType } from "@/services/asset";
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import type { AssetMediaItem } from "@/services/asset";
 
 interface MediaGalleryProps {
   media?: AssetMediaItem[];
@@ -29,7 +29,6 @@ const PLACEHOLDER_IMAGES = [
 export function MediaGallery({
   media,
   coverImage,
-  assetType,
 }: MediaGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -44,13 +43,31 @@ export function MediaGallery({
       ? [coverImage, ...PLACEHOLDER_IMAGES.slice(1)]
       : PLACEHOLDER_IMAGES;
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  };
+  }, [images.length]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-  };
+  }, [images.length]);
+
+  // 键盘导航支持
+  useEffect(() => {
+    if (!previewVisible) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        handlePrev();
+      } else if (e.key === "ArrowRight") {
+        handleNext();
+      } else if (e.key === "Escape") {
+        setPreviewVisible(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previewVisible, handlePrev, handleNext]);
 
   return (
     <div className="media-gallery">
@@ -68,8 +85,9 @@ export function MediaGallery({
               e.stopPropagation();
               handlePrev();
             }}
+            aria-label="上一张图片"
           >
-            <LeftOutlined />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             className="nav-btn nav-next"
@@ -77,8 +95,9 @@ export function MediaGallery({
               e.stopPropagation();
               handleNext();
             }}
+            aria-label="下一张图片"
           >
-            <RightOutlined />
+            <ChevronRight className="w-5 h-5" />
           </button>
 
           {/* 放大按钮 */}
@@ -88,8 +107,9 @@ export function MediaGallery({
               e.stopPropagation();
               setPreviewVisible(true);
             }}
+            aria-label="全屏预览"
           >
-            <ExpandOutlined />
+            <Maximize2 className="w-4 h-4" />
           </button>
 
           {/* 图片计数 */}
@@ -107,33 +127,108 @@ export function MediaGallery({
             className={`thumbnail ${idx === currentIndex ? "active" : ""}`}
             style={{ backgroundImage: `url(${img})` }}
             onClick={() => setCurrentIndex(idx)}
+            role="button"
+            tabIndex={0}
+            aria-label={`查看第 ${idx + 1} 张图片`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                setCurrentIndex(idx);
+              }
+            }}
           />
         ))}
         {images.length > 6 && (
           <div
             className="thumbnail more"
             onClick={() => setPreviewVisible(true)}
+            role="button"
+            tabIndex={0}
+            aria-label={`查看更多 ${images.length - 6} 张图片`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                setPreviewVisible(true);
+              }
+            }}
           >
             +{images.length - 6}
           </div>
         )}
       </div>
 
-      {/* 隐藏的 Ant Design Image 预览 */}
-      <div style={{ display: "none" }}>
-        <AntImage.PreviewGroup
-          preview={{
-            open: previewVisible,
-            onOpenChange: setPreviewVisible,
-            current: currentIndex,
-            onChange: setCurrentIndex,
-          }}
+      {/* shadcn/ui Dialog 图片预览 */}
+      <Dialog open={previewVisible} onOpenChange={setPreviewVisible}>
+        <DialogContent 
+          className="max-w-[90vw] max-h-[90vh] p-0 bg-black/95 border-white/10 overflow-hidden"
+          hideCloseButton
         >
-          {images.map((img, idx) => (
-            <AntImage key={idx} src={img} />
-          ))}
-        </AntImage.PreviewGroup>
-      </div>
+          <VisuallyHidden>
+            <DialogTitle>图片预览</DialogTitle>
+          </VisuallyHidden>
+          <div className="relative flex items-center justify-center min-h-[60vh]">
+            {/* 关闭按钮 */}
+            <button
+              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
+              onClick={() => setPreviewVisible(false)}
+              aria-label="关闭预览"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* 预览图片 */}
+            <img
+              src={images[currentIndex]}
+              alt={`图片 ${currentIndex + 1}`}
+              className="max-w-full max-h-[80vh] object-contain"
+            />
+
+            {/* 导航按钮 - 左 */}
+            {images.length > 1 && (
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
+                onClick={handlePrev}
+                aria-label="上一张图片"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* 导航按钮 - 右 */}
+            {images.length > 1 && (
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
+                onClick={handleNext}
+                aria-label="下一张图片"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* 图片计数器 */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 rounded-full text-white text-sm">
+              {currentIndex + 1} / {images.length}
+            </div>
+          </div>
+
+          {/* 缩略图导航 */}
+          {images.length > 1 && (
+            <div className="flex justify-center gap-2 p-4 bg-black/80 overflow-x-auto">
+              {images.map((img, idx) => (
+                <button
+                  key={idx}
+                  className={`flex-shrink-0 w-16 h-12 rounded-md bg-cover bg-center border-2 transition-all ${
+                    idx === currentIndex
+                      ? "border-[#00d4aa] opacity-100"
+                      : "border-transparent opacity-60 hover:opacity-100"
+                  }`}
+                  style={{ backgroundImage: `url(${img})` }}
+                  onClick={() => setCurrentIndex(idx)}
+                  aria-label={`查看第 ${idx + 1} 张图片`}
+                />
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <style jsx>{`
         .media-gallery {

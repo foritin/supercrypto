@@ -2,19 +2,120 @@
 /**
  * KYC Admin List Component
  * Admin panel for managing KYC applications
+ * 
+ * Migrated from Ant Design to shadcn/ui:
+ * - Table → DataTable (@tanstack/react-table)
+ * - Modal → Dialog (Radix)
+ * - Select → shadcn/ui Select
+ * - Button → shadcn/ui Button
+ * - Tag → Badge
+ * - Badge (status) → custom status indicators
+ * - message → sonner toast (notification service)
+ * - Typography → native elements with Tailwind
+ * - Flex → Tailwind flex utilities
+ * - Space → Tailwind gap utilities
+ * 
+ * @validates Requirements 8.2
  */
 import { useState } from 'react'
-import { Table, Card, Select, Button, Tag, Space, Flex, Typography, Badge, Modal, Input, message } from 'antd'
-import { CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
-import type { ColumnsType } from 'antd/es/table'
+import { ColumnDef } from '@tanstack/react-table'
+import { CheckCircle, XCircle, Eye, RefreshCw, Loader2, Copy, Check } from 'lucide-react'
+
+// shadcn/ui components
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { DataTable } from '@/components/ui/data-table'
+
+// Services and utilities
+import { notification } from '@/lib/notification'
 import { useKycList, useKycReview } from '@/hooks/use-kyc-admin'
 import { KycStatus } from '@/services/kyc'
 import type { KycFullResponse } from '@/services/kyc'
 import { truncateAddress } from '@/utils/format'
 
-const { Title, Text } = Typography
-const { TextArea } = Input
+// Status badge variant mapping
+const STATUS_BADGE_VARIANTS: Record<KycStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  [KycStatus.NOT_STARTED]: 'outline',
+  [KycStatus.PENDING]: 'secondary',
+  [KycStatus.APPROVED]: 'default',
+  [KycStatus.REJECTED]: 'destructive',
+}
+
+// Copyable address component
+function CopyableAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(address)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className="font-mono text-sm">{truncateAddress(address)}</span>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={handleCopy}
+            >
+              {copied ? (
+                <Check className="h-3 w-3 text-green-500" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {copied ? '已复制' : '复制地址'}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  )
+}
 
 export function KycAdminList() {
   const { t } = useTranslation()
@@ -27,6 +128,10 @@ export function KycAdminList() {
     action: 'approve' | 'reject' | null
   }>({ visible: false, kyc: null, action: null })
   const [rejectReason, setRejectReason] = useState('')
+  const [viewReasonDialog, setViewReasonDialog] = useState<{
+    open: boolean
+    reason: string
+  }>({ open: false, reason: '' })
   
   const { data, isLoading, refetch } = useKycList({
     status: statusFilter,
@@ -36,104 +141,130 @@ export function KycAdminList() {
   
   const { mutate: review, isPending: isReviewing } = useKycReview()
 
-  // Status tag renderer
+  // Status badge renderer
   const renderStatus = (status: KycStatus) => {
-    const config: Record<KycStatus, { color: string; label: string }> = {
-      [KycStatus.NOT_STARTED]: { color: 'default', label: t('kyc.status.notStarted') },
-      [KycStatus.PENDING]: { color: 'processing', label: t('kyc.status.pending') },
-      [KycStatus.APPROVED]: { color: 'success', label: t('kyc.status.approved') },
-      [KycStatus.REJECTED]: { color: 'error', label: t('kyc.status.rejected') },
+    const labels: Record<KycStatus, string> = {
+      [KycStatus.NOT_STARTED]: t('kyc.status.notStarted'),
+      [KycStatus.PENDING]: t('kyc.status.pending'),
+      [KycStatus.APPROVED]: t('kyc.status.approved'),
+      [KycStatus.REJECTED]: t('kyc.status.rejected'),
     }
-    const { color, label } = config[status]
-    return <Tag color={color}>{label}</Tag>
+    return (
+      <Badge variant={STATUS_BADGE_VARIANTS[status]}>
+        {labels[status]}
+      </Badge>
+    )
   }
 
-  // Table columns
-  const columns: ColumnsType<KycFullResponse> = [
+  // Table columns using @tanstack/react-table ColumnDef
+  const columns: ColumnDef<KycFullResponse>[] = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 80,
+      accessorKey: 'id',
+      header: 'ID',
+      size: 80,
     },
     {
-      title: t('admin.kyc.walletAddress'),
-      dataIndex: 'wallet_address',
-      key: 'wallet_address',
-      render: (addr: string) => (
-        <Text copyable={{ text: addr }}>{truncateAddress(addr)}</Text>
+      accessorKey: 'wallet_address',
+      header: t('admin.kyc.walletAddress'),
+      cell: ({ row }) => (
+        <CopyableAddress address={row.original.wallet_address} />
       ),
     },
     {
-      title: t('admin.kyc.status'),
-      dataIndex: 'status',
-      key: 'status',
-      render: renderStatus,
-      width: 120,
+      accessorKey: 'status',
+      header: t('admin.kyc.status'),
+      size: 120,
+      cell: ({ row }) => renderStatus(row.original.status),
     },
     {
-      title: t('admin.kyc.country'),
-      dataIndex: 'country_code',
-      key: 'country_code',
-      width: 100,
-      render: (code: string | null) => code || '-',
+      accessorKey: 'country_code',
+      header: t('admin.kyc.country'),
+      size: 100,
+      cell: ({ row }) => row.original.country_code || '-',
     },
     {
-      title: t('admin.kyc.submittedAt'),
-      dataIndex: 'submitted_at',
-      key: 'submitted_at',
-      render: (date: string | null) => 
-        date ? new Date(date).toLocaleString() : '-',
-      width: 180,
+      accessorKey: 'submitted_at',
+      header: t('admin.kyc.submittedAt'),
+      size: 180,
+      cell: ({ row }) => 
+        row.original.submitted_at 
+          ? new Date(row.original.submitted_at).toLocaleString() 
+          : '-',
     },
     {
-      title: t('admin.kyc.reviewedAt'),
-      dataIndex: 'reviewed_at',
-      key: 'reviewed_at',
-      render: (date: string | null) => 
-        date ? new Date(date).toLocaleString() : '-',
-      width: 180,
+      accessorKey: 'reviewed_at',
+      header: t('admin.kyc.reviewedAt'),
+      size: 180,
+      cell: ({ row }) => 
+        row.original.reviewed_at 
+          ? new Date(row.original.reviewed_at).toLocaleString() 
+          : '-',
     },
     {
-      title: t('admin.kyc.actions'),
-      key: 'actions',
-      width: 200,
-      render: (_, record) => (
-        <Space>
-          {record.status === KycStatus.PENDING && (
-            <>
-              <Button
-                type="primary"
-                size="small"
-                icon={<CheckCircleOutlined />}
-                onClick={() => openReviewModal(record, 'approve')}
-              >
-                {t('admin.kyc.approve')}
-              </Button>
-              <Button
-                danger
-                size="small"
-                icon={<CloseCircleOutlined />}
-                onClick={() => openReviewModal(record, 'reject')}
-              >
-                {t('admin.kyc.reject')}
-              </Button>
-            </>
-          )}
-          {record.status === KycStatus.REJECTED && record.reject_reason && (
-            <Button
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => Modal.info({
-                title: t('admin.kyc.rejectReason'),
-                content: record.reject_reason,
-              })}
-            >
-              {t('admin.kyc.viewReason')}
-            </Button>
-          )}
-        </Space>
-      ),
+      id: 'actions',
+      header: t('admin.kyc.actions'),
+      size: 200,
+      cell: ({ row }) => {
+        const record = row.original
+        return (
+          <div className="flex gap-1">
+            {record.status === KycStatus.PENDING && (
+              <>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => openReviewModal(record, 'approve')}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        {t('admin.kyc.approve')}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('admin.kyc.approve')}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => openReviewModal(record, 'reject')}
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        {t('admin.kyc.reject')}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('admin.kyc.reject')}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
+            )}
+            {record.status === KycStatus.REJECTED && record.reject_reason && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setViewReasonDialog({
+                        open: true,
+                        reason: record.reject_reason || '',
+                      })}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      {t('admin.kyc.viewReason')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('admin.kyc.viewReason')}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        )
+      },
     },
   ]
 
@@ -148,7 +279,7 @@ export function KycAdminList() {
     if (!reviewModal.kyc || !reviewModal.action) return
     
     if (reviewModal.action === 'reject' && !rejectReason.trim()) {
-      message.error(t('admin.kyc.rejectReasonRequired'))
+      notification.error(t('admin.kyc.rejectReasonRequired'))
       return
     }
     
@@ -161,7 +292,7 @@ export function KycAdminList() {
       },
     }, {
       onSuccess: () => {
-        message.success(
+        notification.success(
           reviewModal.action === 'approve'
             ? t('admin.kyc.approveSuccess')
             : t('admin.kyc.rejectSuccess')
@@ -170,103 +301,176 @@ export function KycAdminList() {
         refetch()
       },
       onError: (error) => {
-        message.error(error.message || t('common.error'))
+        notification.error(error.message || t('common.error'))
       },
     })
   }
 
   // Status filter options
   const statusOptions = [
-    { value: undefined, label: t('admin.kyc.allStatus') },
+    { value: 'all', label: t('admin.kyc.allStatus') },
     { value: KycStatus.PENDING, label: t('kyc.status.pending') },
     { value: KycStatus.APPROVED, label: t('kyc.status.approved') },
     { value: KycStatus.REJECTED, label: t('kyc.status.rejected') },
     { value: KycStatus.NOT_STARTED, label: t('kyc.status.notStarted') },
   ]
 
+  // Calculate stats from current page data
+  const pendingCount = data?.items.filter(k => k.status === KycStatus.PENDING).length || 0
+  const approvedCount = data?.items.filter(k => k.status === KycStatus.APPROVED).length || 0
+  const rejectedCount = data?.items.filter(k => k.status === KycStatus.REJECTED).length || 0
+
   return (
     <Card>
-      <Flex vertical gap={24} style={{ width: '100%' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>{t('admin.kyc.title')}</Title>
-          <Space>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle>{t('admin.kyc.title')}</CardTitle>
+          <div className="flex gap-2">
             <Select
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={statusOptions}
-              style={{ width: 150 }}
-              placeholder={t('admin.kyc.filterByStatus')}
-            />
-            <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
+              value={statusFilter || 'all'}
+              onValueChange={(value) => setStatusFilter(value === 'all' ? undefined : value as KycStatus)}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder={t('admin.kyc.filterByStatus')} />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
               {t('common.refresh')}
             </Button>
-          </Space>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Stats */}
+        <div className="flex gap-6">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-yellow-500" />
+            <span className="text-sm text-muted-foreground">
+              {t('kyc.status.pending')}: {pendingCount}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+            <span className="text-sm text-muted-foreground">
+              {t('kyc.status.approved')}: {approvedCount}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-red-500" />
+            <span className="text-sm text-muted-foreground">
+              {t('kyc.status.rejected')}: {rejectedCount}
+            </span>
+          </div>
         </div>
 
-        {/* Stats */}
-        <Space size="large">
-          <Badge status="processing" text={`${t('kyc.status.pending')}: ${data?.items.filter(k => k.status === KycStatus.PENDING).length || 0}`} />
-          <Badge status="success" text={`${t('kyc.status.approved')}: ${data?.items.filter(k => k.status === KycStatus.APPROVED).length || 0}`} />
-          <Badge status="error" text={`${t('kyc.status.rejected')}: ${data?.items.filter(k => k.status === KycStatus.REJECTED).length || 0}`} />
-        </Space>
-
-        {/* Table */}
-        <Table
+        {/* DataTable */}
+        <DataTable
           columns={columns}
-          dataSource={data?.items || []}
-          rowKey="id"
+          data={data?.items || []}
           loading={isLoading}
+          emptyMessage={t('common.noData')}
           pagination={{
-            current: page,
+            pageIndex: page - 1,
             pageSize,
-            total: data?.total || 0,
-            showSizeChanger: true,
-            showTotal: (total) => t('admin.kyc.totalRecords', { total }),
-            onChange: (p, ps) => {
-              setPage(p)
-              setPageSize(ps)
-            },
+            pageCount: Math.ceil((data?.total || 0) / pageSize) || 1,
+            onPageChange: (p) => setPage(p + 1),
+            onPageSizeChange: setPageSize,
           }}
         />
-      </Flex>
+      </CardContent>
 
-      {/* Review Modal */}
-      <Modal
-        title={
-          reviewModal.action === 'approve'
-            ? t('admin.kyc.confirmApprove')
-            : t('admin.kyc.confirmReject')
-        }
-        open={reviewModal.visible}
-        onCancel={() => setReviewModal({ visible: false, kyc: null, action: null })}
-        onOk={handleReview}
-        confirmLoading={isReviewing}
-        okText={reviewModal.action === 'approve' ? t('admin.kyc.approve') : t('admin.kyc.reject')}
-        okButtonProps={{ danger: reviewModal.action === 'reject' }}
+      {/* Review Confirmation Dialog - using AlertDialog */}
+      <AlertDialog 
+        open={reviewModal.visible} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setReviewModal({ visible: false, kyc: null, action: null })
+          }
+        }}
       >
-        {reviewModal.kyc && (
-          <Flex vertical style={{ width: '100%' }}>
-            <Text>
-              <strong>{t('admin.kyc.walletAddress')}:</strong>{' '}
-              {truncateAddress(reviewModal.kyc.wallet_address)}
-            </Text>
-            {reviewModal.action === 'reject' && (
-              <div>
-                <Text strong>{t('admin.kyc.rejectReason')}:</Text>
-                <TextArea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder={t('admin.kyc.rejectReasonPlaceholder')}
-                  rows={3}
-                  style={{ marginTop: 8 }}
-                />
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {reviewModal.action === 'approve'
+                ? t('admin.kyc.confirmApprove')
+                : t('admin.kyc.confirmReject')}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                {reviewModal.kyc && (
+                  <div className="text-sm">
+                    <span className="font-medium">{t('admin.kyc.walletAddress')}:</span>{' '}
+                    <span className="font-mono">{truncateAddress(reviewModal.kyc.wallet_address)}</span>
+                  </div>
+                )}
+                {reviewModal.action === 'reject' && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {t('admin.kyc.rejectReason')}:
+                    </label>
+                    <Textarea
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      placeholder={t('admin.kyc.rejectReasonPlaceholder')}
+                      rows={3}
+                    />
+                  </div>
+                )}
               </div>
-            )}
-          </Flex>
-        )}
-      </Modal>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReview}
+              disabled={isReviewing}
+              className={reviewModal.action === 'reject' ? 'bg-destructive hover:bg-destructive/90' : ''}
+            >
+              {isReviewing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {reviewModal.action === 'approve' ? t('admin.kyc.approve') : t('admin.kyc.reject')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* View Reject Reason Dialog */}
+      <Dialog 
+        open={viewReasonDialog.open} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewReasonDialog({ open: false, reason: '' })
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('admin.kyc.rejectReason')}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              {viewReasonDialog.reason}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setViewReasonDialog({ open: false, reason: '' })}
+            >
+              {t('common.close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
-

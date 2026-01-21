@@ -2,48 +2,52 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { use } from "react";
-import { Typography, Button, Progress, Spin, Empty, Tooltip, Skeleton, Tabs, Card, Row, Col, Divider } from "antd";
-import {
-  ArrowLeftOutlined,
-  BankOutlined,
-  SafetyOutlined,
-  FireOutlined,
-  RiseOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  PauseCircleOutlined,
-  CopyOutlined,
-  CheckOutlined,
-  FileTextOutlined,
-  EnvironmentOutlined,
-  WalletOutlined,
-  LinkOutlined,
-} from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
+import {
+  ArrowLeft,
+  Building2,
+  Shield,
+  Flame,
+  TrendingUp,
+  CheckCircle,
+  Clock,
+  PauseCircle,
+  Copy,
+  Check,
+  FileText,
+  MapPin,
+  Wallet,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
 import { assetService, type AssetDetail, ASSET_TYPE_NAMES, type AssetType, type AssetStatus } from "@/services/asset";
 import { SubscriptionModal } from "@/components/subscription/subscription-modal";
 import { MediaGallery } from "@/components/asset/media-gallery";
 import { PropertyHighlights } from "@/components/asset/property-highlights";
-
-const { Title, Text, Paragraph } = Typography;
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // 资产类型图标
 const ASSET_TYPE_ICONS: Record<AssetType, React.ReactNode> = {
-  real_estate: <BankOutlined />,
-  bond: <SafetyOutlined />,
-  commodity: <FireOutlined />,
-  equity: <RiseOutlined />,
-  other: <BankOutlined />,
+  real_estate: <Building2 className="h-4 w-4" />,
+  bond: <Shield className="h-4 w-4" />,
+  commodity: <Flame className="h-4 w-4" />,
+  equity: <TrendingUp className="h-4 w-4" />,
+  other: <Building2 className="h-4 w-4" />,
 };
 
 // 状态配置
 const STATUS_CONFIG: Record<AssetStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  active: { label: "Available", color: "#00D4AA", bg: "rgba(0,212,170,0.1)", icon: <CheckCircleOutlined /> },
-  paused: { label: "Paused", color: "#FAAD14", bg: "rgba(250,173,20,0.1)", icon: <PauseCircleOutlined /> },
-  sold_out: { label: "Sold Out", color: "#FF4D4F", bg: "rgba(255,77,79,0.1)", icon: <ClockCircleOutlined /> },
-  closed: { label: "Closed", color: "#8C8C8C", bg: "rgba(140,140,140,0.1)", icon: <ClockCircleOutlined /> },
+  active: { label: "Available", color: "#00D4AA", bg: "rgba(0,212,170,0.1)", icon: <CheckCircle className="h-4 w-4" /> },
+  paused: { label: "Paused", color: "#FAAD14", bg: "rgba(250,173,20,0.1)", icon: <PauseCircle className="h-4 w-4" /> },
+  sold_out: { label: "Sold Out", color: "#FF4D4F", bg: "rgba(255,77,79,0.1)", icon: <Clock className="h-4 w-4" /> },
+  closed: { label: "Closed", color: "#8C8C8C", bg: "rgba(140,140,140,0.1)", icon: <Clock className="h-4 w-4" /> },
 };
 
 export default function AssetDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -90,21 +94,30 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
 
   if (isLoading) {
     return (
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px" }}>
-        <Skeleton.Button active style={{ width: 100, marginBottom: 24 }} />
-        <Skeleton.Image active style={{ width: "100%", height: 400 }} />
-        <Skeleton active paragraph={{ rows: 6 }} style={{ marginTop: 24 }} />
+      <div className="max-w-[1200px] mx-auto px-6 py-6">
+        <Skeleton className="w-24 h-8 mb-6" />
+        <Skeleton className="w-full h-[400px] rounded-xl mb-6" />
+        <div className="space-y-4">
+          <Skeleton className="w-3/4 h-6" />
+          <Skeleton className="w-1/2 h-4" />
+          <Skeleton className="w-full h-4" />
+          <Skeleton className="w-full h-4" />
+          <Skeleton className="w-2/3 h-4" />
+        </div>
       </div>
     );
   }
 
   if (error || !asset) {
     return (
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: "60px 24px", textAlign: "center" }}>
-        <Empty description={t("assets.notFound")} />
-        <Button onClick={() => router.push("/assets")} style={{ marginTop: 24 }}>
-          <ArrowLeftOutlined /> {t("common.back")}
-        </Button>
+      <div className="max-w-[800px] mx-auto px-6 py-16 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="text-white/50 text-lg">{t("assets.notFound")}</div>
+          <Button variant="outline" onClick={() => router.push("/assets")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            {t("common.back")}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -113,445 +126,275 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
   const progress = (asset.subscribed_amount / asset.total_supply) * 100;
 
   return (
-    <div className="asset-detail-page">
-      <div className="detail-container">
-        {/* 面包屑导航 */}
-        <div className="breadcrumb">
-          <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.push("/assets")}>
-            Back to Assets
-          </Button>
-          <span className="breadcrumb-sep">/</span>
-          <span className="breadcrumb-current">{asset.name}</span>
-        </div>
+    <TooltipProvider>
+      <div className="min-h-screen pb-20">
+        <div className="max-w-[1200px] mx-auto px-6">
+          {/* 面包屑导航 */}
+          <div className="flex items-center gap-2 mb-4 text-white/50 text-sm">
+            <Button variant="ghost" size="sm" onClick={() => router.push("/assets")} className="text-white/70 hover:text-white">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Assets
+            </Button>
+            <span className="text-white/30">/</span>
+            <span className="text-white/80">{asset.name}</span>
+          </div>
 
-        {/* 标题栏 */}
-        <div className="title-bar">
-          <div className="title-left">
-            <Title level={2} style={{ margin: 0 }}>{asset.location || asset.name}</Title>
-            <div className="title-meta">
-              <span className="asset-type-badge">
-                {ASSET_TYPE_ICONS[asset.asset_type as AssetType]}
-                {ASSET_TYPE_NAMES[asset.asset_type as AssetType]}
-              </span>
-              {asset.contract_address && (
-                <span className="contract-link">
-                  VIEW SMART CONTRACTS
-                  <LinkOutlined />
+          {/* 标题栏 */}
+          <div className="flex justify-between items-start mb-6 flex-wrap gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">{asset.location || asset.name}</h1>
+              <div className="flex items-center gap-4">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[rgba(0,212,170,0.1)] border border-[rgba(0,212,170,0.2)] rounded-md text-[#00D4AA] text-xs">
+                  {ASSET_TYPE_ICONS[asset.asset_type as AssetType]}
+                  {ASSET_TYPE_NAMES[asset.asset_type as AssetType]}
                 </span>
-              )}
-            </div>
-          </div>
-          <div className="status-badge" style={{ background: statusInfo.bg, color: statusInfo.color }}>
-            {statusInfo.icon}
-            <span>{statusInfo.label}</span>
-          </div>
-        </div>
-
-        {/* 主内容区 */}
-        <Row gutter={32}>
-          {/* 左侧：图片和详情 */}
-          <Col xs={24} lg={16}>
-            {/* 图片画廊 */}
-            <MediaGallery coverImage={asset.image_url} assetType={asset.asset_type} media={asset.media} />
-
-            {/* 标签页导航 */}
-            <div className="tabs-container">
-              <Tabs
-                activeKey={activeTab}
-                onChange={setActiveTab}
-                items={[
-                  { key: "highlights", label: "HIGHLIGHTS" },
-                  { key: "financials", label: "FINANCIALS" },
-                  { key: "details", label: "DETAILS" },
-                  { key: "blockchain", label: "BLOCKCHAIN" },
-                ]}
-              />
-            </div>
-
-            {/* 标签内容 */}
-            {activeTab === "highlights" && (
-              <div className="tab-content">
-                <div className="section-title">PROPERTY HIGHLIGHTS</div>
-                <PropertyHighlights asset={asset} />
-              </div>
-            )}
-
-            {activeTab === "financials" && (
-              <div className="tab-content">
-                <div className="section-title">FINANCIAL DETAILS</div>
-                <Card className="dark-card">
-                  <Row gutter={[16, 24]}>
-                    <Col span={12}>
-                      <div className="metric-item">
-                        <Text className="metric-label">Token Price</Text>
-                        <Text className="metric-value">${asset.current_price.toFixed(2)}</Text>
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div className="metric-item">
-                        <Text className="metric-label">Total Investment</Text>
-                        <Text className="metric-value">{formatAmount(asset.total_supply)}</Text>
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div className="metric-item">
-                        <Text className="metric-label">3M APY</Text>
-                        <Text className="metric-value">{asset.apy_3m.toFixed(1)}%</Text>
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div className="metric-item">
-                        <Text className="metric-label">6M APY</Text>
-                        <Text className="metric-value">{asset.apy_6m.toFixed(1)}%</Text>
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div className="metric-item">
-                        <Text className="metric-label">12M APY</Text>
-                        <Text className="metric-value highlight">{asset.apy_12m.toFixed(1)}%</Text>
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div className="metric-item">
-                        <Text className="metric-label">Min. Investment</Text>
-                        <Text className="metric-value">{formatAmount(asset.min_subscription)}</Text>
-                      </div>
-                    </Col>
-                  </Row>
-                </Card>
-              </div>
-            )}
-
-            {activeTab === "details" && (
-              <div className="tab-content">
-                <div className="section-title">ABOUT THE OFFERING</div>
-                <Card className="dark-card">
-                  <Paragraph style={{ color: "rgba(255,255,255,0.75)", lineHeight: 1.8, marginBottom: 0 }}>
-                    {asset.description || "This tokenized real-world asset offers investors an opportunity to participate in property ownership through blockchain technology. Each token represents a fractional ownership stake, providing exposure to rental income and potential property appreciation."}
-                  </Paragraph>
-                </Card>
-                
-                {asset.location && (
-                  <>
-                    <div className="section-title" style={{ marginTop: 24 }}>LOCATION</div>
-                    <Card className="dark-card">
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <EnvironmentOutlined style={{ color: "#00D4AA" }} />
-                        <Text style={{ color: "#fff" }}>{asset.location}</Text>
-                      </div>
-                    </Card>
-                  </>
+                {asset.contract_address && (
+                  <span className="inline-flex items-center gap-1.5 text-white/50 text-xs cursor-pointer hover:text-[#00D4AA] transition-colors">
+                    VIEW SMART CONTRACTS
+                    <ExternalLink className="h-3 w-3" />
+                  </span>
                 )}
               </div>
-            )}
-
-            {activeTab === "blockchain" && (
-              <div className="tab-content">
-                <div className="section-title">BLOCKCHAIN INFORMATION</div>
-                <Card className="dark-card">
-                  {asset.contract_address ? (
-                    <div className="contract-info">
-                      <Text className="info-label">Contract Address</Text>
-                      <div className="address-row">
-                        <code>{asset.contract_address}</code>
-                        <Tooltip title={copied ? "Copied!" : "Copy"}>
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={copied ? <CheckOutlined /> : <CopyOutlined />}
-                            onClick={() => copyAddress(asset.contract_address!)}
-                          />
-                        </Tooltip>
-                      </div>
-                    </div>
-                  ) : (
-                    <Text style={{ color: "rgba(255,255,255,0.5)" }}>Contract not deployed yet</Text>
-                  )}
-                  
-                  {asset.document_url && (
-                    <div className="contract-info" style={{ marginTop: 16 }}>
-                      <Text className="info-label">Documents</Text>
-                      <a href={asset.document_url} target="_blank" rel="noopener noreferrer" style={{ color: "#00D4AA" }}>
-                        <FileTextOutlined /> View Legal Documents
-                      </a>
-                    </div>
-                  )}
-                </Card>
-              </div>
-            )}
-          </Col>
-
-          {/* 右侧：投资面板 */}
-          <Col xs={24} lg={8}>
-            <div className="investment-panel">
-              <div className="investment-header">
-                <Text className="panel-label">TOTAL INVESTMENT</Text>
-                <Title level={2} style={{ margin: "8px 0", color: "#fff" }}>
-                  {formatAmount(asset.total_supply)}
-                </Title>
-              </div>
-
-              {/* 状态标签 */}
-              <div className="release-badge">
-                {asset.status === "active" ? "AVAILABLE NOW" : statusInfo.label.toUpperCase()}
-              </div>
-
-              {/* 购买信息 */}
-              <div className="purchase-stats">
-                <div className="stat-item">
-                  <Text className="stat-label">SUBSCRIBED</Text>
-                  <Text className="stat-value">{formatAmount(asset.subscribed_amount)}</Text>
-                </div>
-                <div className="stat-item">
-                  <Text className="stat-label">REMAINING</Text>
-                  <Text className="stat-value highlight">{formatAmount(asset.remaining_amount)}</Text>
-                </div>
-              </div>
-
-              {/* 进度条 */}
-              <div className="progress-section">
-                <Progress
-                  percent={progress}
-                  showInfo={false}
-                  strokeColor="#00D4AA"
-                  railColor="rgba(255,255,255,0.1)"
-                  size={["100%", 8]}
-                />
-                <div className="progress-labels">
-                  <span>{progress.toFixed(1)}% Funded</span>
-                  <span>{(100 - progress).toFixed(1)}% Available</span>
-                </div>
-              </div>
-
-              <Divider style={{ borderColor: "rgba(255,255,255,0.1)", margin: "24px 0" }} />
-
-              {/* APY 信息 */}
-              <div className="apy-preview">
-                <div className="apy-row">
-                  <Text>Expected Annual Return</Text>
-                  <Text className="apy-value">{asset.apy_12m.toFixed(1)}%</Text>
-                </div>
-                <div className="apy-row">
-                  <Text>Token Price</Text>
-                  <Text className="apy-value">${asset.current_price.toFixed(2)}</Text>
-                </div>
-              </div>
-
-              {/* 认购按钮 */}
-              <Button
-                type="primary"
-                size="large"
-                block
-                disabled={!isConnected || asset.status !== "active"}
-                onClick={() => setShowSubscribeModal(true)}
-                className="subscribe-btn"
-              >
-                <WalletOutlined />
-                {isConnected ? "Subscribe Now" : "Connect Wallet to Subscribe"}
-              </Button>
-
-              {!isConnected && (
-                <Text className="subscribe-hint">Please connect your wallet to invest</Text>
-              )}
             </div>
-          </Col>
-        </Row>
+            <div
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg font-semibold text-sm"
+              style={{ background: statusInfo.bg, color: statusInfo.color }}
+            >
+              {statusInfo.icon}
+              <span>{statusInfo.label}</span>
+            </div>
+          </div>
+
+          {/* 主内容区 */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* 左侧：图片和详情 */}
+            <div className="lg:col-span-2">
+              {/* 图片画廊 */}
+              <MediaGallery coverImage={asset.image_url} assetType={asset.asset_type} media={asset.media} />
+
+              {/* 标签页导航 */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+                <TabsList className="w-full justify-start bg-transparent border-b border-white/10 rounded-none h-auto p-0 gap-0">
+                  <TabsTrigger
+                    value="highlights"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3"
+                  >
+                    HIGHLIGHTS
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="financials"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3"
+                  >
+                    FINANCIALS
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="details"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3"
+                  >
+                    DETAILS
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="blockchain"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3"
+                  >
+                    BLOCKCHAIN
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="highlights" className="mt-4">
+                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4">PROPERTY HIGHLIGHTS</div>
+                  <PropertyHighlights asset={asset} />
+                </TabsContent>
+
+                <TabsContent value="financials" className="mt-4">
+                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4">FINANCIAL DETAILS</div>
+                  <Card className="bg-white/[0.02] border-white/[0.06]">
+                    <CardContent className="p-6">
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-white/50 text-xs">Token Price</span>
+                          <span className="text-white text-xl font-semibold">${asset.current_price.toFixed(2)}</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-white/50 text-xs">Total Investment</span>
+                          <span className="text-white text-xl font-semibold">{formatAmount(asset.total_supply)}</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-white/50 text-xs">3M APY</span>
+                          <span className="text-white text-xl font-semibold">{asset.apy_3m.toFixed(1)}%</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-white/50 text-xs">6M APY</span>
+                          <span className="text-white text-xl font-semibold">{asset.apy_6m.toFixed(1)}%</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-white/50 text-xs">12M APY</span>
+                          <span className="text-[#00D4AA] text-xl font-semibold">{asset.apy_12m.toFixed(1)}%</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-white/50 text-xs">Min. Investment</span>
+                          <span className="text-white text-xl font-semibold">{formatAmount(asset.min_subscription)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="details" className="mt-4">
+                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4">ABOUT THE OFFERING</div>
+                  <Card className="bg-white/[0.02] border-white/[0.06]">
+                    <CardContent className="p-6">
+                      <p className="text-white/75 leading-relaxed">
+                        {asset.description || "This tokenized real-world asset offers investors an opportunity to participate in property ownership through blockchain technology. Each token represents a fractional ownership stake, providing exposure to rental income and potential property appreciation."}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  {asset.location && (
+                    <>
+                      <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 mt-6">LOCATION</div>
+                      <Card className="bg-white/[0.02] border-white/[0.06]">
+                        <CardContent className="p-6">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-[#00D4AA]" />
+                            <span className="text-white">{asset.location}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="blockchain" className="mt-4">
+                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4">BLOCKCHAIN INFORMATION</div>
+                  <Card className="bg-white/[0.02] border-white/[0.06]">
+                    <CardContent className="p-6">
+                      {asset.contract_address ? (
+                        <div className="mb-2">
+                          <span className="block text-white/50 text-xs mb-2">Contract Address</span>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 bg-white/5 px-3 py-2 rounded-md text-sm text-white overflow-hidden text-ellipsis">
+                              {asset.contract_address}
+                            </code>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => copyAddress(asset.contract_address!)}
+                                >
+                                  {copied ? <Check className="h-4 w-4 text-[#00D4AA]" /> : <Copy className="h-4 w-4" />}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {copied ? "Copied!" : "Copy"}
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-white/50">Contract not deployed yet</span>
+                      )}
+                      
+                      {asset.document_url && (
+                        <div className="mt-4">
+                          <span className="block text-white/50 text-xs mb-2">Documents</span>
+                          <a
+                            href={asset.document_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-[#00D4AA] hover:underline"
+                          >
+                            <FileText className="h-4 w-4" />
+                            View Legal Documents
+                          </a>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
+
+            {/* 右侧：投资面板 */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-[88px] bg-gradient-to-b from-white/[0.03] to-white/[0.01] border border-white/[0.08] rounded-2xl p-6">
+                {/* 投资头部 */}
+                <div className="text-center mb-4">
+                  <span className="text-white/50 text-xs tracking-wider">TOTAL INVESTMENT</span>
+                  <h2 className="text-3xl font-bold text-white mt-2">{formatAmount(asset.total_supply)}</h2>
+                </div>
+
+                {/* 状态标签 */}
+                <div className="text-center px-4 py-2 bg-gradient-to-r from-[#00D4AA] to-[#00B894] rounded-full text-black font-bold text-xs tracking-wider mb-5">
+                  {asset.status === "active" ? "AVAILABLE NOW" : statusInfo.label.toUpperCase()}
+                </div>
+
+                {/* 购买信息 */}
+                <div className="flex justify-around mb-4">
+                  <div className="text-center">
+                    <span className="block text-white/50 text-[11px] mb-1">SUBSCRIBED</span>
+                    <span className="block text-white text-lg font-semibold">{formatAmount(asset.subscribed_amount)}</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="block text-white/50 text-[11px] mb-1">REMAINING</span>
+                    <span className="block text-[#00D4AA] text-lg font-semibold">{formatAmount(asset.remaining_amount)}</span>
+                  </div>
+                </div>
+
+                {/* 进度条 */}
+                <div className="mb-2">
+                  <Progress value={progress} indicatorColor="#00D4AA" className="h-2" />
+                  <div className="flex justify-between mt-2 text-xs text-white/50">
+                    <span>{progress.toFixed(1)}% Funded</span>
+                    <span>{(100 - progress).toFixed(1)}% Available</span>
+                  </div>
+                </div>
+
+                {/* 分隔线 */}
+                <div className="border-t border-white/10 my-6" />
+
+                {/* APY 信息 */}
+                <div className="mb-5">
+                  <div className="flex justify-between py-2 border-b border-white/[0.06]">
+                    <span className="text-white/60">Expected Annual Return</span>
+                    <span className="text-[#00D4AA] font-semibold">{asset.apy_12m.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span className="text-white/60">Token Price</span>
+                    <span className="text-[#00D4AA] font-semibold">${asset.current_price.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* 认购按钮 */}
+                <Button
+                  size="lg"
+                  className="w-full h-[52px] text-base font-semibold rounded-xl"
+                  disabled={!isConnected || asset.status !== "active"}
+                  onClick={() => setShowSubscribeModal(true)}
+                >
+                  <Wallet className="h-5 w-5 mr-2" />
+                  {isConnected ? "Subscribe Now" : "Connect Wallet to Subscribe"}
+                </Button>
+
+                {!isConnected && (
+                  <p className="text-center mt-3 text-sm text-white/40">
+                    Please connect your wallet to invest
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <SubscriptionModal
+          open={showSubscribeModal}
+          onClose={() => setShowSubscribeModal(false)}
+          onSuccess={() => setShowSubscribeModal(false)}
+          asset={asset}
+        />
       </div>
-
-      <SubscriptionModal
-        open={showSubscribeModal}
-        onClose={() => setShowSubscribeModal(false)}
-        onSuccess={() => setShowSubscribeModal(false)}
-        asset={asset}
-      />
-
-      <style jsx global>{`
-        .asset-detail-page {
-          min-height: 100vh;
-          padding-bottom: 80px;
-        }
-        .detail-container {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 24px;
-        }
-        .breadcrumb {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 16px;
-          color: rgba(255,255,255,0.5);
-          font-size: 14px;
-        }
-        .breadcrumb-sep { color: rgba(255,255,255,0.3); }
-        .breadcrumb-current { color: rgba(255,255,255,0.8); }
-        .title-bar {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 24px;
-          flex-wrap: wrap;
-          gap: 16px;
-        }
-        .title-meta {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          margin-top: 8px;
-        }
-        .asset-type-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 12px;
-          background: rgba(0,212,170,0.1);
-          border: 1px solid rgba(0,212,170,0.2);
-          border-radius: 6px;
-          color: #00D4AA;
-          font-size: 12px;
-        }
-        .contract-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          color: rgba(255,255,255,0.5);
-          font-size: 12px;
-          cursor: pointer;
-        }
-        .contract-link:hover { color: #00D4AA; }
-        .status-badge {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 16px;
-          border-radius: 8px;
-          font-weight: 600;
-          font-size: 13px;
-        }
-        .tabs-container {
-          margin: 24px 0 16px;
-        }
-        .tabs-container .ant-tabs-nav::before {
-          border-bottom: 1px solid rgba(255,255,255,0.1) !important;
-        }
-        .tabs-container .ant-tabs-tab {
-          color: rgba(255,255,255,0.5) !important;
-          font-weight: 600;
-          font-size: 12px;
-          letter-spacing: 0.5px;
-        }
-        .tabs-container .ant-tabs-tab-active .ant-tabs-tab-btn {
-          color: #00D4AA !important;
-        }
-        .tabs-container .ant-tabs-ink-bar {
-          background: #00D4AA !important;
-        }
-        .section-title {
-          font-size: 12px;
-          font-weight: 600;
-          color: rgba(255,255,255,0.5);
-          letter-spacing: 1px;
-          margin-bottom: 16px;
-        }
-        .dark-card {
-          background: rgba(255,255,255,0.02) !important;
-          border: 1px solid rgba(255,255,255,0.06) !important;
-          border-radius: 12px !important;
-        }
-        .metric-item {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .metric-label { color: rgba(255,255,255,0.5) !important; font-size: 12px; }
-        .metric-value { color: #fff !important; font-size: 20px; font-weight: 600; }
-        .metric-value.highlight { color: #00D4AA !important; }
-        .contract-info { margin-bottom: 8px; }
-        .info-label { display: block; color: rgba(255,255,255,0.5) !important; font-size: 12px; margin-bottom: 8px; }
-        .address-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .address-row code {
-          flex: 1;
-          background: rgba(255,255,255,0.05);
-          padding: 8px 12px;
-          border-radius: 6px;
-          font-size: 13px;
-          color: #fff;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        
-        /* Investment Panel */
-        .investment-panel {
-          position: sticky;
-          top: 88px;
-          background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 16px;
-          padding: 24px;
-        }
-        .investment-header { text-align: center; margin-bottom: 16px; }
-        .panel-label { color: rgba(255,255,255,0.5) !important; font-size: 12px; letter-spacing: 1px; }
-        .release-badge {
-          display: block;
-          text-align: center;
-          padding: 8px 16px;
-          background: linear-gradient(90deg, #00D4AA 0%, #00B894 100%);
-          border-radius: 20px;
-          color: #000;
-          font-weight: 700;
-          font-size: 12px;
-          letter-spacing: 1px;
-          margin-bottom: 20px;
-        }
-        .purchase-stats {
-          display: flex;
-          justify-content: space-around;
-          margin-bottom: 16px;
-        }
-        .stat-item { text-align: center; }
-        .stat-label { display: block; color: rgba(255,255,255,0.5) !important; font-size: 11px; margin-bottom: 4px; }
-        .stat-value { display: block; color: #fff !important; font-size: 18px; font-weight: 600; }
-        .stat-value.highlight { color: #00D4AA !important; }
-        .progress-section { margin-bottom: 8px; }
-        .progress-labels {
-          display: flex;
-          justify-content: space-between;
-          margin-top: 8px;
-          font-size: 12px;
-          color: rgba(255,255,255,0.5);
-        }
-        .apy-preview { margin-bottom: 20px; }
-        .apy-row {
-          display: flex;
-          justify-content: space-between;
-          padding: 8px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        .apy-row:last-child { border-bottom: none; }
-        .apy-row span:first-child { color: rgba(255,255,255,0.6); }
-        .apy-value { color: #00D4AA !important; font-weight: 600; }
-        .subscribe-btn {
-          height: 52px !important;
-          font-size: 16px !important;
-          font-weight: 600 !important;
-          border-radius: 12px !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          gap: 8px !important;
-        }
-        .subscribe-hint {
-          display: block;
-          text-align: center;
-          margin-top: 12px;
-          font-size: 13px;
-          color: rgba(255,255,255,0.4) !important;
-        }
-      `}</style>
-    </div>
+    </TooltipProvider>
   );
 }

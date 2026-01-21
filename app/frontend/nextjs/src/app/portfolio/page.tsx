@@ -2,34 +2,16 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  Typography,
-  Row,
-  Col,
-  Card,
-  Tag,
-  Table,
-  Tabs,
-  Flex,
-  Statistic,
-  Empty,
-  Spin,
-  Button,
-  Modal,
-  Progress,
-  Tooltip,
-  Select,
-  message,
-} from "antd";
-import {
-  DollarOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  ArrowUpOutlined,
-  HistoryOutlined,
-  ExportOutlined,
-  LinkOutlined,
-  InfoCircleOutlined,
-} from "@ant-design/icons";
+  DollarSign,
+  Clock,
+  CheckCircle,
+  TrendingUp,
+  History,
+  Download,
+  ExternalLink,
+  Info,
+  Copy,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAccount } from "wagmi";
 import {
@@ -46,8 +28,80 @@ import {
   getExplorerUrl,
 } from "@/services/transaction";
 import { RequireWallet } from "@/components/auth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  DataTable,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
+import { notification } from "@/lib/notification";
+import { cn } from "@/lib/utils";
 
-const { Title, Text } = Typography;
+// 统计卡片组件
+interface StatCardProps {
+  title: string;
+  value: number;
+  precision?: number;
+  prefix?: React.ReactNode;
+  valueClassName?: string;
+}
+
+function StatCard({ title, value, precision = 2, prefix, valueClassName }: StatCardProps) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <p className="text-sm text-muted-foreground mb-2">{title}</p>
+        <div className={cn("text-2xl font-bold flex items-center gap-2", valueClassName)}>
+          {prefix}
+          <span>
+            {typeof value === 'number' 
+              ? value.toLocaleString(undefined, { minimumFractionDigits: precision, maximumFractionDigits: precision })
+              : value}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// 空状态组件
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+      <span>{message}</span>
+    </div>
+  );
+}
 
 export default function PortfolioPage() {
   const { t } = useTranslation();
@@ -167,11 +221,11 @@ export default function PortfolioPage() {
         selectedSubscription.id,
         mockTxHash
       );
-      message.success(t("portfolio.redeemSuccess"));
+      notification.success(t("portfolio.redeemSuccess"));
       setDetailModalOpen(false);
       fetchSubscriptions();
     } catch (err) {
-      message.error((err as Error).message || t("portfolio.redeemFailed"));
+      notification.error((err as Error).message || t("portfolio.redeemFailed"));
     } finally {
       setIsRedeeming(false);
     }
@@ -180,562 +234,545 @@ export default function PortfolioPage() {
   // 导出交易记录
   const handleExport = useCallback(async () => {
     try {
-      message.loading(t("portfolio.exporting"));
+      notification.loading(t("portfolio.exporting"));
       // TODO: 实现导出功能
-      message.success(t("portfolio.exportSuccess"));
+      notification.success(t("portfolio.exportSuccess"));
     } catch {
-      message.error(t("portfolio.exportFailed"));
+      notification.error(t("portfolio.exportFailed"));
     }
   }, [t]);
 
-  // 认购表格列
-  const subscriptionColumns = useMemo(
+  // 复制文本到剪贴板
+  const copyToClipboard = useCallback((text: string) => {
+    navigator.clipboard.writeText(text);
+    notification.success("已复制到剪贴板");
+  }, []);
+
+  // 认购表格列定义
+  const subscriptionColumns: ColumnDef<SubscriptionItem>[] = useMemo(
     () => [
       {
-        title: t("portfolio.table.asset"),
-        dataIndex: "asset_name",
-        key: "asset_name",
-        render: (name: string, record: SubscriptionItem) => (
-          <Flex vertical gap={2}>
-            <Text strong>{name}</Text>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {record.asset_symbol}
-            </Text>
-          </Flex>
+        accessorKey: "asset_name",
+        header: t("portfolio.table.asset"),
+        cell: ({ row }) => (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-semibold">{row.original.asset_name}</span>
+            <span className="text-xs text-muted-foreground">
+              {row.original.asset_symbol}
+            </span>
+          </div>
         ),
       },
       {
-        title: t("portfolio.table.amount"),
-        dataIndex: "amount",
-        key: "amount",
-        render: (amount: number) => (
-          <Text strong style={{ color: "#00D4AA" }}>
-            ${amount.toLocaleString()}
-          </Text>
+        accessorKey: "amount",
+        header: t("portfolio.table.amount"),
+        cell: ({ row }) => (
+          <span className="font-semibold text-primary">
+            ${row.original.amount.toLocaleString()}
+          </span>
         ),
       },
       {
-        title: t("portfolio.table.apy"),
-        dataIndex: "apy",
-        key: "apy",
-        render: (apy: number) => <Tag color="green">{apy}% APY</Tag>,
-      },
-      {
-        title: t("portfolio.table.period"),
-        dataIndex: "lock_period",
-        key: "lock_period",
-        render: (period: number, record: SubscriptionItem) => (
-          <Flex vertical gap={4}>
-            <Text>
-              {period} {t("common.months")}
-            </Text>
-            <Progress
-              percent={Math.max(
-                0,
-                100 - (record.days_remaining / (period * 30)) * 100
-              )}
-              size="small"
-              showInfo={false}
-              strokeColor="#00D4AA"
-            />
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              {record.days_remaining > 0
-                ? `${record.days_remaining} ${t("common.daysLeft")}`
-                : t("portfolio.matured")}
-            </Text>
-          </Flex>
+        accessorKey: "apy",
+        header: t("portfolio.table.apy"),
+        cell: ({ row }) => (
+          <Badge variant="secondary" className="bg-green-500/20 text-green-400">
+            {row.original.apy}% APY
+          </Badge>
         ),
       },
       {
-        title: t("portfolio.table.status"),
-        dataIndex: "status",
-        key: "status",
-        render: (status: string) => {
-          const colors: Record<string, string> = {
-            active: "processing",
-            matured: "success",
-            redeemed: "default",
-          };
+        accessorKey: "lock_period",
+        header: t("portfolio.table.period"),
+        cell: ({ row }) => {
+          const period = row.original.lock_period;
+          const daysRemaining = row.original.days_remaining;
+          const progressPercent = Math.max(
+            0,
+            100 - (daysRemaining / (period * 30)) * 100
+          );
           return (
-            <Tag color={colors[status] || "default"}>
-              {t(`portfolio.status.${status}`)}
-            </Tag>
+            <div className="flex flex-col gap-1 min-w-[120px]">
+              <span>
+                {period} {t("common.months")}
+              </span>
+              <Progress value={progressPercent} indicatorColor="#00D4AA" className="h-1.5" />
+              <span className="text-xs text-muted-foreground">
+                {daysRemaining > 0
+                  ? `${daysRemaining} ${t("common.daysLeft")}`
+                  : t("portfolio.matured")}
+              </span>
+            </div>
           );
         },
       },
       {
-        title: t("portfolio.table.actions"),
-        key: "actions",
-        render: (_: unknown, record: SubscriptionItem) => (
-          <Flex gap={8}>
+        accessorKey: "status",
+        header: t("portfolio.table.status"),
+        cell: ({ row }) => {
+          const status = row.original.status;
+          const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+            active: "secondary",
+            matured: "default",
+            redeemed: "outline",
+          };
+          return (
+            <Badge variant={variants[status] || "outline"}>
+              {t(`portfolio.status.${status}`)}
+            </Badge>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: t("portfolio.table.actions"),
+        cell: ({ row }) => (
+          <div className="flex gap-2">
             <Button
-              type="link"
-              size="small"
-              onClick={() => handleViewDetail(record)}
+              variant="ghost"
+              size="sm"
+              onClick={() => handleViewDetail(row.original)}
             >
               {t("common.details")}
             </Button>
-            {record.is_matured && record.status !== "redeemed" && (
+            {row.original.is_matured && row.original.status !== "redeemed" && (
               <Button
-                type="primary"
-                size="small"
-                onClick={() => handleViewDetail(record)}
+                size="sm"
+                onClick={() => handleViewDetail(row.original)}
               >
                 {t("portfolio.redeem")}
               </Button>
             )}
-          </Flex>
+          </div>
         ),
       },
     ],
     [t, handleViewDetail]
   );
 
-  // 交易历史表格列
-  const transactionColumns = useMemo(
+  // 交易历史表格列定义
+  const transactionColumns: ColumnDef<TransactionRecord>[] = useMemo(
     () => [
       {
-        title: t("portfolio.txTable.time"),
-        dataIndex: "created_at",
-        key: "created_at",
-        render: (time: string) => new Date(time).toLocaleString(),
+        accessorKey: "created_at",
+        header: t("portfolio.txTable.time"),
+        cell: ({ row }) => new Date(row.original.created_at).toLocaleString(),
       },
       {
-        title: t("portfolio.txTable.type"),
-        dataIndex: "tx_type",
-        key: "tx_type",
-        render: (type: string) => (
-          <Tag
-            color={
-              TRANSACTION_TYPE_COLORS[
-                type as keyof typeof TRANSACTION_TYPE_COLORS
-              ] || "default"
-            }
-          >
-            {TRANSACTION_TYPE_NAMES[
-              type as keyof typeof TRANSACTION_TYPE_NAMES
-            ] || type}
-          </Tag>
-        ),
-      },
-      {
-        title: t("portfolio.txTable.amount"),
-        dataIndex: "amount",
-        key: "amount",
-        render: (amount: string) => `$${parseFloat(amount).toLocaleString()}`,
-      },
-      {
-        title: t("portfolio.txTable.status"),
-        dataIndex: "status",
-        key: "status",
-        render: (status: string) => (
-          <Tag
-            color={
-              TRANSACTION_STATUS_COLORS[
-                status as keyof typeof TRANSACTION_STATUS_COLORS
-              ] || "default"
-            }
-          >
-            {status}
-          </Tag>
-        ),
-      },
-      {
-        title: t("portfolio.txTable.txHash"),
-        dataIndex: "tx_hash",
-        key: "tx_hash",
-        render: (hash: string, record: TransactionRecord) => {
-          const explorerUrl = getExplorerUrl(hash, record.network);
+        accessorKey: "tx_type",
+        header: t("portfolio.txTable.type"),
+        cell: ({ row }) => {
+          const type = row.original.tx_type;
+          const colorMap: Record<string, string> = {
+            subscribe: "bg-blue-500/20 text-blue-400",
+            redeem: "bg-green-500/20 text-green-400",
+            stake: "bg-purple-500/20 text-purple-400",
+            unstake: "bg-orange-500/20 text-orange-400",
+            claim: "bg-yellow-500/20 text-yellow-400",
+          };
           return (
-            <Tooltip title={hash}>
-              <Text
-                copyable={{ text: hash }}
-                style={{ fontFamily: "monospace", fontSize: 12 }}
-              >
-                {hash.slice(0, 10)}...{hash.slice(-6)}
-              </Text>
-              {explorerUrl && (
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<LinkOutlined />}
-                  href={explorerUrl}
-                  target="_blank"
-                />
-              )}
-            </Tooltip>
+            <Badge className={colorMap[type] || "bg-gray-500/20 text-gray-400"}>
+              {TRANSACTION_TYPE_NAMES[type as keyof typeof TRANSACTION_TYPE_NAMES] || type}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "amount",
+        header: t("portfolio.txTable.amount"),
+        cell: ({ row }) => `${parseFloat(row.original.amount).toLocaleString()}`,
+      },
+      {
+        accessorKey: "status",
+        header: t("portfolio.txTable.status"),
+        cell: ({ row }) => {
+          const status = row.original.status;
+          const colorMap: Record<string, string> = {
+            pending: "bg-yellow-500/20 text-yellow-400",
+            confirmed: "bg-green-500/20 text-green-400",
+            failed: "bg-red-500/20 text-red-400",
+          };
+          return (
+            <Badge className={colorMap[status] || "bg-gray-500/20 text-gray-400"}>
+              {status}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "tx_hash",
+        header: t("portfolio.txTable.txHash"),
+        cell: ({ row }) => {
+          const hash = row.original.tx_hash;
+          const explorerUrl = getExplorerUrl(hash, row.original.network);
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs">
+                      {hash.slice(0, 10)}...{hash.slice(-6)}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => copyToClipboard(hash)}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                    {explorerUrl && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        asChild
+                      >
+                        <a href={explorerUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{hash}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         },
       },
     ],
-    [t]
-  );
-
-  // Tab 项
-  const tabItems = useMemo(
-    () => [
-      {
-        key: "investments",
-        label: (
-          <span>
-            <DollarOutlined /> {t("portfolio.tabs.investments")}
-          </span>
-        ),
-        children: (
-          <Table
-            columns={subscriptionColumns}
-            dataSource={subscriptions}
-            rowKey="id"
-            loading={isLoadingSubscriptions}
-            pagination={false}
-            locale={{
-              emptyText: <Empty description={t("portfolio.noInvestments")} />,
-            }}
-          />
-        ),
-      },
-      {
-        key: "history",
-        label: (
-          <span>
-            <HistoryOutlined /> {t("portfolio.tabs.history")}
-          </span>
-        ),
-        children: (
-          <Flex vertical gap={16}>
-            <Flex justify="space-between" align="center">
-              <Select
-                placeholder={t("portfolio.filterByType")}
-                allowClear
-                style={{ width: 200 }}
-                value={txTypeFilter}
-                onChange={setTxTypeFilter}
-                options={Object.entries(TRANSACTION_TYPE_NAMES).map(
-                  ([value, label]) => ({
-                    value,
-                    label,
-                  })
-                )}
-              />
-              <Button icon={<ExportOutlined />} onClick={handleExport}>
-                {t("portfolio.export")}
-              </Button>
-            </Flex>
-            <Table
-              columns={transactionColumns}
-              dataSource={transactions}
-              rowKey="id"
-              loading={isLoadingTx}
-              pagination={{
-                current: txPagination.page,
-                total: txPagination.total,
-                pageSize: txPagination.pageSize,
-                onChange: (page) => fetchTransactions(page),
-              }}
-              locale={{
-                emptyText: (
-                  <Empty description={t("portfolio.noTransactions")} />
-                ),
-              }}
-            />
-          </Flex>
-        ),
-      },
-    ],
-    [
-      t,
-      subscriptionColumns,
-      subscriptions,
-      isLoadingSubscriptions,
-      transactionColumns,
-      transactions,
-      isLoadingTx,
-      txPagination,
-      txTypeFilter,
-      handleExport,
-      fetchTransactions,
-    ]
+    [t, copyToClipboard]
   );
 
   // 服务端渲染或客户端未挂载时显示加载状态，避免 hydration 不匹配
   if (!mounted) {
     return (
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: "0 auto",
-          padding: "60px 24px",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "calc(100vh - 200px)",
-        }}
-      >
-        <Spin size="large" />
+      <div className="max-w-[1200px] mx-auto px-6 py-16 flex justify-center items-center min-h-[calc(100vh-200px)]">
+        <div className="flex flex-col items-center gap-4">
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-4 w-24" />
+        </div>
       </div>
     );
   }
 
   return (
     <RequireWallet>
-      <div
-        className="portfolio-page"
-        style={{
-          maxWidth: 1200,
-          margin: "0 auto",
-          padding: "24px",
-          position: "relative",
-          minHeight: "calc(100vh - 200px)",
-        }}
-      >
-      {/* Page Header */}
-      <Flex
-        vertical
-        gap={8}
-        style={{ marginBottom: 32 }}
-        className="fade-in-stagger"
-      >
-        <Text
-          style={{
-            color: "#00D4AA",
-            fontSize: 14,
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "2px",
-          }}
-        >
-          My Investments
-        </Text>
-        <Title level={2} style={{ margin: 0 }}>
-          {t("portfolio.title")}
-        </Title>
-        <Text style={{ color: "rgba(255, 255, 255, 0.65)" }}>
-          {t("portfolio.subtitle")}
-        </Text>
-      </Flex>
+      <div className="portfolio-page max-w-[1200px] mx-auto px-6 py-6 relative min-h-[calc(100vh-200px)]">
+        {/* Page Header */}
+        <div className="flex flex-col gap-2 mb-8 fade-in-stagger">
+          <span className="text-primary text-sm font-semibold uppercase tracking-widest">
+            My Investments
+          </span>
+          <h1 className="text-3xl font-bold m-0">{t("portfolio.title")}</h1>
+          <p className="text-muted-foreground">{t("portfolio.subtitle")}</p>
+        </div>
 
-      {/* Stats Cards */}
-      <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title={t("portfolio.stats.totalInvested")}
-              value={userStats?.total_invested || 0}
-              precision={2}
-              prefix={<DollarOutlined />}
-              styles={{ content: { color: "#00D4AA" } }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title={t("portfolio.stats.totalValue")}
-              value={userStats?.total_value || 0}
-              precision={2}
-              prefix={<DollarOutlined />}
-              styles={{ content: { color: "#FFD700" } }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title={t("portfolio.stats.totalEarnings")}
-              value={userStats?.total_earnings || 0}
-              precision={2}
-              prefix={<ArrowUpOutlined />}
-              styles={{ content: { color: "#52C41A" } }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title={t("portfolio.stats.activeInvestments")}
-              value={userStats?.active_subscriptions || 0}
-              prefix={<ClockCircleOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title={t("portfolio.stats.totalInvested")}
+            value={userStats?.total_invested || 0}
+            prefix={<DollarSign className="h-5 w-5" />}
+            valueClassName="text-primary"
+          />
+          <StatCard
+            title={t("portfolio.stats.totalValue")}
+            value={userStats?.total_value || 0}
+            prefix={<DollarSign className="h-5 w-5" />}
+            valueClassName="text-yellow-400"
+          />
+          <StatCard
+            title={t("portfolio.stats.totalEarnings")}
+            value={userStats?.total_earnings || 0}
+            prefix={<TrendingUp className="h-5 w-5" />}
+            valueClassName="text-green-400"
+          />
+          <StatCard
+            title={t("portfolio.stats.activeInvestments")}
+            value={userStats?.active_subscriptions || 0}
+            precision={0}
+            prefix={<Clock className="h-5 w-5" />}
+          />
+        </div>
 
-      {/* Main Content Tabs */}
-      <Card>
-        <Tabs items={tabItems} />
-      </Card>
+        {/* Main Content Tabs */}
+        <Card>
+          <CardContent className="p-6">
+            <Tabs defaultValue="investments">
+              <TabsList className="mb-4">
+                <TabsTrigger value="investments" className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  {t("portfolio.tabs.investments")}
+                </TabsTrigger>
+                <TabsTrigger value="history" className="flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  {t("portfolio.tabs.history")}
+                </TabsTrigger>
+              </TabsList>
 
-      {/* Subscription Detail Modal */}
-      <Modal
-        title={
-          <Flex align="center" gap={8}>
-            <InfoCircleOutlined />
-            {t("portfolio.subscriptionDetail")}
-          </Flex>
-        }
-        open={detailModalOpen}
-        onCancel={() => setDetailModalOpen(false)}
-        footer={
-          selectedSubscription?.is_matured &&
-          selectedSubscription?.status !== "redeemed" ? (
-            <Flex justify="end" gap={8}>
-              <Button onClick={() => setDetailModalOpen(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="primary"
-                loading={isRedeeming}
-                onClick={handleRedeem}
-              >
-                {t("portfolio.redeem")}
-              </Button>
-            </Flex>
-          ) : null
-        }
-        width={600}
-      >
-        {selectedSubscription && (
-          <Flex vertical gap={24}>
-            {/* 资产信息 */}
-            <Card size="small" title={t("portfolio.detail.assetInfo")}>
-              <Flex vertical gap={12}>
-                <Flex justify="space-between">
-                  <Text type="secondary">
-                    {t("portfolio.detail.assetName")}
-                  </Text>
-                  <Text strong>{selectedSubscription.asset_name}</Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text type="secondary">{t("portfolio.detail.symbol")}</Text>
-                  <Text>{selectedSubscription.asset_symbol}</Text>
-                </Flex>
-              </Flex>
-            </Card>
+              <TabsContent value="investments">
+                {isLoadingSubscriptions ? (
+                  <div className="space-y-4">
+                    {[...Array(3)].map((_, i) => (
+                      <Skeleton key={i} className="h-16 w-full" />
+                    ))}
+                  </div>
+                ) : subscriptions.length > 0 ? (
+                  <DataTable
+                    columns={subscriptionColumns}
+                    data={subscriptions}
+                    emptyMessage={t("portfolio.noInvestments")}
+                  />
+                ) : (
+                  <EmptyState message={t("portfolio.noInvestments")} />
+                )}
+              </TabsContent>
 
-            {/* 投资信息 */}
-            <Card size="small" title={t("portfolio.detail.investmentInfo")}>
-              <Flex vertical gap={12}>
-                <Flex justify="space-between">
-                  <Text type="secondary">{t("portfolio.detail.amount")}</Text>
-                  <Text strong style={{ color: "#00D4AA" }}>
-                    ${selectedSubscription.amount.toLocaleString()}
-                  </Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text type="secondary">
-                    {t("portfolio.detail.tokenType")}
-                  </Text>
-                  <Tag>{selectedSubscription.token_type}</Tag>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text type="secondary">
-                    {t("portfolio.detail.lockPeriod")}
-                  </Text>
-                  <Text>
-                    {selectedSubscription.lock_period} {t("common.months")}
-                  </Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text type="secondary">{t("portfolio.detail.apy")}</Text>
-                  <Tag color="green">{selectedSubscription.apy}%</Tag>
-                </Flex>
-              </Flex>
-            </Card>
+              <TabsContent value="history">
+                <div className="flex flex-col gap-4">
+                  <div className="flex justify-between items-center">
+                    <Select
+                      value={txTypeFilter}
+                      onValueChange={(value) => setTxTypeFilter(value === "all" ? undefined : value)}
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder={t("portfolio.filterByType")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">全部类型</SelectItem>
+                        {Object.entries(TRANSACTION_TYPE_NAMES).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" onClick={handleExport}>
+                      <Download className="h-4 w-4 mr-2" />
+                      {t("portfolio.export")}
+                    </Button>
+                  </div>
 
-            {/* 收益信息 */}
-            <Card size="small" title={t("portfolio.detail.earningsInfo")}>
-              <Flex vertical gap={12}>
-                <Flex justify="space-between">
-                  <Text type="secondary">
-                    {t("portfolio.detail.expectedInterest")}
-                  </Text>
-                  <Text style={{ color: "#52C41A" }}>
-                    +${selectedSubscription.expected_interest.toLocaleString()}
-                  </Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text type="secondary">
-                    {t("portfolio.detail.totalReturn")}
-                  </Text>
-                  <Text strong style={{ color: "#FFD700" }}>
-                    ${selectedSubscription.total_return.toLocaleString()}
-                  </Text>
-                </Flex>
-              </Flex>
-            </Card>
-
-            {/* 时间信息 */}
-            <Card size="small" title={t("portfolio.detail.timeInfo")}>
-              <Flex vertical gap={12}>
-                <Flex justify="space-between">
-                  <Text type="secondary">
-                    {t("portfolio.detail.startDate")}
-                  </Text>
-                  <Text>
-                    {selectedSubscription.start_date
-                      ? new Date(
-                          selectedSubscription.start_date
-                        ).toLocaleDateString()
-                      : "-"}
-                  </Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text type="secondary">{t("portfolio.detail.endDate")}</Text>
-                  <Text>
-                    {selectedSubscription.end_date
-                      ? new Date(
-                          selectedSubscription.end_date
-                        ).toLocaleDateString()
-                      : "-"}
-                  </Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text type="secondary">
-                    {t("portfolio.detail.daysRemaining")}
-                  </Text>
-                  <Text>
-                    {selectedSubscription.days_remaining > 0
-                      ? selectedSubscription.days_remaining
-                      : t("portfolio.matured")}
-                  </Text>
-                </Flex>
-                <Progress
-                  percent={Math.max(
-                    0,
-                    100 -
-                      (selectedSubscription.days_remaining /
-                        (selectedSubscription.lock_period * 30)) *
-                        100
+                  {isLoadingTx ? (
+                    <div className="space-y-4">
+                      {[...Array(5)].map((_, i) => (
+                        <Skeleton key={i} className="h-12 w-full" />
+                      ))}
+                    </div>
+                  ) : transactions.length > 0 ? (
+                    <DataTable
+                      columns={transactionColumns}
+                      data={transactions}
+                      pagination={{
+                        pageIndex: txPagination.page - 1,
+                        pageSize: txPagination.pageSize,
+                        pageCount: Math.ceil(txPagination.total / txPagination.pageSize),
+                        onPageChange: (page) => fetchTransactions(page + 1),
+                        onPageSizeChange: (size) => {
+                          setTxPagination((prev) => ({ ...prev, pageSize: size }));
+                        },
+                      }}
+                      emptyMessage={t("portfolio.noTransactions")}
+                    />
+                  ) : (
+                    <EmptyState message={t("portfolio.noTransactions")} />
                   )}
-                  strokeColor="#00D4AA"
-                  format={() =>
-                    selectedSubscription.is_matured ? (
-                      <CheckCircleOutlined style={{ color: "#52C41A" }} />
-                    ) : null
-                  }
-                />
-              </Flex>
-            </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
 
-            {/* 状态 */}
-            <Flex justify="center">
-              <Tag
-                color={
-                  selectedSubscription.status === "redeemed"
-                    ? "default"
-                    : selectedSubscription.is_matured
-                    ? "success"
-                    : "processing"
-                }
-                style={{ fontSize: 14, padding: "4px 16px" }}
-              >
-                {t(`portfolio.status.${selectedSubscription.status}`)}
-              </Tag>
-            </Flex>
-          </Flex>
-        )}
-      </Modal>
-    </div>
+        {/* Subscription Detail Modal */}
+        <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+          <DialogContent className="max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5" />
+                {t("portfolio.subscriptionDetail")}
+              </DialogTitle>
+            </DialogHeader>
+
+            {selectedSubscription && (
+              <div className="flex flex-col gap-6">
+                {/* 资产信息 */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{t("portfolio.detail.assetInfo")}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("portfolio.detail.assetName")}
+                      </span>
+                      <span className="font-semibold">{selectedSubscription.asset_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("portfolio.detail.symbol")}
+                      </span>
+                      <span>{selectedSubscription.asset_symbol}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 投资信息 */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{t("portfolio.detail.investmentInfo")}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("portfolio.detail.amount")}
+                      </span>
+                      <span className="font-semibold text-primary">
+                        ${selectedSubscription.amount.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("portfolio.detail.tokenType")}
+                      </span>
+                      <Badge variant="outline">{selectedSubscription.token_type}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("portfolio.detail.lockPeriod")}
+                      </span>
+                      <span>
+                        {selectedSubscription.lock_period} {t("common.months")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("portfolio.detail.apy")}
+                      </span>
+                      <Badge variant="secondary" className="bg-green-500/20 text-green-400">
+                        {selectedSubscription.apy}%
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 收益信息 */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{t("portfolio.detail.earningsInfo")}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("portfolio.detail.expectedInterest")}
+                      </span>
+                      <span className="text-green-400">
+                        +${selectedSubscription.expected_interest.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("portfolio.detail.totalReturn")}
+                      </span>
+                      <span className="font-semibold text-yellow-400">
+                        ${selectedSubscription.total_return.toLocaleString()}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 时间信息 */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{t("portfolio.detail.timeInfo")}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("portfolio.detail.startDate")}
+                      </span>
+                      <span>
+                        {selectedSubscription.start_date
+                          ? new Date(selectedSubscription.start_date).toLocaleDateString()
+                          : "-"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("portfolio.detail.endDate")}
+                      </span>
+                      <span>
+                        {selectedSubscription.end_date
+                          ? new Date(selectedSubscription.end_date).toLocaleDateString()
+                          : "-"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {t("portfolio.detail.daysRemaining")}
+                      </span>
+                      <span>
+                        {selectedSubscription.days_remaining > 0
+                          ? selectedSubscription.days_remaining
+                          : t("portfolio.matured")}
+                      </span>
+                    </div>
+                    <Progress
+                      value={Math.max(
+                        0,
+                        100 -
+                          (selectedSubscription.days_remaining /
+                            (selectedSubscription.lock_period * 30)) *
+                            100
+                      )}
+                      indicatorColor="#00D4AA"
+                      showInfo
+                      format={(percent) =>
+                        selectedSubscription.is_matured ? (
+                          <CheckCircle className="h-4 w-4 text-green-400" />
+                        ) : (
+                          `${Math.round(percent)}%`
+                        )
+                      }
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* 状态 */}
+                <div className="flex justify-center">
+                  <Badge
+                    className={cn(
+                      "text-sm px-4 py-1",
+                      selectedSubscription.status === "redeemed"
+                        ? "bg-gray-500/20 text-gray-400"
+                        : selectedSubscription.is_matured
+                        ? "bg-green-500/20 text-green-400"
+                        : "bg-blue-500/20 text-blue-400"
+                    )}
+                  >
+                    {t(`portfolio.status.${selectedSubscription.status}`)}
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {selectedSubscription?.is_matured &&
+              selectedSubscription?.status !== "redeemed" && (
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDetailModalOpen(false)}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button onClick={handleRedeem} disabled={isRedeeming}>
+                    {isRedeeming ? "处理中..." : t("portfolio.redeem")}
+                  </Button>
+                </DialogFooter>
+              )}
+          </DialogContent>
+        </Dialog>
+      </div>
     </RequireWallet>
   );
 }

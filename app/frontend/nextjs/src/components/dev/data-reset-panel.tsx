@@ -2,20 +2,33 @@
 /**
  * Data Reset Panel Component
  * Developer tool for resetting test data
+ * 
+ * Migrated from Ant Design to shadcn/ui
+ * @validates Requirements 16.12
  */
 import { useState, useEffect, useCallback } from 'react'
-import { Card, Button, Space, Flex, Typography, Alert, Checkbox, Input, Modal, Statistic, Row, Col, App } from 'antd'
-import { DeleteOutlined, WarningOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
-import { devToolsService, type ResetableDataInfo, type DataResetRequest } from '@/services/dev-tools'
+import { Trash2, AlertTriangle, AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
 
-const { Text } = Typography
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog'
+import { notification } from '@/lib/notification'
+import { devToolsService, type ResetableDataInfo, type DataResetRequest } from '@/services/dev-tools'
 
 type DataType = 'kyc' | 'transaction' | 'all'
 
 export function DataResetPanel() {
   const { t } = useTranslation()
-  const { message: messageApi } = App.useApp()
   
   const [selectedTypes, setSelectedTypes] = useState<DataType[]>(['all'])
   const [confirmText, setConfirmText] = useState('')
@@ -50,12 +63,12 @@ export function DataResetPanel() {
     setIsResetting(true)
     try {
       await devToolsService.resetData(request)
-      messageApi.success(t('dev.dataReset.success'))
+      notification.success(t('dev.dataReset.success'))
       setIsModalOpen(false)
       setConfirmText('')
       refetch()
     } catch (error) {
-      messageApi.error((error as Error).message || t('common.error'))
+      notification.error((error as Error).message || t('common.error'))
     } finally {
       setIsResetting(false)
     }
@@ -79,7 +92,7 @@ export function DataResetPanel() {
   // Open confirmation modal
   const handleResetClick = () => {
     if (selectedTypes.length === 0) {
-      messageApi.warning(t('dev.dataReset.selectType'))
+      notification.warning(t('dev.dataReset.selectType'))
       return
     }
     setIsModalOpen(true)
@@ -88,7 +101,7 @@ export function DataResetPanel() {
   // Execute reset
   const handleConfirmReset = () => {
     if (confirmText !== 'RESET') {
-      messageApi.error(t('dev.dataReset.confirmError'))
+      notification.error(t('dev.dataReset.confirmError'))
       return
     }
     
@@ -101,144 +114,177 @@ export function DataResetPanel() {
   const isAllSelected = selectedTypes.includes('all')
 
   return (
-    <Card 
-      title={<Space><DeleteOutlined />{t('dev.dataReset.title')}</Space>}
-      extra={
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          <Trash2 className="h-4 w-4" />
+          {t('dev.dataReset.title')}
+        </CardTitle>
         <Button 
-          size="small" 
+          variant="outline"
+          size="sm"
           onClick={() => refetch()}
-          loading={isLoading}
+          disabled={isLoading}
         >
-          {t('common.refresh')}
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
+          <span className="ml-1">{t('common.refresh')}</span>
         </Button>
-      }
-    >
-      <Flex vertical gap={16} style={{ width: '100%' }}>
-        {/* Warning */}
-        <Alert
-          type="error"
-          icon={<WarningOutlined />}
-          message={t('dev.dataReset.warning')}
-          description={t('dev.dataReset.warningDescription')}
-          showIcon
-        />
+      </CardHeader>
+      
+      <CardContent className="flex flex-col gap-4">
+        {/* Warning Alert */}
+        <div className="flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="flex flex-col gap-1">
+            <span className="font-medium text-red-500">
+              {t('dev.dataReset.warning')}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {t('dev.dataReset.warningDescription')}
+            </span>
+          </div>
+        </div>
 
         {/* Data Statistics */}
         {resetInfo && (
-          <Row gutter={16}>
-            <Col span={12}>
-              <Statistic
-                title={t('dev.dataReset.kycRecords')}
-                value={resetInfo.kyc_count}
-              />
-            </Col>
-            <Col span={12}>
-              <Statistic
-                title={t('dev.dataReset.transactionRecords')}
-                value={resetInfo.transaction_count}
-              />
-            </Col>
-          </Row>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1 p-4 rounded-lg bg-white/5 border border-white/10">
+              <span className="text-sm text-muted-foreground">
+                {t('dev.dataReset.kycRecords')}
+              </span>
+              <span className="text-2xl font-semibold text-foreground">
+                {resetInfo.kyc_count}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 p-4 rounded-lg bg-white/5 border border-white/10">
+              <span className="text-sm text-muted-foreground">
+                {t('dev.dataReset.transactionRecords')}
+              </span>
+              <span className="text-2xl font-semibold text-foreground">
+                {resetInfo.transaction_count}
+              </span>
+            </div>
+          </div>
         )}
 
         {/* Data Type Selection */}
-        <div>
-          <Text strong>{t('dev.dataReset.selectDataTypes')}:</Text>
-          <div style={{ marginTop: 8 }}>
-            <Flex vertical>
+        <div className="flex flex-col gap-2">
+          <span className="font-medium text-foreground">
+            {t('dev.dataReset.selectDataTypes')}:
+          </span>
+          <div className="flex flex-col gap-3 mt-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={isAllSelected}
-                onChange={(e) => handleTypeChange('all', e.target.checked)}
-              >
-                {t('dev.dataReset.allData')}
-              </Checkbox>
+                onCheckedChange={(checked) => handleTypeChange('all', checked === true)}
+              />
+              <span className="text-sm">{t('dev.dataReset.allData')}</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={selectedTypes.includes('kyc') || isAllSelected}
                 disabled={isAllSelected}
-                onChange={(e) => handleTypeChange('kyc', e.target.checked)}
-              >
+                onCheckedChange={(checked) => handleTypeChange('kyc', checked === true)}
+              />
+              <span className="text-sm">
                 {t('dev.dataReset.kycData')} ({resetInfo?.kyc_count || 0})
-              </Checkbox>
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={selectedTypes.includes('transaction') || isAllSelected}
                 disabled={isAllSelected}
-                onChange={(e) => handleTypeChange('transaction', e.target.checked)}
-              >
+                onCheckedChange={(checked) => handleTypeChange('transaction', checked === true)}
+              />
+              <span className="text-sm">
                 {t('dev.dataReset.transactionData')} ({resetInfo?.transaction_count || 0})
-              </Checkbox>
-            </Flex>
+              </span>
+            </label>
           </div>
         </div>
 
         {/* Reset Button */}
         <Button
-          type="primary"
-          danger
-          icon={<DeleteOutlined />}
+          variant="destructive"
           onClick={handleResetClick}
           disabled={selectedTypes.length === 0}
-          block
+          className="w-full"
         >
+          <Trash2 className="h-4 w-4 mr-2" />
           {t('dev.dataReset.resetButton')}
         </Button>
 
-        <Text type="secondary" style={{ fontSize: 12 }}>
+        <p className="text-xs text-muted-foreground">
           {t('dev.dataReset.note')}
-        </Text>
-      </Flex>
+        </p>
+      </CardContent>
 
-      {/* Confirmation Modal */}
-      <Modal
-        title={
-          <Space>
-            <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
-            {t('dev.dataReset.confirmTitle')}
-          </Space>
-        }
-        open={isModalOpen}
-        onCancel={() => {
-          setIsModalOpen(false)
-          setConfirmText('')
-        }}
-        onOk={handleConfirmReset}
-        okText={t('dev.dataReset.confirmButton')}
-        okButtonProps={{ 
-          danger: true, 
-          disabled: confirmText !== 'RESET',
-          loading: isResetting,
-        }}
-        cancelText={t('common.cancel')}
-      >
-        <Flex vertical gap={16} style={{ width: '100%' }}>
-          <Alert
-            type="error"
-            message={t('dev.dataReset.confirmWarning')}
-            showIcon
-          />
+      {/* Confirmation AlertDialog */}
+      <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              {t('dev.dataReset.confirmTitle')}
+            </AlertDialogTitle>
+          </AlertDialogHeader>
           
-          <div>
-            <Text>{t('dev.dataReset.confirmPrompt')}</Text>
-            <Input
-              placeholder="RESET"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
-              style={{ marginTop: 8 }}
-            />
+          <div className="flex flex-col gap-4">
+            {/* Confirm Warning */}
+            <div className="flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+              <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <span className="text-sm text-red-500">
+                {t('dev.dataReset.confirmWarning')}
+              </span>
+            </div>
+            
+            {/* Confirm Input */}
+            <div className="flex flex-col gap-2">
+              <span className="text-sm text-foreground">
+                {t('dev.dataReset.confirmPrompt')}
+              </span>
+              <Input
+                placeholder="RESET"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
+              />
+            </div>
+            
+            {/* Will Delete List */}
+            <div className="flex flex-col gap-2">
+              <span className="font-medium text-foreground">
+                {t('dev.dataReset.willDelete')}:
+              </span>
+              <ul className="list-disc list-inside text-sm text-muted-foreground ml-2">
+                {(isAllSelected || selectedTypes.includes('kyc')) && (
+                  <li>{t('dev.dataReset.kycData')}</li>
+                )}
+                {(isAllSelected || selectedTypes.includes('transaction')) && (
+                  <li>{t('dev.dataReset.transactionData')}</li>
+                )}
+              </ul>
+            </div>
           </div>
-          
-          <div>
-            <Text strong>{t('dev.dataReset.willDelete')}:</Text>
-            <ul style={{ marginTop: 8, paddingLeft: 20 }}>
-              {(isAllSelected || selectedTypes.includes('kyc')) && (
-                <li>{t('dev.dataReset.kycData')}</li>
-              )}
-              {(isAllSelected || selectedTypes.includes('transaction')) && (
-                <li>{t('dev.dataReset.transactionData')}</li>
-              )}
-            </ul>
-          </div>
-        </Flex>
-      </Modal>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmText('')}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmReset}
+              disabled={confirmText !== 'RESET' || isResetting}
+            >
+              {isResetting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {t('dev.dataReset.confirmButton')}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

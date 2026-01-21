@@ -1,5 +1,9 @@
 @import "tailwindcss";
+
+@plugin "tailwindcss-animate";
 @import "../styles/premium-v5-dashboard.css";
+
+@custom-variant dark (&:is(.dark *));
 
 /* ============================================
    SuperCrypto - Web3 Theme Styles
@@ -104,6 +108,62 @@
   --header-padding-x-tablet: 36px;
   --logo-size-tablet: 40px;
   --logo-title-size-tablet: 20px;
+  --radius: 0.5rem;
+  
+  /* ============================================
+     shadcn/ui CSS Variables - Light Mode
+     Configured for Web3 theme compatibility
+     ============================================ */
+  --background: 0 0% 100%;
+  --foreground: 210 40% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 40% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 40% 10%;
+  
+  /* Primary: #00D4AA (Web3 Neon Green) */
+  --primary: 165 100% 42%;
+  --primary-foreground: 210 40% 6%;
+  
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 210 40% 10%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 210 40% 40%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 210 40% 10%;
+  
+  /* Semantic Colors */
+  --success: 165 100% 42%;
+  --success-foreground: 210 40% 6%;
+  --warning: 51 100% 50%;
+  --warning-foreground: 210 40% 6%;
+  --error: 0 84% 60%;
+  --error-foreground: 0 0% 100%;
+  --info: 210 100% 50%;
+  --info-foreground: 0 0% 100%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 210 40% 90%;
+  --input: 210 40% 90%;
+  --ring: 165 100% 42%;
+  
+  /* Chart Colors */
+  --chart-1: 165 100% 42%;
+  --chart-2: 51 100% 50%;
+  --chart-3: 210 100% 50%;
+  --chart-4: 0 84% 60%;
+  --chart-5: 280 100% 60%;
+  
+  /* Sidebar */
+  --sidebar: 0 0% 98%;
+  --sidebar-foreground: 210 40% 10%;
+  --sidebar-primary: 165 100% 42%;
+  --sidebar-primary-foreground: 210 40% 6%;
+  --sidebar-accent: 210 40% 96%;
+  --sidebar-accent-foreground: 210 40% 10%;
+  --sidebar-border: 210 40% 90%;
+  --sidebar-ring: 165 100% 42%;
 }
 
 /* ============================================
@@ -1030,6 +1090,12 @@ body {
   color: var(--color-error) !important;
 }
 
+/* Content Wrapper - 确保全宽 */
+.content-wrapper {
+  width: 100%;
+  min-height: calc(100vh - 64px - 100px);
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;
@@ -1663,6 +1729,8 @@ body {
 .cta-section {
   position: relative;
   padding: 100px 24px;
+  display: flex;
+  justify-content: center;
   /* 增强的渐变背景 */
   background:
     /* 网格纹理 */
@@ -2149,6 +2217,7 @@ body {
     transparent 1.5px
   );
   background-size: 24px 24px;
+  position: relative;
 }
 
 /* 2.1 六边形网格背景 - 科技感 */
@@ -2825,4 +2894,148 @@ input:focus:not(:focus-visible) {
   border: 1px solid rgba(0, 212, 170, 0.15);
   border-radius: 16px;
   overflow: hidden;
+}
+
+@theme inline {
+  /* Border Radius System */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  
+  /* Color System - HSL format for Tailwind compatibility */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  
+  /* Semantic Colors */
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-error: hsl(var(--error));
+  --color-error-foreground: hsl(var(--error-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+  
+  /* Chart Colors */
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+  
+  /* Sidebar Colors */
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+}
+
+.dark {
+  /* ============================================
+     shadcn/ui CSS Variables - Dark Mode (Default)
+     Web3 Theme with Glass-morphism Effects
+     Primary: #00D4AA (Neon Green)
+     ============================================ */
+  
+  /* Background: rgba(25, 35, 30, 0.8) equivalent - Dark Web3 */
+  --background: 150 17% 6%;
+  --foreground: 0 0% 95%;
+  
+  /* Card: Glass-morphism dark card */
+  --card: 150 17% 8%;
+  --card-foreground: 0 0% 95%;
+  
+  /* Popover: Elevated dark surface */
+  --popover: 150 17% 10%;
+  --popover-foreground: 0 0% 95%;
+  
+  /* Primary: #00D4AA (Web3 Neon Green) */
+  --primary: 165 100% 42%;
+  --primary-foreground: 150 17% 6%;
+  
+  /* Secondary: Muted dark surface */
+  --secondary: 150 17% 15%;
+  --secondary-foreground: 0 0% 95%;
+  
+  /* Muted: Subtle text and backgrounds */
+  --muted: 150 17% 15%;
+  --muted-foreground: 0 0% 70%;
+  
+  /* Accent: Highlighted elements */
+  --accent: 150 17% 15%;
+  --accent-foreground: 0 0% 95%;
+  
+  /* Semantic Colors */
+  --success: 165 100% 42%;
+  --success-foreground: 150 17% 6%;
+  --warning: 51 100% 50%;
+  --warning-foreground: 150 17% 6%;
+  --error: 0 84% 60%;
+  --error-foreground: 0 0% 100%;
+  --info: 210 100% 50%;
+  --info-foreground: 0 0% 100%;
+  
+  /* Destructive: Error/Danger state */
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  
+  /* Border: rgba(255, 255, 255, 0.15) equivalent */
+  --border: 0 0% 100% / 15%;
+  
+  /* Input: Slightly more visible border */
+  --input: 0 0% 100% / 20%;
+  
+  /* Ring: Focus ring color (primary) */
+  --ring: 165 100% 42%;
+  
+  /* Chart Colors - Web3 Palette */
+  --chart-1: 165 100% 42%;
+  --chart-2: 51 100% 50%;
+  --chart-3: 210 100% 50%;
+  --chart-4: 0 84% 60%;
+  --chart-5: 280 100% 60%;
+  
+  /* Sidebar - Dark theme */
+  --sidebar: 150 17% 8%;
+  --sidebar-foreground: 0 0% 95%;
+  --sidebar-primary: 165 100% 42%;
+  --sidebar-primary-foreground: 150 17% 6%;
+  --sidebar-accent: 150 17% 15%;
+  --sidebar-accent-foreground: 0 0% 95%;
+  --sidebar-border: 0 0% 100% / 10%;
+  --sidebar-ring: 165 100% 42%;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

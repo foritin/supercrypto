@@ -2,23 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Typography,
-  Select,
-  Empty,
-  Pagination,
-  Progress,
-  Skeleton,
-} from "antd";
-import {
-  BankOutlined,
-  FireOutlined,
-  RiseOutlined,
-  SafetyOutlined,
-  ArrowRightOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  PauseCircleOutlined,
-} from "@ant-design/icons";
+  Building2,
+  Flame,
+  TrendingUp,
+  Shield,
+  ArrowRight,
+  CheckCircle,
+  Clock,
+  PauseCircle,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
 import {
@@ -28,17 +20,27 @@ import {
   type AssetStatus,
   ASSET_TYPE_NAMES,
 } from "@/services/asset";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import "./assets.css";
 
-const { Title, Text } = Typography;
-
-// 资产类型图标映射
+// 资产类型图标映射 - 使用 lucide-react 图标
 const ASSET_TYPE_ICONS: Record<AssetType, React.ReactNode> = {
-  real_estate: <BankOutlined />,
-  bond: <SafetyOutlined />,
-  commodity: <FireOutlined />,
-  equity: <RiseOutlined />,
-  other: <BankOutlined />,
+  real_estate: <Building2 className="h-4 w-4" />,
+  bond: <Shield className="h-4 w-4" />,
+  commodity: <Flame className="h-4 w-4" />,
+  equity: <TrendingUp className="h-4 w-4" />,
+  other: <Building2 className="h-4 w-4" />,
 };
 
 // 高质量背景图
@@ -54,7 +56,7 @@ const ASSET_TYPE_IMAGES: Record<AssetType, string> = {
     "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800&q=80",
 };
 
-// 状态配置
+// 状态配置 - 使用 lucide-react 图标
 const STATUS_CONFIG: Record<
   AssetStatus,
   { label: string; color: string; icon: React.ReactNode }
@@ -62,19 +64,19 @@ const STATUS_CONFIG: Record<
   active: {
     label: "Available",
     color: "#00D4AA",
-    icon: <CheckCircleOutlined />,
+    icon: <CheckCircle className="h-3 w-3" />,
   },
   paused: {
     label: "Paused",
     color: "#FAAD14",
-    icon: <PauseCircleOutlined />,
+    icon: <PauseCircle className="h-3 w-3" />,
   },
   sold_out: {
     label: "Sold Out",
     color: "#FF4D4F",
-    icon: <ClockCircleOutlined />,
+    icon: <Clock className="h-3 w-3" />,
   },
-  closed: { label: "Closed", color: "#8C8C8C", icon: <ClockCircleOutlined /> },
+  closed: { label: "Closed", color: "#8C8C8C", icon: <Clock className="h-3 w-3" /> },
 };
 
 interface AssetsData {
@@ -85,6 +87,107 @@ interface AssetsData {
     page_size: number;
     total_pages: number;
   };
+}
+
+// 自定义分页组件
+function CustomPagination({
+  current,
+  total,
+  pageSize,
+  onChange,
+}: {
+  current: number;
+  total: number;
+  pageSize: number;
+  onChange: (page: number) => void;
+}) {
+  const totalPages = Math.ceil(total / pageSize);
+  
+  if (totalPages <= 1) return null;
+
+  // 生成页码数组
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const showPages = 5; // 显示的页码数量
+    
+    if (totalPages <= showPages) {
+      // 总页数小于等于显示数量，显示所有页码
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // 总页数大于显示数量，需要省略
+      if (current <= 3) {
+        // 当前页靠近开头
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (current >= totalPages - 2) {
+        // 当前页靠近结尾
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // 当前页在中间
+        pages.push(1);
+        pages.push("...");
+        for (let i = current - 1; i <= current + 1; i++) {
+          pages.push(i);
+        }
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* 上一页按钮 */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onChange(current - 1)}
+        disabled={current === 1}
+        className="h-8 w-8 p-0"
+      >
+        ‹
+      </Button>
+      
+      {/* 页码 */}
+      {getPageNumbers().map((page, index) => (
+        <Button
+          key={index}
+          variant={page === current ? "default" : "outline"}
+          size="sm"
+          onClick={() => typeof page === "number" && onChange(page)}
+          disabled={typeof page !== "number"}
+          className={cn(
+            "h-8 min-w-8 p-0",
+            page === current && "bg-primary text-primary-foreground"
+          )}
+        >
+          {page}
+        </Button>
+      ))}
+      
+      {/* 下一页按钮 */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onChange(current + 1)}
+        disabled={current === totalPages}
+        className="h-8 w-8 p-0"
+      >
+        ›
+      </Button>
+    </div>
+  );
 }
 
 export default function AssetsPage() {
@@ -129,9 +232,9 @@ export default function AssetsPage() {
   const formatApy = (apy: number) => (apy === 0 ? "-" : `${apy.toFixed(1)}%`);
 
   const formatAmount = (amount: number) => {
-    if (amount >= 1000000) return `$${(amount / 1000000).toFixed(2)}M`;
-    if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
-    return `$${amount.toFixed(0)}`;
+    if (amount >= 1000000) return `${(amount / 1000000).toFixed(2)}M`;
+    if (amount >= 1000) return `${(amount / 1000).toFixed(0)}K`;
+    return `${amount.toFixed(0)}`;
   };
 
   // 计算统计
@@ -192,60 +295,58 @@ export default function AssetsPage() {
         <div className="asset-card-content">
           {/* Header */}
           <div className="asset-card-header">
-            <Title level={5} ellipsis style={{ margin: 0, flex: 1 }}>
+            <h5 className="text-base font-semibold text-white truncate flex-1 m-0">
               {asset.name}
-            </Title>
-            <Text className="asset-symbol">{asset.symbol}</Text>
+            </h5>
+            <span className="asset-symbol">{asset.symbol}</span>
           </div>
 
           {/* APY Section */}
           <div className="apy-section">
             <div className="apy-item">
-              <Text className="apy-label">3M APY</Text>
-              <Text className="apy-value">{formatApy(asset.apy_3m)}</Text>
+              <span className="apy-label">3M APY</span>
+              <span className="apy-value">{formatApy(asset.apy_3m)}</span>
             </div>
             <div className="apy-divider" />
             <div className="apy-item">
-              <Text className="apy-label">6M APY</Text>
-              <Text className="apy-value">{formatApy(asset.apy_6m)}</Text>
+              <span className="apy-label">6M APY</span>
+              <span className="apy-value">{formatApy(asset.apy_6m)}</span>
             </div>
             <div className="apy-divider" />
             <div className="apy-item highlight">
-              <Text className="apy-label">12M APY</Text>
-              <Text className="apy-value highlight">
+              <span className="apy-label">12M APY</span>
+              <span className="apy-value highlight">
                 {formatApy(asset.apy_12m)}
-              </Text>
+              </span>
             </div>
           </div>
 
           {/* Progress Section */}
           <div className="progress-section">
             <div className="progress-header">
-              <Text className="progress-label">Subscription</Text>
-              <Text className="progress-value">
+              <span className="progress-label">Subscription</span>
+              <span className="progress-value">
                 {formatAmount(asset.subscribed_amount)} /{" "}
                 {formatAmount(asset.total_supply)}
-              </Text>
+              </span>
             </div>
             <Progress
-              percent={progress}
-              showInfo={false}
-              strokeColor="#00D4AA"
-              railColor="rgba(255,255,255,0.06)"
-              size="small"
+              value={progress}
+              indicatorColor="#00D4AA"
+              className="h-1.5"
             />
           </div>
 
           {/* Footer */}
           <div className="asset-card-footer">
             <div className="price-info">
-              <Text className="price-label">Price</Text>
-              <Text className="price-value">
+              <span className="price-label">Price</span>
+              <span className="price-value">
                 ${asset.current_price.toFixed(2)}
-              </Text>
+              </span>
             </div>
             <div className="view-action">
-              <ArrowRightOutlined />
+              <ArrowRight className="h-4 w-4" />
             </div>
           </div>
         </div>
@@ -257,8 +358,28 @@ export default function AssetsPage() {
   const renderCardSkeleton = () => (
     <div className="asset-card-wrapper skeleton">
       <div className="skeleton-image-placeholder" />
-      <div style={{ padding: 20 }}>
-        <Skeleton active paragraph={{ rows: 4 }} />
+      <div className="p-5 space-y-4">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-12" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-16 flex-1" />
+        </div>
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <Skeleton className="h-1.5 w-full" />
+        </div>
+        <div className="flex justify-between items-center pt-4 border-t border-white/5">
+          <div className="space-y-1">
+            <Skeleton className="h-3 w-10" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+          <Skeleton className="h-9 w-9 rounded-lg" />
+        </div>
       </div>
     </div>
   );
@@ -284,10 +405,10 @@ export default function AssetsPage() {
       <section className="page-header">
         <div className="header-content">
           <div className="header-text">
-            <Text className="section-label">{t("assets.explore")}</Text>
-            <Title level={2} style={{ margin: "8px 0 0" }}>
+            <span className="section-label">{t("assets.explore")}</span>
+            <h2 className="text-2xl font-bold text-white mt-2 mb-0">
               {t("assets.title")}
-            </Title>
+            </h2>
           </div>
 
           {/* Stats - 加载时显示骨架屏 */}
@@ -296,23 +417,23 @@ export default function AssetsPage() {
           ) : (
             <div className="stats-row">
               <div className="stat-item">
-                <Text className="stat-value">{stats.total}</Text>
-                <Text className="stat-label">Assets</Text>
+                <span className="stat-value">{stats.total}</span>
+                <span className="stat-label">Assets</span>
               </div>
               <div className="stat-divider" />
               <div className="stat-item">
-                <Text className="stat-value">{formatAmount(stats.tvl)}</Text>
-                <Text className="stat-label">Total Value</Text>
+                <span className="stat-value">{formatAmount(stats.tvl)}</span>
+                <span className="stat-label">Total Value</span>
               </div>
               <div className="stat-divider" />
               <div className="stat-item">
-                <Text className="stat-value highlight">{stats.avgApy}%</Text>
-                <Text className="stat-label">Avg. APY</Text>
+                <span className="stat-value highlight">{stats.avgApy}%</span>
+                <span className="stat-label">Avg. APY</span>
               </div>
               <div className="stat-divider" />
               <div className="stat-item">
-                <Text className="stat-value">{stats.available}</Text>
-                <Text className="stat-label">Available</Text>
+                <span className="stat-value">{stats.available}</span>
+                <span className="stat-label">Available</span>
               </div>
             </div>
           )}
@@ -348,22 +469,25 @@ export default function AssetsPage() {
           )}
         </div>
 
+        {/* 使用 shadcn/ui Select 替换 Ant Design Select */}
         <Select
-          style={{ width: 140 }}
-          placeholder="Status"
-          allowClear
-          value={statusFilter}
-          onChange={(value) => {
-            setStatusFilter(value);
+          value={statusFilter || "all"}
+          onValueChange={(value) => {
+            setStatusFilter(value === "all" ? undefined : (value as AssetStatus));
             setPage(1);
           }}
-          options={[
-            { value: "active", label: "Available" },
-            { value: "paused", label: "Paused" },
-            { value: "sold_out", label: "Sold Out" },
-            { value: "closed", label: "Closed" },
-          ]}
-        />
+        >
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Available</SelectItem>
+            <SelectItem value="paused">Paused</SelectItem>
+            <SelectItem value="sold_out">Sold Out</SelectItem>
+            <SelectItem value="closed">Closed</SelectItem>
+          </SelectContent>
+        </Select>
       </section>
 
       {/* Assets Grid */}
@@ -375,9 +499,11 @@ export default function AssetsPage() {
             ))}
           </div>
         ) : error ? (
-          <Empty description={t("common.error")} />
+          <EmptyState message={t("common.error")} />
         ) : !data?.items?.length ? (
-          <Empty description={t("assets.empty")} className="empty-state" />
+          <div className="empty-state">
+            <EmptyState message={t("assets.empty")} />
+          </div>
         ) : (
           <>
             <div className="assets-grid">
@@ -386,12 +512,11 @@ export default function AssetsPage() {
 
             {data.pagination && data.pagination.total_pages > 1 && (
               <div className="pagination-wrapper">
-                <Pagination
+                <CustomPagination
                   current={page}
                   pageSize={pageSize}
                   total={data.pagination.total}
                   onChange={setPage}
-                  showSizeChanger={false}
                 />
               </div>
             )}

@@ -4,7 +4,7 @@
  * Story 10.7: 前端项目状态仪表盘
  */
 
-import { Tag } from 'antd';
+import { Badge } from '@/components/ui/badge';
 import type { ProjectReadiness, ContractStatus } from '@/types/project-registry';
 
 
@@ -15,21 +15,21 @@ interface ProjectStatusBadgeProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-const readinessConfig: Record<ProjectReadiness, { label: string; color: string }> = {
-  not_ready: { label: '未就绪', color: 'error' },
-  partially_ready: { label: '部分就绪', color: 'warning' },
-  fully_ready: { label: '完全就绪', color: 'success' },
-  unknown: { label: '未知', color: 'default' },
-  error: { label: '错误', color: 'error' },
+const readinessConfig: Record<ProjectReadiness, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' }> = {
+  not_ready: { label: '未就绪', variant: 'destructive' },
+  partially_ready: { label: '部分就绪', variant: 'warning' },
+  fully_ready: { label: '完全就绪', variant: 'success' },
+  unknown: { label: '未知', variant: 'secondary' },
+  error: { label: '错误', variant: 'destructive' },
 };
 
 export function ProjectStatusBadge({ readiness }: ProjectStatusBadgeProps) {
   const config = readinessConfig[readiness] || readinessConfig.unknown;
 
   return (
-    <Tag color={config.color}>
+    <Badge variant={config.variant}>
       {config.label}
-    </Tag>
+    </Badge>
   );
 }
 
@@ -40,24 +40,24 @@ interface ContractStatusBadgeProps {
   status: ContractStatus | null;
 }
 
-const statusConfig: Record<ContractStatus, { label: string; color: string }> = {
-  not_registered: { label: '未注册', color: 'default' },
-  registered: { label: '已注册', color: 'blue' },
-  deployed: { label: '已部署', color: 'purple' },
-  bound: { label: '已绑定', color: 'cyan' },
-  active: { label: '已激活', color: 'green' },
-  deprecated: { label: '已废弃', color: 'red' },
+const statusConfig: Record<ContractStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' }> = {
+  not_registered: { label: '未注册', variant: 'secondary' },
+  registered: { label: '已注册', variant: 'default' },
+  deployed: { label: '已部署', variant: 'outline' },
+  bound: { label: '已绑定', variant: 'default' },
+  active: { label: '已激活', variant: 'success' },
+  deprecated: { label: '已废弃', variant: 'destructive' },
 };
 
 export function ContractStatusBadge({ status }: ContractStatusBadgeProps) {
   if (!status) {
-    return <span style={{ color: '#999' }}>-</span>;
+    return <span className="text-muted-foreground">-</span>;
   }
 
   const config = statusConfig[status];
   if (!config) {
-    return <Tag>{status}</Tag>;
+    return <Badge variant="secondary">{status}</Badge>;
   }
 
-  return <Tag color={config.color}>{config.label}</Tag>;
+  return <Badge variant={config.variant}>{config.label}</Badge>;
 }
