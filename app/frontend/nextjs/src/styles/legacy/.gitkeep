@@ -1,0 +1,3 @@
+# This directory contains legacy styles to be cleaned up
+# Files to be created:
+# - ant-design.css (Ant Design override styles - to be removed after migration)

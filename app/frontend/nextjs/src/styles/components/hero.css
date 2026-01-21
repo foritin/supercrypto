@@ -1,0 +1,171 @@
+/* ============================================
+   SuperCrypto - Hero Section Styles
+   Hero 区域、视频背景、光球效果
+   ============================================ */
+
+/* Hero Section with Video Background */
+.hero-section {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 0;
+  margin: 0;
+}
+
+/* 视频背景容器 */
+.hero-video-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* 视频元素 */
+.hero-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+}
+
+/* 视频遮罩层 - 确保文字可读性 */
+.hero-video-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    135deg,
+    rgba(10, 15, 13, 0.75) 0%,
+    rgba(10, 15, 13, 0.85) 100%
+  );
+}
+
+/* 降级方案：如果没有视频支持，使用背景图 */
+.hero-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+      180deg,
+      rgba(10, 15, 13, 0.6) 0%,
+      rgba(10, 15, 13, 0.75) 40%,
+      rgba(10, 15, 13, 0.9) 80%,
+      rgba(10, 15, 13, 1) 100%
+    ),
+    url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80")
+      center/cover no-repeat;
+  z-index: 0;
+  display: none;
+}
+
+/* 当没有视频元素时显示背景图 */
+.hero-section:not(:has(.hero-video))::before {
+  display: block;
+}
+
+/* Vignette 边缘暗角效果 - 柔化边界 */
+.hero-section::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(
+      ellipse at center,
+      transparent 0%,
+      transparent 50%,
+      rgba(10, 15, 13, 0.3) 75%,
+      rgba(10, 15, 13, 0.6) 90%,
+      rgba(10, 15, 13, 0.85) 100%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(0, 212, 170, 0.03) 0%,
+      transparent 40%,
+      rgba(255, 215, 0, 0.02) 60%,
+      transparent 100%
+    );
+  background-size: 100% 100%, 200% 200%;
+  animation: gradientShift 15s ease infinite;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 24px;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 10;
+}
+
+/* Background Orbs - Enhanced */
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.bg-orb-primary {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(
+    circle,
+    rgba(0, 212, 170, 0.2) 0%,
+    transparent 70%
+  );
+}
+
+.bg-orb-gold {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 215, 0, 0.12) 0%,
+    transparent 70%
+  );
+}
+
+.bg-orb-blue {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(
+    circle,
+    rgba(24, 144, 255, 0.1) 0%,
+    transparent 70%
+  );
+}
+
+.bg-orb-purple {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(
+    circle,
+    rgba(168, 85, 247, 0.12) 0%,
+    transparent 70%
+  );
+}
+
+.bg-orb-pink {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(
+    circle,
+    rgba(236, 72, 153, 0.1) 0%,
+    transparent 70%
+  );
+}

@@ -1,0 +1,40 @@
+/* ============================================
+   SuperCrypto - Scroll Reveal Styles
+   滚动触发动画样式
+   
+   注意: 主要的 scroll-reveal 样式已包含在 animations.css 中
+   此文件用于扩展或覆盖特定场景
+   ============================================ */
+
+/* 延迟变体 */
+.scroll-reveal-delay-100 {
+  transition-delay: 0.1s;
+}
+
+.scroll-reveal-delay-200 {
+  transition-delay: 0.2s;
+}
+
+.scroll-reveal-delay-300 {
+  transition-delay: 0.3s;
+}
+
+.scroll-reveal-delay-400 {
+  transition-delay: 0.4s;
+}
+
+.scroll-reveal-delay-500 {
+  transition-delay: 0.5s;
+}
+
+/* 组合效果 - 从下方缩放进入 */
+.scroll-reveal-scale-up {
+  opacity: 0;
+  transform: translateY(30px) scale(0.95);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.scroll-reveal-scale-up.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}

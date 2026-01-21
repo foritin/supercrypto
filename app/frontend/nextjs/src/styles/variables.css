@@ -1,0 +1,232 @@
+/* ============================================
+   SuperCrypto - Design Tokens / CSS Variables
+   ============================================ */
+
+:root {
+  /* Primary Colors - Green Neon */
+  --color-primary: #00d4aa;
+  --color-primary-light: #33ffcc;
+  --color-primary-dark: #00a080;
+  --color-primary-glow: rgba(0, 212, 170, 0.4);
+
+  /* Gold Accent */
+  --color-gold: #ffd700;
+  --color-gold-light: #ffe55c;
+  --color-gold-dark: #c9a000;
+
+  /* Status Colors */
+  --color-success: #52c41a;
+  --color-warning: #faad14;
+  --color-error: #ff4d4f;
+  --color-info: #1890ff;
+
+  /* Spacing System - 间距系统 (4px 基准) */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 48px;
+
+  /* Border Radius - 圆角系统 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius: 0.5rem;
+
+  /* Transitions - 过渡动画 */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Header Layout Variables */
+  --header-height: 96px;
+  --header-padding-x: 48px;
+  --header-padding-y: 0;
+  --header-background: transparent;
+  --header-background-scrolled: rgba(10, 15, 13, 0.98);
+  --header-border-scrolled: 1px solid rgba(0, 212, 170, 0.15);
+  --header-shadow-scrolled: 0 2px 20px rgba(0, 0, 0, 0.4);
+  --logo-size: 52px;
+  --logo-icon-size: 28px;
+  --logo-title-size: 26px;
+  --logo-border-radius: 12px;
+  --logo-gap: 12px;
+  --menu-font-size: 18px;
+  --menu-item-padding-x: 20px;
+  --menu-item-padding-y: 0;
+  --menu-max-width: 600px;
+  --menu-transition: background 0.25s ease, border-bottom 0.25s ease, box-shadow 0.25s ease;
+  --header-space: 16px;
+  --header-height-mobile: 60px;
+  --header-padding-x-mobile: 24px;
+  --logo-size-mobile: 36px;
+  --logo-title-size-mobile: 18px;
+  --menu-font-size-mobile: 14px;
+  --header-height-tablet: 70px;
+  --header-padding-x-tablet: 36px;
+  --logo-size-tablet: 40px;
+  --logo-title-size-tablet: 20px;
+
+  /* shadcn/ui CSS Variables - Light Mode */
+  --background: 0 0% 100%;
+  --foreground: 210 40% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 40% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 40% 10%;
+  --primary: 165 100% 42%;
+  --primary-foreground: 210 40% 6%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 210 40% 10%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 210 40% 40%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 210 40% 10%;
+  --success: 165 100% 42%;
+  --success-foreground: 210 40% 6%;
+  --warning: 51 100% 50%;
+  --warning-foreground: 210 40% 6%;
+  --error: 0 84% 60%;
+  --error-foreground: 0 0% 100%;
+  --info: 210 100% 50%;
+  --info-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 210 40% 90%;
+  --input: 210 40% 90%;
+  --ring: 165 100% 42%;
+  --chart-1: 165 100% 42%;
+  --chart-2: 51 100% 50%;
+  --chart-3: 210 100% 50%;
+  --chart-4: 0 84% 60%;
+  --chart-5: 280 100% 60%;
+  --sidebar: 0 0% 98%;
+  --sidebar-foreground: 210 40% 10%;
+  --sidebar-primary: 165 100% 42%;
+  --sidebar-primary-foreground: 210 40% 6%;
+  --sidebar-accent: 210 40% 96%;
+  --sidebar-accent-foreground: 210 40% 10%;
+  --sidebar-border: 210 40% 90%;
+  --sidebar-ring: 165 100% 42%;
+}
+
+/* Dark Mode (Default) */
+:root,
+.dark {
+  --bg-dark: #0a0f0d;
+  --bg-card: #111916;
+  --bg-card-hover: #151f1a;
+  --bg-elevated: #1a241e;
+  --bg-gradient: linear-gradient(135deg, #0a0f0d 0%, #0d1512 50%, #111916 100%);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.70);
+  --text-tertiary: rgba(255, 255, 255, 0.55);
+  --text-muted: rgba(255, 255, 255, 0.40);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-color-light: rgba(255, 255, 255, 0.12);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 20px var(--color-primary-glow);
+  --glass-bg: rgba(17, 25, 22, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-blur: blur(12px);
+}
+
+/* Light Mode */
+.light {
+  --bg-dark: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-elevated: #f1f5f9;
+  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #ffffff 100%);
+  --text-primary: #0f172a;
+  --text-secondary: rgba(15, 23, 42, 0.70);
+  --text-tertiary: rgba(15, 23, 42, 0.55);
+  --text-muted: rgba(15, 23, 42, 0.40);
+  --border-color: rgba(15, 23, 42, 0.08);
+  --border-color-light: rgba(15, 23, 42, 0.12);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 20px rgba(0, 212, 170, 0.3);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(15, 23, 42, 0.1);
+  --glass-blur: blur(12px);
+}
+
+/* shadcn/ui CSS Variables - Dark Mode */
+.dark {
+  --background: 150 17% 6%;
+  --foreground: 0 0% 95%;
+  --card: 150 17% 8%;
+  --card-foreground: 0 0% 95%;
+  --popover: 150 17% 10%;
+  --popover-foreground: 0 0% 95%;
+  --primary: 165 100% 42%;
+  --primary-foreground: 150 17% 6%;
+  --secondary: 150 17% 15%;
+  --secondary-foreground: 0 0% 95%;
+  --muted: 150 17% 15%;
+  --muted-foreground: 0 0% 70%;
+  --accent: 150 17% 15%;
+  --accent-foreground: 0 0% 95%;
+  --success: 165 100% 42%;
+  --success-foreground: 150 17% 6%;
+  --warning: 51 100% 50%;
+  --warning-foreground: 150 17% 6%;
+  --error: 0 84% 60%;
+  --error-foreground: 0 0% 100%;
+  --info: 210 100% 50%;
+  --info-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 100% / 15%;
+  --input: 0 0% 100% / 20%;
+  --ring: 165 100% 42%;
+  --chart-1: 165 100% 42%;
+  --chart-2: 51 100% 50%;
+  --chart-3: 210 100% 50%;
+  --chart-4: 0 84% 60%;
+  --chart-5: 280 100% 60%;
+  --sidebar: 150 17% 8%;
+  --sidebar-foreground: 0 0% 95%;
+  --sidebar-primary: 165 100% 42%;
+  --sidebar-primary-foreground: 150 17% 6%;
+  --sidebar-accent: 150 17% 15%;
+  --sidebar-accent-foreground: 0 0% 95%;
+  --sidebar-border: 0 0% 100% / 10%;
+  --sidebar-ring: 165 100% 42%;
+}
+
+/* Responsive Breakpoints - Header Variables */
+@media (max-width: 768px) {
+  :root {
+    --header-height: 60px;
+    --header-padding-x: 24px;
+    --logo-size: 36px;
+    --logo-title-size: 18px;
+    --menu-font-size: 15px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  :root {
+    --header-height: 70px;
+    --header-padding-x: 36px;
+    --logo-size: 40px;
+    --logo-title-size: 20px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}

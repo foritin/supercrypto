@@ -1,0 +1,407 @@
+/* ============================================
+   SuperCrypto - Ant Design Legacy Styles
+   ════════════════════════════════════════════════════════════════
+   ⚠️ 警告: 这些样式是 Ant Design 组件的覆盖样式
+   项目已迁移到 shadcn/ui，这些样式待清理
+   
+   清理计划:
+   1. 逐步替换 Ant Design 组件为 shadcn/ui
+   2. 删除对应的覆盖样式
+   3. 最终删除此文件
+   ════════════════════════════════════════════════════════════════
+   ============================================ */
+
+/* 阻止 Ant Design Modal 修改样式导致的页面抖动 */
+html.ant-scrolling-effect,
+body.ant-scrolling-effect {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+  overflow-y: scroll !important;
+  width: 100% !important;
+}
+
+/* ============================================
+   Layout 布局
+   ============================================ */
+
+.ant-layout {
+  min-height: 100vh;
+  background: var(--bg-gradient) !important;
+}
+
+.ant-layout-header {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.ant-layout-content {
+  background: transparent !important;
+}
+
+.ant-layout-content:has(.hero-section) {
+  padding: 0 !important;
+}
+
+.ant-layout-footer {
+  background: var(--bg-card) !important;
+  border-top: 1px solid var(--border-color);
+}
+
+/* ============================================
+   Typography 排版
+   ============================================ */
+
+.ant-typography {
+  color: var(--text-primary) !important;
+}
+
+.ant-typography.ant-typography-secondary {
+  color: var(--text-secondary) !important;
+}
+
+.ant-typography h1,
+.ant-typography h2,
+.ant-typography h3,
+.ant-typography h4,
+.ant-typography h5 {
+  color: var(--text-primary) !important;
+}
+
+/* ============================================
+   Card 卡片
+   ============================================ */
+
+.ant-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 -4px 16px rgba(0, 0, 0, 0.1) inset !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: cardFadeInUp 0.5s ease-out;
+}
+
+.ant-card.ant-card-hoverable:hover {
+  transform: translateY(-6px);
+  border-color: rgba(0, 212, 170, 0.3) !important;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(0, 212, 170, 0.2) inset,
+    0 -6px 24px rgba(0, 0, 0, 0.15) inset,
+    0 0 40px rgba(0, 212, 170, 0.12),
+    0 0 80px rgba(0, 212, 170, 0.06) !important;
+}
+
+.ant-card-head {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.ant-card-head-title {
+  color: var(--text-primary) !important;
+}
+
+.ant-card-body {
+  color: var(--text-secondary);
+}
+
+/* ============================================
+   Button 按钮
+   ============================================ */
+
+.ant-btn {
+  border-radius: 8px !important;
+  font-weight: 500;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.ant-btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-primary-dark) 100%
+  ) !important;
+  border: none !important;
+  color: var(--bg-dark) !important;
+  font-weight: 600;
+  box-shadow:
+    0 0 15px rgba(0, 212, 170, 0.6),
+    0 0 30px rgba(0, 212, 170, 0.4),
+    0 0 60px rgba(0, 212, 170, 0.2);
+  animation: buttonBreathe 3s ease-in-out infinite;
+}
+
+.ant-btn-primary:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow:
+    0 0 25px rgba(0, 212, 170, 1),
+    0 0 50px rgba(0, 212, 170, 0.8),
+    0 0 100px rgba(0, 212, 170, 0.6),
+    inset 0 0 30px rgba(255, 255, 255, 0.3);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-light) 0%,
+    var(--color-primary) 100%
+  ) !important;
+}
+
+.ant-btn-default {
+  background: var(--bg-elevated) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-primary) !important;
+}
+
+.ant-btn-default:hover {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
+
+.ant-btn-text {
+  color: var(--text-secondary) !important;
+}
+
+.ant-btn-text:hover {
+  color: var(--color-primary) !important;
+  background: rgba(0, 212, 170, 0.1) !important;
+}
+
+.ant-btn-link {
+  color: var(--color-primary) !important;
+}
+
+.ant-btn-link:hover {
+  color: var(--color-primary-light) !important;
+}
+
+
+/* ============================================
+   Input & Select 输入框
+   ============================================ */
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select-selector,
+.ant-input-number,
+.ant-picker {
+  background: var(--bg-elevated) !important;
+  border-color: var(--border-color-light) !important;
+  color: var(--text-primary) !important;
+  border-radius: 12px !important;
+}
+
+.ant-input:focus,
+.ant-input-affix-wrapper-focused,
+.ant-select-focused .ant-select-selector,
+.ant-input-number:focus,
+.ant-picker-focused {
+  border-color: rgba(0, 212, 170, 0.8) !important;
+  box-shadow:
+    0 0 0 2px rgba(0, 212, 170, 0.2),
+    0 0 20px rgba(0, 212, 170, 0.3),
+    inset 0 0 10px rgba(0, 212, 170, 0.1) !important;
+}
+
+.ant-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.ant-select-dropdown {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 12px !important;
+}
+
+.ant-select-item {
+  color: var(--text-primary) !important;
+}
+
+.ant-select-item-option-active,
+.ant-select-item-option-selected {
+  background: rgba(0, 212, 170, 0.15) !important;
+}
+
+/* ============================================
+   Table 表格
+   ============================================ */
+
+.ant-table {
+  background: transparent !important;
+}
+
+.ant-table-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ant-table-thead > tr > th,
+.ant-table-thead > tr > td {
+  background: var(--bg-elevated) !important;
+  color: var(--text-secondary) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.ant-table-tbody > tr > td {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: var(--bg-card-hover) !important;
+}
+
+/* ============================================
+   Modal 模态框
+   ============================================ */
+
+.ant-modal-content {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-lg), 0 0 40px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ant-modal-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.ant-modal-title {
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+}
+
+.ant-modal-close {
+  color: var(--text-tertiary) !important;
+}
+
+.ant-modal-close:hover {
+  color: var(--text-primary) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.ant-modal-footer {
+  border-top: 1px solid var(--border-color) !important;
+}
+
+.ant-modal-mask {
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(4px);
+}
+
+.ant-modal .ant-card,
+.ant-modal-content .ant-card {
+  animation: none !important;
+}
+
+/* ============================================
+   Menu 菜单
+   ============================================ */
+
+.ant-menu {
+  background: transparent !important;
+  border: none !important;
+}
+
+.ant-menu-horizontal {
+  border-bottom: none !important;
+}
+
+.ant-menu-item,
+.ant-menu-submenu-title {
+  color: var(--text-secondary) !important;
+}
+
+.ant-menu-item:hover,
+.ant-menu-submenu-title:hover,
+.ant-menu-item-selected,
+.ant-menu-submenu-selected {
+  color: var(--color-primary) !important;
+}
+
+/* ============================================
+   Tags 标签
+   ============================================ */
+
+.ant-tag {
+  border-radius: 6px !important;
+  font-weight: 500;
+}
+
+.ant-tag-success {
+  background: rgba(82, 196, 26, 0.15) !important;
+  border-color: rgba(82, 196, 26, 0.3) !important;
+  color: #73d13d !important;
+}
+
+.ant-tag-warning {
+  background: rgba(250, 173, 20, 0.15) !important;
+  border-color: rgba(250, 173, 20, 0.3) !important;
+  color: #ffc53d !important;
+}
+
+.ant-tag-error {
+  background: rgba(255, 77, 79, 0.15) !important;
+  border-color: rgba(255, 77, 79, 0.3) !important;
+  color: #ff7875 !important;
+}
+
+/* ============================================
+   Other Components 其他组件
+   ============================================ */
+
+.ant-dropdown-menu {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 12px !important;
+}
+
+.ant-tooltip-inner {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+}
+
+.ant-alert {
+  border-radius: 12px !important;
+}
+
+.ant-pagination-item {
+  background: var(--bg-elevated) !important;
+  border-color: var(--border-color) !important;
+}
+
+.ant-pagination-item-active {
+  border-color: var(--color-primary) !important;
+}
+
+.ant-form-item-label > label {
+  color: var(--text-secondary) !important;
+}
+
+.ant-spin-dot-item {
+  background: var(--color-primary) !important;
+}
+
+.ant-divider {
+  border-color: var(--border-color) !important;
+}
+
+.ant-collapse {
+  background: transparent !important;
+  border: none !important;
+}
+
+.ant-collapse-header {
+  color: var(--text-primary) !important;
+}
