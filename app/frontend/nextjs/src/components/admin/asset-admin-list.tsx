@@ -12,7 +12,7 @@
  * 
  * @validates Requirements 8.1, 8.4, 8.5
  */
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -85,7 +85,7 @@ import {
 } from '@/services/asset'
 import { MediaManager } from './media-manager'
 import { AssetStatusIndicator } from './asset-status-indicator'
-import { CreateAssetModal } from './create-asset-modal'
+import { CreateAssetWizard } from './create-asset-wizard'
 
 // Asset type options
 const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
@@ -114,31 +114,31 @@ interface PaginatedData {
   }
 }
 
-// Edit form schema using zod
-const editAssetSchema = z.object({
-  name: z.string().min(1, '名称不能为空'),
-  symbol: z.string().min(1, '符号不能为空'),
+// Edit form schema factory - uses i18n
+const createEditAssetSchema = (t: (key: string) => string) => z.object({
+  name: z.string().min(1, t('admin.assets.form.nameEmpty')),
+  symbol: z.string().min(1, t('admin.assets.form.symbolEmpty')),
   description: z.string().optional(),
   asset_type: z.enum(['real_estate', 'bond', 'commodity', 'equity', 'other']),
   image_url: z.string().optional(),
   document_url: z.string().optional(),
   location: z.string().optional(),
-  total_supply: z.number().min(0, '总供应量不能为负数'),
-  min_subscription: z.number().min(0, '最小认购额不能为负数'),
+  total_supply: z.number().min(0, t('admin.assets.form.totalSupplyNonNegative')),
+  min_subscription: z.number().min(0, t('admin.assets.form.minSubscriptionNonNegative')),
   apy_3m: z.number().min(0).max(100),
   apy_6m: z.number().min(0).max(100),
   apy_12m: z.number().min(0).max(100),
 })
 
-type EditAssetFormValues = z.infer<typeof editAssetSchema>
+type EditAssetFormValues = z.infer<ReturnType<typeof createEditAssetSchema>>
 
-// Price update form schema
-const priceUpdateSchema = z.object({
-  price: z.number().min(0, '价格不能为负数'),
+// Price update form schema factory - uses i18n
+const createPriceUpdateSchema = (t: (key: string) => string) => z.object({
+  price: z.number().min(0, t('admin.assets.form.priceNonNegative')),
   source: z.enum(['manual', 'oracle', 'api']),
 })
 
-type PriceUpdateFormValues = z.infer<typeof priceUpdateSchema>
+type PriceUpdateFormValues = z.infer<ReturnType<typeof createPriceUpdateSchema>>
 
 export function AssetAdminList() {
   const { t } = useTranslation()
@@ -184,6 +184,10 @@ export function AssetAdminList() {
   // 防止重复点击
   const isOpeningCreateModal = useRef(false)
 
+  // 使用 useMemo 创建带 i18n 的 schema
+  const editAssetSchema = useMemo(() => createEditAssetSchema(t), [t])
+  const priceUpdateSchema = useMemo(() => createPriceUpdateSchema(t), [t])
+
   // react-hook-form for edit modal
   const editForm = useForm<EditAssetFormValues>({
     resolver: zodResolver(editAssetSchema),
@@ -216,7 +220,8 @@ export function AssetAdminList() {
   const fetchAssets = useCallback(async () => {
     setIsLoading(true)
     try {
-      const result = await assetService.getAssets({
+      // 管理员使用 getAssetsAdmin，可以看到所有资产（包括未绑定合约的）
+      const result = await assetService.getAssetsAdmin({
         page,
         page_size: pageSize,
         status: statusFilter,
@@ -274,7 +279,7 @@ export function AssetAdminList() {
       fetchAvailableProjects(),
       (async () => {
         try {
-          const detail = await assetService.getAsset(asset.id)
+          const detail = await assetService.getAssetAdmin(asset.id)
           setCurrentAssetDetail(detail)
         } catch (err) {
           console.error('Failed to fetch asset detail:', err)
@@ -402,7 +407,7 @@ export function AssetAdminList() {
   const openEditModal = async (asset: AssetListItem) => {
     setSelectedAsset(asset)
     try {
-      const detail = await assetService.getAsset(asset.id)
+      const detail = await assetService.getAssetAdmin(asset.id)
       setCurrentAssetDetail(detail)
       editForm.reset({
         name: detail.name,
@@ -484,7 +489,7 @@ export function AssetAdminList() {
     },
     {
       id: 'visibility',
-      header: '可见性',
+      header: t('admin.assets.visibility'),
       size: 80,
       cell: ({ row }) => (
         <div className="text-center">
@@ -592,7 +597,7 @@ export function AssetAdminList() {
                     <Image className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>媒体管理</TooltipContent>
+                <TooltipContent>{t('admin.assets.mediaManagement')}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
             <TooltipProvider>
@@ -718,7 +723,7 @@ export function AssetAdminList() {
       </CardContent>
 
       {/* Create Modal */}
-      <CreateAssetModal
+      <CreateAssetWizard
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         onSuccess={fetchAssets}
@@ -1233,12 +1238,14 @@ export function AssetAdminList() {
                 <SelectTrigger>
                   <SelectValue placeholder={t('admin.assets.selectProject')} />
                 </SelectTrigger>
-                <SelectContent>
-                  {availableProjects.map(p => (
+                <SelectContent className="z-[1200]">
+                  {availableProjects
+                    .filter(p => p.project !== 'common')
+                    .map(p => (
                     <SelectItem key={p.project} value={p.project}>
                       <div className="flex justify-between items-center w-full gap-4">
                         <span className="font-medium">{p.project}</span>
-                        <Badge variant={p.project === 'common' ? 'secondary' : p.project === 'mock' ? 'outline' : 'default'}>
+                        <Badge variant={p.project === 'mock' ? 'outline' : 'default'}>
                           {p.contracts.filter(c => c.is_available).length}/{p.contract_count}
                         </Badge>
                       </div>

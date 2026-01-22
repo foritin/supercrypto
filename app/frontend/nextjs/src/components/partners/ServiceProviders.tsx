@@ -31,6 +31,9 @@ export const ROW1_PROVIDERS: ServiceProvider[] = [
   { id: 'hedera', name: 'Hedera', logo: '/partners/hedera.svg' },
   { id: 'aptos', name: 'Aptos', logo: '/partners/aptos.svg' },
   { id: 'sei', name: 'Sei', logo: '/partners/sei.svg' },
+  { id: 'bnb', name: 'BNB Chain', logo: '/partners/bnb.svg' },
+  { id: 'polkadot', name: 'Polkadot', logo: '/partners/polkadot.svg' },
+  { id: 'cosmos', name: 'Cosmos', logo: '/partners/cosmos.svg' },
 ];
 
 // 第二行: Layer 2 & 基础设施
@@ -41,6 +44,8 @@ export const ROW2_PROVIDERS: ServiceProvider[] = [
   { id: 'chainlink', name: 'Chainlink', logo: '/partners/chainlink.svg' },
   { id: 'frax', name: 'Frax', logo: '/partners/frax.svg' },
   { id: 'near', name: 'NEAR', logo: '/partners/near.svg' },
+  { id: 'blackrock', name: 'BlackRock', logo: '/partners/blackrock.svg' },
+  { id: 'vaneck', name: 'VanEck', logo: '/partners/vaneck.svg' },
 ];
 
 interface ServiceProvidersProps {

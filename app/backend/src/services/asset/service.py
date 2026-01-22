@@ -478,11 +478,21 @@ class AssetService:
 
     async def get_available_projects(self) -> list[ProjectContractInfo]:
         """
-        获取可绑定的项目列表
+        获取可绑定的项目列表（含主合约和就绪状态）
+
+        变更 (Requirements 3.1, 3.2, 7.3, 7.4, 7.7):
+        1. 返回 has_primary: 是否有主合约
+        2. 返回 primary_contract_symbol: 主合约 Symbol
+        3. 集成 ProjectReadinessChecker 计算就绪状态
+        4. 返回 is_ready: 项目是否就绪
+        5. 返回 missing_dependencies: 缺失的必选依赖列表
 
         Returns:
-            项目列表，每个项目包含合约数量和详细合约信息（含绑定状态）
+            项目列表，每个项目包含合约数量、详细合约信息、主合约信息和就绪状态
         """
+        from src.services.project_registry import get_readiness_checker
+        from src.shared.schemas.enums import ProjectReadiness
+
         # 查询所有活跃的合约 (使用 Contract 模型)
         contracts = await Contract.filter(status=ContractStatus.ACTIVE).all()
 
@@ -494,8 +504,10 @@ class AssetService:
         for binding in all_bindings:
             bound_map[binding.contract_address] = (binding.asset.name, binding.asset.id)
 
-        # 按项目分组
+        # 按项目分组，同时记录主合约信息
         project_map: dict[str, list[ContractBindingStatus]] = {}
+        project_primary_map: dict[str, Contract] = {}  # 记录每个项目的主合约
+
         for record in contracts:
             if record.project_name not in project_map:
                 project_map[record.project_name] = []
@@ -523,48 +535,111 @@ class AssetService:
                 )
             )
 
-        # 转换为响应格式
-        return [
-            ProjectContractInfo(
-                project=project,
-                contract_count=len(contracts),
-                contracts=sorted(contracts, key=lambda c: c.contract_name),
+            # 记录主合约 (Requirements 3.1, 3.2)
+            if record.is_primary:
+                project_primary_map[record.project_name] = record
+
+        # 获取就绪状态检查器
+        checker = get_readiness_checker(self.environment)
+
+        # 转换为响应格式，集成就绪状态
+        result: list[ProjectContractInfo] = []
+        for project, contracts_list in sorted(project_map.items()):
+            # 获取主合约信息
+            primary_contract = project_primary_map.get(project)
+            has_primary = primary_contract is not None
+            primary_contract_symbol = (
+                primary_contract.symbol if primary_contract else None
             )
-            for project, contracts in sorted(project_map.items())
-        ]
+
+            # 获取项目就绪状态 (Requirements 7.3, 7.4, 7.7)
+            is_ready = False
+            missing_dependencies: list[str] = []
+
+            try:
+                report = await checker.get_project_status(project)
+                # 项目就绪条件：readiness 不是 NOT_READY
+                is_ready = report.readiness != ProjectReadiness.NOT_READY
+
+                # 收集所有缺失的必选依赖
+                for info in report.contracts.values():
+                    missing_dependencies.extend(info.missing_required_deps)
+
+                # 去重
+                missing_dependencies = list(set(missing_dependencies))
+            except Exception:
+                # 如果获取就绪状态失败，保持默认值
+                pass
+
+            result.append(
+                ProjectContractInfo(
+                    project=project,
+                    contract_count=len(contracts_list),
+                    contracts=sorted(contracts_list, key=lambda c: c.contract_name),
+                    has_primary=has_primary,
+                    primary_contract_symbol=primary_contract_symbol,
+                    is_ready=is_ready,
+                    missing_dependencies=missing_dependencies,
+                )
+            )
+
+        return result
 
     async def bind_project_contracts(
         self,
         asset_id: int,
         project: str,
         contract_names: list[str] | None = None,
-        set_primary: bool = False,
     ) -> AssetDetailResponse:
         """
-        按项目绑定合约（支持选择性绑定）
+        按项目绑定合约（简化版）
+
+        变更 (Requirements 2.1-2.6):
+        1. 只绑定 PROJECT scope 合约（不绑定 GLOBAL scope）
+        2. 检查项目是否有主合约（is_primary=True）
+        3. 自动从主合约获取 symbol 和 address 填充到 Asset
 
         Args:
             asset_id: 资产ID
             project: 项目标识
-            contract_names: 要绑定的合约名称列表，为空则绑定该项目下所有可用合约
-            set_primary: 是否设置主合约
+            contract_names: 要绑定的合约名称列表，为空则绑定该项目下所有可用的 PROJECT scope 合约
 
         Returns:
             更新后的资产详情
+
+        Raises:
+            BusinessException: 资产不存在、项目无主合约、合约已被绑定等错误
         """
+        from src.services.contract import get_contract_service
+
         asset = await Asset.filter(id=asset_id, environment=self.environment).first()
 
         if not asset:
             raise BusinessException(code=404, message="Asset not found")
 
-        # 查询该项目下所有活跃的合约 (使用 Contract 模型)
+        # 获取 Contract Service 实例
+        contract_service = get_contract_service()
+
+        # 检查项目是否有主合约 (Requirements 2.3, 2.4)
+        primary_contract = await contract_service.get_project_primary_contract(project)
+        if not primary_contract:
+            raise BusinessException(
+                code=400,
+                message="该项目没有设置主合约，请先在 Contract Monitor 中设置",
+            )
+
+        # 查询该项目下所有活跃的 PROJECT scope 合约 (Requirements 2.1, 2.2)
+        # 只绑定 PROJECT scope 合约，不绑定 GLOBAL scope 合约
         contracts = await Contract.filter(
-            project_name=project, status=ContractStatus.ACTIVE
+            project_name=project,
+            status=ContractStatus.ACTIVE,
+            scope=ContractScope.PROJECT,  # 只查询 PROJECT scope
         ).all()
 
         if not contracts:
             raise BusinessException(
-                code=400, message=f"No active contracts found for project '{project}'"
+                code=400,
+                message=f"No active PROJECT scope contracts found for project '{project}'",
             )
 
         # 如果指定了合约名称，只绑定这些合约
@@ -576,9 +651,7 @@ class AssetService:
                 )
 
         # 批量检查 PROJECT scope 合约是否已被其他资产绑定
-        exclusive_addresses = [
-            r.address for r in contracts if r.scope == ContractScope.PROJECT
-        ]
+        exclusive_addresses = [r.address for r in contracts]
         if exclusive_addresses:
             existing_bindings = (
                 await AssetContractBinding.filter(
@@ -610,19 +683,18 @@ class AssetService:
         ).all()
         existing_map = {b.contract_name: b for b in existing_bindings}
 
-        # 批量创建/更新绑定
+        # 批量创建/更新绑定 (只绑定 PROJECT scope 合约)
         for record in contracts:
-            # 根据 scope 确定 binding_type
-            binding_type = (
-                "common" if record.scope == ContractScope.GLOBAL else "project"
-            )
+            # 判断是否为主合约
+            is_primary_binding = record.id == primary_contract.id
 
             existing = existing_map.get(record.name)
 
             if existing:
-                # 如果已存在，更新地址和类型
+                # 如果已存在，更新地址和主合约标记
                 existing.contract_address = record.address
-                existing.contract_type = binding_type
+                existing.contract_type = "project"  # PROJECT scope 合约类型为 project
+                existing.is_primary = is_primary_binding
                 await existing.save()
             else:
                 # 创建新绑定
@@ -630,34 +702,19 @@ class AssetService:
                     asset=asset,
                     contract_name=record.name,
                     contract_address=record.address,
-                    contract_type=binding_type,
-                    is_primary=False,
+                    contract_type="project",  # PROJECT scope 合约类型为 project
+                    is_primary=is_primary_binding,
                 )
 
-        # 更新资产的 project 字段（如果还没设置或与当前项目相同）
-        if not asset.project or asset.project == project:
-            asset.project = project
-            await asset.save()
-
-        # 如果需要设置主合约
-        if set_primary and contracts:
-            # 查找主合约（通常是 Token 合约）
-            primary_candidates = ["RWATokenSTO", "STOToken", f"{project.upper()}Token"]
-            for candidate in primary_candidates:
-                for record in contracts:
-                    if record.name == candidate:
-                        # 先清除其他主合约标记
-                        await AssetContractBinding.filter(
-                            asset=asset, is_primary=True
-                        ).update(is_primary=False)
-                        # 设置新的主合约
-                        await AssetContractBinding.filter(
-                            asset=asset, contract_name=candidate
-                        ).update(is_primary=True)
-                        # 更新资产的主合约地址
-                        asset.contract_address = record.address
-                        await asset.save()
-                        break
+        # 更新资产字段 (Requirements 2.5, 2.6)
+        # 1. 更新 project 字段
+        asset.project = project
+        # 2. 从主合约获取 symbol 填充到 Asset.symbol
+        if primary_contract.symbol:
+            asset.symbol = primary_contract.symbol
+        # 3. 从主合约获取 address 填充到 Asset.contract_address
+        asset.contract_address = primary_contract.address
+        await asset.save()
 
         return await self._to_detail_response(asset)
 

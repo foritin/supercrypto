@@ -195,14 +195,18 @@ class ContractBindingResponse(BaseModel):
 
 
 class BindProjectRequest(BaseModel):
-    """按项目绑定合约请求"""
+    """
+    按项目绑定合约请求（简化版）
 
-    project: str = Field(..., description="项目标识 (如 common, mock, rwa)")
+    变更说明:
+    - 移除 set_primary 参数，主合约由 Contract 表的 is_primary 字段决定
+    - 只绑定 PROJECT scope 合约，不绑定 GLOBAL scope 合约
+    - 绑定时自动从主合约获取 symbol 和 address 填充到 Asset
+    """
+
+    project: str = Field(..., description="项目标识 (如 vanke, common)")
     contract_names: Optional[List[str]] = Field(
-        None, description="要绑定的合约名称列表，为空则绑定该项目下所有可用合约"
-    )
-    set_primary: bool = Field(
-        default=False, description="是否将该项目的主合约设为 primary"
+        None, description="要绑定的合约名称列表，为空则绑定该项目下所有可用的 PROJECT scope 合约"
     )
 
 
@@ -228,11 +232,23 @@ class ContractBindingStatus(BaseModel):
 
 
 class ProjectContractInfo(BaseModel):
-    """项目合约信息"""
+    """项目合约信息（含主合约和就绪状态）"""
 
     project: str
     contract_count: int
     contracts: List[ContractBindingStatus]  # 改为详细合约信息
+
+    # 主合约信息 (Requirements 3.1, 3.2)
+    has_primary: bool = Field(default=False, description="是否有主合约")
+    primary_contract_symbol: Optional[str] = Field(
+        None, description="主合约 Symbol"
+    )
+
+    # 就绪状态 (Requirements 7.3, 7.4, 7.7)
+    is_ready: bool = Field(default=False, description="项目是否就绪")
+    missing_dependencies: List[str] = Field(
+        default_factory=list, description="缺失的必选依赖列表"
+    )
 
 
 class ProjectListResponse(BaseModel):

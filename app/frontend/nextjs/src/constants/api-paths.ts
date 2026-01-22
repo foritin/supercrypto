@@ -37,6 +37,10 @@ export const PUBLIC_PATHS = {
 
   // KYC - 状态查询
   KYC_STATUS: (address: string) => `/public/kyc/status/${address}`,
+
+  // 常量
+  CONSTANTS: '/public/constants',
+  CONSTANTS_GROUP: (group: string) => `/public/constants/${group}`,
 } as const
 
 // ============================================================================

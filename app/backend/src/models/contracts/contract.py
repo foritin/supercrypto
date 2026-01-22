@@ -66,6 +66,17 @@ class Contract(AbstractModel, TimestampMixin):
         description="合约状态",
     )
 
+    # 主合约标记字段
+    is_primary = fields.BooleanField(
+        default=False,
+        description="是否为项目主合约（RWA Token），每个项目只能有一个主合约",
+    )
+    symbol = fields.CharField(
+        max_length=20,
+        null=True,
+        description="Token Symbol，用于标识代币符号",
+    )
+
     class Meta:
         table = "contract"
         table_description = "合约表"

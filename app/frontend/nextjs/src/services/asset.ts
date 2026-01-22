@@ -11,7 +11,7 @@ import { PUBLIC_PATHS, ADMIN_PATHS } from '@/constants/api-paths'
 export type AssetStatus = 'active' | 'paused' | 'sold_out' | 'closed'
 export type AssetType = 'real_estate' | 'bond' | 'commodity' | 'equity' | 'other'
 // MVP 媒体类型 - 与后端 MediaType 枚举同步
-export type MediaType = 'cover' | 'gallery' | 'valuation' | 'legal' | 'financial' | 'image' | 'floor_plan' | 'evaluation' | 'document' | 'video'
+export type MediaType = 'cover' | 'gallery' | 'valuation' | 'legal' | 'financial' | 'floor_plan' | 'video'
 
 export interface AssetMediaItem {
   id: number
@@ -200,6 +200,33 @@ export const assetService = {
 
   // ============ 管理员接口 ============
 
+  /**
+   * 获取资产列表 (管理员)
+   * 返回所有资产，包括未绑定合约的资产
+   */
+  async getAssetsAdmin(query: AssetListQuery = {}) {
+    const params = new URLSearchParams()
+    if (query.status) params.append('status', query.status)
+    if (query.asset_type) params.append('asset_type', query.asset_type)
+    if (query.page) params.append('page', query.page.toString())
+    if (query.page_size) params.append('page_size', query.page_size.toString())
+    const url = ADMIN_PATHS.ASSETS + (params.toString() ? '?' + params.toString() : '')
+    const response = await api.get<API.ResponseData<AssetListItem>>(url)
+    return {
+      items: response.list_data || [],
+      pagination: response.pagination || { total: 0, page: 1, page_size: 10, total_pages: 0 },
+    }
+  },
+
+  /**
+   * 获取资产详情 (管理员)
+   * 可以获取所有资产，包括未绑定合约的资产
+   */
+  async getAssetAdmin(id: number): Promise<AssetDetail> {
+    return (await api.get<API.ResponseData<AssetDetail>>(ADMIN_PATHS.ASSET_DETAIL(id)))
+      .object_data as AssetDetail
+  },
+
   async createAsset(data: AssetCreateRequest): Promise<AssetDetail> {
     return (await api.post<API.ResponseData<AssetDetail>>(ADMIN_PATHS.ASSETS, data))
       .object_data as AssetDetail
@@ -249,10 +276,9 @@ export const assetService = {
     assetId: number,
     options: { contract_names?: string[]; project?: string; unbind_all?: boolean }
   ): Promise<AssetDetail> {
+    // 注意：api.delete 内部会将 body 放入 { data: body }，所以这里直接传 options
     return (
-      await api.delete<API.ResponseData<AssetDetail>>(ADMIN_PATHS.ASSET_UNBIND(assetId), {
-        data: options,
-      })
+      await api.delete<API.ResponseData<AssetDetail>>(ADMIN_PATHS.ASSET_UNBIND(assetId), options)
     ).object_data as AssetDetail
   },
 
@@ -297,12 +323,7 @@ export const assetService = {
     return (
       await api.post<API.ResponseData<AssetMediaItem>>(
         ADMIN_PATHS.ASSET_MEDIA(assetId),
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
+        formData
       )
     ).object_data as AssetMediaItem
   },
@@ -356,6 +377,15 @@ export interface ProjectContractInfo {
   contracts: ContractBindingStatus[]
 }
 
+/**
+ * 以下常量作为 fallback 使用
+ * 推荐使用 useConstants hook 从后端 API 获取最新数据:
+ * - useConstants('asset_type') 获取资产类型
+ * - useConstants('asset_status') 获取资产状态
+ * - useConstants('media_type') 获取媒体类型
+ * @see src/hooks/useConstants.ts
+ * @see src/lib/constants.ts (fallback 常量)
+ */
 export const ASSET_TYPE_NAMES: Record<AssetType, string> = {
   real_estate: 'Real Estate',
   bond: 'Bond',
@@ -376,11 +406,12 @@ export const ASSET_STATUS_COLORS: Record<AssetStatus, string> = {
   closed: 'default',
 }
 export const MEDIA_TYPE_NAMES: Record<MediaType, string> = {
-  image: 'Photos',
   cover: 'Cover',
+  gallery: 'Gallery',
+  valuation: 'Valuation Report',
+  legal: 'Legal Documents',
+  financial: 'Financial Documents',
   floor_plan: 'Floor Plan',
-  evaluation: 'Evaluation Report',
-  document: 'Documents',
   video: 'Video',
 }
 export const PROPERTY_TYPE_NAMES: Record<string, string> = {

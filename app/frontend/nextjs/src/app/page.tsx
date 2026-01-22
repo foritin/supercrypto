@@ -1,26 +1,17 @@
 "use client";
 
 import React from "react";
-import {
-  Shield,
-  Zap,
-  Globe,
-  Rocket,
-  DollarSign,
-  Trophy,
-  Building2,
-} from "lucide-react";
+import { Rocket } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
-import { useScrollReveal, useScrollRevealDelay } from "@/hooks/useScrollReveal";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useMouseParallax } from "@/hooks/useMouseParallax";
 import { useCountUp } from "@/hooks/useCountUp";
 import { useMagneticButton } from "@/hooks/useMagneticButton";
 import { useTypewriter } from "@/hooks/useTypewriter";
 import { RippleButton } from "@/components/ui/RippleButton";
-import { YieldCalculator } from "@/components/calculator/YieldCalculator";
-import { Card, CardContent } from "@/components/ui/card";
-import { PartnersMarquee, INSTITUTION_PARTNERS, ServiceProviders } from "@/components/partners";
+import { PartnersMarquee, INSTITUTION_PARTNERS, ROW1_PROVIDERS, ROW2_PROVIDERS } from "@/components/partners";
+import { StatsBar, FeaturedAssets, BentoFeatures, CalculatorSection, InfiniteMarquee, HowItWorks } from "@/components/home";
 import { cn } from "@/lib/utils";
 
 export default function HomePage() {
@@ -32,16 +23,8 @@ export default function HomePage() {
   const howItWorksSection = useScrollReveal();
   const ctaSection = useScrollReveal();
 
-  const feature1 = useScrollRevealDelay(100);
-  const feature2 = useScrollRevealDelay(200);
-  const feature3 = useScrollRevealDelay(300);
-
-  const step1 = useScrollRevealDelay(100);
-  const step2 = useScrollRevealDelay(200);
-  const step3 = useScrollRevealDelay(300);
-
   // Phoenix Prototype: 视差效果
-  const { offset: parallaxOffset } = useMouseParallax({ intensity: 0.02 });
+  useMouseParallax({ intensity: 0.02 });
 
   // Phoenix Prototype: 数字滚动动画
   const tvlCount = useCountUp(2500000, { prefix: '$', suffix: '+', decimals: 0, threshold: 0.1 });
@@ -106,22 +89,23 @@ export default function HomePage() {
               </div>
 
               {/* Main Title - Two Lines */}
+              {/* Requirements: 1.1 - 渐变色标题 */}
               <div>
                 <h1
                   className="text-[clamp(48px,8vw,96px)] font-extrabold mb-0 leading-[1.1] tracking-[-0.02em] text-white text-center"
                 >
-                  {/* Line 1: Bridge + Dynamic Word */}
+                  {/* Line 1: Bridge + Dynamic Word - 金/橙色渐变 */}
                   <span className="block whitespace-nowrap">
                     {t('home.heroTitle.unlock')}{' '}
                     <span
                       key={animationKey}
-                      className="inline-block min-w-[280px] bg-gradient-to-r from-[#C9A962] via-[#E8D5A3] to-[#C9A962] bg-clip-text text-transparent typewriter-text"
+                      className="inline-block min-w-[280px] bg-gradient-to-r from-[#FFD700] via-[#FFA500] to-[#FFD700] bg-clip-text text-transparent typewriter-text"
                     >
                       {dynamicText}
                     </span>
                   </span>
-                  {/* Line 2: to DeFi Yields */}
-                  <span className="block">
+                  {/* Line 2: to DeFi Yields - 青色渐变 */}
+                  <span className="block bg-gradient-to-r from-[#00D4AA] via-[#00E5BB] to-[#00D4AA] bg-clip-text text-transparent">
                     {t('home.heroTitle.onWeb3')}
                   </span>
                 </h1>
@@ -139,7 +123,7 @@ export default function HomePage() {
                 <br />
                 <span className="mt-2 inline-block">
                   Earn up to{" "}
-                  <span className="bg-gradient-to-r from-[#C9A962] to-[#E8D5A3] bg-clip-text text-transparent font-semibold">
+                  <span className="bg-gradient-to-r from-[#FFD700] to-[#FFA500] bg-clip-text text-transparent font-semibold">
                     15% APY
                   </span>
                   {" "}backed by tokenized real-world assets.
@@ -177,55 +161,16 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Stats Section - Separate container, won't be affected by title changes */}
-            <div
-              className="flex justify-center items-center flex-wrap gap-20 w-full max-w-[1100px] mx-auto"
-              style={{ marginTop: '120px' }}
-            >
-              {/* TVL Stat */}
-              <div className="flex items-baseline gap-4">
-                <span className="text-white/70 text-lg uppercase tracking-[1px]">
-                  {t("home.stats.tvl")}
-                </span>
-                <span
-                  ref={tvlCount.ref}
-                  className="text-[#00D4AA] text-[38px] font-bold"
-                >
-                  {tvlCount.count}
-                </span>
-              </div>
-
-              {/* Separator */}
-              <div className="w-px h-12 bg-white/10" />
-
-              {/* Users Stat */}
-              <div className="flex items-baseline gap-4">
-                <span className="text-white/70 text-lg uppercase tracking-[1px]">
-                  {t("home.stats.users")}
-                </span>
-                <span
-                  ref={usersCount.ref}
-                  className="text-[#00D4AA] text-[38px] font-bold"
-                >
-                  {usersCount.count}
-                </span>
-              </div>
-
-              {/* Separator */}
-              <div className="w-px h-12 bg-white/10" />
-
-              {/* Assets Stat */}
-              <div className="flex items-baseline gap-4">
-                <span className="text-white/70 text-lg uppercase tracking-[1px]">
-                  {t("home.stats.assets")}
-                </span>
-                <span
-                  ref={assetsCount.ref}
-                  className="text-[#00D4AA] text-[38px] font-bold"
-                >
-                  {assetsCount.count}
-                </span>
-              </div>
+            {/* Stats Section - 使用 StatsBar 组件 */}
+            {/* Requirements: 1.2, 1.4 */}
+            <div className="mt-[180px] flex justify-center">
+              <StatsBar
+                stats={[
+                  { label: t("home.stats.tvl"), value: tvlCount.count, ref: tvlCount.ref },
+                  { label: t("home.stats.users"), value: usersCount.count, ref: usersCount.ref },
+                  { label: t("home.stats.assets"), value: assetsCount.count, ref: assetsCount.ref },
+                ]}
+              />
             </div>
 
           </div>
@@ -242,272 +187,79 @@ export default function HomePage() {
         pauseOnHover={true}
       />
 
-      {/* Features Section */}
+      {/* Featured Assets Section - Requirements: 2.1, 2.6 */}
+      <section className="w-full section-spacing px-6">
+        <FeaturedAssets />
+      </section>
+
+      {/* Features Section - Bento Grid Layout */}
+      {/* Requirements: 3.1, 3.2, 3.3, 3.4, 3.5 */}
       <section
         ref={featuresSection.ref as React.RefObject<HTMLDivElement>}
         className={cn(
-          "w-full dot-pattern-bg scroll-reveal py-[100px] px-6 flex justify-center",
+          "w-full dot-pattern-bg scroll-reveal section-spacing px-6 flex justify-center",
           featuresSection.isVisible && 'is-visible'
         )}
       >
         <div className="w-full max-w-[1200px] relative">
-          <div
-            className="text-center mb-[72px] fade-in-stagger"
-          >
-            <span
-              className="text-[#00D4AA] text-sm font-semibold uppercase tracking-[2px]"
-            >
+          <div className="text-center mb-[72px] fade-in-stagger">
+            <span className="text-[#00D4AA] text-sm font-semibold uppercase tracking-[2px]">
               Features
             </span>
-            <h2 className="mt-4 mb-4 text-3xl md:text-4xl font-bold text-white">
+            <h2 className="mt-4 mb-6 text-3xl md:text-4xl font-bold text-white">
               {t("home.features.title")}
             </h2>
-            <p
-              className="text-lg text-white/65 max-w-[600px] mx-auto"
-            >
+            <p className="text-lg text-white/65 max-w-[600px] mx-auto text-center">
               {t("home.features.subtitle")}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div
-              ref={feature1.ref as React.RefObject<HTMLDivElement>}
-              className={cn(
-                "scroll-reveal",
-                feature1.isVisible && 'is-visible'
-              )}
-            >
-              <Card
-                className="glass-card-enhanced h-full cursor-pointer"
-              >
-                <CardContent className="p-6">
-                  <div className="flex flex-col gap-5">
-                    <div className="icon-box icon-box-primary">
-                      <Shield
-                        className="w-7 h-7 text-[#00D4AA]"
-                      />
-                    </div>
-                    <h4 className="text-xl font-semibold text-white m-0">
-                      {t("home.features.security.title")}
-                    </h4>
-                    <span
-                      className="text-white/65 leading-[1.7]"
-                    >
-                      {t("home.features.security.description")}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            <div
-              ref={feature2.ref as React.RefObject<HTMLDivElement>}
-              className={cn(
-                "scroll-reveal",
-                feature2.isVisible && 'is-visible'
-              )}
-            >
-              <Card
-                className="glass-card-enhanced h-full cursor-pointer"
-              >
-                <CardContent className="p-6">
-                  <div className="flex flex-col gap-5">
-                    <div className="icon-box icon-box-gold">
-                      <DollarSign
-                        className="w-7 h-7 text-[#FFD700]"
-                      />
-                    </div>
-                    <h4 className="text-xl font-semibold text-white m-0">
-                      {t("home.features.returns.title")}
-                    </h4>
-                    <span
-                      className="text-white/65 leading-[1.7]"
-                    >
-                      {t("home.features.returns.description")}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            <div
-              ref={feature3.ref as React.RefObject<HTMLDivElement>}
-              className={cn(
-                "scroll-reveal",
-                feature3.isVisible && 'is-visible'
-              )}
-            >
-              <Card
-                className="glass-card-enhanced h-full cursor-pointer"
-              >
-                <CardContent className="p-6">
-                  <div className="flex flex-col gap-5">
-                    <div className="icon-box icon-box-blue">
-                      <Globe
-                        className="w-7 h-7 text-[#1890ff]"
-                      />
-                    </div>
-                    <h4 className="text-xl font-semibold text-white m-0">
-                      {t("home.features.global.title")}
-                    </h4>
-                    <span
-                      className="text-white/65 leading-[1.7]"
-                    >
-                      {t("home.features.global.description")}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <BentoFeatures />
         </div>
       </section>
 
-      {/* How It Works Section */}
+      {/* How It Works Section - 横向时间轴 */}
+      {/* Requirements: 6.1, 6.2, 6.3 */}
       <section
         ref={howItWorksSection.ref as React.RefObject<HTMLDivElement>}
         className={cn(
-          "w-full hex-pattern-bg scroll-reveal py-[100px] px-6 flex justify-center",
+          "w-full hex-pattern-bg scroll-reveal section-spacing px-6 flex justify-center",
           howItWorksSection.isVisible && 'is-visible'
         )}
       >
         <div className="w-full max-w-[1200px]">
-          <div
-            className="text-center mb-[72px] fade-in-stagger"
-          >
-            <span
-              className="text-[#FFD700] text-sm font-semibold uppercase tracking-[2px]"
-            >
+          <div className="text-center mb-[72px] fade-in-stagger">
+            <span className="text-[#FFD700] text-sm font-semibold uppercase tracking-[2px]">
               How It Works
             </span>
             <h2 className="mt-4 mb-4 text-3xl md:text-4xl font-bold text-white">
               {t("home.howItWorks.title")}
             </h2>
-            <p
-              className="text-lg text-white/65 max-w-[600px] mx-auto"
-            >
+            <p className="text-lg text-white/65 max-w-[600px] mx-auto text-center">
               {t("home.howItWorks.subtitle")}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
-            {[
-              {
-                icon: <Building2 className="w-10 h-10" />,
-                step: 1,
-                titleKey: "home.howItWorks.step1.title",
-                descKey: "home.howItWorks.step1.description",
-                color: "#00D4AA",
-              },
-              {
-                icon: <Zap className="w-10 h-10" />,
-                step: 2,
-                titleKey: "home.howItWorks.step2.title",
-                descKey: "home.howItWorks.step2.description",
-                color: "#FFD700",
-              },
-              {
-                icon: <Trophy className="w-10 h-10" />,
-                step: 3,
-                titleKey: "home.howItWorks.step3.title",
-                descKey: "home.howItWorks.step3.description",
-                color: "#1890ff",
-              },
-            ].map((item, index) => {
-              const stepRef = index === 0 ? step1 : index === 1 ? step2 : step3;
-              return (
-                <div
-                  key={item.step}
-                  ref={stepRef.ref as React.RefObject<HTMLDivElement>}
-                  className={cn(
-                    "scroll-reveal",
-                    stepRef.isVisible && 'is-visible'
-                  )}
-                >
-                  <div className="text-center relative">
-                    {/* Connecting Line */}
-                    {index < 2 && (
-                      <div
-                        className="hidden absolute top-11 left-[calc(50%+50px)] w-[calc(100%-100px)] h-0.5"
-                        style={{
-                          background: `linear-gradient(90deg, ${item.color}40 0%, rgba(255,255,255,0.1) 100%)`,
-                        }}
-                      />
-                    )}
-                    <div
-                      className="w-[88px] h-[88px] bg-gradient-to-br from-[rgba(17,25,22,0.9)] to-[rgba(26,36,30,0.9)] rounded-3xl flex items-center justify-center mx-auto mb-7 relative transition-all duration-300"
-                      style={{
-                        border: `2px solid ${item.color}40`,
-                        boxShadow: `0 0 40px ${item.color}15`,
-                      }}
-                    >
-                      <span
-                        className="absolute -top-3.5 -right-3.5 w-9 h-9 rounded-full flex items-center justify-center text-base font-bold text-[var(--bg-dark)]"
-                        style={{
-                          background: `linear-gradient(135deg, ${item.color} 0%, ${item.color}CC 100%)`,
-                          boxShadow: `0 0 20px ${item.color}50`,
-                        }}
-                      >
-                        {item.step}
-                      </span>
-                      {React.cloneElement(
-                        item.icon as React.ReactElement<{
-                          style?: React.CSSProperties;
-                          className?: string;
-                        }>,
-                        {
-                          style: { color: item.color },
-                        }
-                      )}
-                    </div>
-                    <h4 className="text-xl font-semibold text-white mb-3">
-                      {t(item.titleKey)}
-                    </h4>
-                    <span
-                      className="text-white/65 leading-[1.7]"
-                    >
-                      {t(item.descKey)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <HowItWorks />
         </div>
       </section>
 
-      {/* Phase 11: Yield Calculator Section */}
+      {/* Yield Calculator Section - Split Layout */}
+      {/* Requirements: 4.1, 4.2, 4.3, 4.4 */}
       <section
         ref={calculatorSection.ref as React.RefObject<HTMLDivElement>}
         className={cn(
-          "w-full hex-pattern-bg scroll-reveal py-[100px] px-6 flex justify-center",
+          "w-full hex-pattern-bg scroll-reveal section-spacing px-6 flex justify-center",
           calculatorSection.isVisible && 'is-visible'
         )}
       >
         <div className="w-full max-w-[1200px]">
-          <div className="text-center mb-12 fade-in-stagger">
-            <span
-              className="text-[#FFD700] text-sm font-semibold tracking-[2px] uppercase"
-            >
-              Calculate Your Earnings
-            </span>
-            <h2 className="mt-4 mb-4 text-3xl md:text-4xl font-bold text-white">
-              Yield Calculator
-            </h2>
-            <p
-              className="text-lg text-white/65 max-w-[600px] mx-auto"
-            >
-              See your potential returns with our interactive yield calculator
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 justify-center">
-            <div className="lg:col-span-8 lg:col-start-3">
-              <YieldCalculator />
-            </div>
-          </div>
+          <CalculatorSection />
         </div>
       </section>
 
-      {/* Phase 11: Ecosystem / Logo Wall Section - 区块链生态 */}
+      {/* Ecosystem / Logo Wall Section - 区块链生态 */}
+      {/* Requirements: 5.1, 5.2, 5.3, 5.4, 5.5 */}
       <section
         ref={ecosystemSection.ref as React.RefObject<HTMLDivElement>}
         className={cn(
@@ -515,9 +267,13 @@ export default function HomePage() {
           ecosystemSection.isVisible && 'is-visible'
         )}
       >
-        <ServiceProviders
+        <InfiniteMarquee
+          row1Items={ROW1_PROVIDERS}
+          row2Items={ROW2_PROVIDERS}
           title={t("home.partners.blockchains.title")}
           subtitle={t("home.partners.blockchains.subtitle")}
+          speed={35}
+          pauseOnHover={true}
         />
       </section>
 

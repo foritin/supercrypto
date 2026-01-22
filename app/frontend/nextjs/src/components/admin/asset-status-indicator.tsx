@@ -10,6 +10,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import {
   Tooltip,
@@ -126,6 +127,8 @@ export function AssetStatusIndicator({
   isVisible,
   visibilityIssues = [],
 }: AssetStatusIndicatorProps) {
+  const { t } = useTranslation()
+
   // 计算状态项
   const statusItems = useMemo<StatusItem[]>(() => {
     const items: StatusItem[] = []
@@ -134,36 +137,40 @@ export function AssetStatusIndicator({
     const hasContract = hasContractBinding(asset)
     items.push({
       key: 'contract',
-      label: '合约绑定',
+      label: t('admin.assets.statusIndicator.contractBinding'),
       status: hasContract ? 'success' : 'error',
       required: true,
-      message: hasContract ? '已绑定合约' : '未绑定合约',
+      message: hasContract 
+        ? t('admin.assets.statusIndicator.contractBound') 
+        : t('admin.assets.statusIndicator.contractNotBound'),
     })
 
     // APY 设置状态
     const hasAPY = hasAnyAPY(asset)
     items.push({
       key: 'apy',
-      label: 'APY 设置',
+      label: t('admin.assets.statusIndicator.apySetting'),
       status: hasAPY ? 'success' : 'error',
       required: true,
       message: hasAPY
         ? `3M: ${asset.apy_3m}% | 6M: ${asset.apy_6m}% | 12M: ${asset.apy_12m}%`
-        : '未设置 APY',
+        : t('admin.assets.statusIndicator.apyNotSet'),
     })
 
     // 状态检查
     const isActive = asset.status === 'active'
     items.push({
       key: 'status',
-      label: '资产状态',
+      label: t('admin.assets.statusIndicator.assetStatus'),
       status: isActive ? 'success' : 'warning',
       required: false,
-      message: isActive ? '状态正常' : `当前状态: ${asset.status}`,
+      message: isActive 
+        ? t('admin.assets.statusIndicator.statusNormal') 
+        : t('admin.assets.statusIndicator.currentStatus', { status: asset.status }),
     })
 
     return items
-  }, [asset])
+  }, [asset, t])
 
   // 计算用户可见性
   const computedVisibility = useMemo(() => {
@@ -210,10 +217,10 @@ export function AssetStatusIndicator({
           </TooltipTrigger>
           <TooltipContent>
             {computedVisibility ? (
-              <span>用户可见</span>
+              <span>{t('admin.assets.statusIndicator.userVisible')}</span>
             ) : (
               <div>
-                <div className="mb-1 font-medium">用户不可见：</div>
+                <div className="mb-1 font-medium">{t('admin.assets.statusIndicator.userNotVisible')}:</div>
                 <ul className="list-disc pl-4 space-y-0.5">
                   {issues.map((issue, i) => (
                     <li key={i} className="text-muted-foreground">{issue}</li>
@@ -273,14 +280,20 @@ export function AssetStatusIndicator({
                 ) : (
                   <EyeOff className="h-3.5 w-3.5" />
                 )}
-                <span>{computedVisibility ? '用户可见' : '用户不可见'}</span>
+                <span>
+                  {computedVisibility 
+                    ? t('admin.assets.statusIndicator.userVisible') 
+                    : t('admin.assets.statusIndicator.userNotVisible')}
+                </span>
               </Badge>
             </TooltipTrigger>
             <TooltipContent>
               <span>
                 {computedVisibility
-                  ? '满足所有可见性条件'
-                  : `不可见原因: ${visibilityIssues.join(', ') || statusItems.filter(s => s.status !== 'success').map(s => s.label).join(', ')}`}
+                  ? t('admin.assets.statusIndicator.allConditionsMet')
+                  : t('admin.assets.statusIndicator.notVisibleReason', { 
+                      reasons: visibilityIssues.join(', ') || statusItems.filter(s => s.status !== 'success').map(s => s.label).join(', ')
+                    })}
               </span>
             </TooltipContent>
           </Tooltip>

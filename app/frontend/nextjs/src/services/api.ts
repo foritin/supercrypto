@@ -188,6 +188,12 @@ export function get<T>(endpoint: string, params?: Record<string, unknown>): Prom
  * POST request
  */
 export function post<T>(endpoint: string, body?: unknown): Promise<T> {
+  // 如果是 FormData，删除默认的 Content-Type，让浏览器自动设置 (包含 boundary)
+  if (body instanceof FormData) {
+    return axiosInstance.post(endpoint, body, {
+      headers: { 'Content-Type': undefined }
+    }) as Promise<T>
+  }
   return axiosInstance.post(endpoint, body) as Promise<T>
 }
 

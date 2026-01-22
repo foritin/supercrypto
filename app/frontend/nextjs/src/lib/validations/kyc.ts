@@ -9,6 +9,13 @@ import { z } from 'zod'
 export const idTypeEnum = z.enum(['passport', 'id_card', 'driver_license'])
 export type IdType = z.infer<typeof idTypeEnum>
 
+/**
+ * 以下常量作为 fallback 使用
+ * 推荐使用 useConstants hook 从后端 API 获取最新数据:
+ * - useConstants('id_type') 获取证件类型
+ * @see src/hooks/useConstants.ts
+ * @see src/lib/constants.ts (fallback 常量)
+ */
 // ID type display names (Chinese)
 export const ID_TYPE_NAMES: Record<IdType, string> = {
   passport: '护照',

@@ -246,21 +246,71 @@ export function WalletConnect() {
           >
             {(() => {
               // Not connected state - show connect button
+              // 🎨 Style variants: 'outline' | 'glass' | 'minimal'
+              // Change BUTTON_STYLE to switch between designs
+              const BUTTON_STYLE: 'outline' | 'glass' | 'minimal' = 'glass'
+              
               if (!connected) {
+                // Style configurations
+                const buttonStyles = {
+                  // 描边风格 - 透明背景 + 边框
+                  outline: {
+                    className: cn(
+                      "group relative flex items-center justify-center gap-3 px-7 py-3 rounded-full",
+                      "font-semibold text-[15px] tracking-wide",
+                      "border-2 border-[#00D4AA] text-[#00D4AA]",
+                      "bg-transparent hover:bg-[#00D4AA]/10",
+                      "transition-all duration-300",
+                      "hover:shadow-[0_0_25px_rgba(0,212,170,0.4)]",
+                      "active:scale-[0.98]",
+                      "focus:outline-none focus:ring-2 focus:ring-[#00D4AA]/50 focus:ring-offset-2 focus:ring-offset-[#0a0f0d]"
+                    ),
+                    style: {}
+                  },
+                  // 玻璃效果 - 毛玻璃 + 半透明（无边框）
+                  glass: {
+                    className: cn(
+                      "group relative flex items-center justify-center gap-3 px-7 py-3 rounded-full",
+                      "font-semibold text-[15px] tracking-wide",
+                      "backdrop-blur-md bg-[#00D4AA]/15",
+                      "text-[#00D4AA]",
+                      "transition-all duration-300",
+                      "hover:bg-[#00D4AA]/25",
+                      "hover:shadow-[0_0_25px_rgba(0,212,170,0.3)]",
+                      "active:scale-[0.98]",
+                      "focus:outline-none focus:ring-2 focus:ring-[#00D4AA]/50"
+                    ),
+                    style: {}
+                  },
+                  // 极简风格 - 纯文字
+                  minimal: {
+                    className: cn(
+                      "group flex items-center gap-2 px-4 h-10 rounded-lg",
+                      "font-medium text-[14px]",
+                      "text-[#00D4AA]",
+                      "transition-all duration-200",
+                      "hover:bg-[#00D4AA]/10",
+                      "active:bg-[#00D4AA]/15",
+                      "focus:outline-none focus:ring-2 focus:ring-[#00D4AA]/50"
+                    ),
+                    style: {}
+                  }
+                }
+                
+                const currentStyle = buttonStyles[BUTTON_STYLE]
+                
                 return (
                   <button
                     onClick={openConnectModal}
                     type="button"
-                    className={cn(
-                      "flex items-center gap-2 px-4 h-10 rounded-[10px]",
-                      "bg-primary text-primary-foreground font-semibold",
-                      "hover:bg-primary/90 transition-colors",
-                      "disabled:opacity-50 disabled:cursor-not-allowed"
-                    )}
+                    aria-label={t('wallet.connect')}
+                    className={currentStyle.className}
+                    style={currentStyle.style}
                   >
+                    {/* Wallet icon */}
                     <svg
-                      width="16"
-                      height="16"
+                      width="18"
+                      height="18"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -272,7 +322,7 @@ export function WalletConnect() {
                       <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
                       <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
                     </svg>
-                    {t('wallet.connect')}
+                    <span>{t('wallet.connect')}</span>
                   </button>
                 )
               }

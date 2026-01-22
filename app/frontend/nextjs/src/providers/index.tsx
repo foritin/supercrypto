@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { Web3Provider } from "./web3-provider";
 import { I18nProvider } from "./i18n-provider";
 import { AppReadyProvider } from "./app-ready-provider";
+import { GodModeIndicator } from "@/components/dev/god-mode-indicator";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -12,6 +13,8 @@ export function Providers({ children }: { children: ReactNode }) {
       <Web3Provider>
         {/* AppReadyProvider 需要在 I18nProvider 内部，以检测 i18n 状态 */}
         <AppReadyProvider>{children}</AppReadyProvider>
+        {/* GOD_MODE 指示器 - 仅在开发环境且启用时显示 */}
+        <GodModeIndicator />
         {/* Sonner Toaster - Web3 主题配置 */}
         <Toaster
           position="top-right"

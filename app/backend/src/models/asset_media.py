@@ -30,7 +30,7 @@ class AssetMedia(AbstractModel, TimestampMixin):
     media_type = fields.CharEnumField(
         MediaType,
         max_length=20,
-        default=MediaType.IMAGE,
+        default=MediaType.GALLERY,
         description="媒体类型"
     )
     title = fields.CharField(max_length=200, null=True, description="媒体标题")

@@ -24,6 +24,7 @@ const common = {
     days: "days",
     daysLeft: "days left",
     details: "Details",
+    noData: "No data available",
   },
   auth: {
     verifying: "Verifying...",

@@ -9,6 +9,13 @@ import { z } from 'zod'
 export const priceSourceEnum = z.enum(['manual', 'oracle', 'api'])
 export type PriceSource = z.infer<typeof priceSourceEnum>
 
+/**
+ * 以下常量作为 fallback 使用
+ * 推荐使用 useConstants hook 从后端 API 获取最新数据:
+ * - useConstants('price_source') 获取价格来源
+ * @see src/hooks/useConstants.ts
+ * @see src/lib/constants.ts (fallback 常量)
+ */
 // Price source display names (Chinese)
 export const PRICE_SOURCE_NAMES: Record<PriceSource, string> = {
   manual: '手动输入',

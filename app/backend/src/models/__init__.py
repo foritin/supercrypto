@@ -17,6 +17,7 @@ from src.models.contracts.contract_dependency import ContractDependency
 from src.models.contracts.contract_meta import ContractMeta
 from src.models.contracts.provider_registry import ProviderRegistry
 from src.models.kyc import UserKyc
+from src.models.project_registry import ContractDeploymentStatus, ProjectContractConfig
 from src.models.staking import (
     BASE_DAILY_RATE,
     STAKING_MULTIPLIERS,
@@ -95,6 +96,9 @@ __all__ = [
     "ContractMeta",
     "ContractDependency",
     "ProviderRegistry",
+    # Project Registry (Epic 10)
+    "ProjectContractConfig",
+    "ContractDeploymentStatus",
     # Staking
     "StakingRecord",
     "StakingLimit",

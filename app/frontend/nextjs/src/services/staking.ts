@@ -10,7 +10,7 @@ import { api } from '@/services/api'
 import { PUBLIC_PATHS, USER_PATHS } from '@/constants/api-paths'
 
 // 质押状态
-export type StakingStatus = 'active' | 'matured' | 'unstaked' | 'cancelled'
+export type StakingStatus = 'active' | 'matured' | 'unstaked' | 'claimed' | 'cancelled'
 
 // 质押周期（天）
 export type StakingPeriod = 15 | 30 | 45 | 60
@@ -273,11 +273,20 @@ export const stakingService = {
   },
 }
 
+/**
+ * 以下常量作为 fallback 使用
+ * 推荐使用 useConstants hook 从后端 API 获取最新数据:
+ * - useConstants('staking_status') 获取质押状态
+ * @see src/hooks/useConstants.ts
+ * @see src/lib/constants.ts (fallback 常量)
+ */
+
 // 状态显示名称
 export const STAKING_STATUS_NAMES: Record<StakingStatus, string> = {
   active: 'Active',
   matured: 'Matured',
   unstaked: 'Unstaked',
+  claimed: 'Claimed',
   cancelled: 'Cancelled',
 }
 
@@ -286,5 +295,6 @@ export const STAKING_STATUS_COLORS: Record<StakingStatus, string> = {
   active: 'processing',
   matured: 'success',
   unstaked: 'default',
+  claimed: 'gold',
   cancelled: 'error',
 }

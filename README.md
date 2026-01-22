@@ -348,7 +348,7 @@ SuperCrypto/
 │           │   └── locales/     # 国际化 (模块化)
 │           └── package.json
 │
-├── docs/                        # BMAD 文档
+├── bmad_docs/                        # BMAD 文档
 │   ├── prd.md                   # 产品需求文档
 │   ├── architecture.md          # 架构设计
 │   ├── epics.md                 # 史诗和故事
@@ -595,11 +595,11 @@ PROJECT_CONFIG = {
 
 | 文档        | 链接                                                                 | 说明         |
 | ----------- | -------------------------------------------------------------------- | ------------ |
-| 产品需求    | [docs/prd.md](./docs/prd.md)                                         | PRD 完整需求 |
-| 架构设计    | [docs/architecture.md](./docs/architecture.md)                       | 技术架构决策 |
-| Epic 分解   | [docs/epics.md](./docs/epics.md)                                     | 故事和任务   |
-| UX 设计     | [docs/ux-design-specification.md](./docs/ux-design-specification.md) | 界面设计规范 |
-| Sprint 状态 | [docs/sprint-artifacts/](./docs/sprint-artifacts/)                   | 开发进度追踪 |
+| 产品需求    | [bmad_docs/prd.md](./bmad_docs/prd.md)                                         | PRD 完整需求 |
+| 架构设计    | [bmad_docs/architecture.md](./bmad_docs/architecture.md)                       | 技术架构决策 |
+| Epic 分解   | [bmad_docs/epics.md](./bmad_docs/epics.md)                                     | 故事和任务   |
+| UX 设计     | [bmad_docs/ux-design-specification.md](./bmad_docs/ux-design-specification.md) | 界面设计规范 |
+| Sprint 状态 | [bmad_docs/sprint-artifacts/](./bmad_docs/sprint-artifacts/)                   | 开发进度追踪 |
 
 ---
 

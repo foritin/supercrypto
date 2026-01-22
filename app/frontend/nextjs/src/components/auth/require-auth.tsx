@@ -10,6 +10,7 @@
  * - 未授权时显示友好的提示
  * - 避免 SSR hydration 不匹配
  * - 监听 auth:logout 事件，处理强制退出（Token过期、被管理员踢出）
+ * - GOD_MODE: 开发环境下可绕过所有权限检查
  * 
  * 用法：
  * - <RequireAuth wallet>...</RequireAuth>           // 仅需钱包连接
@@ -18,6 +19,7 @@
  * - <RequireAuth check={() => someCondition}>...</RequireAuth> // 自定义检查
  */
 import { ReactNode, useEffect, useState, useMemo, useCallback } from 'react'
+import { useGodMode } from '@/hooks/use-god-mode'
 import { Loader2, Lock, Wallet, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
@@ -99,6 +101,10 @@ export function RequireAuth({
 }: RequireAuthProps) {
   const { t } = useTranslation()
   const router = useRouter()
+  
+  // GOD_MODE: 开发环境下绕过所有权限检查
+  // Requirements: 14.4
+  const { enabled: godModeEnabled } = useGodMode()
   
   // 监听强制退出事件
   useAuthLogoutListener()
@@ -392,6 +398,12 @@ export function RequireAuth({
         <Skeleton className="w-[200px] h-4" />
       </div>
     )
+  }
+
+  // GOD_MODE: 开发环境下直接渲染子组件，跳过所有权限检查
+  // Requirements: 14.4
+  if (godModeEnabled) {
+    return <>{children}</>
   }
 
   // 1. 正在加载（包括首次加载）

@@ -4,12 +4,14 @@
  * 包装需要 KYC 验证的内容
  * 
  * 已从 Ant Design 迁移到 shadcn/ui
+ * GOD_MODE: 开发环境下可绕过 KYC 检查
  */
 import { ReactNode } from 'react'
 import { ShieldAlert, ArrowRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAccount } from 'wagmi'
 import { useKycStatus } from '@/hooks/use-kyc-status'
+import { useGodMode } from '@/hooks/use-god-mode'
 
 // shadcn/ui 组件
 import {
@@ -92,6 +94,15 @@ export function KycRequiredGuard({
   const { t } = useTranslation()
   const { isConnected } = useAccount()
   const { isLoading, isApproved } = useKycStatus()
+  
+  // GOD_MODE: 开发环境下绕过 KYC 检查
+  // Requirements: 14.5
+  const { enabled: godModeEnabled } = useGodMode()
+
+  // GOD_MODE: 直接渲染子组件，跳过 KYC 检查
+  if (godModeEnabled) {
+    return <>{children}</>
+  }
 
   // 加载状态
   if (isLoading) {

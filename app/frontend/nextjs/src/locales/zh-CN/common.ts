@@ -24,6 +24,7 @@ const common = {
     days: "天",
     daysLeft: "天剩余",
     details: "详情",
+    noData: "暂无数据",
   },
   auth: {
     verifying: "验证中...",

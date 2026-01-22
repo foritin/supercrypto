@@ -1,29 +1,15 @@
 /* ============================================
    SuperCrypto - Base Styles
-   全局重置和基础样式
+   仅保留必要的全局样式，不覆盖 Tailwind
    ============================================ */
 
-/* 全局重置 */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* 
+   注意: Tailwind v4 已内置 preflight 重置
+   这里只添加 Tailwind 不处理的特殊情况
+*/
 
 html {
   scroll-behavior: smooth;
-  overflow-y: scroll !important;
-}
-
-body {
-  font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: var(--bg-dark);
-  color: var(--text-primary);
-  line-height: 1.6;
-  min-height: 100vh;
 }
 
 /* 滚动条样式 */
@@ -33,16 +19,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-dark);
+  background: var(--bg-dark, #0a0a0f);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-elevated);
+  background: var(--bg-elevated, #1a1a2e);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-color-light);
+  background: var(--border-color-light, #2a2a3e);
 }
 
 /* 选中文本样式 */
@@ -63,7 +49,6 @@ a:focus:not(:focus-visible),
 input:focus:not(:focus-visible) {
   outline: none;
 }
-
 
 /* ============================================
    无障碍样式 - Accessibility
@@ -88,12 +73,6 @@ input:focus:not(:focus-visible) {
     border-width: 2px;
     border-color: currentColor;
   }
-  
-  button,
-  a {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
-  }
 }
 
 /* Print Styles - 打印样式 */
@@ -108,9 +87,5 @@ input:focus:not(:focus-visible) {
   body {
     background: white !important;
     color: black !important;
-  }
-  
-  a {
-    text-decoration: underline;
   }
 }

@@ -156,7 +156,8 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
               <span className="text-white/70 text-[13px] block mb-2 uppercase tracking-wider">
                 Total Value
               </span>
-              <div className="text-[32px] font-bold text-[#00D4AA] drop-shadow-[0_2px_8px_rgba(0,212,170,0.3)]">
+              {/* Requirements: 4.6, 9.3 - 等宽字体 + 放大数字 */}
+              <div className="text-[36px] md:text-[42px] font-bold text-[#00D4AA] drop-shadow-[0_2px_8px_rgba(0,212,170,0.3)] font-mono-result tracking-tight">
                 ${calculateYield.futureValue.toFixed(2)}
               </div>
             </div>
@@ -164,14 +165,15 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
               <span className="text-white/70 text-[13px] block mb-2 uppercase tracking-wider">
                 Profit
               </span>
-              <div className="text-[32px] font-bold text-[#FFD700] drop-shadow-[0_2px_8px_rgba(255,215,0,0.3)]">
+              {/* Requirements: 4.6, 9.3 - 等宽字体 + 放大数字 */}
+              <div className="text-[36px] md:text-[42px] font-bold text-[#FFD700] drop-shadow-[0_2px_8px_rgba(255,215,0,0.3)] font-mono-result tracking-tight">
                 ${calculateYield.profit.toFixed(2)}
               </div>
             </div>
             <div className="col-span-1 sm:col-span-2 text-center pt-5 border-t border-white/10 relative z-10">
               <span className="text-white/70 text-sm">
                 Return on Investment (ROI):{' '}
-                <span className="text-[#FFD700] text-[22px] font-bold drop-shadow-[0_2px_8px_rgba(255,215,0,0.3)]">
+                <span className="text-[#FFD700] text-[24px] md:text-[28px] font-bold drop-shadow-[0_2px_8px_rgba(255,215,0,0.3)] font-mono-result">
                   {calculateYield.roi}%
                 </span>
               </span>

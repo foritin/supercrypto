@@ -38,15 +38,29 @@
 }
 
 /* 视频遮罩层 - 确保文字可读性 */
+/* Requirements: 1.3 - 渐变遮罩实现底部自然过渡 */
 .hero-video-overlay {
   position: absolute;
   inset: 0;
   z-index: 1;
   background: linear-gradient(
-    135deg,
-    rgba(10, 15, 13, 0.75) 0%,
-    rgba(10, 15, 13, 0.85) 100%
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(5, 5, 5, 0.6) 50%,
+    rgba(5, 5, 5, 1) 100%
   );
+}
+
+/* 底部渐变遮罩 - 更强的底部过渡 */
+.hero-video-overlay::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to top, #050505 10%, transparent 100%);
+  pointer-events: none;
 }
 
 /* 降级方案：如果没有视频支持，使用背景图 */

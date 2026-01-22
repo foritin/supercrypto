@@ -6,7 +6,7 @@
 
 from fastapi import APIRouter
 
-from src.api.v1.public import assets, auth, contracts, kyc, staking, subscriptions
+from src.api.v1.public import assets, auth, constants, contracts, kyc, staking, subscriptions
 
 router = APIRouter()
 
@@ -15,6 +15,9 @@ router.include_router(auth.router, prefix="/auth", tags=["认证-公开"])
 
 # 资产 - 列表、详情查询
 router.include_router(assets.router, prefix="/assets", tags=["资产-公开"])
+
+# 常量 - 系统常量表
+router.include_router(constants.router, prefix="/constants", tags=["常量-公开"])
 
 # 合约 - 地址查询
 router.include_router(contracts.router, prefix="/contracts", tags=["合约-公开"])

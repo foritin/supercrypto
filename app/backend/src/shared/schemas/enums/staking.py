@@ -7,8 +7,9 @@ from enum import Enum
 class StakingStatus(str, Enum):
     """质押状态"""
     ACTIVE = "active"          # 质押中
-    MATURED = "matured"        # 已到期（可解押）
+    MATURED = "matured"        # 已到期（可解押/领取）
     UNSTAKED = "unstaked"      # 已解押
+    CLAIMED = "claimed"        # 已领取奖励
     CANCELLED = "cancelled"    # 已取消
 
 

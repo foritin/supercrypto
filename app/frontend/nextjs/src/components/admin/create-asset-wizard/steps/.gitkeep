@@ -1,0 +1,6 @@
+# Placeholder for steps directory
+# Step components will be added in subsequent tasks:
+# - BasicInfoStep.tsx (Task 3)
+# - FinancialStep.tsx (Task 4)
+# - MediaStep.tsx (Task 5)
+# - PreviewStep.tsx (Task 6)

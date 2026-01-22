@@ -30,6 +30,7 @@ from deploy.executor import (
     get_global_and_project_deployed,
     get_network_enum,
     record_dependencies,
+    sync_project_registry_before_deploy,
 )
 from deploy.projects.vanke.config import VANKE_PROJECT
 
@@ -47,6 +48,9 @@ def main():
     print(f"   项目名称: {project_config.name}")
     print(f"   网络: {network} (chain_id={chain_id})")
     print("=" * 60)
+
+    # 部署前同步项目注册表配置
+    sync_project_registry_before_deploy(project_config.name)
 
     deployer = get_deployer(network)
     deployed = get_global_and_project_deployed(chain_id, net_enum, project_config.name)

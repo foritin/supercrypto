@@ -73,15 +73,21 @@ class ContractService:
 
         数据来源:
         - ContractMeta: 合约元数据、依赖关系
-        - Contract: 部署状态
+        - Contract: 部署状态（包含 is_primary, symbol 字段）
         - ProviderRegistry: Provider 注册状态
 
         返回结构按 scope 分组:
         - global_contracts: 公共合约 (AddressProvider, KYC, USDT, USDC 等)
         - project_contracts: 按项目分组的项目合约
+          - 每个项目组包含 has_primary, primary_contract, is_ready, missing_dependencies 字段
         
         注意: 返回所有记录（包括已删除的），由前端根据 is_deleted 字段过滤显示
+        
+        Requirements: 4.1, 4.6, 7.3, 7.4
         """
+        from src.services.project_registry import get_readiness_checker
+        from src.shared.schemas.enums import ProjectReadiness
+
         # 查询所有合约元数据
         metas = await ContractMeta.all().order_by("project_name", "contract_name")
 
@@ -116,7 +122,7 @@ class ContractService:
         }
 
         global_contracts = []  # scope == 'global'
-        project_contracts = {}  # scope == 'project', 按 project_name 分组
+        project_contracts: Dict[str, dict] = {}  # scope == 'project', 按 project_name 分组
         needs_update_count = 0
 
         # 遍历 ContractMeta (而非 Contract 表)
@@ -164,7 +170,8 @@ class ContractService:
                     }
                 )
 
-            # 构造合约数据
+            # 构造合约数据（包含 is_primary 和 symbol 字段）
+            # Requirements: 4.1, 4.6
             contract_data = {
                 "name": meta.contract_name,
                 "project": meta.project_name,
@@ -185,6 +192,9 @@ class ContractService:
                 if registry and registry.last_synced_at
                 else None,
                 "is_deleted": registry.is_deleted if registry else False,
+                # 新增字段：主合约标记和 Token Symbol
+                "is_primary": contract.is_primary if contract else False,
+                "symbol": contract.symbol if contract else None,
             }
 
             # 按 scope 分组
@@ -205,8 +215,37 @@ class ContractService:
                             },
                         ),
                         "contracts": [],
+                        # 新增字段：主合约相关信息（初始化）
+                        "has_primary": False,
+                        "primary_contract": None,
+                        "is_ready": False,
+                        "missing_dependencies": [],
                     }
                 project_contracts[project_name]["contracts"].append(contract_data)
+                
+                # 检查是否为主合约
+                if contract_data["is_primary"]:
+                    project_contracts[project_name]["has_primary"] = True
+                    project_contracts[project_name]["primary_contract"] = contract_data
+
+        # 计算每个项目的就绪状态
+        # Requirements: 7.3, 7.4
+        checker = get_readiness_checker(self.network)
+        for project_name, project_group in project_contracts.items():
+            try:
+                report = await checker.get_project_status(project_name, self.network)
+                # 项目就绪：NOT_READY 以外的状态都算就绪
+                project_group["is_ready"] = report.readiness != ProjectReadiness.NOT_READY
+                
+                # 收集缺失的必选依赖
+                missing_deps: list[str] = []
+                for contract_info in report.contracts.values():
+                    missing_deps.extend(contract_info.missing_required_deps)
+                project_group["missing_dependencies"] = list(set(missing_deps))
+            except Exception as e:
+                logger.warning(f"Failed to get readiness status for project '{project_name}': {e}")
+                project_group["is_ready"] = False
+                project_group["missing_dependencies"] = []
 
         return {
             # 新结构：按 scope 分组
@@ -828,6 +867,124 @@ class ContractService:
             "nodes": nodes,
             "edges": edges,
         }
+
+
+    async def set_primary(self, contract_id: int) -> ContractModel:
+        """
+        设置合约为主合约
+
+        验证规则:
+        1. 合约必须存在
+        2. 合约必须是 PROJECT scope（只有项目专属合约可以设为主合约）
+        3. 项目不能已有主合约（每个项目只能有一个主合约）
+
+        Args:
+            contract_id: 合约 ID
+
+        Returns:
+            更新后的合约对象
+
+        Raises:
+            ValueError: 合约不存在、scope 不正确、或项目已有主合约
+        """
+        from src.shared.schemas.enums import ContractScope
+
+        # 1. 验证合约存在
+        contract = await ContractModel.filter(id=contract_id).first()
+        if not contract:
+            raise ValueError("合约不存在")
+
+        # 2. 验证合约是 PROJECT scope
+        if contract.scope != ContractScope.PROJECT:
+            raise ValueError("只有项目专属合约（PROJECT scope）可以设为主合约")
+
+        # 3. 检查项目是否已有主合约
+        existing_primary = await ContractModel.filter(
+            project_name=contract.project_name,
+            network=self.network,
+            is_primary=True,
+        ).first()
+
+        if existing_primary:
+            raise ValueError("该项目已有主合约，请先取消现有主合约标记")
+
+        # 4. 设置为主合约
+        contract.is_primary = True
+        await contract.save()
+
+        logger.info(
+            f"Set contract as primary: {contract.name} (project: {contract.project_name})"
+        )
+
+        return contract
+
+    async def unset_primary(self, contract_id: int) -> ContractModel:
+        """
+        取消合约的主合约标记
+
+        验证规则:
+        1. 合约必须存在
+        2. 合约必须是当前的主合约（is_primary=True）
+
+        Args:
+            contract_id: 合约 ID
+
+        Returns:
+            更新后的合约对象
+
+        Raises:
+            ValueError: 合约不存在或合约不是主合约
+        """
+        # 1. 验证合约存在
+        contract = await ContractModel.filter(id=contract_id).first()
+        if not contract:
+            raise ValueError("合约不存在")
+
+        # 2. 验证合约是主合约
+        if not contract.is_primary:
+            raise ValueError("该合约不是主合约")
+
+        # 3. 取消主合约标记
+        contract.is_primary = False
+        await contract.save()
+
+        logger.info(
+            f"Unset contract as primary: {contract.name} (project: {contract.project_name})"
+        )
+
+        return contract
+
+    async def get_project_primary_contract(
+        self, project_name: str
+    ) -> Optional[ContractModel]:
+        """
+        获取项目的主合约
+
+        根据项目名称查询该项目的主合约（is_primary=True 的合约）。
+        每个项目最多只有一个主合约。
+
+        Args:
+            project_name: 项目名称
+
+        Returns:
+            主合约对象，如果项目没有主合约则返回 None
+
+        Validates: Requirements 5.5
+        """
+        contract = await ContractModel.filter(
+            project_name=project_name,
+            network=self.network,
+            is_primary=True,
+        ).first()
+
+        if contract:
+            logger.debug(
+                f"Found primary contract for project '{project_name}': {contract.name}"
+            )
+        else:
+            logger.debug(f"No primary contract found for project '{project_name}'")
+
+        return contract
 
 
 def get_contract_service(network: Optional[str] = None) -> ContractService:

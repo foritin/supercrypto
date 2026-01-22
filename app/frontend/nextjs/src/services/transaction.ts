@@ -179,6 +179,14 @@ export const transactionService = {
   },
 };
 
+/**
+ * 以下常量作为 fallback 使用
+ * 推荐使用 useConstants hook 从后端 API 获取最新数据:
+ * - useConstants('transaction_type') 获取交易类型
+ * @see src/hooks/useConstants.ts
+ * @see src/lib/constants.ts (fallback 常量)
+ */
+
 // 交易类型显示名称
 export const TRANSACTION_TYPE_NAMES: Record<TransactionType, string> = {
   subscription: "Subscription",

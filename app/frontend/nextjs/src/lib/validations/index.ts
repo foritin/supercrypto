@@ -39,3 +39,37 @@ export {
   type PriceUpdateFormValues,
   type BatchPriceUpdateFormValues,
 } from './price'
+
+// Create Asset Wizard schemas
+export {
+  // Schemas
+  wizardAssetTypeEnum,
+  basicInfoSchema,
+  financialSchema,
+  mediaSchema,
+  bindingSchema,
+  createAssetWizardSchema,
+  // Default values
+  basicInfoDefaultValues,
+  financialDefaultValues,
+  mediaDefaultValues,
+  bindingDefaultValues,
+  createAssetWizardDefaultValues,
+  // Constants
+  WIZARD_ASSET_TYPE_NAMES,
+  MAX_FILE_SIZE_MB,
+  // Validation helpers
+  validateBasicInfo,
+  validateFinancial,
+  validateMedia,
+  validateBinding,
+  validateCreateAssetWizard,
+  validateFileSize,
+  // Types
+  type WizardAssetType,
+  type BasicInfoFormValues,
+  type FinancialFormValues,
+  type MediaFormValues,
+  type BindingFormValues,
+  type CreateAssetWizardFormValues,
+} from './create-asset-wizard'

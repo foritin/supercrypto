@@ -210,6 +210,9 @@ export interface ContractStatusItem {
   description?: string;                     // 描述
   last_synced?: string | null;              // 上次同步时间
   is_deleted?: boolean;                     // 是否已删除（解绑）
+  // 新增字段：主合约相关 (Requirements: 4.1, 4.6)
+  is_primary: boolean;                      // 是否为主合约
+  symbol: string | null;                    // Token Symbol
 }
 
 // 项目配置
@@ -224,6 +227,11 @@ export interface ProjectContractsGroup {
   project: string;
   config: ProjectInfo;
   contracts: ContractStatusItem[];
+  // 新增字段：主合约相关信息 (Requirements: 7.3, 7.4)
+  has_primary: boolean;                         // 是否有主合约
+  primary_contract: ContractStatusItem | null;  // 主合约信息
+  is_ready: boolean;                            // 项目是否就绪
+  missing_dependencies: string[];               // 缺失的必选依赖列表
 }
 
 // 统计信息

@@ -1,0 +1,302 @@
+/* ============================================
+   SuperCrypto - Glassmorphism Styles
+   磨砂玻璃效果、Stats Bar、视频遮罩等
+   ============================================ */
+
+/* ============================================
+   统一磨砂玻璃卡片样式
+   Requirements: 7.1, 7.2
+   ============================================ */
+
+.glass-card {
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(0, 212, 170, 0.3);
+  box-shadow: 0 0 40px rgba(0, 212, 170, 0.12);
+}
+
+/* Stats Bar 样式 - Requirements: 1.2 */
+.stats-bar {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px 40px;
+}
+
+/* 视频遮罩 - Requirements: 1.3 */
+.video-overlay-gradient {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, rgba(5, 5, 5, 1) 100%);
+}
+
+/* 底部渐变遮罩 */
+.video-overlay-bottom {
+  background: linear-gradient(to top, #050505 10%, transparent 100%);
+}
+
+/* ============================================
+   性能优化 - @supports 检测
+   Requirements: 11.1, 11.2
+   ============================================ */
+
+/* 不支持 backdrop-filter 时的回退方案 */
+@supports not (backdrop-filter: blur(12px)) {
+  .glass-card,
+  .stats-bar {
+    background: rgba(20, 20, 20, 0.9);
+  }
+}
+
+/* ============================================
+   噪点纹理叠加
+   Requirements: 12.1
+   ============================================ */
+
+.noise-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* ============================================
+   渐变描边效果
+   Requirements: 12.2, 12.3
+   ============================================ */
+
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.gradient-border:hover::before {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.4) 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+}
+
+/* ============================================
+   呼吸光晕效果
+   Requirements: 4.7
+   ============================================ */
+
+.glow-orb {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  background: var(--color-primary);
+  animation: breathe 4s ease-in-out infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes breathe {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.1);
+  }
+}
+
+/* ============================================
+   发光进度条效果
+   Requirements: 4.5
+   ============================================ */
+
+.slider-glow {
+  position: relative;
+}
+
+.slider-glow::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 6px;
+  width: var(--slider-progress, 0%);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+  border-radius: 3px;
+  transform: translateY(-50%);
+  box-shadow: 0 0 10px var(--color-primary-glow), 0 0 20px var(--color-primary-glow);
+  pointer-events: none;
+}
+
+/* ============================================
+   无限滚动走马灯
+   Requirements: 5.1
+   ============================================ */
+
+@keyframes marquee-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-100% - 1.5rem));
+  }
+}
+
+@keyframes marquee-right {
+  0% {
+    transform: translateX(calc(-100% - 1.5rem));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-marquee-left {
+  animation: marquee-left linear infinite;
+}
+
+.animate-marquee-right {
+  animation: marquee-right linear infinite;
+}
+
+.animate-marquee-left:hover,
+.animate-marquee-right:hover {
+  animation-play-state: paused;
+}
+
+/* ============================================
+   横向滚动容器
+   Requirements: 2.4
+   ============================================ */
+
+.horizontal-scroll {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.horizontal-scroll > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Bento Grid 布局
+   Requirements: 3.1, 3.2, 3.5
+   ============================================ */
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 24px;
+}
+
+.bento-grid .big-card {
+  grid-row: span 2;
+}
+
+/* 移动端回退 - Requirements: 3.3 */
+@media (max-width: 768px) {
+  .bento-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .bento-grid .big-card {
+    grid-row: auto;
+  }
+}
+
+/* ============================================
+   发光连接线
+   Requirements: 6.1
+   ============================================ */
+
+.glow-line {
+  position: absolute;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(0, 212, 170, 0.6) 0%, rgba(255, 255, 255, 0.1) 100%);
+  box-shadow: 0 0 10px rgba(0, 212, 170, 0.4);
+  transition: all 0.5s ease;
+}
+
+.glow-line.active {
+  background: linear-gradient(90deg, rgba(0, 212, 170, 1) 0%, rgba(0, 212, 170, 0.6) 100%);
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.8);
+}
+
+/* 移动端垂直连接线 - Requirements: 6.3 */
+@media (max-width: 768px) {
+  .glow-line {
+    width: 2px;
+    height: auto;
+    background: linear-gradient(180deg, rgba(0, 212, 170, 0.6) 0%, rgba(255, 255, 255, 0.1) 100%);
+  }
+}
+
+/* ============================================
+   Section 间距优化
+   Requirements: 8.1
+   ============================================ */
+
+.section-spacing {
+  padding-top: 120px;
+  padding-bottom: 120px;
+}
+
+@media (max-width: 768px) {
+  .section-spacing {
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
+}
+
+/* ============================================
+   数字字体优化
+   Requirements: 9.1, 9.2, 9.3
+   ============================================ */
+
+.font-numeric {
+  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-mono-result {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}

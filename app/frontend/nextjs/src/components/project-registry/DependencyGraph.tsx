@@ -24,12 +24,10 @@ import 'reactflow/dist/style.css';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RotateCcw, Loader2 } from 'lucide-react';
-
 import { ContractNode } from './ContractNode';
 import { DependencyEdge } from './DependencyEdge';
 import { useDependencyGraph } from '@/hooks/useProjectStatus';
 import type { DependencyType } from '@/types/project-registry';
-
 
 // 自定义节点类型
 const nodeTypes = {
@@ -94,7 +92,7 @@ export function DependencyGraph({ projectName, network = 'local' }: DependencyGr
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   // 点击节点 - 高亮依赖链
-  const onNodeClick: NodeMouseHandler = useCallback((event, node) => {
+  const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     if (selectedNode === node.id) {
       // 取消选中
       setSelectedNode(null);
@@ -153,41 +151,23 @@ export function DependencyGraph({ projectName, network = 'local' }: DependencyGr
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          height: 500,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#fafafa',
-          borderRadius: 8,
-        }}
-      >
-        <Spin />
-        <Text type="secondary" style={{ marginLeft: 8 }}>加载依赖图...</Text>
+      <div className="h-[500px] flex items-center justify-center bg-muted/30 rounded-lg">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-sm text-muted-foreground">加载依赖图...</span>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div
-        style={{
-          height: 500,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#fafafa',
-          borderRadius: 8,
-        }}
-      >
-        <Text type="danger">加载失败</Text>
+      <div className="h-[500px] flex items-center justify-center bg-muted/30 rounded-lg">
+        <span className="text-sm text-destructive">加载失败</span>
       </div>
     );
   }
 
   return (
-    <div style={{ height: 500, border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+    <div className="h-[500px] border border-border rounded-lg overflow-hidden">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -237,50 +217,51 @@ export function DependencyGraph({ projectName, network = 'local' }: DependencyGr
 
         {/* 图例面板 */}
         <Panel position="top-right">
-          <Card size="small" style={{ fontSize: 12, width: 160 }}>
-            <div style={{ fontWeight: 500, marginBottom: 8 }}>图例</div>
+          <Card className="p-3 text-xs w-40">
+            <div className="font-medium mb-2">图例</div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e' }} />
+            <div className="flex flex-col gap-1 mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
                 <span>已激活</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#eab308' }} />
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
                 <span>已绑定</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#a855f7' }} />
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
                 <span>已部署</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#9ca3af' }} />
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />
                 <span>未部署</span>
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 16, height: 2, background: '#22c55e' }} />
+            <div className="border-t border-border pt-2 flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-0.5 bg-green-500" />
                 <span>必须 (已绑定)</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 16, height: 2, background: '#ef4444' }} />
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-0.5 bg-red-500" />
                 <span>必须 (未绑定)</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 16, height: 2, background: '#9ca3af', borderTop: '2px dashed' }} />
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-0.5 bg-gray-400 border-t-2 border-dashed border-gray-400" />
                 <span>可选依赖</span>
               </div>
             </div>
 
             {selectedNode && (
               <Button
-                size="small"
-                icon={<ClearOutlined />}
+                size="sm"
+                variant="outline"
                 onClick={resetHighlight}
-                style={{ width: '100%', marginTop: 8 }}
+                className="w-full mt-2"
               >
+                <RotateCcw className="h-3 w-3 mr-1" />
                 清除高亮
               </Button>
             )}

@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { WalletConnect } from "@/components/wallet-connect";
 import { LanguageSwitcher } from "@/components/web3/language-switcher";
 import { useCurrentUser } from "@/hooks";
+import { useGodMode } from "@/hooks/use-god-mode";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -55,6 +56,7 @@ export function Header() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const { isAdmin, isConnected } = useCurrentUser();
+  const { enabled: isGodMode } = useGodMode();
 
   // 用于避免 hydration 不匹配 - i18n 在服务端/客户端可能不同步
   const [isHydrated, setIsHydrated] = useState(false);
@@ -104,8 +106,9 @@ export function Header() {
       { key: "about", label: t("header.nav.about"), href: "/about" },
     ];
 
-    // Only show admin menu if user is admin
-    if (isConnected && isAdmin) {
+    // Show admin menu if user is admin OR GOD_MODE is enabled
+    // GOD_MODE 下无需登录钱包也显示 admin 菜单
+    if ((isConnected && isAdmin) || isGodMode) {
       const adminChildren: NavItem[] = [
         {
           key: "admin-dashboard",
@@ -149,7 +152,7 @@ export function Header() {
     }
 
     return items;
-  }, [t, isConnected, isAdmin, isHydrated]);
+  }, [t, isConnected, isAdmin, isHydrated, isGodMode]);
 
   const selectedKey = getSelectedKey();
 
@@ -157,13 +160,16 @@ export function Header() {
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-[1000] grid grid-cols-[1fr_auto_1fr] items-center transition-all duration-300",
-        scrolled && "border-b shadow-lg backdrop-blur-md"
+        // Requirements: 13.1, 13.2, 13.3 - 透明/磨砂切换
+        scrolled && "border-b backdrop-blur-[12px]"
       )}
       style={{
         padding: "var(--header-padding-y) var(--header-padding-x)",
+        // 首屏透明，滚动后磨砂玻璃
         background: scrolled ? "rgba(10, 15, 13, 0.85)" : "transparent",
         height: "var(--header-height)",
         borderColor: scrolled ? "rgba(255, 255, 255, 0.1)" : "transparent",
+        boxShadow: scrolled ? "0 4px 30px rgba(0, 0, 0, 0.3)" : "none",
       }}
     >
       {/* 左侧：Logo - 左对齐 */}

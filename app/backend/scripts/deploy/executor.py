@@ -23,8 +23,9 @@ from src.models.contracts.provider_registry import (
     ProviderRegistry,
     compute_key_hash,
 )
+from src.models.project_registry import ContractDeploymentStatus, ProjectContractConfig
 from src.shared.common.adapters import get_db_adapter, get_minio_adapter
-from src.shared.schemas.enums import ChainID, ContractStatus, NetWork
+from src.shared.schemas.enums import ChainID, ContractRegistryStatus, ContractStatus, NetWork
 
 from .base import ZERO_ADDRESS, ContractConfig
 
@@ -324,7 +325,16 @@ def deploy_contract(
     # 8. 自动写入 ContractMeta (元数据)
     save_contract_meta(config, project_name)
 
-    # 9. 预创建 ProviderRegistry 记录 (如果有 provider_key)
+    # 9. 更新项目注册表部署状态
+    update_project_registry_status(
+        project_name=project_name,
+        contract_name=config.name,
+        network=network,
+        address=str(contract.address),
+        tx_hash=tx_hash,
+    )
+
+    # 10. 预创建 ProviderRegistry 记录 (如果有 provider_key)
     if config.provider_key and provider:
         create_provider_registry_record(
             config=config,
@@ -446,6 +456,73 @@ def save_contract_meta(config: ContractConfig, project_name: str):
             # 创建新记录
             db.query(ContractMeta.create(contract_name=config.name, **meta_data))
             print(f"   📝 ContractMeta 已创建: {config.name}")
+
+
+def update_project_registry_status(
+    project_name: str,
+    contract_name: str,
+    network: NetWork,
+    address: str,
+    tx_hash: str = None,
+):
+    """
+    更新项目注册表部署状态
+
+    部署成功后自动更新 ContractDeploymentStatus 表。
+
+    Args:
+        project_name: 项目名称
+        contract_name: 合约名称
+        network: 网络枚举
+        address: 部署地址
+        tx_hash: 部署交易哈希
+    """
+    # 转换网络名称
+    network_name = network.value if hasattr(network, "value") else str(network)
+
+    with get_db() as db:
+        # 查找合约配置
+        config = db.query(
+            ProjectContractConfig.filter(
+                project_name=project_name,
+                contract_name=contract_name,
+            ).first()
+        )
+
+        if not config:
+            print(f"   ⚠️  ProjectContractConfig 未找到: {project_name}/{contract_name}")
+            return
+
+        # 查找或创建部署状态记录
+        deployment = db.query(
+            ContractDeploymentStatus.filter(
+                config_id=config.id,
+                network=network_name,
+            ).first()
+        )
+
+        if deployment:
+            # 更新现有记录
+            db.query(
+                ContractDeploymentStatus.filter(id=deployment.id).update(
+                    address=address,
+                    status=ContractRegistryStatus.DEPLOYED,
+                    deploy_tx_hash=tx_hash,
+                )
+            )
+            print(f"   📋 ProjectRegistry 已更新: {contract_name}@{network_name}")
+        else:
+            # 创建新记录
+            db.query(
+                ContractDeploymentStatus.create(
+                    config_id=config.id,
+                    network=network_name,
+                    address=address,
+                    status=ContractRegistryStatus.DEPLOYED,
+                    deploy_tx_hash=tx_hash,
+                )
+            )
+            print(f"   📋 ProjectRegistry 已创建: {contract_name}@{network_name}")
 
 
 def _contract_name_to_provider_key(contract_name: str) -> str:
@@ -635,3 +712,110 @@ def _provider_key_to_contract_name(provider_key: str) -> str:
     # 通用规则: VANKE_RWA_TOKEN -> VankeRWAToken (下划线分隔转驼峰)
     parts = provider_key.split("_")
     return "".join(part.capitalize() for part in parts)
+
+
+
+# ============================================
+# 项目注册表同步
+# ============================================
+
+
+def sync_project_registry_before_deploy(project_name: str):
+    """
+    部署前同步项目注册表配置
+
+    将 config.yaml 中的项目配置同步到 ProjectContractConfig 表。
+    这是部署流程的前置步骤，确保配置存在后才能更新部署状态。
+
+    Args:
+        project_name: 项目名称
+    """
+    from src.services.project_registry import get_config_loader
+
+    print(f"\n🔄 同步项目注册表配置: {project_name}")
+
+    with get_db() as db:
+        loader = get_config_loader()
+
+        try:
+            # 加载配置
+            config = loader.load_config(project_name)
+            print(f"   配置加载成功: {len(config.contracts)} 个合约")
+
+            # 同步到数据库（同步版本）
+            stats = _sync_project_config_sync(db, project_name, config)
+
+            if stats["created"] > 0:
+                print(f"   ✅ 创建 {stats['created']} 个合约配置")
+            if stats["updated"] > 0:
+                print(f"   ✅ 更新 {stats['updated']} 个合约配置")
+            if stats["unchanged"] > 0:
+                print(f"   ✅ {stats['unchanged']} 个合约配置无变化")
+
+        except Exception as e:
+            print(f"   ❌ 同步失败: {e}")
+            raise
+
+
+def _sync_project_config_sync(db, project_name: str, config) -> dict:
+    """
+    同步版本的配置同步（用于部署脚本）
+
+    Args:
+        db: 数据库适配器
+        project_name: 项目名称
+        config: ProjectConfigSchema
+
+    Returns:
+        同步统计
+    """
+    from src.shared.schemas.enums import DependencyType
+
+    stats = {"created": 0, "updated": 0, "unchanged": 0}
+
+    for contract_config in config.contracts:
+        # 查找现有记录
+        existing = db.query(
+            ProjectContractConfig.filter(
+                project_name=project_name,
+                contract_name=contract_config.name,
+            ).first()
+        )
+
+        # 准备数据
+        data = {
+            "project_name": project_name,
+            "contract_name": contract_config.name,
+            "description": contract_config.description,
+            "dependency_type": DependencyType(contract_config.type.value.lower()),
+            "is_primary": contract_config.name == config.primary_contract,
+            "module": contract_config.module,
+            "required_deps": contract_config.required_deps,
+            "optional_deps": contract_config.optional_deps,
+            "deploy_order": contract_config.deploy_order,
+            "allow_zero_address": contract_config.allow_zero_address,
+            "environments": contract_config.environments,
+            "production_address": contract_config.production_address,
+        }
+
+        if existing:
+            # 检查是否有变化（简单比较关键字段）
+            changed = (
+                existing.description != data["description"]
+                or existing.dependency_type != data["dependency_type"]
+                or existing.is_primary != data["is_primary"]
+                or existing.required_deps != data["required_deps"]
+                or existing.optional_deps != data["optional_deps"]
+                or existing.deploy_order != data["deploy_order"]
+            )
+
+            if changed:
+                db.query(ProjectContractConfig.filter(id=existing.id).update(**data))
+                stats["updated"] += 1
+            else:
+                stats["unchanged"] += 1
+        else:
+            db.query(ProjectContractConfig.create(**data))
+            stats["created"] += 1
+
+    return stats

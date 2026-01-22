@@ -122,9 +122,9 @@ export type { DateRangePickerProps, DateRange } from './date-range-picker';
 // Custom Components
 // ============================================
 
-// Glass Card
-export { GlassCard } from './GlassCard';
-export type { default as GlassCardProps } from './GlassCard';
+// Glass Card (CVA-based glassmorphism card)
+export { GlassCard, glassCardVariants } from './glass-card';
+export type { GlassCardProps } from './glass-card';
 
 // Section Card
 export { SectionCard } from './SectionCard';

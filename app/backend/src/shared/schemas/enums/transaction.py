@@ -14,8 +14,18 @@ class TransactionStatus(str, Enum):
 
 class TransactionType(str, Enum):
     """交易类型枚举"""
-    TRANSFER = "transfer"      # 转账
-    CONTRACT = "contract"      # 合约调用
-    MINT = "mint"              # 铸造
-    SWAP = "swap"              # 兑换
+    # 业务交易类型
+    SUBSCRIPTION = "subscription"  # 认购
+    REDEEM = "redeem"              # 赎回
+    STAKE = "stake"                # 质押
+    UNSTAKE = "unstake"            # 解押
+    CLAIM = "claim"                # 领取奖励
+    
+    # 链上交易类型
+    TRANSFER = "transfer"          # 转账
+    APPROVE = "approve"            # 授权
+    MINT = "mint"                  # 铸造
+    
+    # 其他
+    OTHER = "other"                # 其他
 

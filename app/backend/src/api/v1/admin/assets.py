@@ -8,7 +8,8 @@ from decimal import Decimal
 from typing import Optional
 
 from falib.utils.handlers import create_success_response
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from starlette import status
 
 from src.services.asset.media_schemas import (
     MediaListResponse,
@@ -30,7 +31,7 @@ from src.services.asset.schemas import (
 )
 from src.services.asset.service import AssetService
 from src.shared.common.storage import FileSizeExceeded, InvalidFileType
-from src.shared.schemas.enums import MediaType
+from src.shared.schemas.enums import AssetStatus, AssetType, MediaType
 from src.shared.security import require_admin
 
 router = APIRouter()
@@ -39,6 +40,71 @@ router = APIRouter()
 def get_asset_service() -> AssetService:
     """依赖注入：获取资产服务"""
     return AssetService()
+
+
+@router.get(
+    "",
+    summary="获取资产列表 (管理员)",
+    description="获取所有资产列表，包括未绑定合约的资产",
+)
+async def list_assets(
+    status: Optional[AssetStatus] = Query(None, description="状态筛选"),
+    asset_type: Optional[AssetType] = Query(None, description="类型筛选"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量"),
+    service: AssetService = Depends(get_asset_service),
+    admin_address: str = Depends(require_admin),
+):
+    """
+    获取资产列表（Admin API）
+
+    - 需要管理员权限
+    - 返回所有资产，包括未绑定合约的资产
+    - 支持按状态和类型筛选
+    """
+    items, total, total_pages = await service.list_assets(
+        status=status,
+        asset_type=asset_type,
+        page=page,
+        page_size=page_size,
+        public_only=False,  # 管理员可以看到所有资产
+    )
+
+    return create_success_response(
+        list_data=[item.model_dump(mode="json") for item in items],
+        pagination={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+        },
+    )
+
+
+@router.get(
+    "/{asset_id}",
+    summary="获取资产详情 (管理员)",
+    description="根据ID获取资产的详细信息，包括未绑定合约的资产",
+)
+async def get_asset(
+    asset_id: int,
+    service: AssetService = Depends(get_asset_service),
+    admin_address: str = Depends(require_admin),
+):
+    """
+    获取资产详情（Admin API）
+
+    - 需要管理员权限
+    - 可以获取所有资产，包括未绑定合约的资产
+    """
+    result = await service.get_asset(asset_id, public_only=False)
+
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found"
+        )
+
+    return create_success_response(object_data=result.model_dump(mode="json"))
 
 
 @router.post("", summary="创建资产", description="创建新的 RWA 资产 (管理员)")
@@ -56,7 +122,9 @@ async def create_asset(
     from src.services.audit.service import audit_service
     from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
 
-    result = await service.create_asset(data, created_by=admin_address)
+    # 注意：created_by 字段是 IntField，不能传入钱包地址字符串
+    # 暂时不传递 created_by，后续可以通过 User 表关联获取用户 ID
+    result = await service.create_asset(data, created_by=None)
 
     # 记录审计日志
     await audit_service.log_async(
@@ -222,7 +290,7 @@ async def get_available_projects(service: AssetService = Depends(get_asset_servi
 @router.post(
     "/{asset_id}/bind-project",
     summary="按项目绑定合约",
-    description="将指定项目下的合约绑定到资产（支持选择性绑定）",
+    description="将指定项目下的 PROJECT scope 合约绑定到资产",
 )
 async def bind_project_contracts(
     asset_id: int,
@@ -231,12 +299,16 @@ async def bind_project_contracts(
     admin_address: str = Depends(require_admin),
 ):
     """
-    按项目绑定合约（支持选择性绑定）
+    按项目绑定合约（简化版）
 
-    - **project**: 项目标识 (如 common, mock, rwa)
-    - **contract_names**: 要绑定的合约名称列表，为空则绑定该项目下所有可用合约
-    - **set_primary**: 是否将该项目的主合约设为 primary
-    - exclusive 类型合约不能被多个资产绑定
+    变更说明 (Requirements 2.1-2.6):
+    - 只绑定 PROJECT scope 合约，不绑定 GLOBAL scope 合约
+    - 项目必须有主合约（is_primary=True），否则返回错误
+    - 绑定成功后自动从主合约获取 symbol 和 address 填充到 Asset
+
+    参数:
+    - **project**: 项目标识 (如 vanke)
+    - **contract_names**: 要绑定的合约名称列表，为空则绑定该项目下所有可用的 PROJECT scope 合约
     """
     from src.services.audit.service import audit_service
     from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
@@ -245,7 +317,6 @@ async def bind_project_contracts(
         asset_id=asset_id,
         project=data.project,
         contract_names=data.contract_names,
-        set_primary=data.set_primary,
     )
 
     bound_count = len(data.contract_names) if data.contract_names else "all"
@@ -259,17 +330,16 @@ async def bind_project_contracts(
         target_type="asset",
         target_id=asset_id,
         status=AuditStatus.SUCCESS,
-        description=f"Bound {bound_count} contracts from project '{data.project}' to asset #{asset_id}",
+        description=f"Bound {bound_count} PROJECT scope contracts from project '{data.project}' to asset #{asset_id}",
         new_value={
             "project": data.project,
             "contract_names": data.contract_names,
-            "set_primary": data.set_primary,
         },
     )
 
     return create_success_response(
         object_data=result.model_dump(mode="json"),
-        msg=f"Bound {bound_count} contracts from project '{data.project}'",
+        msg=f"Bound {bound_count} PROJECT scope contracts from project '{data.project}'",
     )
 
 

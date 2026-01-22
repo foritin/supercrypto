@@ -9,6 +9,13 @@ import { z } from 'zod'
 export const assetTypeEnum = z.enum(['real_estate', 'bond', 'commodity', 'equity', 'other'])
 export type AssetType = z.infer<typeof assetTypeEnum>
 
+/**
+ * 以下常量作为 fallback 使用
+ * 推荐使用 useConstants hook 从后端 API 获取最新数据:
+ * - useConstants('asset_type') 获取资产类型
+ * @see src/hooks/useConstants.ts
+ * @see src/lib/constants.ts (fallback 常量)
+ */
 // Asset type display names (Chinese)
 export const ASSET_TYPE_NAMES: Record<AssetType, string> = {
   real_estate: '房地产',
@@ -50,59 +57,6 @@ export const createAssetSchema = z.object({
 })
 
 export type CreateAssetFormValues = z.infer<typeof createAssetSchema>
-
-/**
- * Schema for the CreateAssetModal form (includes additional fields)
- * Used by the admin modal for creating assets with project binding
- * Note: All fields are required to avoid type mismatches with react-hook-form
- */
-export const createAssetModalSchema = z.object({
-  name: z.string()
-    .min(1, '资产名称不能为空')
-    .max(100, '资产名称不能超过100个字符'),
-  symbol: z.string()
-    .min(1, '资产符号不能为空')
-    .max(10, '资产符号不能超过10个字符'),
-  description: z.string().optional(),
-  asset_type: assetTypeEnum,
-  location: z.string().optional(),
-  total_supply: z.number()
-    .min(0, '总供应量不能为负数'),
-  min_subscription: z.number()
-    .min(0, '最小认购额不能为负数'),
-  current_price: z.number()
-    .min(0, '价格不能为负数'),
-  apy_3m: z.number()
-    .min(0, 'APY不能为负数')
-    .max(100, 'APY不能超过100%'),
-  apy_6m: z.number()
-    .min(0, 'APY不能为负数')
-    .max(100, 'APY不能超过100%'),
-  apy_12m: z.number()
-    .min(0, 'APY不能为负数')
-    .max(100, 'APY不能超过100%'),
-  bind_projects: z.array(z.string()),
-})
-
-export type CreateAssetModalFormValues = z.infer<typeof createAssetModalSchema>
-
-/**
- * Default values for the CreateAssetModal form
- */
-export const createAssetModalDefaultValues: CreateAssetModalFormValues = {
-  name: '',
-  symbol: '',
-  description: '',
-  asset_type: 'real_estate',
-  location: '',
-  total_supply: 0,
-  min_subscription: 100,
-  current_price: 1,
-  apy_3m: 10,
-  apy_6m: 12,
-  apy_12m: 15,
-  bind_projects: [],
-}
 
 /**
  * Schema for updating an existing asset

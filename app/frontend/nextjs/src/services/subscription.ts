@@ -188,6 +188,16 @@ export const subscriptionService = {
   },
 }
 
+/**
+ * 以下常量作为 fallback 使用
+ * 推荐使用 useConstants hook 从后端 API 获取最新数据:
+ * - useConstants('subscription_status') 获取认购状态
+ * - useConstants('lock_period') 获取锁定期
+ * - useConstants('token_type') 获取代币类型
+ * @see src/hooks/useConstants.ts
+ * @see src/lib/constants.ts (fallback 常量)
+ */
+
 // 状态显示名称
 export const SUBSCRIPTION_STATUS_NAMES: Record<SubscriptionStatus, string> = {
   pending: 'Pending',

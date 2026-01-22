@@ -1,26 +1,30 @@
 /* ============================================
    SuperCrypto - Global Styles Entry Point
    ============================================
-   此文件作为样式入口，只包含：
+   Tailwind + CVA 架构：全局 CSS 仅保留必要内容
    - Tailwind 导入
-   - 样式模块导入
-   - Tailwind 自定义变体
-   - @theme inline 配置
-   - @layer base 配置
+   - CSS 变量 (主题)
+   - @keyframes 动画
+   - 特殊组件样式 (视频背景、玻璃态等)
    ============================================ */
 
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
-/* 样式模块导入 */
-@import "../styles/variables.css";
-@import "../styles/animations.css";
-@import "../styles/base.css";
-@import "../styles/components/hero.css";
-@import "../styles/components/scroll-reveal.css";
-@import "../styles/components/phoenix-prototype.css";
-@import "../styles/legacy/ant-design.css";
-@import "../styles/premium-v5-dashboard.css";
+/* 样式模块导入 - 精简版 */
+@import "../styles/variables.css";       /* CSS 变量/主题 */
+@import "../styles/animations.css";      /* @keyframes 动画 */
+@import "../styles/base.css";            /* 滚动条、无障碍 */
+@import "../styles/components/hero.css"; /* 视频背景组件 */
+@import "../styles/components/glassmorphism.css"; /* 玻璃态效果 */
+@import "../styles/components/wizard.css";        /* 向导组件动画 */
+@import "../styles/legacy/ant-design.css";        /* 第三方库覆盖 */
+
+/* 已移除 - 未使用或可用 Tailwind 替代:
+   - scroll-reveal.css (未使用)
+   - phoenix-prototype.css (部分已迁移)
+   - premium-v5-dashboard.css (待迁移到 CVA)
+*/
 
 /* Tailwind 自定义变体 */
 @custom-variant dark (&:is(.dark *));

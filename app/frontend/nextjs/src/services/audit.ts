@@ -318,13 +318,15 @@ export async function getTargetHistory(
 export async function exportAuditLogs(
   params?: AuditLogQueryParams
 ): Promise<Blob> {
+  // 从 localStorage 获取正确的 token key
+  const token = localStorage.getItem("supercrypto-jwt");
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/admin/audit-logs/export?${new URLSearchParams(
       params as Record<string, string>
     )}`,
     {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("jwt_token")}`,
+        Authorization: `Bearer ${token}`,
       },
     }
   );
