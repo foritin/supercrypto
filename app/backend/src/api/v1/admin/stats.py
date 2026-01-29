@@ -28,15 +28,15 @@ def get_admin_service() -> AdminService:
 # ============ 用户管理 ============
 
 
-@router.get("/users", summary="获取用户列表", description="获取用户列表")
+@router.get("/users", summary="获取用户统计", description="获取用户统计数据")
 async def get_users(
     _: dict = Depends(require_admin),
     service: AdminService = Depends(get_admin_service),
 ):
     """
-    获取用户列表
+    获取用户统计数据
     """
-    result = await service.get_users()
+    result = await service.get_user_stats()
     return create_success_response(object_data=result.model_dump(mode="json"))
 
 

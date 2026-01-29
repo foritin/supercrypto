@@ -62,9 +62,13 @@ class Asset(AbstractModel, TimestampMixin):
     project = fields.CharField(
         max_length=50, null=True, description="关联的项目标识 (deploy_info.project)"
     )
-    # 主合约地址（快速访问，避免每次都查关联表）
+    # 主合约地址 - 已废弃，请使用 primary_contract_address property
+    # 保留字段用于向后兼容，将在后续版本删除
+    # @deprecated: 使用 AssetContractBinding (is_primary=True) 查询
     contract_address = fields.CharField(
-        max_length=128, null=True, description="主 RWA Token 合约地址"
+        max_length=128,
+        null=True,
+        description="[DEPRECATED] 主 RWA Token 合约地址，请使用 primary_contract_address",
     )
 
     # 状态
@@ -74,7 +78,7 @@ class Asset(AbstractModel, TimestampMixin):
 
     # 环境区分
     environment = fields.CharField(
-        max_length=20, default="local", description="环境标识"
+        max_length=20, default="hardhat", description="环境标识"
     )
 
     # 创建者
@@ -105,6 +109,47 @@ class Asset(AbstractModel, TimestampMixin):
         """是否可认购"""
         return self.status == AssetStatus.ACTIVE and self.remaining_amount > 0
 
+    async def get_primary_contract_address(self) -> str | None:
+        """
+        获取主合约地址 (异步方法)
+
+        通过 AssetContractBinding 关联查询获取 is_primary=True 的合约地址。
+
+        Requirements: 5.2, 5.4, 5.5
+
+        Returns:
+            主合约地址，如果不存在则返回 None
+        """
+        # 延迟导入避免循环依赖
+        from src.models.asset import AssetContractBinding
+
+        binding = await AssetContractBinding.filter(
+            asset_id=self.id,
+            is_primary=True,
+        ).first()
+
+        return binding.contract_address if binding else None
+
+    @property
+    def primary_contract_address(self) -> str | None:
+        """
+        获取主合约地址 (同步 property，使用缓存的 contract_address 字段)
+
+        注意: 这是一个同步 property，返回缓存在 contract_address 字段中的值。
+        如果需要从数据库实时查询，请使用 get_primary_contract_address() 异步方法。
+
+        在完全迁移到 AssetContractBinding 后，此 property 将改为同步查询
+        已预加载的 contract_bindings 关系。
+
+        Requirements: 5.4, 5.5
+
+        Returns:
+            主合约地址，如果不存在则返回 None
+        """
+        # 当前实现: 返回缓存的 contract_address 字段值
+        # 未来实现: 从预加载的 contract_bindings 中查找 is_primary=True 的记录
+        return self.contract_address if self.contract_address else None
+
     @property
     def is_visible_to_public(self) -> bool:
         """
@@ -116,10 +161,12 @@ class Asset(AbstractModel, TimestampMixin):
         3. 至少设置一个 APY（3m/6m/12m > 0）
         """
         zero = Decimal("0")
+        # 使用 primary_contract_address property
+        primary_addr = self.primary_contract_address
         return (
             self.status == AssetStatus.ACTIVE
-            and self.contract_address is not None
-            and self.contract_address != ""
+            and primary_addr is not None
+            and primary_addr != ""
             and (self.apy_3m > zero or self.apy_6m > zero or self.apy_12m > zero)
         )
 
@@ -137,7 +184,8 @@ class Asset(AbstractModel, TimestampMixin):
         if self.status != AssetStatus.ACTIVE:
             issues.append(f"状态不是 active（当前: {self.status.value}）")
 
-        if not self.contract_address:
+        # 使用 primary_contract_address property
+        if not self.primary_contract_address:
             issues.append("未绑定主合约")
 
         if not (self.apy_3m > zero or self.apy_6m > zero or self.apy_12m > zero):

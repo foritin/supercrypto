@@ -2,16 +2,16 @@
 用户认证路由 - 当前用户信息
 
 路由前缀: /api/v1/user/auth
+
+遵循分层架构原则：Router → Service → Model
+Router 层只调用 Service 方法，不直接使用 ORM 模型查询
 """
 
-from falib.utils.config import SETTINGS
 from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends, Request
 
-from src.models.account import Account
-from src.models.kyc import UserKyc
 from src.services.auth.schemas import CurrentUserResponse
-from src.shared.schemas.enums import NetWork
+from src.services.auth.service import get_auth_service
 from src.shared.security import require_user
 
 router = APIRouter()
@@ -30,18 +30,15 @@ async def get_current_user(
 
     返回用户信息、是否为管理员、KYC 状态等
     """
-    network = SETTINGS.NETWORK
-    network_type = NetWork.from_value(network)
-    # 查询账户
-    account = await Account.filter(address=wallet_address, network=network_type).first()
+    # 使用 AuthService 获取用户信息，遵循分层架构
+    auth_service = get_auth_service()
+    user_info = await auth_service.get_current_user_info(wallet_address)
 
-    # 查询 KYC 状态
-    kyc = await UserKyc.filter(
-        wallet_address=wallet_address, wallet=network_type
-    ).first()
-
-    # 判断是否为管理员
-    is_admin = account.tag == "admin" if account and account.tag else False
+    # 从 Service 返回的数据构建响应
+    account = user_info["account"]
+    kyc = user_info["kyc"]
+    is_admin = user_info["is_admin"]
+    network_type = user_info["network_type"]
 
     response = CurrentUserResponse(
         address=wallet_address,

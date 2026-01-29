@@ -34,3 +34,4 @@ class MediaType(str, Enum):
     FINANCIAL = "financial"  # 财务文件
     FLOOR_PLAN = "floor_plan"  # 平面图
     VIDEO = "video"  # 视频
+    OTHER = "other"  # 其他文档

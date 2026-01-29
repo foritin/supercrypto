@@ -68,12 +68,23 @@ i18n
     resources,
     fallbackLng: "en-US",
     supportedLngs: ["en-US", "zh-CN", "en", "zh"],
+    // 语言别名映射
+    load: "currentOnly",
     interpolation: {
       escapeValue: false,
     },
     detection: {
       order: ["localStorage", "navigator"],
       caches: ["localStorage"],
+      // 将 zh 映射到 zh-CN，en 映射到 en-US
+      convertDetectedLanguage: (lng: string) => {
+        if (lng === "zh" || lng.startsWith("zh-")) return "zh-CN";
+        if (lng === "en" || lng.startsWith("en-")) return "en-US";
+        return lng;
+      },
+    },
+    react: {
+      useSuspense: false, // 禁用 Suspense 以避免 SSR 问题
     },
   });
 

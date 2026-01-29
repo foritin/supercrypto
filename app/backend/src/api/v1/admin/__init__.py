@@ -8,15 +8,15 @@
 from fastapi import APIRouter
 
 from src.api.v1.admin import (
-    accounts,
-    assets,
-    audit,
-    auth,
-    contracts,
-    kyc,
-    stats,
-    transactions,
-    transactions_audit,
+                              accounts,
+                              assets,
+                              audit,
+                              auth,
+                              contracts,
+                              kyc,
+                              stats,
+                              transactions,
+                              transactions_audit,
 )
 
 router = APIRouter()

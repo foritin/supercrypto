@@ -14,9 +14,9 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
 from falib.utils.log import get_logger
-from src.models.project_registry import ContractDeploymentStatus
 
-from src.shared.schemas.enums import ContractRegistryStatus
+from src.models.contracts.contract_deployment import ContractDeployment
+from src.shared.schemas.enums import ContractStatus
 
 from .config_loader import get_config_loader
 from .schemas import ProjectConfigSchema
@@ -270,17 +270,13 @@ class DeploymentOrderCalculator:
         self, project_name: str, network: str
     ) -> Set[str]:
         """获取已部署的合约集合"""
-        deployed_statuses = [
-            ContractRegistryStatus.DEPLOYED,
-            ContractRegistryStatus.BOUND,
-            ContractRegistryStatus.ACTIVE,
-        ]
-
-        deployed = await ContractDeploymentStatus.filter(
-            config__project_name=project_name,
+        # 使用新的 ContractDeployment 模型
+        # 已部署的合约是有地址且状态为 ACTIVE 的合约
+        deployed = await ContractDeployment.filter(
+            project_name=project_name,
             network=network,
-            status__in=[s.value for s in deployed_statuses],
-        ).values_list("config__contract_name", flat=True)
+            status=ContractStatus.ACTIVE,
+        ).values_list("name", flat=True)
 
         return set(deployed)
 

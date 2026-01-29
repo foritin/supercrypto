@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
@@ -51,15 +51,12 @@ export function Loading({
   const pixelSize = sizeMap[size];
 
   const content = (
-    <motion.div
+    <div
       className={cn(
         'flex flex-col items-center justify-center gap-4',
         fullscreen && 'fixed inset-0 z-50 bg-[#0a0f0d]',
         className
       )}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
     >
       <motion.div
         animate={{ rotate: 360 }}
@@ -73,15 +70,13 @@ export function Loading({
       </motion.div>
 
       {text && (
-        <motion.p
-          className={cn('text-sm', variantStyles[variant])}
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
+        <p
+          className={cn('text-sm animate-pulse', variantStyles[variant])}
         >
           {text}
-        </motion.p>
+        </p>
       )}
-    </motion.div>
+    </div>
   );
 
   return content;
@@ -108,38 +103,29 @@ export function Skeleton({
   width,
   height,
 }: SkeletonProps) {
-  const variantStyles = {
+  const skeletonVariantStyles = {
     gold: 'bg-gradient-to-r from-amber-500/20 via-yellow-400/30 to-amber-500/20',
     cyan: 'bg-gradient-to-r from-teal-500/20 via-cyan-400/30 to-teal-500/20',
     default: 'bg-gradient-to-r from-white/5 via-white/10 to-white/5',
   };
 
   return (
-    <motion.div
+    <div
       className={cn(
-        'rounded-lg',
-        variantStyles[variant],
+        'rounded-lg animate-pulse',
+        skeletonVariantStyles[variant],
         className
       )}
-      style={{ width, height }}
-      animate={{
-        backgroundPosition: ['200% 0', '-200% 0'],
-      }}
-      transition={{
-        duration: 1.5,
-        repeat: Infinity,
-        ease: 'linear',
-      }}
       style={{
         backgroundSize: '200% 100%',
         width: typeof width === 'number' ? `${width}px` : width,
         height: typeof height === 'number' ? `${height}px` : height,
-      } as any}
+      }}
       role="status"
       aria-label="加载中"
     >
       <span className="sr-only">Loading...</span>
-    </motion.div>
+    </div>
   );
 }
 
@@ -153,39 +139,33 @@ export function DashboardSkeleton() {
       {/* 统计卡片骨架 */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <motion.div
+          <div
             key={i}
-            className="premium-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            className="premium-card animate-fade-in"
+            style={{ animationDelay: `${i * 100}ms` }}
           >
             <div className="flex items-center gap-3 mb-4">
               <Skeleton variant="gold" className="w-10 h-10" />
               <Skeleton className="flex-1 h-4" />
             </div>
             <Skeleton className="h-8 w-3/4" variant="cyan" />
-          </motion.div>
+          </div>
         ))}
       </div>
 
       {/* 图表骨架 */}
-      <motion.div
-        className="premium-card"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
+      <div
+        className="premium-card animate-fade-in"
+        style={{ animationDelay: '500ms' }}
       >
         <Skeleton className="h-12 w-48 mb-4" />
         <Skeleton className="h-64 w-full" variant="gold" />
-      </motion.div>
+      </div>
 
       {/* 列表骨架 */}
-      <motion.div
-        className="premium-card space-y-3"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
+      <div
+        className="premium-card space-y-3 animate-fade-in"
+        style={{ animationDelay: '600ms' }}
       >
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="flex items-center gap-4">
@@ -196,7 +176,7 @@ export function DashboardSkeleton() {
             </div>
           </div>
         ))}
-      </motion.div>
+      </div>
     </div>
   );
 }

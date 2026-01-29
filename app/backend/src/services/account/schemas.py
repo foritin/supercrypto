@@ -16,14 +16,16 @@ class AccountBase(BaseModel):
 
     address: str = Field(..., max_length=128, description="钱包地址")
     tag: Optional[str] = Field(None, max_length=255, description="标签")
-    net_type: str = Field(default="local", description="网络类型: local/test/main")
+    net_type: str = Field(
+        default="hardhat", description="网络类型: hardhat/sepolia/mainnet"
+    )
 
     @field_validator("net_type")
     @classmethod
     def validate_net_type(cls, v: str) -> str:
         """验证网络类型"""
-        if v not in ["local", "test", "main"]:
-            raise ValueError("net_type必须是: local, test, main 之一")
+        if v not in ["hardhat", "sepolia", "mainnet"]:
+            raise ValueError("net_type必须是: hardhat, sepolia, mainnet 之一")
         return v
 
     @field_validator("address")
@@ -69,12 +71,12 @@ class AccountUpdate(BaseModel):
     @classmethod
     def validate_net_type(cls, v: Optional[str]) -> Optional[str]:
         """验证网络类型"""
-        if v is not None and v not in ["local", "test", "main"]:
-            raise ValueError("net_type必须是: local, test, main 之一")
+        if v is not None and v not in ["hardhat", "sepolia", "mainnet"]:
+            raise ValueError("net_type必须是: hardhat, sepolia, mainnet 之一")
         return v
 
     class Config:
-        json_schema_extra = {"example": {"tag": "更新后的标签", "net_type": "main"}}
+        json_schema_extra = {"example": {"tag": "更新后的标签", "net_type": "mainnet"}}
 
 
 class AccountResponse(AccountBase, IDMixin, TimestampMixin):

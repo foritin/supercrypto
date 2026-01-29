@@ -1,12 +1,12 @@
 """
 Admin Domain - Schemas
 """
-from typing import Optional, List, Any
 from datetime import datetime
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 from src.shared.schemas.enums import AuditAction
-
 
 # ============ 平台统计 ============
 

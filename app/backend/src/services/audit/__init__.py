@@ -5,8 +5,8 @@
 """
 from src.services.audit.service import AuditService, audit_service
 from src.services.audit.transaction_service import (
-    TransactionAuditService,
-    transaction_audit_service,
+                                                    TransactionAuditService,
+                                                    transaction_audit_service,
 )
 
 __all__ = [

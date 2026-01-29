@@ -229,7 +229,7 @@ export function MockTokenMint() {
             transactionAuditService.recordContractCall({
               txHash: hash,
               chainId,
-              network: "local",
+              network: "hardhat",
               fromAddress: address,
               contractAddress: tokenAddress,
               contractName: selectedToken,
@@ -276,7 +276,7 @@ export function MockTokenMint() {
             transactionAuditService.recordContractCall({
               txHash: hash,
               chainId,
-              network: "local",
+              network: "hardhat",
               fromAddress: address!,
               contractAddress: tokenAddress,
               contractName: selectedToken,
@@ -550,12 +550,22 @@ export function MockTokenMint() {
                 placeholder={t("dev.mockToken.selectRecipientPlaceholder")}
               />
             </SelectTrigger>
-            <SelectContent>
-              {recipients?.map((r) => (
-                <SelectItem key={r.address} value={r.address}>
-                  {r.label}
+            <SelectContent className="max-h-[300px]">
+              {isLoadingRecipients ? (
+                <SelectItem value="_loading" disabled>
+                  {t("common.loading")}...
                 </SelectItem>
-              ))}
+              ) : recipients?.length === 0 ? (
+                <SelectItem value="_empty" disabled>
+                  {t("dev.mockToken.noRecipients")}
+                </SelectItem>
+              ) : (
+                recipients?.map((r) => (
+                  <SelectItem key={r.address} value={r.address}>
+                    {r.label}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>

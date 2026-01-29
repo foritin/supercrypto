@@ -31,6 +31,7 @@ import { V6StatCard } from "@/components/dashboard/V6StatCard";
 import { V6Chart } from "@/components/dashboard/V6Chart";
 import { V6ActivityList } from "@/components/dashboard/V6ActivityList";
 import { DashboardSkeleton } from "@/components/ui/Loading";
+import { getErrorMessage } from "@/utils/error-handler";
 
 // 主仪表盘页面
 export default function AdminDashboardPage() {
@@ -53,7 +54,7 @@ export default function AdminDashboardPage() {
         setStats(data);
       } catch (err) {
         console.error("Failed to fetch platform stats:", err);
-        setError((err as Error).message || t("admin.dashboard.loadError"));
+        setError(getErrorMessage(err));
       } finally {
         setIsLoading(false);
       }
@@ -69,7 +70,7 @@ export default function AdminDashboardPage() {
       const data = await adminService.getPlatformStats();
       setStats(data);
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

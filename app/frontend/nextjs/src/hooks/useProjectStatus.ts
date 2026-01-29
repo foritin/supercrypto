@@ -33,7 +33,7 @@ const fetcher = async <T>(url: string): Promise<T> => {
 /**
  * 获取项目列表
  */
-export function useProjects(network: string = 'local') {
+export function useProjects(network: string = 'hardhat') {
   return useQuery<ProjectListResponse>({
     queryKey: ['projects', network],
     queryFn: () => fetcher(`${API_BASE}/projects?network=${network}`),
@@ -45,7 +45,7 @@ export function useProjects(network: string = 'local') {
 /**
  * 获取项目状态
  */
-export function useProjectStatus(name: string | null, network: string = 'local') {
+export function useProjectStatus(name: string | null, network: string = 'hardhat') {
   return useQuery<ProjectStatusResponse>({
     queryKey: ['projectStatus', name, network],
     queryFn: () => fetcher(`${API_BASE}/projects/${name}/status?network=${network}`),
@@ -58,7 +58,7 @@ export function useProjectStatus(name: string | null, network: string = 'local')
 /**
  * 获取部署顺序
  */
-export function useDeploymentOrder(name: string | null, network: string = 'local', excludeDeployed: boolean = false) {
+export function useDeploymentOrder(name: string | null, network: string = 'hardhat', excludeDeployed: boolean = false) {
   return useQuery<DeploymentOrderResponse>({
     queryKey: ['deploymentOrder', name, network, excludeDeployed],
     queryFn: () => fetcher(`${API_BASE}/projects/${name}/deployment-order?network=${network}&exclude_deployed=${excludeDeployed}`),
@@ -70,7 +70,7 @@ export function useDeploymentOrder(name: string | null, network: string = 'local
 /**
  * 获取依赖图数据
  */
-export function useDependencyGraph(name: string | null, network: string = 'local') {
+export function useDependencyGraph(name: string | null, network: string = 'hardhat') {
   return useQuery<DependencyGraphResponse>({
     queryKey: ['dependencyGraph', name, network],
     queryFn: () => fetcher(`${API_BASE}/projects/${name}/dependency-graph?network=${network}`),
@@ -97,7 +97,7 @@ export async function syncProjectConfig(name: string, force: boolean = false): P
 /**
  * 同步项目绑定状态（从链上读取）
  */
-export async function syncProjectBindings(name: string, network: string = 'local'): Promise<ProjectBindingSyncResponse> {
+export async function syncProjectBindings(name: string, network: string = 'hardhat'): Promise<ProjectBindingSyncResponse> {
   const res = await fetch(`${API_BASE}/projects/${name}/sync-bindings?network=${network}`, {
     method: 'POST',
   });
@@ -114,7 +114,7 @@ export async function updateContractDeployment(
   contractName: string,
   address: string,
   status: string,
-  network: string = 'local'
+  network: string = 'hardhat'
 ): Promise<void> {
   const res = await fetch(
     `${API_BASE}/projects/${projectName}/contracts/${contractName}/deployment?network=${network}`,
@@ -135,7 +135,7 @@ export async function updateContractBindings(
   projectName: string,
   contractName: string,
   bindings: Record<string, string>,
-  network: string = 'local'
+  network: string = 'hardhat'
 ): Promise<void> {
   const res = await fetch(
     `${API_BASE}/projects/${projectName}/contracts/${contractName}/bindings?network=${network}`,

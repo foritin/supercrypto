@@ -147,7 +147,7 @@ export async function getAuditLogs(
 ): Promise<PaginatedResponse<AuditLogResponse>> {
   const data = await get<PaginatedResponse<AuditLogResponse>>(
     "/admin/audit-logs",
-    query
+    query as Record<string, unknown> | undefined
   );
   return data;
 }

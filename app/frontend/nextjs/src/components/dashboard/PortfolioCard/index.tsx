@@ -149,7 +149,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
               <Progress
                 value={asset.progress}
                 className="h-1.5 group-hover:opacity-100 opacity-80 transition-opacity"
-                indicatorClassName={asset.type === 'rwa' ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'}
+                indicatorColor={asset.type === 'rwa' ? '#6366f1' : '#10b981'}
               />
             </motion.div>
           ))}

@@ -223,7 +223,7 @@ export const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
 // 获取区块链浏览器链接
 export function getExplorerUrl(
   txHash: string,
-  network: string = "local"
+  network: string = "hardhat"
 ): string | null {
   switch (network) {
     case "mainnet":
@@ -232,7 +232,7 @@ export function getExplorerUrl(
     case "sepolia":
     case "test":
       return `https://sepolia.etherscan.io/tx/${txHash}`;
-    case "local":
+    case "hardhat":
     default:
       return null; // 本地环境无浏览器
   }

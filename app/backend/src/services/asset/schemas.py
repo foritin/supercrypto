@@ -79,6 +79,9 @@ class AssetListItem(BaseModel):
     symbol: str
     asset_type: AssetType
     image_url: Optional[str]
+    cover_image_url: Optional[str] = Field(
+        None, description="封面图预签名 URL（从 AssetMedia 获取）"
+    )
     current_price: float
     apy_3m: float
     apy_6m: float
@@ -246,9 +249,6 @@ class ProjectContractInfo(BaseModel):
 
     # 就绪状态 (Requirements 7.3, 7.4, 7.7)
     is_ready: bool = Field(default=False, description="项目是否就绪")
-    missing_dependencies: List[str] = Field(
-        default_factory=list, description="缺失的必选依赖列表"
-    )
 
 
 class ProjectListResponse(BaseModel):

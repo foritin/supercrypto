@@ -11,7 +11,7 @@ Provider 注册记录模型
 from tortoise import fields
 
 from src.models.base import AbstractModel, SoftDeleteMixin, TimestampMixin
-from src.models.contracts.contract import NetWork
+from src.shared.schemas.enums import NetWork
 
 
 class ProviderRegistry(AbstractModel, TimestampMixin, SoftDeleteMixin):
@@ -108,19 +108,19 @@ async def sync_provider_registry(
     """
     from datetime import datetime
 
-    from src.models.contracts.contract_meta import ContractMeta
+    from src.models.contracts.contract_config import ContractConfig
 
     results = []
     now = datetime.now()
 
-    # 从 ContractMeta 获取所有合约元数据
-    all_metas = await ContractMeta.all()
+    # 从 ContractConfig 获取所有合约配置
+    all_configs = await ContractConfig.all()
 
-    for meta in all_metas:
-        if not meta.provider_key:
+    for config in all_configs:
+        if not config.provider_key:
             continue
 
-        key_hash = meta.provider_key_hash or compute_key_hash(meta.provider_key)
+        key_hash = config.provider_key_hash or compute_key_hash(config.provider_key)
 
         # 查询链上地址
         # registered_addr = provider_contract.functions.get_address(key_hash).call()
@@ -131,13 +131,13 @@ async def sync_provider_registry(
         registry, _ = await ProviderRegistry.update_or_create(
             provider_address=provider_address,
             chain_id=chain_id,
-            key=meta.provider_key,
+            key=config.provider_key,
             defaults={
                 "network": network,
                 "key_hash": key_hash,
                 "registered_address": registered_addr,
-                "category": meta.project_name,
-                "contract_name": meta.contract_name,
+                "category": config.project_name,
+                "contract_name": config.contract_name,
                 "is_registered": registered_addr != ZERO_ADDRESS,
                 "last_synced_at": now,
             },
@@ -161,11 +161,11 @@ async def check_project_ready(
     Returns:
         项目状态字典
     """
-    from src.models.contracts.contract_meta import ContractMeta
+    from src.models.contracts.contract_config import ContractConfig
 
-    # 从 ContractMeta 获取项目的所有合约
-    project_metas = await ContractMeta.filter(project_name=project_name).all()
-    project_keys = [m.provider_key for m in project_metas if m.provider_key]
+    # 从 ContractConfig 获取项目的所有合约
+    project_configs = await ContractConfig.filter(project_name=project_name).all()
+    project_keys = [c.provider_key for c in project_configs if c.provider_key]
 
     # 查询注册状态（排除已删除记录）
     registrations = await ProviderRegistry.filter(
@@ -186,21 +186,21 @@ async def check_project_ready(
         "missing_registrations": [],
     }
 
-    for meta in project_metas:
-        if not meta.provider_key:
+    for config in project_configs:
+        if not config.provider_key:
             continue
 
-        deps = meta.dependencies or []
+        deps = config.dependencies or []
 
         # 检查合约本身是否注册
-        self_registered = meta.provider_key in registered_keys
+        self_registered = config.provider_key in registered_keys
 
         # 检查依赖是否注册
         missing_deps = [dep for dep in deps if dep not in registered_keys]
 
         contract_status = {
-            "name": meta.contract_name,
-            "key": meta.provider_key,
+            "name": config.contract_name,
+            "key": config.provider_key,
             "ready": self_registered and len(missing_deps) == 0,
             "registered": self_registered,
             "missing_deps": missing_deps,
@@ -208,7 +208,7 @@ async def check_project_ready(
         result["contracts"].append(contract_status)
 
         if not self_registered:
-            result["missing_registrations"].append(meta.provider_key)
+            result["missing_registrations"].append(config.provider_key)
 
         if not contract_status["ready"]:
             result["status"] = "partially_ready"

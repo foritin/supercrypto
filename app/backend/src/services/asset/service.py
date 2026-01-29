@@ -15,7 +15,7 @@ from src.models.asset import (
     AssetStatus,
     AssetType,
 )
-from src.models.contracts.contract import Contract
+from src.models.contracts.contract_deployment import ContractDeployment
 from src.services.asset.schemas import (
     AssetCreateRequest,
     AssetDetailResponse,
@@ -26,7 +26,7 @@ from src.services.asset.schemas import (
     ProjectContractInfo,
 )
 from src.shared.common.exceptions import BusinessException
-from src.shared.schemas.enums import ContractScope, ContractStatus
+from src.shared.schemas.enums import ContractScope, ContractStatus, ErrorCode
 
 
 class AssetService:
@@ -62,6 +62,10 @@ class AssetService:
 
         from tortoise.expressions import Q
 
+        from src.models.asset_media import AssetMedia
+        from src.shared.common.storage import get_storage_service
+        from src.shared.schemas.enums import MediaType
+
         query = Asset.filter(environment=self.environment)
 
         if status:
@@ -84,7 +88,36 @@ class AssetService:
         offset = (page - 1) * page_size
         assets = await query.order_by("-created_at").offset(offset).limit(page_size)
 
-        return ([self._to_list_item(a) for a in assets], total, total_pages)
+        # 获取所有资产的主封面图
+        asset_ids = [a.id for a in assets]
+        cover_images: dict[int, str] = {}  # asset_id -> url
+
+        if asset_ids:
+            # 查询所有资产的主封面图（is_primary=True 且 media_type=COVER）
+            primary_covers = await AssetMedia.filter(
+                asset_id__in=asset_ids,
+                media_type=MediaType.COVER,
+                is_primary=True,
+            ).all()
+
+            # 收集需要生成预签名 URL 的文件路径
+            file_paths = [m.url for m in primary_covers if m.url]
+
+            if file_paths:
+                # 批量生成预签名 URL
+                storage = get_storage_service()
+                presigned_urls = await storage.get_presigned_urls_batch(file_paths)
+
+                # 构建 asset_id -> presigned_url 映射
+                for media in primary_covers:
+                    if media.url and media.url in presigned_urls:
+                        cover_images[media.asset_id] = presigned_urls[media.url]
+
+        return (
+            [self._to_list_item(a, cover_images.get(a.id)) for a in assets],
+            total,
+            total_pages,
+        )
 
     async def get_asset(
         self, asset_id: int, public_only: bool = False
@@ -392,7 +425,9 @@ class AssetService:
 
         return await self._to_detail_response(asset)
 
-    def _to_list_item(self, asset: Asset) -> AssetListItem:
+    def _to_list_item(
+        self, asset: Asset, cover_image_url: Optional[str] = None
+    ) -> AssetListItem:
         """转换为列表项"""
         return AssetListItem(
             id=asset.id,
@@ -400,6 +435,7 @@ class AssetService:
             symbol=asset.symbol,
             asset_type=asset.asset_type,
             image_url=asset.image_url,
+            cover_image_url=cover_image_url,
             current_price=asset.current_price,
             apy_3m=asset.apy_3m,
             apy_6m=asset.apy_6m,
@@ -483,18 +519,13 @@ class AssetService:
         变更 (Requirements 3.1, 3.2, 7.3, 7.4, 7.7):
         1. 返回 has_primary: 是否有主合约
         2. 返回 primary_contract_symbol: 主合约 Symbol
-        3. 集成 ProjectReadinessChecker 计算就绪状态
-        4. 返回 is_ready: 项目是否就绪
-        5. 返回 missing_dependencies: 缺失的必选依赖列表
+        3. 返回 is_ready: 项目是否就绪（有主合约 + 所有合约已部署）
 
         Returns:
             项目列表，每个项目包含合约数量、详细合约信息、主合约信息和就绪状态
         """
-        from src.services.project_registry import get_readiness_checker
-        from src.shared.schemas.enums import ProjectReadiness
-
-        # 查询所有活跃的合约 (使用 Contract 模型)
-        contracts = await Contract.filter(status=ContractStatus.ACTIVE).all()
+        # 查询所有活跃的合约 (使用 ContractDeployment 模型)
+        contracts = await ContractDeployment.filter(status=ContractStatus.ACTIVE).all()
 
         # 查询所有已绑定的 PROJECT 合约
         all_bindings = await AssetContractBinding.all().prefetch_related("asset")
@@ -506,7 +537,7 @@ class AssetService:
 
         # 按项目分组，同时记录主合约信息
         project_map: dict[str, list[ContractBindingStatus]] = {}
-        project_primary_map: dict[str, Contract] = {}  # 记录每个项目的主合约
+        project_primary_map: dict[str, ContractDeployment] = {}  # 记录每个项目的主合约
 
         for record in contracts:
             if record.project_name not in project_map:
@@ -539,10 +570,7 @@ class AssetService:
             if record.is_primary:
                 project_primary_map[record.project_name] = record
 
-        # 获取就绪状态检查器
-        checker = get_readiness_checker(self.environment)
-
-        # 转换为响应格式，集成就绪状态
+        # 转换为响应格式
         result: list[ProjectContractInfo] = []
         for project, contracts_list in sorted(project_map.items()):
             # 获取主合约信息
@@ -553,23 +581,10 @@ class AssetService:
             )
 
             # 获取项目就绪状态 (Requirements 7.3, 7.4, 7.7)
-            is_ready = False
-            missing_dependencies: list[str] = []
-
-            try:
-                report = await checker.get_project_status(project)
-                # 项目就绪条件：readiness 不是 NOT_READY
-                is_ready = report.readiness != ProjectReadiness.NOT_READY
-
-                # 收集所有缺失的必选依赖
-                for info in report.contracts.values():
-                    missing_dependencies.extend(info.missing_required_deps)
-
-                # 去重
-                missing_dependencies = list(set(missing_dependencies))
-            except Exception:
-                # 如果获取就绪状态失败，保持默认值
-                pass
+            # 就绪条件：有主合约 + 所有合约已部署
+            is_ready = has_primary and all(
+                c.contract_address for c in contracts_list
+            )
 
             result.append(
                 ProjectContractInfo(
@@ -579,7 +594,6 @@ class AssetService:
                     has_primary=has_primary,
                     primary_contract_symbol=primary_contract_symbol,
                     is_ready=is_ready,
-                    missing_dependencies=missing_dependencies,
                 )
             )
 
@@ -599,6 +613,10 @@ class AssetService:
         2. 检查项目是否有主合约（is_primary=True）
         3. 自动从主合约获取 symbol 和 address 填充到 Asset
 
+        变更 (Requirements 6.1-6.5):
+        1. 校验项目就绪状态，未就绪则拒绝绑定
+        2. 校验项目未被其他 Asset 绑定
+
         Args:
             asset_id: 资产ID
             project: 项目标识
@@ -608,14 +626,64 @@ class AssetService:
             更新后的资产详情
 
         Raises:
-            BusinessException: 资产不存在、项目无主合约、合约已被绑定等错误
+            BusinessException: 资产不存在、项目未就绪、项目已绑定、项目无主合约、合约已被绑定等错误
         """
-        from src.services.contract import get_contract_service
+        from src.services.contract import get_contract_service, get_contract_status_service
+
+        # === 校验项目就绪状态 (Requirements 6.1, 6.2) ===
+        # 使用 status_service 的逻辑，基于 ProviderRegistry 判断就绪状态
+        status_service = get_contract_status_service(self.environment)
+        contract_status = await status_service.get_contract_status()
+        
+        # 查找项目
+        project_group = None
+        for pg in contract_status.get("project_contracts", []):
+            if pg.get("project") == project:
+                project_group = pg
+                break
+        
+        if not project_group:
+            raise BusinessException(
+                code=400,
+                error_code=ErrorCode.PROJECT_NOT_READY,
+                detail={
+                    "project": project,
+                    "reasons": ["项目不存在"],
+                    "message": "项目未就绪，无法绑定 Asset",
+                },
+            )
+        
+        # 检查就绪状态
+        if project_group.get("project_readiness") != "ready":
+            reasons: list[str] = []
+            readiness_details = project_group.get("readiness_details", {})
+            if not readiness_details.get("has_primary"):
+                reasons.append("未设置主合约")
+            if not readiness_details.get("all_registered"):
+                reasons.append("存在未注册的合约")
+            if not readiness_details.get("no_missing_deps"):
+                reasons.append("存在未注册的依赖")
+            
+            raise BusinessException(
+                code=400,
+                error_code=ErrorCode.PROJECT_NOT_READY,
+                detail={
+                    "project": project,
+                    "reasons": reasons if reasons else ["项目未就绪"],
+                    "message": "项目未就绪，无法绑定 Asset",
+                },
+            )
+
+        # === 校验项目未被其他 Asset 绑定 (Requirements 6.3) ===
+        await status_service.check_project_can_modify(project)
 
         asset = await Asset.filter(id=asset_id, environment=self.environment).first()
 
         if not asset:
-            raise BusinessException(code=404, message="Asset not found")
+            raise BusinessException(
+                code=404, 
+                error_code=ErrorCode.ASSET_NOT_FOUND,
+            )
 
         # 获取 Contract Service 实例
         contract_service = get_contract_service()
@@ -625,12 +693,13 @@ class AssetService:
         if not primary_contract:
             raise BusinessException(
                 code=400,
-                message="该项目没有设置主合约，请先在 Contract Monitor 中设置",
+                error_code=ErrorCode.PROJECT_NO_PRIMARY_CONTRACT,
+                detail={"project": project},
             )
 
         # 查询该项目下所有活跃的 PROJECT scope 合约 (Requirements 2.1, 2.2)
         # 只绑定 PROJECT scope 合约，不绑定 GLOBAL scope 合约
-        contracts = await Contract.filter(
+        contracts = await ContractDeployment.filter(
             project_name=project,
             status=ContractStatus.ACTIVE,
             scope=ContractScope.PROJECT,  # 只查询 PROJECT scope
@@ -639,7 +708,8 @@ class AssetService:
         if not contracts:
             raise BusinessException(
                 code=400,
-                message=f"No active PROJECT scope contracts found for project '{project}'",
+                error_code=ErrorCode.PROJECT_NO_CONTRACTS,
+                detail={"project": project},
             )
 
         # 如果指定了合约名称，只绑定这些合约
@@ -647,7 +717,8 @@ class AssetService:
             contracts = [r for r in contracts if r.name in contract_names]
             if not contracts:
                 raise BusinessException(
-                    code=400, message="None of the specified contracts found"
+                    code=400, 
+                    error_code=ErrorCode.CONTRACTS_NOT_FOUND,
                 )
 
         # 批量检查 PROJECT scope 合约是否已被其他资产绑定
@@ -674,7 +745,11 @@ class AssetService:
                     )
                     raise BusinessException(
                         code=400,
-                        message=f"Contract '{contract_name}' is already bound to asset '{binding.asset.name}'",
+                        error_code=ErrorCode.CONTRACT_ALREADY_BOUND,
+                        detail={
+                            "contract_name": contract_name,
+                            "bound_asset_name": binding.asset.name,
+                        },
                     )
 
         # 批量查询当前资产已存在的绑定
@@ -771,7 +846,7 @@ class AssetService:
         elif project:
             # 解绑指定项目的合约
             # 先获取该项目的合约名称列表
-            contracts = await Contract.filter(project_name=project).all()
+            contracts = await ContractDeployment.filter(project_name=project).all()
             names_to_unbind = [r.name for r in contracts]
 
             if names_to_unbind:

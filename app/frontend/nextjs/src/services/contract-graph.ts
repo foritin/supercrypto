@@ -6,6 +6,7 @@
  */
 import { api } from "@/services/api";
 import { ADMIN_PATHS } from "@/constants/api-paths";
+import type { ContractActions } from "@/types/contract";
 
 // 图节点数据（纯 Provider 模式）
 export interface GraphNode {
@@ -14,13 +15,19 @@ export interface GraphNode {
   type: "exclusive" | "common" | "mock";
   module: "kyc" | "stablecoin" | "business" | "oracle" | null;
   address: string;
-  status: "ready" | "not_deployed" | "not_registered" | "missing_deps";
+  status: "ready" | "synced" | "not_deployed" | "not_registered" | "missing_deps";
   project: string;
   deployedAt: string | null;
   isRegistered: boolean;           // 是否注册到 Provider
   providerAddress: string | null;  // Provider 上的地址
   missingDeps: string[];           // 缺失的依赖 Key 列表
   isDeleted?: boolean;             // 是否已删除（解绑）
+  // 主合约相关字段
+  contractId?: number | null;      // 合约 ID (用于 set-primary API)
+  isPrimary?: boolean;             // 是否为主合约
+  symbol?: string | null;          // Token Symbol
+  // 操作权限字段 (Requirements: 5.1-5.5, 8.5-8.6)
+  actions?: ContractActions;       // 合约操作权限
 }
 
 // 图边数据（纯 Provider 模式）

@@ -14,21 +14,19 @@
 - lock_period: 锁定期
 - token_type: 代币类型
 - price_source: 价格来源
+
+注意: 区块链网络配置已迁移到数据库表 (chains)，通过 API 获取
 """
 
 from src.shared.constants.registry import get_registry
 
 # 导入资产相关常量
-from .asset import (
-    ASSET_TYPE_CONSTANTS,
-    ASSET_STATUS_CONSTANTS,
-    MEDIA_TYPE_CONSTANTS,
-)
+from .asset import ASSET_STATUS_CONSTANTS, ASSET_TYPE_CONSTANTS, MEDIA_TYPE_CONSTANTS
 
 # 导入业务相关常量
 from .business import (
-    SUBSCRIPTION_STATUS_CONSTANTS,
     STAKING_STATUS_CONSTANTS,
+    SUBSCRIPTION_STATUS_CONSTANTS,
     TRANSACTION_TYPE_CONSTANTS,
 )
 
@@ -36,8 +34,8 @@ from .business import (
 from .user import (
     ID_TYPE_CONSTANTS,
     LOCK_PERIOD_CONSTANTS,
-    TOKEN_TYPE_CONSTANTS,
     PRICE_SOURCE_CONSTANTS,
+    TOKEN_TYPE_CONSTANTS,
 )
 
 __all__ = [
@@ -84,4 +82,5 @@ def register_all_constants() -> None:
 
 
 # 模块导入时自动注册所有常量
+register_all_constants()  # 模块导入时自动注册所有常量
 register_all_constants()

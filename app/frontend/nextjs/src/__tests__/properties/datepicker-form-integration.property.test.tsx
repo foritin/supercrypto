@@ -37,8 +37,7 @@ import { Button } from '@/components/ui/button'
 // Schema for single date form
 const singleDateSchema = z.object({
   date: z.date({
-    required_error: 'Date is required',
-    invalid_type_error: 'Invalid date',
+    error: 'Date is required',
   }),
 })
 
@@ -46,10 +45,10 @@ const singleDateSchema = z.object({
 const dateRangeSchema = z.object({
   dateRange: z.object({
     from: z.date({
-      required_error: 'Start date is required',
+      error: 'Start date is required',
     }),
     to: z.date({
-      required_error: 'End date is required',
+      error: 'End date is required',
     }),
   }).refine(
     (data) => data.from <= data.to,

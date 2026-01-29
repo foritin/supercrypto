@@ -68,10 +68,12 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { Label } from '@/components/ui/label'
 import { DataTable } from '@/components/ui/data-table'
 
 // Services and utilities
 import { notification } from '@/lib/notification'
+import { getErrorMessage } from '@/utils/error-handler'
 import { 
   assetService, 
   type AssetListItem, 
@@ -323,7 +325,7 @@ export function AssetAdminList() {
       setSelectedContracts([])
       fetchAssets()
     } catch (err) {
-      notification.error((err as Error).message || t('admin.assets.bindFailed'))
+      notification.error(getErrorMessage(err))
     } finally {
       setIsBinding(false)
     }
@@ -343,7 +345,7 @@ export function AssetAdminList() {
       setCurrentAssetDetail(detail)
       fetchAssets()
     } catch (err) {
-      notification.error((err as Error).message || t('admin.assets.unbindFailed'))
+      notification.error(getErrorMessage(err))
     } finally {
       setIsUnbinding(false)
     }
@@ -941,7 +943,7 @@ export function AssetAdminList() {
 
               {/* 显示已绑定的合约（只读展示） */}
               <div className="space-y-2">
-                <FormLabel>{t('admin.assets.form.boundContracts')}</FormLabel>
+                <Label>{t('admin.assets.form.boundContracts')}</Label>
                 {currentAssetDetail?.bound_contracts && currentAssetDetail.bound_contracts.length > 0 ? (
                   <Card className="bg-primary/5 border-primary/30">
                     <CardContent className="p-4 space-y-3">
@@ -1233,24 +1235,36 @@ export function AssetAdminList() {
               <Select
                 value={selectedBindProject || ''}
                 onValueChange={(value) => handleSelectProject(value || null)}
-                disabled={isLoadingProjects}
+                disabled={isLoadingProjects || availableProjects.filter(p => p.project !== 'common').length === 0}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t('admin.assets.selectProject')} />
+                  <SelectValue placeholder={
+                    isLoadingProjects 
+                      ? t('admin.assets.loadingProjects')
+                      : availableProjects.filter(p => p.project !== 'common').length === 0
+                        ? t('admin.assets.noProjectsAvailable')
+                        : t('admin.assets.selectProject')
+                  } />
                 </SelectTrigger>
                 <SelectContent className="z-[1200]">
-                  {availableProjects
-                    .filter(p => p.project !== 'common')
-                    .map(p => (
-                    <SelectItem key={p.project} value={p.project}>
-                      <div className="flex justify-between items-center w-full gap-4">
-                        <span className="font-medium">{p.project}</span>
-                        <Badge variant={p.project === 'mock' ? 'outline' : 'default'}>
-                          {p.contracts.filter(c => c.is_available).length}/{p.contract_count}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {availableProjects.filter(p => p.project !== 'common').length === 0 ? (
+                    <div className="py-6 px-4 text-center text-muted-foreground text-sm">
+                      {t('admin.assets.noProjectsAvailable')}
+                    </div>
+                  ) : (
+                    availableProjects
+                      .filter(p => p.project !== 'common')
+                      .map(p => (
+                      <SelectItem key={p.project} value={p.project}>
+                        <div className="flex justify-between items-center w-full gap-4">
+                          <span className="font-medium">{p.project}</span>
+                          <Badge variant={p.project === 'mock' ? 'outline' : 'default'}>
+                            {p.contracts.filter(c => c.is_available).length}/{p.contract_count}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
 

@@ -67,6 +67,9 @@ import { KycStatus } from '@/services/kyc'
 import type { KycFullResponse } from '@/services/kyc'
 import { truncateAddress } from '@/utils/format'
 
+// KYC Detail Modal
+import { KycDetailModal } from './kyc-detail-modal'
+
 // Status badge variant mapping
 const STATUS_BADGE_VARIANTS: Record<KycStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   [KycStatus.NOT_STARTED]: 'outline',
@@ -132,6 +135,10 @@ export function KycAdminList() {
     open: boolean
     reason: string
   }>({ open: false, reason: '' })
+  const [detailModal, setDetailModal] = useState<{
+    open: boolean
+    kycId: number | null
+  }>({ open: false, kycId: null })
   
   const { data, isLoading, refetch } = useKycList({
     status: statusFilter,
@@ -208,6 +215,22 @@ export function KycAdminList() {
         const record = row.original
         return (
           <div className="flex gap-1">
+            {/* 查看详情按钮 - 对所有状态可见 */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDetailModal({ open: true, kycId: record.id })}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    {t('admin.kyc.viewDetail')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('admin.kyc.viewDetail')}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             {record.status === KycStatus.PENDING && (
               <>
                 <TooltipProvider>
@@ -471,6 +494,14 @@ export function KycAdminList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* KYC Detail Modal */}
+      <KycDetailModal
+        kycId={detailModal.kycId}
+        open={detailModal.open}
+        onOpenChange={(open) => setDetailModal({ open, kycId: open ? detailModal.kycId : null })}
+        onReviewSuccess={refetch}
+      />
     </Card>
   )
 }

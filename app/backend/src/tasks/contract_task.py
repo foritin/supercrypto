@@ -4,7 +4,7 @@ Contract Provider Sync Task
 
 定期同步 AddressProvider 注册状态到数据库
 
-数据来源: ContractMeta 表获取所有需要同步的合约
+数据来源: ContractConfig 表获取所有需要同步的合约
 """
 
 import asyncio
@@ -13,8 +13,8 @@ from datetime import datetime
 from falib.utils.log import get_logger
 from tortoise import Tortoise
 
-from src.models.contracts.contract import Contract
-from src.models.contracts.contract_meta import ContractMeta
+from src.models.contracts.contract_config import ContractConfig
+from src.models.contracts.contract_deployment import ContractDeployment
 from src.models.contracts.provider_registry import (
     ZERO_ADDRESS,
     ProviderRegistry,
@@ -24,27 +24,25 @@ from src.shared.aerich_redirect import TORTOISE_ORM
 from src.shared.common.adapters import get_async_minio_adapter, get_async_web3_adapter
 from src.shared.schemas.enums import ChainID, ContractStatus
 
-web3_adapter = get_async_web3_adapter()
-minio_adapter = get_async_minio_adapter()
 schedule_logger = get_logger("schedule.contract_task")
 
 
 async def get_network_chain() -> tuple[str, int]:
     """获取当前网络和链ID"""
-    async with web3_adapter as adapter:
+    async with get_async_web3_adapter() as adapter:
         chain_id = await adapter.get_chain_id()
         network = ChainID.from_value_to_name(chain_id)
         return str(network), chain_id
 
 
-async def get_provider_contract(network: str, chain_id: int) -> Contract | None:
+async def get_provider_contract(network: str, chain_id: int) -> ContractDeployment | None:
     """
     获取 AddressProvider 合约实例
 
     Returns:
         AddressProvider 合约记录，或 None
     """
-    return await Contract.filter(
+    return await ContractDeployment.filter(
         name="AddressProvider",
         network=network,
         chain_id=chain_id,
@@ -61,7 +59,7 @@ async def sync_provider_registry_from_chain(
     """
     从链上同步 Provider 注册状态到数据库
 
-    数据来源: ContractMeta 表获取所有有 provider_key 的合约
+    数据来源: ContractConfig 表获取所有有 provider_key 的合约
 
     Args:
         provider_address: AddressProvider 合约地址
@@ -75,19 +73,19 @@ async def sync_provider_registry_from_chain(
     results = []
     now = datetime.now()
 
-    # 从 ContractMeta 获取所有有 provider_key 的合约
-    metas = await ContractMeta.filter(provider_key__not_isnull=True)
+    # 从 ContractConfig 获取所有有 provider_key 的合约
+    configs = await ContractConfig.filter(provider_key__not_isnull=True)
 
-    if not metas:
-        schedule_logger.warning("No contracts with provider_key found in ContractMeta")
+    if not configs:
+        schedule_logger.warning("No contracts with provider_key found in ContractConfig")
         return results
 
-    # 注册合约到 web3_adapter
-    web3_adapter.register_contract(provider_address, provider_abi)
-
-    async with web3_adapter as adapter:
-        for meta in metas:
-            key = meta.provider_key
+    async with get_async_web3_adapter() as adapter:
+        # 注册合约到 adapter
+        adapter.register_contract(provider_address, provider_abi)
+        
+        for config in configs:
+            key = config.provider_key
             key_hash = compute_key_hash(key)
 
             try:
@@ -111,8 +109,8 @@ async def sync_provider_registry_from_chain(
                     "network": network,
                     "key_hash": key_hash,
                     "registered_address": registered_addr,
-                    "category": meta.project_name,
-                    "contract_name": meta.contract_name,
+                    "category": config.project_name,
+                    "contract_name": config.contract_name,
                     "is_registered": registered_addr != ZERO_ADDRESS,
                     "last_synced_at": now,
                 },
@@ -126,8 +124,6 @@ async def sync_provider_registry_from_chain(
 
     return results
 
-    return results
-
 
 async def check_project_status(
     project_name: str, provider_address: str, chain_id: int
@@ -135,7 +131,7 @@ async def check_project_status(
     """
     检查项目状态（所有合约是否已注册到 Provider）
 
-    数据来源: ContractMeta 表获取项目的合约列表
+    数据来源: ContractConfig 表获取项目的合约列表
 
     Args:
         project_name: 项目分类名称，如 "vanke"
@@ -145,13 +141,13 @@ async def check_project_status(
     Returns:
         项目状态字典
     """
-    # 从 ContractMeta 获取项目的所有合约
-    metas = await ContractMeta.filter(
+    # 从 ContractConfig 获取项目的所有合约
+    configs = await ContractConfig.filter(
         project_name=project_name,
         provider_key__not_isnull=True,
     )
 
-    project_keys = [m.provider_key for m in metas]
+    project_keys = [c.provider_key for c in configs]
 
     if not project_keys:
         return {
@@ -214,7 +210,8 @@ async def async_sync_provider_registry():
     # 加载 ABI (优先从 MinIO，失败则从本地)
     provider_abi = None
     try:
-        provider_abi = await minio_adapter.get_json(provider_contract.abi_path)
+        async with get_async_minio_adapter() as minio:
+            provider_abi = await minio.get_json(provider_contract.abi_path)
     except Exception as e:
         schedule_logger.warning(f"Failed to load ABI from MinIO: {e}")
 
@@ -242,9 +239,9 @@ async def async_sync_provider_registry():
 
     schedule_logger.info(f"Synced {len(registries)} Provider registrations")
 
-    # 检查各项目状态 (从 ContractMeta 获取所有项目)
+    # 检查各项目状态 (从 ContractConfig 获取所有项目)
     project_names = (
-        await ContractMeta.all().distinct().values_list("project_name", flat=True)
+        await ContractConfig.all().distinct().values_list("project_name", flat=True)
     )
     for project_name in project_names:
         status = await check_project_status(

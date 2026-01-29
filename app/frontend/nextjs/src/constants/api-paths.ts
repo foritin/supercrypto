@@ -114,6 +114,8 @@ export const ADMIN_PATHS = {
   CONTRACT_UNREGISTER_PREPARE: '/admin/contracts/unregister/prepare',
   CONTRACT_UNREGISTER_CONFIRM: '/admin/contracts/unregister/confirm',
   CONTRACT_VALIDATE: '/admin/contracts/validate',
+  CONTRACT_SET_PRIMARY: (id: number) => `/admin/contracts/${id}/set-primary`,
+  CONTRACT_UNSET_PRIMARY: (id: number) => `/admin/contracts/${id}/unset-primary`,
 
   // 平台统计
   STATS: '/admin/stats',

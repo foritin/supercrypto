@@ -16,10 +16,7 @@ from src.services.account.schemas import (
     AccountResponse,
     AccountUpdate,
 )
-from src.shared.common.exceptions import (
-    ConflictException,
-    NotFoundException,
-)
+from src.shared.common.exceptions import ConflictException, NotFoundException
 from src.shared.common.utils import calculate_total_pages
 
 

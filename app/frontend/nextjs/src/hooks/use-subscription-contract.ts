@@ -328,7 +328,7 @@ export function useSubscriptionContract() {
         transactionAuditService.recordTokenApprove({
           txHash: hash,
           chainId: chainId,
-          network: backendNetwork || "local",
+          network: backendNetwork || "hardhat",
           fromAddress: address,
           spenderAddress: addresses.subscription,
           tokenAddress: addresses.usdt,
@@ -408,7 +408,7 @@ export function useSubscriptionContract() {
         transactionAuditService.recordSubscription({
           txHash: hash,
           chainId: chainId,
-          network: backendNetwork || "local",
+          network: backendNetwork || "hardhat",
           fromAddress: address,
           contractAddress: addresses.subscription,
           amount: amountBigInt.toString(),
@@ -470,7 +470,7 @@ export function useSubscriptionContract() {
         transactionAuditService.recordContractCall({
           txHash: hash,
           chainId: chainId,
-          network: backendNetwork || "local",
+          network: backendNetwork || "hardhat",
           fromAddress: address,
           contractAddress: addresses.subscription,
           contractName: "VankeSubscription",

@@ -1,13 +1,14 @@
 "use client";
 
-import type { AssetDetail, AssetFeaturesData } from "@/services/asset";
-import { ASSET_TYPE_NAMES, PROPERTY_TYPE_NAMES, RENTAL_STATUS_NAMES } from "@/services/asset";
+import { useTranslation } from "react-i18next";
+import type { AssetDetail } from "@/services/asset";
 
 interface PropertyHighlightsProps {
   asset: AssetDetail;
 }
 
 export function PropertyHighlights({ asset }: PropertyHighlightsProps) {
+  const { t } = useTranslation();
   const features = asset.features;
 
   const formatCurrency = (value: number) => {
@@ -18,25 +19,36 @@ export function PropertyHighlights({ asset }: PropertyHighlightsProps) {
 
   // 左列：财务信息
   const financialItems = [
-    { label: "Token Type", value: "Standard Equity" },
-    { label: "Expected Income", value: asset.apy_12m > 0 ? asset.apy_12m.toFixed(1) + "%" : "-" },
-    { label: "Token Price", value: formatCurrency(asset.current_price) },
-    { label: "Total Tokens", value: formatCurrency(asset.total_supply) },
-    { label: "Min. Investment", value: formatCurrency(asset.min_subscription) },
+    { label: t("assets.highlights.tokenType", "Token Type"), value: t("assets.highlights.standardEquity", "Standard Equity") },
+    { label: t("assets.highlights.expectedIncome", "Expected Income"), value: asset.apy_12m > 0 ? asset.apy_12m.toFixed(1) + "%" : "-" },
+    { label: t("assets.financials.tokenPrice"), value: formatCurrency(asset.current_price) },
+    { label: t("assets.highlights.totalTokens", "Total Tokens"), value: formatCurrency(asset.total_supply) },
+    { label: t("assets.financials.minInvestment"), value: formatCurrency(asset.min_subscription) },
   ];
 
   // 右列：物业信息
   const propertyItems = [
-    { label: "Asset Type", value: ASSET_TYPE_NAMES[asset.asset_type] || asset.asset_type },
-    { label: "Full Address", value: asset.location || "-" },
-    { label: "Symbol", value: asset.symbol },
+    { label: t("assets.highlights.assetType", "Asset Type"), value: t(`assets.type.${asset.asset_type}`) },
+    { label: t("assets.highlights.fullAddress", "Full Address"), value: asset.location || "-" },
+    { label: t("assets.highlights.symbol", "Symbol"), value: asset.symbol },
     ...(features ? [
-      { label: "Construction Year", value: features.year_built?.toString() || "-" },
-      { label: "Bedroom/Bath", value: features.bedrooms && features.bathrooms ? features.bedrooms + " Beds / " + features.bathrooms + " Baths" : "-" },
-      { label: "Property Type", value: features.property_type ? PROPERTY_TYPE_NAMES[features.property_type] || features.property_type : "-" },
-      { label: "Rental Type", value: "Long Term" },
-      { label: "Rented?", value: features.rental_status ? RENTAL_STATUS_NAMES[features.rental_status] : "-" },
-      { label: "Monthly Rent", value: features.monthly_rent ? formatCurrency(features.monthly_rent) : "-" },
+      { label: t("assets.highlights.constructionYear", "Construction Year"), value: features.year_built?.toString() || "-" },
+      { 
+        label: t("assets.highlights.bedroomBath", "Bedroom/Bath"), 
+        value: features.bedrooms && features.bathrooms 
+          ? `${features.bedrooms} ${t("assets.highlights.beds", "Beds")} / ${features.bathrooms} ${t("assets.highlights.baths", "Baths")}` 
+          : "-" 
+      },
+      { 
+        label: t("assets.highlights.propertyType"), 
+        value: features.property_type ? t(`assets.highlights.propertyTypes.${features.property_type}`) : "-" 
+      },
+      { label: t("assets.highlights.rentalType", "Rental Type"), value: t("assets.highlights.longTerm", "Long Term") },
+      { 
+        label: t("assets.highlights.rented", "Rented?"), 
+        value: features.rental_status ? t(`assets.highlights.rentalStatuses.${features.rental_status}`) : "-" 
+      },
+      { label: t("assets.highlights.monthlyRent"), value: features.monthly_rent ? formatCurrency(features.monthly_rent) : "-" },
     ] : []),
   ];
 

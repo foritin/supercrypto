@@ -1,11 +1,16 @@
 """
 Contracts Models Package
 合约相关模型
+
+模型:
+- ContractConfig: 合约配置 (元数据 + 项目配置)
+- ContractDeployment: 合约部署记录
+- ProviderRegistry: Provider 注册状态
 """
 
-from src.models.contracts.contract import Contract, ContractStatus, NetWork
-from src.models.contracts.contract_dependency import ContractDependency
-from src.models.contracts.contract_meta import ContractMeta
+from src.shared.schemas.enums import ContractStatus, NetWork
+from src.models.contracts.contract_config import ContractConfig
+from src.models.contracts.contract_deployment import ContractDeployment
 from src.models.contracts.provider_registry import (
     ZERO_ADDRESS,
     ProviderRegistry,
@@ -15,10 +20,10 @@ from src.models.contracts.provider_registry import (
 )
 
 __all__ = [
-    # Models
-    "Contract",
-    "ContractMeta",
-    "ContractDependency",
+    # 模型
+    "ContractConfig",
+    "ContractDeployment",
+    # Provider Registry
     "ProviderRegistry",
     # Enums
     "NetWork",

@@ -2,12 +2,11 @@
 import sys
 from pathlib import Path
 
-# 添加 src 到 Python 路径
+# 添加 backend 到 Python 路径
 backend_dir = Path(__file__).parent.parent
-src_dir = backend_dir / "src"
-sys.path.insert(0, str(src_dir))
+sys.path.insert(0, str(backend_dir))
 
-from src.cores.config import get_settings
+from falib.utils.config import get_settings
 
 def test_config():
     print("=" * 60)

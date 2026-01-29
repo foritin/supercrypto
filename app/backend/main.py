@@ -16,6 +16,7 @@ from tortoise import Tortoise
 from src.api.v1.router import api_router
 from src.models import Account
 from src.shared.aerich_redirect import TORTOISE_ORM
+from src.shared.common.adapters import close_async_redis_adapter
 from src.shared.common.exceptions import BusinessException
 from src.shared.middleware import AuditMiddleware, AuthStateMiddleware
 from src.tasks.contract_task import async_sync_provider_registry
@@ -59,6 +60,8 @@ async def lifespan(app: FastAPI):
     print("🛑 Shutting down SuperCrypto API...")
     await Tortoise.close_connections()
     print("✅ Database connections closed")
+    await close_async_redis_adapter()
+    print("✅ Redis connection closed")
     print("🛑 Scheduler stopped")
     await SchedulerService.stop()
     print("✅ Scheduler stopped")
@@ -122,12 +125,26 @@ async def business_exception_handler(request: Request, exc: BusinessException):
     业务异常处理器
 
     捕获所有业务异常并返回统一格式
+    返回 error_code 用于前端国际化翻译
     """
+    # 记录业务异常日志（包含错误码）
+    # 转义花括号避免 loguru 解析为格式化占位符
+    error_code_str = f"E{exc.error_code}" if exc.error_code else "N/A"
+    detail_str = ""
+    if exc.detail:
+        # 将 {} 转义为 {{}} 避免 loguru 格式化
+        detail_escaped = str(exc.detail).replace("{", "{{").replace("}", "}}")
+        detail_str = f" | detail: {detail_escaped}"
+    logger.warning(
+        f"Business exception: {request.method} {request.url.path} - "
+        f"[HTTP {exc.code}] [{error_code_str}] {exc.message}{detail_str}"
+    )
     return JSONResponse(
         status_code=exc.code,
         content={
             "code": exc.code,
             "message": exc.message,
+            "error_code": exc.error_code,
             "detail": exc.detail,
             "path": str(request.url),
         },

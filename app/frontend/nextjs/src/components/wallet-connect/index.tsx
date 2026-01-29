@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useAccount, useDisconnect, useSignMessage } from 'wagmi'
+import { useAccount, useDisconnect, useSignMessage, useBalance } from 'wagmi'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { ChevronDown, Loader2 } from 'lucide-react'
@@ -13,6 +13,18 @@ import { logout, login } from '@/services/auth'
 import { userService } from '@/services/user'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AccountModal } from './account-modal'
+import type { KycStatus } from './account-modal'
+
+// EIP-1193 Provider 类型扩展
+declare global {
+  interface Window {
+    ethereum?: {
+      on?: (event: string, handler: (...args: unknown[]) => void) => void
+      removeListener?: (event: string, handler: (...args: unknown[]) => void) => void
+    }
+  }
+}
 
 // 签名登录的固定消息
 const SIGN_MESSAGE = 'SlimCryptoAccess'
@@ -30,7 +42,7 @@ const SIGN_MESSAGE = 'SlimCryptoAccess'
  */
 export function WalletConnect() {
   const { t } = useTranslation()
-  const { address, isConnected, chain } = useAccount()
+  const { address, isConnected, chain, connector } = useAccount()
   const { disconnect } = useDisconnect()
   const { signMessageAsync, isPending: isSigning } = useSignMessage()
   
@@ -42,6 +54,15 @@ export function WalletConnect() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   // 当前用户信息（从 /api/v1/user/auth/me 获取）
   const [currentUser, setCurrentUser] = useState<{ is_admin: boolean; tag: string | null; kyc_status: string | null } | null>(null)
+  // 自定义 AccountModal 开关状态
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
+  // 钱包连接时间
+  const [connectedAt, setConnectedAt] = useState<Date | undefined>(undefined)
+  
+  // 获取余额
+  const { data: balanceData } = useBalance({
+    address: address,
+  })
   
   // Track previous address for change detection
   const previousAddressRef = useRef<string | undefined>(undefined)
@@ -125,12 +146,54 @@ export function WalletConnect() {
     }
   }, [address, chain?.id, chain?.name, signMessageAsync, disconnect, t])
 
+  // 监听 MetaMask/EIP-1193 的 accountsChanged 事件
+  // 当用户在钱包扩展中断开连接时，accounts 会变为空数组
+  // wagmi 可能不会立即检测到这个变化，所以我们需要主动监听
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.ethereum) return
+
+    const handleAccountsChanged = (...args: unknown[]) => {
+      const accounts = args[0] as string[]
+      if (!accounts || accounts.length === 0) {
+        // 用户在 MetaMask 中断开了连接
+        console.log('MetaMask disconnected via accountsChanged event')
+        clearAuthData()
+        setIsAuthenticated(false)
+        setCurrentUser(null)
+        wasConnectedRef.current = false
+        // 触发 wagmi 的断开，确保状态同步
+        disconnect()
+      }
+    }
+
+    // 监听 disconnect 事件（某些钱包会触发这个事件）
+    const handleDisconnect = () => {
+      console.log('Wallet disconnected via disconnect event')
+      clearAuthData()
+      setIsAuthenticated(false)
+      setCurrentUser(null)
+      wasConnectedRef.current = false
+    }
+
+    window.ethereum?.on?.('accountsChanged', handleAccountsChanged)
+    window.ethereum?.on?.('disconnect', handleDisconnect)
+
+    return () => {
+      window.ethereum?.removeListener?.('accountsChanged', handleAccountsChanged)
+      window.ethereum?.removeListener?.('disconnect', handleDisconnect)
+    }
+  }, [disconnect])
+
   // 钱包连接后自动签名登录
   useEffect(() => {
     if (isConnected && address && isHydrated) {
       setWalletConnected(true)
       setWalletAddress(address)
       wasConnectedRef.current = true
+      // 记录连接时间
+      if (!connectedAt) {
+        setConnectedAt(new Date())
+      }
       
       // 检查是否需要签名登录
       if (!checkAuthStatus()) {
@@ -145,8 +208,9 @@ export function WalletConnect() {
       wasConnectedRef.current = false
       setIsAuthenticated(false)
       setCurrentUser(null)
+      setConnectedAt(undefined)
     }
-  }, [isConnected, address, isHydrated, checkAuthStatus, performSignIn])
+  }, [isConnected, address, isHydrated, checkAuthStatus, performSignIn, connectedAt])
 
   // Detect account changes (Requirement 7.3) - 切换账户时重新签名登录
   useEffect(() => {
@@ -396,38 +460,53 @@ export function WalletConnect() {
                     )}
                   </button>
 
-                  {/* 地址按钮 - 纯文字无边框 */}
-                  <button
-                    onClick={openAccountModal}
-                    type="button"
-                    className={cn(
-                      "group flex items-center gap-2",
-                      "hover:opacity-80",
-                      "transition-all duration-200"
-                    )}
+                  {/* 自定义 AccountModal (Popover 模式) */}
+                  <AccountModal
+                    open={isAccountModalOpen}
+                    onOpenChange={setIsAccountModalOpen}
+                    address={account.address}
+                    balance={balanceData ? (Number(balanceData.value) / Math.pow(10, balanceData.decimals)).toFixed(4) : undefined}
+                    symbol={balanceData?.symbol}
+                    isAuthenticated={isAuthenticated}
+                    kycStatus={currentUser?.kyc_status as KycStatus | undefined}
+                    chainId={currentChain.id}
+                    chainName={currentChain.name}
+                    connectorName={connector?.name}
+                    connectedAt={connectedAt}
+                    onDisconnect={handleDisconnect}
                   >
-                    {/* 状态指示器 */}
-                    <span 
+                    {/* 地址按钮 - 作为 Popover 触发器 */}
+                    <button
+                      type="button"
                       className={cn(
-                        "w-2 h-2 rounded-full shrink-0",
-                        isAuthenticated ? "bg-[#00D4AA]" : "bg-amber-400",
-                        isAuthenticated 
-                          ? "shadow-[0_0_6px_rgba(0,212,170,0.6)]" 
-                          : "shadow-[0_0_6px_rgba(251,191,36,0.6)]"
+                        "group flex items-center gap-2",
+                        "hover:opacity-80",
+                        "transition-all duration-200"
                       )}
-                    />
+                    >
+                      {/* 状态指示器 */}
+                      <span 
+                        className={cn(
+                          "w-2 h-2 rounded-full shrink-0",
+                          isAuthenticated ? "bg-[#00D4AA]" : "bg-amber-400",
+                          isAuthenticated 
+                            ? "shadow-[0_0_6px_rgba(0,212,170,0.6)]" 
+                            : "shadow-[0_0_6px_rgba(251,191,36,0.6)]"
+                        )}
+                      />
 
-                    {/* 地址显示 */}
-                    <span className="text-sm font-medium text-white/90">
-                      {account.displayName}
-                    </span>
+                      {/* 地址显示 */}
+                      <span className="text-sm font-medium text-white/90">
+                        {account.displayName}
+                      </span>
 
-                    {/* 下拉箭头 */}
-                    <ChevronDown 
-                      className="w-3.5 h-3.5 text-white/40 group-hover:text-white/60 transition-colors" 
-                      aria-hidden="true" 
-                    />
-                  </button>
+                      {/* 下拉箭头 */}
+                      <ChevronDown 
+                        className="w-3.5 h-3.5 text-white/40 group-hover:text-white/60 transition-colors" 
+                        aria-hidden="true" 
+                      />
+                    </button>
+                  </AccountModal>
                 </div>
               )
             })()}

@@ -12,9 +12,10 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
-from falib.adapter.redis import RedisAdapter
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
+
+from src.shared.common.adapters import get_async_redis_adapter
 
 logger = get_logger("auth.session")
 
@@ -67,7 +68,7 @@ class SessionService:
             "token_version_updated_at": now.isoformat(),
         }
 
-        async with RedisAdapter() as redis:
+        async with get_async_redis_adapter() as redis:
             # 存储会话数据
             session_key = f"session:{wallet_address}:{session_id}"
             await redis.set_json(session_key, session_data)
@@ -81,7 +82,7 @@ class SessionService:
         wallet_address = wallet_address.lower()
         session_key = f"session:{wallet_address}:{session_id}"
 
-        async with RedisAdapter() as redis:
+        async with get_async_redis_adapter() as redis:
             data = await redis.get_json(session_key)
             return data
 
@@ -90,7 +91,7 @@ class SessionService:
         wallet_address = wallet_address.lower()
         session_key = f"session:{wallet_address}:{session_id}"
 
-        async with RedisAdapter() as redis:
+        async with get_async_redis_adapter() as redis:
             exists = await redis.exists(session_key)
             if not exists:
                 return False
@@ -107,7 +108,7 @@ class SessionService:
         wallet_address = wallet_address.lower()
         session_key = f"session:{wallet_address}:{session_id}"
 
-        async with RedisAdapter() as redis:
+        async with get_async_redis_adapter() as redis:
             deleted = await redis.delete(session_key)
             return deleted > 0
 
@@ -149,7 +150,7 @@ class SessionService:
         wallet_address = wallet_address.lower()
         cleared_count = 0
 
-        async with RedisAdapter() as redis:
+        async with get_async_redis_adapter() as redis:
             # 加入黑名单
             blacklist_key = f"blacklist:{wallet_address}"
             await redis.set(blacklist_key, datetime.now(timezone.utc).isoformat())
@@ -172,7 +173,7 @@ class SessionService:
         wallet_address = wallet_address.lower()
         blacklist_key = f"blacklist:{wallet_address}"
 
-        async with RedisAdapter() as redis:
+        async with get_async_redis_adapter() as redis:
             exists = await redis.exists(blacklist_key)
             return exists > 0
 
@@ -181,7 +182,7 @@ class SessionService:
         wallet_address = wallet_address.lower()
         blacklist_key = f"blacklist:{wallet_address}"
 
-        async with RedisAdapter() as redis:
+        async with get_async_redis_adapter() as redis:
             deleted = await redis.delete(blacklist_key)
             if deleted:
                 logger.info(f"Removed {wallet_address[:8]}... from blacklist")
@@ -203,7 +204,7 @@ class SessionService:
         """
         sessions = []
 
-        async with RedisAdapter() as redis:
+        async with get_async_redis_adapter() as redis:
             # 扫描所有 session:* 键
             cursor = 0
             pattern = "session:*:*"
@@ -241,7 +242,7 @@ class SessionService:
         """获取用户所有会话"""
         wallet_address = wallet_address.lower()
 
-        async with RedisAdapter() as redis:
+        async with get_async_redis_adapter() as redis:
             sessions = await self._scan_user_sessions(redis, wallet_address)
             return [data for _, data in sessions]
 
@@ -258,7 +259,7 @@ class SessionService:
         wallet_address = wallet_address.lower()
         cleared_count = 0
 
-        async with RedisAdapter() as redis:
+        async with get_async_redis_adapter() as redis:
             # 扫描并删除用户所有会话
             sessions = await self._scan_user_sessions(redis, wallet_address)
             for key_str, _ in sessions:
@@ -282,7 +283,7 @@ class SessionService:
         wallet_address = wallet_address.lower()
         now = datetime.now(timezone.utc)
 
-        async with RedisAdapter() as redis:
+        async with get_async_redis_adapter() as redis:
             # 1. 获取当前最大版本号（从任意 session）
             sessions = await self._scan_user_sessions(redis, wallet_address)
 

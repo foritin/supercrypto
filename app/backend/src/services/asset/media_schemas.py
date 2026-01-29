@@ -76,10 +76,56 @@ class MediaStatsResponse(BaseModel):
     evaluation: int = 0
 
 
+class MediaBatchUploadResult(BaseModel):
+    """批量上传结果项"""
+
+    success: bool
+    file_name: str
+    media: Optional[MediaUploadResponse] = None
+    error: Optional[str] = None
+
+
+class MediaBatchUploadResponse(BaseModel):
+    """批量上传响应"""
+
+    total: int = Field(..., description="总文件数")
+    success_count: int = Field(..., description="成功数")
+    failed_count: int = Field(..., description="失败数")
+    results: list[MediaBatchUploadResult] = Field(..., description="各文件上传结果")
+
+
+class MediaBatchDeleteRequest(BaseModel):
+    """批量删除请求"""
+
+    media_ids: list[int] = Field(..., description="要删除的媒体 ID 列表")
+
+
+class MediaBatchDeleteResult(BaseModel):
+    """批量删除结果项"""
+
+    media_id: int
+    success: bool
+    error: Optional[str] = None
+
+
+class MediaBatchDeleteResponse(BaseModel):
+    """批量删除响应"""
+
+    total: int = Field(..., description="总数")
+    success_count: int = Field(..., description="成功数")
+    failed_count: int = Field(..., description="失败数")
+    results: list[MediaBatchDeleteResult] = Field(..., description="各媒体删除结果")
+
+
 __all__ = [
     "MediaUploadResponse",
     "MediaUpdateRequest",
     "MediaReorderRequest",
     "MediaListResponse",
     "MediaStatsResponse",
+    "MediaBatchUploadResult",
+    "MediaBatchUploadResponse",
+    "MediaBatchDeleteRequest",
+    "MediaBatchDeleteResult",
+    "MediaBatchDeleteResponse",
 ]

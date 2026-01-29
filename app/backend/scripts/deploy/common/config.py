@@ -28,6 +28,9 @@ PROVIDER_CONTRACT = ContractConfig(
     constructor_args={},
     skip_if_exists=True,
     description="地址提供者合约 - 所有合约地址的注册中心",
+    dependency_type="primary",
+    is_primary=True,
+    deploy_order=0,
 )
 
 # ============================================
@@ -44,6 +47,8 @@ KYC_CONTRACT = ContractConfig(
     register_to_provider=True,
     provider_key=ProviderKey.KYC_MANAGER,
     description="KYC 管理合约 - 用户身份验证",
+    dependency_type="required",
+    deploy_order=1,
 )
 
 # ============================================
@@ -61,6 +66,8 @@ STABLECOIN_CONTRACTS = [
         register_to_provider=True,
         provider_key=ProviderKey.USDT,
         description="USDT 稳定币 (Mock)",
+        dependency_type="required",
+        deploy_order=2,
     ),
     ContractConfig(
         name="USDC",
@@ -72,6 +79,8 @@ STABLECOIN_CONTRACTS = [
         register_to_provider=True,
         provider_key=ProviderKey.USDC,
         description="USDC 稳定币 (Mock)",
+        dependency_type="required",
+        deploy_order=3,
     ),
 ]
 
@@ -82,6 +91,9 @@ STABLECOIN_CONTRACTS = [
 COMMON_PROJECT = ProjectConfig(
     name="common",
     display_name="Common Contracts",
+    description="公共基础设施合约",
+    version="1.0.0",
+    primary_contract="AddressProvider",  # AddressProvider 作为公共合约的主入口
     contracts=[
         PROVIDER_CONTRACT,
         KYC_CONTRACT,

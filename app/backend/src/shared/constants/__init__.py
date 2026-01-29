@@ -15,12 +15,11 @@
     ...     print(f"{item.value}: {item.labels['zh']}")
 """
 
-from .schemas import ConstantItem, ConstantGroup
-from .registry import ConstantsRegistry, get_registry
-
 # 导入 definitions 模块以触发常量自动注册
 # 注意: 此导入必须在 registry 导入之后，因为 definitions 依赖 registry
 from . import definitions  # noqa: F401
+from .registry import ConstantsRegistry, get_registry
+from .schemas import ConstantGroup, ConstantItem
 
 __all__ = [
     "ConstantItem",

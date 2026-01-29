@@ -147,6 +147,7 @@ export default function AdminContractsPage() {
   const [isResetting, setIsResetting] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isUnregistering, setIsUnregistering] = useState(false);
+  const [isSettingPrimary, setIsSettingPrimary] = useState(false);
 
   // 获取合约状态
   const fetchContractStatus = useCallback(async () => {
@@ -184,11 +185,11 @@ export default function AdminContractsPage() {
     ];
   }, [contractStatus]);
 
-  // 过滤后的所有合约（根据 filters.showDeleted 过滤）
+  // 过滤后的所有合约（根据 filters.showNotRegistered 过滤）
   const filteredAllContracts = useMemo(() => {
-    if (filters.showDeleted) return allContracts;
+    if (filters.showNotRegistered) return allContracts;
     return allContracts.filter(c => !c.is_deleted);
-  }, [allContracts, filters.showDeleted]);
+  }, [allContracts, filters.showNotRegistered]);
 
   // 按项目分组 (使用 allContracts)
   const groupedContracts = useMemo(() => {
@@ -208,22 +209,18 @@ export default function AdminContractsPage() {
   }, [allContracts]);
 
   // 筛选后的合约数据（返回新结构）
+  // 注意: 项目筛选已移至 ContractTableList 组件内部处理
   const filteredContractStatus = useMemo(() => {
     if (!contractStatus) return null;
 
     const filterContract = (contract: ContractStatusItem) => {
-      // 已删除（解绑）的合约过滤
-      if (!filters.showDeleted && contract.is_deleted) {
+      // 未注册的合约过滤（包括 not_registered 状态和已解绑的）
+      if (!filters.showNotRegistered && (contract.registration_status === 'not_registered' || contract.is_deleted)) {
         return false;
       }
 
       // 搜索筛选
       if (filters.search && !contract.name.toLowerCase().includes(filters.search.toLowerCase())) {
-        return false;
-      }
-
-      // 项目筛选
-      if (filters.project !== 'all' && contract.project !== filters.project) {
         return false;
       }
 
@@ -281,7 +278,7 @@ export default function AdminContractsPage() {
       transactionAuditService.recordAdminContractCall({
         txHash: hash,
         chainId: chainId,
-        network: chain?.name || "local",
+        network: chain?.name || "hardhat",
         fromAddress: address,
         contractAddress: callInfo.target_address,
         contractName: selectedContract.name,
@@ -456,7 +453,7 @@ export default function AdminContractsPage() {
       transactionAuditService.recordAdminContractCall({
         txHash: hash,
         chainId: chainId,
-        network: chain?.name || "local",
+        network: chain?.name || "hardhat",
         fromAddress: address!,
         contractAddress: prepareData.provider_address,
         contractName: "AddressProvider",
@@ -504,10 +501,20 @@ export default function AdminContractsPage() {
       refetch();
     } catch (error) {
       notification.destroy();
-      const errorMessage = (error as Error).message || "Unknown error";
-      notification.error(
-        t("admin.contracts.register.failed", { error: errorMessage })
-      );
+      const err = error as { code?: number; message?: string; shortMessage?: string };
+      
+      // 用户拒绝签名
+      if (err.code === 4001 || err.message?.includes('rejected') || err.message?.includes('denied')) {
+        notification.warning(
+          t("admin.contracts.register.rejected") || "用户取消了交易签名"
+        );
+      } else {
+        // 其他错误 - 优先使用 shortMessage（viem 提供的简短错误）
+        const errorMessage = err.shortMessage || err.message?.split('\n')[0] || "Unknown error";
+        notification.error(
+          t("admin.contracts.register.failed", { error: errorMessage })
+        );
+      }
     } finally {
       setIsRegistering(false);
     }
@@ -599,7 +606,7 @@ export default function AdminContractsPage() {
       transactionAuditService.recordAdminContractCall({
         txHash: hash,
         chainId: chainId,
-        network: chain?.name || "local",
+        network: chain?.name || "hardhat",
         fromAddress: address!,
         contractAddress: prepareData.provider_address,
         contractName: "AddressProvider",
@@ -648,15 +655,95 @@ export default function AdminContractsPage() {
       refetch();
     } catch (error) {
       notification.destroy();
-      const errorMessage = (error as Error).message || "Unknown error";
+      const err = error as { code?: number; message?: string; shortMessage?: string };
+      
+      // 用户拒绝签名
+      if (err.code === 4001 || err.message?.includes('rejected') || err.message?.includes('denied')) {
+        notification.warning(
+          t("admin.contracts.unregister.rejected") || "用户取消了交易签名"
+        );
+      } else {
+        // 其他错误 - 优先使用 shortMessage
+        const errorMessage = err.shortMessage || err.message?.split('\n')[0] || "Unknown error";
+        notification.error(
+          t("admin.contracts.unregister.failed", {
+            defaultValue: "解除注册失败: {{error}}",
+            error: errorMessage,
+          })
+        );
+      }
+    } finally {
+      setIsUnregistering(false);
+    }
+  };
+
+  // 处理设置主合约
+  const handleSetPrimary = async () => {
+    const contractId = selectedListContract?.id;
+    if (!contractId) {
+      notification.error(t("admin.contracts.primary.noContractId", "合约 ID 不存在"));
+      return;
+    }
+
+    setIsSettingPrimary(true);
+    try {
+      await contractAdminService.setPrimary(contractId);
+      notification.success(
+        t("admin.contracts.primary.setSuccess", {
+          defaultValue: "已将 {{name}} 设为主合约",
+          name: selectedListContract?.name,
+        })
+      );
+      // 关闭面板并刷新
+      setDetailPanelOpen(false);
+      setSelectedGraphNode(null);
+      setSelectedListContract(null);
+      refetch();
+    } catch (error) {
+      const err = error as { message?: string };
       notification.error(
-        t("admin.contracts.unregister.failed", {
-          defaultValue: "解除注册失败: {{error}}",
-          error: errorMessage,
+        t("admin.contracts.primary.setFailed", {
+          defaultValue: "设置主合约失败: {{error}}",
+          error: err.message || "Unknown error",
         })
       );
     } finally {
-      setIsUnregistering(false);
+      setIsSettingPrimary(false);
+    }
+  };
+
+  // 处理取消主合约
+  const handleUnsetPrimary = async () => {
+    const contractId = selectedListContract?.id;
+    if (!contractId) {
+      notification.error(t("admin.contracts.primary.noContractId", "合约 ID 不存在"));
+      return;
+    }
+
+    setIsSettingPrimary(true);
+    try {
+      await contractAdminService.unsetPrimary(contractId);
+      notification.success(
+        t("admin.contracts.primary.unsetSuccess", {
+          defaultValue: "已取消 {{name}} 的主合约标记",
+          name: selectedListContract?.name,
+        })
+      );
+      // 关闭面板并刷新
+      setDetailPanelOpen(false);
+      setSelectedGraphNode(null);
+      setSelectedListContract(null);
+      refetch();
+    } catch (error) {
+      const err = error as { message?: string };
+      notification.error(
+        t("admin.contracts.primary.unsetFailed", {
+          defaultValue: "取消主合约失败: {{error}}",
+          error: err.message || "Unknown error",
+        })
+      );
+    } finally {
+      setIsSettingPrimary(false);
     }
   };
 
@@ -747,6 +834,12 @@ export default function AdminContractsPage() {
                     lastSynced: contract.last_synced,
                     isRegistered: contract.registration_status === 'synced',
                     providerKey: contract.provider_key,
+                    // 主合约相关字段
+                    contractId: contract.id,
+                    isPrimary: contract.is_primary,
+                    symbol: contract.symbol,
+                    // 操作权限字段 (Requirements: 5.1-5.5, 8.5-8.6)
+                    actions: contract.actions,
                   },
                 } as Node);
                 setDetailPanelOpen(true);
@@ -762,7 +855,7 @@ export default function AdminContractsPage() {
               onReset={() => setFilters(DEFAULT_FILTERS)}
             />
             <ContractDependencyTree
-              showDeleted={filters.showDeleted}
+              showNotRegistered={filters.showNotRegistered}
               onContractClick={(contractId) => {
                 // Find contract node data from all contracts
                 const nodeData = allContracts.find(
@@ -784,8 +877,15 @@ export default function AdminContractsPage() {
                       lastSynced: nodeData.last_synced,
                       isRegistered: nodeData.registration_status === 'synced',
                       providerKey: nodeData.provider_key,
+                      // 主合约相关字段
+                      contractId: nodeData.id,
+                      isPrimary: nodeData.is_primary,
+                      symbol: nodeData.symbol,
+                      // 操作权限字段 (Requirements: 5.1-5.5, 8.5-8.6)
+                      actions: nodeData.actions,
                     },
                   } as Node);
+                  setSelectedListContract(nodeData);
                   setDetailPanelOpen(true);
                 }
               }}
@@ -950,8 +1050,11 @@ export default function AdminContractsPage() {
               handleUnregisterFromProvider(contractName);
             }
           }}
+          onSetPrimary={handleSetPrimary}
+          onUnsetPrimary={handleUnsetPrimary}
           isRegistering={isRegistering}
           isUnregistering={isUnregistering}
+          isSettingPrimary={isSettingPrimary}
         />
       </div>
     </RequireAdmin>

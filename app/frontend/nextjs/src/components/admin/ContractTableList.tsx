@@ -9,10 +9,12 @@
  * - 状态徽章增强 (颜色 + 动画)
  * - 依赖标签展开/收起
  * - 查看详情按钮
+ * - Project Contracts 独立项目筛选
+ * - 项目就绪状态显示 (Requirements: 4.1-4.5)
  */
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import {
   CheckCircle,
@@ -29,11 +31,21 @@ import {
   Coins,
   TrendingUp,
   LayoutGrid,
+  Link2,
+  Link2Off,
+  Star,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DataTable, SortableHeader } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
@@ -47,7 +59,10 @@ import type {
   DependencyStatusItem,
   RegistrationStatus,
   ContractType,
+  ProjectInfo,
+  ProjectContractsGroup,
 } from '@/services/contract';
+import type { ProjectReadinessStatus } from '@/types/contract';
 
 // 注册状态样式映射（纯 Provider 模式）
 const REGISTRATION_STATUS_STYLES: Record<RegistrationStatus, { className: string; icon: React.ReactNode }> = {
@@ -99,6 +114,22 @@ const DEP_STATUS_STYLES = {
   not_registered: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
 } as const;
 
+// 项目就绪状态样式映射 (Requirements: 4.1)
+const PROJECT_READINESS_STYLES: Record<ProjectReadinessStatus, { className: string; icon: React.ReactNode }> = {
+  ready: {
+    className: 'bg-green-500/20 text-green-400 border-green-500/30',
+    icon: <CheckCircle className="h-3 w-3" />,
+  },
+  partially_ready: {
+    className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    icon: <AlertCircle className="h-3 w-3" />,
+  },
+  not_ready: {
+    className: 'bg-red-500/20 text-red-400 border-red-500/30',
+    icon: <XCircle className="h-3 w-3" />,
+  },
+};
+
 // 新版 Props：接收新的 API 结构
 interface ContractTableListProps {
   contractStatus: ContractStatusResponse | null;
@@ -121,11 +152,20 @@ const getRowClassName = (record: ContractStatusItem) => {
 // 翻译函数类型
 type TranslateFunction = ReturnType<typeof useTranslation>['t'];
 
+// 依赖标签样式 - 可选依赖使用不同颜色
+const OPTIONAL_DEP_STYLES = {
+  registered: 'border-indigo-500/50 bg-indigo-500/10 text-indigo-400',
+  not_registered: 'border-purple-500/50 bg-purple-500/10 text-purple-400',
+};
+
 // 依赖标签组件
-function DependencyTags({ deps, t }: { deps: DependencyStatusItem[]; t: TranslateFunction }) {
+function DependencyTags({ deps, t, variant = 'required' }: { deps: DependencyStatusItem[]; t: TranslateFunction; variant?: 'required' | 'optional' }) {
   if (!deps || deps.length === 0) {
     return <span className="text-muted-foreground">-</span>;
   }
+
+  const isOptional = variant === 'optional';
+  const styles = isOptional ? OPTIONAL_DEP_STYLES : DEP_STATUS_STYLES;
 
   return (
     <div className="flex flex-wrap gap-1">
@@ -137,7 +177,7 @@ function DependencyTags({ deps, t }: { deps: DependencyStatusItem[]; t: Translat
                 variant="outline"
                 className={cn(
                   'cursor-default px-1.5 py-0.5 text-[10px] gap-1',
-                  dep.registered ? DEP_STATUS_STYLES.registered : DEP_STATUS_STYLES.not_registered
+                  dep.registered ? styles.registered : styles.not_registered
                 )}
               >
                 {dep.registered ? (
@@ -151,6 +191,7 @@ function DependencyTags({ deps, t }: { deps: DependencyStatusItem[]; t: Translat
             <TooltipContent>
               <div className="space-y-1">
                 <div className="font-semibold">{dep.contract}</div>
+                {isOptional && <div className="text-[11px] text-purple-400">{t('admin.contracts.status.optional')}</div>}
                 <div className="text-[11px] opacity-80">Key: {dep.key}</div>
                 <div className="text-[11px] opacity-80">
                   {dep.address || t('admin.contracts.status.notRegistered')}
@@ -160,6 +201,175 @@ function DependencyTags({ deps, t }: { deps: DependencyStatusItem[]; t: Translat
           </Tooltip>
         </TooltipProvider>
       ))}
+    </div>
+  );
+}
+
+/**
+ * 项目状态卡片组件
+ * 显示项目就绪状态、绑定状态和就绪条件详情
+ * Requirements: 4.1-4.5
+ */
+interface ProjectStatusCardProps {
+  projectGroup: ProjectContractsGroup;
+  t: TranslateFunction;
+}
+
+function ProjectStatusCard({ projectGroup, t }: ProjectStatusCardProps) {
+  const {
+    project,
+    config,
+    project_readiness,
+    readiness_details,
+    is_bound_to_asset,
+    bound_asset,
+    can_bind_asset,
+  } = projectGroup;
+
+  // 获取就绪状态样式
+  const readinessStyle = PROJECT_READINESS_STYLES[project_readiness] || PROJECT_READINESS_STYLES.not_ready;
+  
+  // 就绪状态标签文本
+  const readinessLabelKey = {
+    ready: 'ready',
+    partially_ready: 'partiallyReady',
+    not_ready: 'notReady',
+  }[project_readiness] || 'notReady';
+
+  // 构建未满足条件列表 (Requirements: 4.2)
+  const unmetConditions: string[] = [];
+  if (readiness_details) {
+    if (!readiness_details.all_registered) {
+      unmetConditions.push(t('admin.contracts.projectReadiness.conditions.allRegisteredNo'));
+    }
+    if (!readiness_details.no_missing_deps) {
+      unmetConditions.push(t('admin.contracts.projectReadiness.conditions.noMissingDepsNo'));
+    }
+    if (!readiness_details.has_primary) {
+      unmetConditions.push(t('admin.contracts.projectReadiness.conditions.hasPrimaryNo'));
+    }
+  }
+
+  return (
+    <div 
+      className="p-4 rounded-xl border border-white/10 mb-4"
+      style={{ background: 'rgba(15, 15, 26, 0.6)' }}
+    >
+      <div className="flex items-center justify-between">
+        {/* 左侧：项目名称和状态 */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Folder className="h-5 w-5 text-emerald-400" />
+            <span className="font-semibold text-white text-base uppercase">
+              {config?.label || project}
+            </span>
+          </div>
+          
+          {/* 就绪状态标签 (Requirements: 4.1) */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant="outline" 
+                  className={cn('gap-1 font-medium cursor-default', readinessStyle.className)}
+                >
+                  {readinessStyle.icon}
+                  {t(`admin.contracts.projectReadiness.${readinessLabelKey}`)}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <div className="space-y-2">
+                  <div className="font-semibold">
+                    {t(`admin.contracts.projectReadiness.tooltip.${project_readiness === 'ready' ? 'ready' : project_readiness === 'partially_ready' ? 'partiallyReady' : 'notReady'}`)}
+                  </div>
+                  {/* 显示未满足条件 (Requirements: 4.2) */}
+                  {unmetConditions.length > 0 && (
+                    <ul className="text-xs space-y-1 text-white/70">
+                      {unmetConditions.map((condition, idx) => (
+                        <li key={idx} className="flex items-center gap-1">
+                          <XCircle className="h-3 w-3 text-red-400" />
+                          {condition}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {/* 显示已满足条件 */}
+                  {readiness_details && (
+                    <ul className="text-xs space-y-1 text-white/70">
+                      {readiness_details.all_registered && (
+                        <li className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-400" />
+                          {t('admin.contracts.projectReadiness.conditions.allRegistered')}
+                        </li>
+                      )}
+                      {readiness_details.no_missing_deps && (
+                        <li className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-400" />
+                          {t('admin.contracts.projectReadiness.conditions.noMissingDeps')}
+                        </li>
+                      )}
+                      {readiness_details.has_primary && (
+                        <li className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-400" />
+                          {t('admin.contracts.projectReadiness.conditions.hasPrimary')}
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        {/* 右侧：绑定状态 */}
+        <div className="flex items-center gap-2">
+          {/* 已绑定 Asset 时显示 Asset 名称 (Requirements: 4.3) */}
+          {is_bound_to_asset && bound_asset && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge 
+                    variant="outline" 
+                    className="gap-1 font-medium cursor-default bg-blue-500/20 text-blue-400 border-blue-500/30"
+                  >
+                    <Link2 className="h-3 w-3" />
+                    {t('admin.contracts.projectReadiness.boundToAsset')}: {bound_asset.asset_name}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('admin.contracts.projectReadiness.tooltip.boundAsset', { assetName: bound_asset.asset_name })}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {/* 可绑定 Asset 标签 (Requirements: 4.4) */}
+          {can_bind_asset && !is_bound_to_asset && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge 
+                    variant="outline" 
+                    className="gap-1 font-medium cursor-default bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                  >
+                    <Link2Off className="h-3 w-3" />
+                    {t('admin.contracts.projectReadiness.canBindAsset')}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('admin.contracts.projectReadiness.tooltip.canBind')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {/* 合约数量 */}
+          <Badge variant="secondary" className="bg-blue-500/20 text-blue-400">
+            {projectGroup.contracts.length} {t('admin.contracts.table.projectContracts')}
+          </Badge>
+        </div>
+      </div>
     </div>
   );
 }
@@ -319,6 +529,18 @@ function getProjectColumns(
         <div className="flex items-center gap-2">
           <Plug className="h-4 w-4 text-green-400" />
           <span className="font-semibold text-white">{row.original.name}</span>
+          {row.original.is_primary && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('admin.contracts.detail.primaryContract')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       ),
     },
@@ -387,6 +609,12 @@ function getProjectColumns(
       header: t('admin.contracts.table.dependencies'),
       size: 250,
       cell: ({ row }) => <DependencyTags deps={row.original.dependencies} t={t} />,
+    },
+    {
+      accessorKey: 'optional_dependencies',
+      header: t('admin.contracts.table.optionalDependencies'),
+      size: 200,
+      cell: ({ row }) => <DependencyTags deps={row.original.optional_dependencies || []} t={t} variant="optional" />,
     },
     {
       accessorKey: 'deployed_at',
@@ -472,14 +700,24 @@ export function ContractTableList({
 }: ContractTableListProps) {
   const { t } = useTranslation();
 
+  // Project Contracts 独立的项目筛选状态
+  const [projectFilter, setProjectFilter] = useState<string>('all');
+
   // 获取 global 和 project 合约
   const globalContracts = contractStatus?.global_contracts || [];
   const projectGroups = contractStatus?.project_contracts || [];
 
-  // 合并所有项目合约用于显示
-  const allProjectContracts = useMemo(() => {
-    return projectGroups.flatMap(g => g.contracts);
-  }, [projectGroups]);
+  // 从 API 响应中获取项目列表
+  const projects: ProjectInfo[] = contractStatus?.projects || [];
+
+  // 根据项目筛选过滤 project contracts
+  const filteredProjectContracts = useMemo(() => {
+    const allProjectContracts = projectGroups.flatMap(g => g.contracts);
+    if (projectFilter === 'all') {
+      return allProjectContracts;
+    }
+    return allProjectContracts.filter(c => c.project === projectFilter);
+  }, [projectGroups, projectFilter]);
 
   const globalColumns = useMemo(
     () => getGlobalColumns(t, onContractClick),
@@ -515,27 +753,76 @@ export function ContractTableList({
       />
 
       {/* Project Contracts 表格 */}
-      {allProjectContracts.length > 0 && (
+      {filteredProjectContracts.length > 0 || projectGroups.length > 0 ? (
         <>
           <div className="border-t border-white/10 my-8" />
-          <ContractTable
-            title={
-              <div className="flex items-center gap-2">
-                <Folder className="h-5 w-5 text-emerald-400" />
-                <span className="font-semibold text-white text-base">
-                  Project Contracts
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  ({t('admin.contracts.projectContracts.description') || '项目专属合约'})
-                </span>
+          <div className="mb-8">
+            {/* 标题和筛选器 */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Folder className="h-5 w-5 text-emerald-400" />
+                  <span className="font-semibold text-white text-base">
+                    Project Contracts
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({t('admin.contracts.projectContracts.description') || '项目专属合约'})
+                  </span>
+                </div>
+                <Badge variant="secondary" className="bg-blue-500/20 text-blue-400">
+                  {filteredProjectContracts.length}
+                </Badge>
               </div>
-            }
-            dataSource={allProjectContracts}
-            columns={projectColumns}
-            loading={loading}
-          />
+              
+              {/* 项目筛选下拉框 */}
+              {projects.length > 0 && (
+                <Select
+                  value={projectFilter}
+                  onValueChange={setProjectFilter}
+                >
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder={t('admin.contracts.filters.allProjects')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      {t('admin.contracts.filters.allProjects', 'All Projects')}
+                    </SelectItem>
+                    {projects.map((project) => (
+                      <SelectItem key={project.name} value={project.name}>
+                        {project.label || project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* 项目状态卡片 (Requirements: 4.1-4.5) */}
+            {projectGroups
+              .filter(pg => projectFilter === 'all' || pg.project === projectFilter)
+              .map((projectGroup) => (
+                <ProjectStatusCard
+                  key={projectGroup.project}
+                  projectGroup={projectGroup}
+                  t={t}
+                />
+              ))}
+            
+            {/* 表格 */}
+            <div 
+              className="rounded-xl overflow-hidden"
+              style={{ background: 'rgba(15, 15, 26, 0.6)' }}
+            >
+              <DataTable<ContractStatusItem, unknown>
+                columns={projectColumns}
+                data={filteredProjectContracts}
+                loading={loading}
+                emptyMessage={t('admin.contracts.table.noData', '暂无合约数据')}
+              />
+            </div>
+          </div>
         </>
-      )}
+      ) : null}
     </>
   );
 }

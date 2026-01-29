@@ -27,6 +27,26 @@ const wallet = {
       signRejected: "Signature rejected. Please sign to login.",
       loginFailed: "Login failed. Please try again.",
     },
+    // Account Card Modal
+    accountModal: {
+      kycVerified: "KYC ✓",
+      kycPending: "KYC Pending",
+      clickToViewDetails: "Click to view details",
+      authenticated: "Authenticated",
+      notAuthenticated: "Not Authenticated",
+      completeKycToInvest: "Complete KYC to Invest",
+      detailsTitle: "Details",
+      ens: "ENS",
+      walletLabel: "Wallet",
+      networkLabel: "Network",
+      txCount: "Transactions",
+      connectedAt: "Connected At",
+      fullAddress: "Full Address",
+      disconnectConfirmTitle: "Confirm Disconnect?",
+      disconnectConfirmDesc: "You will need to reconnect and sign in again to continue using the platform.",
+      cancel: "Cancel",
+      confirmDisconnect: "Confirm Disconnect",
+    },
   },
   metamask: {
     install: {

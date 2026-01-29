@@ -253,8 +253,9 @@ export default function AssetsPage() {
 
   // 渲染资产卡片
   const renderAssetCard = (asset: AssetListItem) => {
+    // 优先使用 cover_image_url（MinIO 预签名 URL），其次 image_url，最后使用默认图
     const bgImage =
-      asset.image_url || ASSET_TYPE_IMAGES[asset.asset_type as AssetType];
+      asset.cover_image_url || asset.image_url || ASSET_TYPE_IMAGES[asset.asset_type as AssetType];
     const progress = (asset.subscribed_amount / asset.total_supply) * 100;
     const statusInfo = STATUS_CONFIG[asset.status as AssetStatus];
 

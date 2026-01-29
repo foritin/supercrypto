@@ -236,13 +236,13 @@ export const Accessibility: Story = {
   render: () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <Loading variant="cyan" text="正在加载数据..." />
-      <Skeleton className="h-4 w-48" ariaLabel="加载标题占位符" />
+      <Skeleton className="h-4 w-48" />
     </div>
   ),
   parameters: {
     docs: {
       description: {
-        story: '**无障碍支持：**\n- Loading 组件使用 `role="status"` 和 `aria-live="polite"` 通知屏幕阅读器\n- 骨架屏应提供描述性的 `aria-label` 或使用 `sr-only` 文本',
+        story: '**无障碍支持：**\n- Loading 组件使用 `role="status"` 和 `aria-live="polite"` 通知屏幕阅读器\n- 骨架屏内置 `aria-label="加载中"` 和 `sr-only` 文本',
       },
     },
   },

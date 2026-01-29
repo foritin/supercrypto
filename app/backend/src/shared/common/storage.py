@@ -2,7 +2,7 @@
 文件存储服务
 ============
 
-支持本地文件存储和 MinIO 对象存储，通过配置切换。
+使用 MinIO 对象存储。
 
 Usage:
     from src.shared.common.storage import get_storage_service
@@ -16,12 +16,10 @@ Usage:
     await storage.delete_file(file_path)
 """
 
-import os
 import uuid
-from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import BinaryIO, Optional, Union
+from typing import Optional, Union
 
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
@@ -91,68 +89,52 @@ ALLOWED_DOCUMENT_TYPES = [
 IMAGE_CATEGORIES = ["cover", "gallery", "floor_plan"]
 
 # 文档类别
-DOCUMENT_CATEGORIES = ["valuation", "legal", "financial", "document", "evaluation"]
+DOCUMENT_CATEGORIES = ["valuation", "legal", "financial", "document", "evaluation", "other"]
 
 
 # ============================================
-# 存储服务抽象基类
+# MinIO 存储服务
 # ============================================
 
 
-class StorageService(ABC):
-    """存储服务抽象基类"""
+class StorageService:
+    """MinIO 对象存储服务"""
 
-    @abstractmethod
-    async def upload_file(
+    def __init__(
         self,
-        file: Union[UploadFile, BinaryIO, bytes],
-        asset_id: int,
-        category: str,
-        filename: Optional[str] = None,
-    ) -> str:
+        endpoint: str,
+        access_key: str,
+        secret_key: str,
+        bucket: str,
+        secure: bool = False,
+    ):
         """
-        上传文件
+        初始化 MinIO 存储
 
         Args:
-            file: 文件对象或字节数据
-            asset_id: 资产 ID
-            category: 分类（cover, gallery, valuation, legal, financial 等）
-            filename: 原始文件名（可选）
-
-        Returns:
-            文件访问 URL
+            endpoint: MinIO 服务地址
+            access_key: 访问密钥
+            secret_key: 私密密钥
+            bucket: 存储桶名称
+            secure: 是否使用 HTTPS
         """
-        pass
+        self.endpoint = endpoint
+        self.access_key = access_key
+        self.secret_key = secret_key
+        self.bucket = bucket
+        self.secure = secure
 
-    @abstractmethod
-    async def delete_file(self, file_path: str) -> bool:
-        """
-        删除文件
+        logger.info(f"StorageService initialized: {endpoint}/{bucket}")
 
-        Args:
-            file_path: 文件路径或 URL
+    def _get_adapter(self):
+        """获取 MinIO 适配器"""
+        from src.shared.common.adapters import get_async_minio_adapter
 
-        Returns:
-            是否删除成功
-        """
-        pass
-
-    @abstractmethod
-    def get_file_url(self, file_path: str) -> str:
-        """
-        获取文件访问 URL
-
-        Args:
-            file_path: 文件路径
-
-        Returns:
-            完整的访问 URL
-        """
-        pass
+        return get_async_minio_adapter()
 
     def validate_file(
         self,
-        file: Union[UploadFile, BinaryIO, bytes],
+        file: Union[UploadFile, bytes],
         category: str,
         content_type: Optional[str] = None,
     ) -> tuple[int, str]:
@@ -174,17 +156,12 @@ class StorageService(ABC):
         # 获取文件大小
         if isinstance(file, bytes):
             file_size = len(file)
-        elif hasattr(file, "file"):
+        else:
             # UploadFile
             file.file.seek(0, 2)  # 移到文件末尾
             file_size = file.file.tell()
             file.file.seek(0)  # 重置到开头
             content_type = content_type or file.content_type
-        else:
-            # BinaryIO
-            file.seek(0, 2)
-            file_size = file.tell()
-            file.seek(0)
 
         # 确定是图片还是文档
         is_image = category in IMAGE_CATEGORIES
@@ -235,153 +212,36 @@ class StorageService(ABC):
 
         return f"assets/{asset_id}/{category}/{new_filename}"
 
-
-# ============================================
-# 本地文件存储实现
-# ============================================
-
-
-class LocalStorageService(StorageService):
-    """本地文件存储服务（开发环境）"""
-
-    def __init__(self, base_path: str = "uploads", base_url: str = "/static/uploads"):
-        """
-        初始化本地存储
-
-        Args:
-            base_path: 本地存储根目录
-            base_url: 访问 URL 前缀
-        """
-        self.base_path = Path(base_path)
-        self.base_url = base_url.rstrip("/")
-
-        # 确保目录存在
-        self.base_path.mkdir(parents=True, exist_ok=True)
-        logger.info(f"LocalStorageService initialized: {self.base_path}")
-
     async def upload_file(
         self,
-        file: Union[UploadFile, BinaryIO, bytes],
+        file: Union[UploadFile, bytes],
         asset_id: int,
         category: str,
         filename: Optional[str] = None,
     ) -> str:
-        """上传文件到本地"""
-        # 获取原始文件名
-        if filename is None and hasattr(file, "filename"):
-            filename = file.filename
-
-        # 获取 content_type
-        content_type = None
-        if hasattr(file, "content_type"):
-            content_type = file.content_type
-
-        # 验证文件
-        file_size, mime_type = self.validate_file(file, category, content_type)
-
-        # 生成文件路径
-        file_path = self.generate_file_path(asset_id, category, filename)
-        full_path = self.base_path / file_path
-
-        # 确保目录存在
-        full_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # 读取文件内容
-        if isinstance(file, bytes):
-            content = file
-        elif hasattr(file, "file"):
-            content = await file.read()
-        else:
-            content = file.read()
-
-        # 写入文件
-        with open(full_path, "wb") as f:
-            f.write(content)
-
-        logger.info(f"File uploaded to local: {file_path} ({file_size} bytes)")
-
-        return self.get_file_url(file_path)
-
-    async def delete_file(self, file_path: str) -> bool:
-        """从本地删除文件"""
-        # 从 URL 提取相对路径
-        if file_path.startswith(self.base_url):
-            file_path = file_path[len(self.base_url) :].lstrip("/")
-
-        full_path = self.base_path / file_path
-
-        if full_path.exists():
-            os.remove(full_path)
-            logger.info(f"File deleted from local: {file_path}")
-            return True
-
-        logger.warning(f"File not found for deletion: {file_path}")
-        return False
-
-    def get_file_url(self, file_path: str) -> str:
-        """获取本地文件访问 URL"""
-        return f"{self.base_url}/{file_path}"
-
-
-# ============================================
-# MinIO 存储实现
-# ============================================
-
-
-class MinIOStorageService(StorageService):
-    """MinIO 对象存储服务（生产环境）"""
-
-    def __init__(
-        self,
-        endpoint: str,
-        access_key: str,
-        secret_key: str,
-        bucket: str,
-        secure: bool = False,
-    ):
         """
-        初始化 MinIO 存储
+        上传文件到 MinIO
 
         Args:
-            endpoint: MinIO 服务地址
-            access_key: 访问密钥
-            secret_key: 私密密钥
-            bucket: 存储桶名称
-            secure: 是否使用 HTTPS
+            file: 文件对象或字节数据
+            asset_id: 资产 ID
+            category: 分类（cover, gallery, valuation, legal, financial 等）
+            filename: 原始文件名（可选）
+
+        Returns:
+            文件相对路径
         """
-        self.endpoint = endpoint
-        self.access_key = access_key
-        self.secret_key = secret_key
-        self.bucket = bucket
-        self.secure = secure
-
-        logger.info(f"MinIOStorageService initialized: {endpoint}/{bucket}")
-
-    def _get_adapter(self):
-        """获取 MinIO 适配器"""
-        from src.shared.common.adapters import get_async_minio_adapter
-
-        return get_async_minio_adapter()
-
-    async def upload_file(
-        self,
-        file: Union[UploadFile, BinaryIO, bytes],
-        asset_id: int,
-        category: str,
-        filename: Optional[str] = None,
-    ) -> str:
-        """上传文件到 MinIO"""
         # 获取原始文件名
-        if filename is None and hasattr(file, "filename"):
+        if filename is None and isinstance(file, UploadFile):
             filename = file.filename
 
         # 获取 content_type
         content_type = None
-        if hasattr(file, "content_type"):
+        if isinstance(file, UploadFile):
             content_type = file.content_type
 
         # 验证文件
-        file_size, mime_type = self.validate_file(file, category, content_type)
+        file_size, _ = self.validate_file(file, category, content_type)
 
         # 生成文件路径
         file_path = self.generate_file_path(asset_id, category, filename)
@@ -389,40 +249,87 @@ class MinIOStorageService(StorageService):
         # 读取文件内容
         if isinstance(file, bytes):
             content = file
-        elif hasattr(file, "file"):
-            content = await file.read()
         else:
-            content = file.read()
+            content = await file.read()
 
         # 上传到 MinIO
         async with self._get_adapter() as minio:
-            # 使用 put_object 方法
-            from io import BytesIO
-
-            await minio.upload_fileobj(
-                BytesIO(content),
-                file_path,
-                content_type=mime_type,
-                content_length=file_size,
-            )
+            await minio.put_object(self.bucket, file_path, content)
 
         logger.info(f"File uploaded to MinIO: {file_path} ({file_size} bytes)")
 
         return self.get_file_url(file_path)
 
+    async def upload_files_batch(
+        self,
+        files: list[tuple[Union[UploadFile, bytes], int, str, Optional[str]]],
+    ) -> list[str]:
+        """
+        批量上传文件到 MinIO（复用连接）
+
+        Args:
+            files: 文件列表，每个元素为 (file, asset_id, category, filename)
+
+        Returns:
+            文件相对路径列表
+        """
+        if not files:
+            return []
+
+        results = []
+        
+        # 预处理所有文件
+        prepared_files = []
+        for file, asset_id, category, filename in files:
+            # 获取原始文件名
+            if filename is None and isinstance(file, UploadFile):
+                filename = file.filename
+
+            # 获取 content_type
+            content_type = None
+            if isinstance(file, UploadFile):
+                content_type = file.content_type
+
+            # 验证文件
+            file_size, _ = self.validate_file(file, category, content_type)
+
+            # 生成文件路径
+            file_path = self.generate_file_path(asset_id, category, filename)
+
+            # 读取文件内容
+            if isinstance(file, bytes):
+                content = file
+            else:
+                content = await file.read()
+
+            prepared_files.append((file_path, content, file_size))
+
+        # 使用单个连接上传所有文件
+        async with self._get_adapter() as minio:
+            for file_path, content, file_size in prepared_files:
+                await minio.put_object(self.bucket, file_path, content)
+                logger.info(f"File uploaded to MinIO: {file_path} ({file_size} bytes)")
+                results.append(self.get_file_url(file_path))
+
+        return results
+
     async def delete_file(self, file_path: str) -> bool:
-        """从 MinIO 删除文件"""
-        # 从 URL 提取对象路径
-        if file_path.startswith("http"):
-            # 从完整 URL 提取路径
-            # 格式: http://endpoint/bucket/path
-            parts = file_path.split(f"/{self.bucket}/", 1)
-            if len(parts) > 1:
-                file_path = parts[1]
+        """
+        从 MinIO 删除文件
+
+        Args:
+            file_path: 文件相对路径
+
+        Returns:
+            是否删除成功
+        """
+        # 移除开头的斜杠，得到对象路径
+        if file_path.startswith("/"):
+            file_path = file_path[1:]
 
         try:
             async with self._get_adapter() as minio:
-                await minio.delete_object(file_path)
+                await minio.remove_object(self.bucket, file_path)
             logger.info(f"File deleted from MinIO: {file_path}")
             return True
         except Exception as e:
@@ -430,9 +337,62 @@ class MinIOStorageService(StorageService):
             return False
 
     def get_file_url(self, file_path: str) -> str:
-        """获取 MinIO 文件访问 URL"""
-        protocol = "https" if self.secure else "http"
-        return f"{protocol}://{self.endpoint}/{self.bucket}/{file_path}"
+        """
+        获取文件访问路径（相对路径）
+        
+        返回不含 host 和 bucket 的相对路径。
+        格式: /assets/{asset_id}/{category}/{filename}
+        """
+        if file_path.startswith("/"):
+            return file_path
+        return f"/{file_path}"
+
+    async def get_presigned_url(self, file_path: str, expires: int = 3600) -> str:
+        """
+        获取预签名临时访问 URL
+        
+        Args:
+            file_path: 文件相对路径
+            expires: 过期时间（秒），默认 1 小时
+            
+        Returns:
+            预签名的临时访问 URL
+        """
+        # 移除开头的斜杠
+        if file_path.startswith("/"):
+            file_path = file_path[1:]
+            
+        async with self._get_adapter() as minio:
+            url = await minio.presigned_get_object(self.bucket, file_path, expires)
+        return url or ""
+
+    async def get_presigned_urls_batch(
+        self, file_paths: list[str], expires: int = 3600
+    ) -> dict[str, str]:
+        """
+        批量获取预签名临时访问 URL（复用连接）
+        
+        Args:
+            file_paths: 文件相对路径列表
+            expires: 过期时间（秒），默认 1 小时
+            
+        Returns:
+            {原始路径: 预签名URL} 的字典
+        """
+        if not file_paths:
+            return {}
+
+        results = {}
+        async with self._get_adapter() as minio:
+            for file_path in file_paths:
+                original_path = file_path
+                # 移除开头的斜杠
+                if file_path.startswith("/"):
+                    file_path = file_path[1:]
+                url = await minio.presigned_get_object(self.bucket, file_path, expires)
+                results[original_path] = url or ""
+        
+        return results
 
 
 # ============================================
@@ -447,8 +407,6 @@ def get_storage_service() -> StorageService:
     """
     获取存储服务实例（单例）
 
-    根据配置自动选择本地存储或 MinIO 存储
-
     Returns:
         存储服务实例
     """
@@ -457,25 +415,15 @@ def get_storage_service() -> StorageService:
     if _storage_service is not None:
         return _storage_service
 
-    # 检查是否配置了 MinIO
-    try:
-        minio_config = SETTINGS.MINIO
-        if minio_config and minio_config.ENDPOINT:
-            _storage_service = MinIOStorageService(
-                endpoint=minio_config.ENDPOINT,
-                access_key=minio_config.ACCESS_KEY,
-                secret_key=minio_config.SECRET_KEY,
-                bucket=minio_config.BUCKET,
-                secure=getattr(minio_config, "SECURE", False),
-            )
-            logger.info("Using MinIO storage service")
-            return _storage_service
-    except AttributeError:
-        pass
-
-    # 默认使用本地存储
-    _storage_service = LocalStorageService()
-    logger.info("Using local storage service")
+    minio_config = SETTINGS.MINIO
+    _storage_service = StorageService(
+        endpoint=minio_config.ENDPOINT,
+        access_key=minio_config.ACCESS_KEY,
+        secret_key=minio_config.SECRET_KEY,
+        bucket=minio_config.BUCKET,
+        secure=getattr(minio_config, "SECURE", False),
+    )
+    logger.info("Using MinIO storage service")
     return _storage_service
 
 
@@ -487,8 +435,6 @@ def reset_storage_service():
 
 __all__ = [
     "StorageService",
-    "LocalStorageService",
-    "MinIOStorageService",
     "get_storage_service",
     "reset_storage_service",
     "StorageError",

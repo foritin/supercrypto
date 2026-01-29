@@ -75,7 +75,7 @@ def deploy_stablecoins(deployer, chain_id: int, network, deployed: dict):
     network_name = get_current_network()
 
     # 仅在测试网络部署自有稳定币
-    if network_name not in ["local", "hardhat", "sepolia", "goerli"]:
+    if network_name not in ["hardhat", "sepolia", "goerli"]:
         print("⚠️  跳过: 自有稳定币仅部署到测试网络")
         return
 

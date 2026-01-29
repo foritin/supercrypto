@@ -58,7 +58,8 @@ function TestTableCell<TData>({
   column, 
   data 
 }: { 
-  column: ColumnDef<TData>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  column: ColumnDef<TData, any>
   data: TData[]
 }) {
   const table = useReactTable({

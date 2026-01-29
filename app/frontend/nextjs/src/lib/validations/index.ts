@@ -73,3 +73,43 @@ export {
   type BindingFormValues,
   type CreateAssetWizardFormValues,
 } from './create-asset-wizard'
+
+// KYC Wizard schemas
+export {
+  // Schemas
+  kycIdTypeEnum,
+  step1Schema,
+  step2Schema,
+  step3Schema,
+  step4Schema,
+  kycWizardSchema,
+  // Default values
+  step1DefaultValues,
+  step2DefaultValues,
+  step3DefaultValues,
+  step4DefaultValues,
+  kycWizardDefaultValues,
+  // Constants
+  KYC_ID_TYPE_NAMES,
+  KYC_MAX_FILE_SIZE,
+  KYC_MAX_FILE_SIZE_MB,
+  KYC_ACCEPTED_FILE_TYPES,
+  KYC_ACCEPTED_EXTENSIONS,
+  // Validation helpers
+  calculateAge,
+  validateStep1,
+  validateStep2,
+  validateStep3,
+  validateStep4,
+  validateKycWizard,
+  validateFileType,
+  validateFileSize as validateKycFileSize,
+  validateKycFile,
+  // Types
+  type KycIdType,
+  type Step1FormValues,
+  type Step2FormValues,
+  type Step3FormValues,
+  type Step4FormValues,
+  type KycWizardFormData,
+} from './kyc-wizard'

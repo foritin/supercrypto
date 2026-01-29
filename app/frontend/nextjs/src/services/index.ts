@@ -6,6 +6,9 @@ export {
   type KycStatusResponse,
   type KycFullResponse,
   type KycApplyRequest,
+  type KycDocumentType,
+  type KycUploadResponse,
+  uploadKycDocument,
 } from "./kyc";
 export {
   adminService,

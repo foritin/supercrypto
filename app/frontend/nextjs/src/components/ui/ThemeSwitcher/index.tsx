@@ -21,14 +21,12 @@ export function ThemeSwitcher() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <motion.button
+    <button
       onClick={toggleTheme}
       className="relative w-8 h-8 rounded-lg bg-white/5 border border-white/10
-                 hover:bg-white/10 transition-colors
+                 hover:bg-white/10 hover:scale-105 active:scale-95 transition-all
                  focus:outline-none focus:ring-2 focus:ring-[#00d4aa]/50
                  flex items-center justify-center"
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
       aria-label={`切换到${theme === 'dark' ? '浅色' : '深色'}模式`}
       title={`切换到${theme === 'dark' ? '浅色' : '深色'}模式`}
     >
@@ -43,6 +41,6 @@ export function ThemeSwitcher() {
           <Sun className="w-4 h-4 text-[#00d4aa]" strokeWidth={2} />
         )}
       </motion.div>
-    </motion.button>
+    </button>
   );
 }

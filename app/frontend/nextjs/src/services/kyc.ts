@@ -11,6 +11,28 @@
 import { api } from '@/services/api'
 import { PUBLIC_PATHS, USER_PATHS, ADMIN_PATHS, DEV_PATHS } from '@/constants/api-paths'
 
+// ============================================================================
+// KYC 文件上传类型定义
+// ============================================================================
+
+/**
+ * KYC 文档类型
+ * - id_front: 证件正面
+ * - id_back: 证件背面
+ * - selfie: 自拍照
+ */
+export type KycDocumentType = 'id_front' | 'id_back' | 'selfie'
+
+/**
+ * KYC 文件上传响应
+ */
+export interface KycUploadResponse {
+  /** 文档类型 */
+  document_type: KycDocumentType
+  /** 文件路径 (MinIO 对象名) */
+  file_path: string
+}
+
 /**
  * KYC Status enum
  */
@@ -99,6 +121,35 @@ export async function getKycStatus(walletAddress: string): Promise<KycStatusResp
 // ============================================================================
 // 用户接口
 // ============================================================================
+
+/**
+ * 上传 KYC 文档到 MinIO
+ * 参考 Asset Media 上传模式
+ *
+ * @param documentType - 文档类型: id_front (证件正面), id_back (证件背面), selfie (自拍照)
+ * @param file - 要上传的文件 (支持 JPG/PNG/PDF, 最大 10MB)
+ * @returns 上传响应，包含文件路径
+ *
+ * @example
+ * ```typescript
+ * const result = await uploadKycDocument('id_front', file)
+ * console.log(result.file_path) // kyc/0x742d35.../id_front_abc123.jpg
+ * ```
+ */
+export async function uploadKycDocument(
+  documentType: KycDocumentType,
+  file: File
+): Promise<KycUploadResponse> {
+  const formData = new FormData()
+  formData.append('document_type', documentType)
+  formData.append('file', file)
+
+  const response = await api.post<API.ResponseData<KycUploadResponse>>(
+    USER_PATHS.KYC_UPLOAD,
+    formData
+  )
+  return response.object_data as KycUploadResponse
+}
 
 /**
  * Apply for KYC (需要 JWT 认证)
@@ -201,6 +252,7 @@ export const kycService = {
   getStatus: getKycStatus,
 
   // 用户
+  uploadDocument: uploadKycDocument,
   apply: applyKyc,
 
   // 管理员

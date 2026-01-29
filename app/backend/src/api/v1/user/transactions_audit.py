@@ -19,10 +19,7 @@ from src.services.audit.transaction_service import (
     TransactionAuditService,
     transaction_audit_service,
 )
-from src.shared.schemas.enums.audit import (
-    TransactionAuditStatus,
-    TransactionAuditType,
-)
+from src.shared.schemas.enums.audit import TransactionAuditStatus, TransactionAuditType
 
 router = APIRouter()
 

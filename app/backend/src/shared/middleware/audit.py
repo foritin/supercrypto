@@ -21,10 +21,10 @@ logger = get_logger("audit.middleware")
 class AuditMiddleware(BaseHTTPMiddleware):
     """
     审计中间件
-    
+
     自动记录需要审计的 API 请求
     """
-    
+
     # 需要审计的路由配置
     # 格式: (method, path_pattern) -> (category, action)
     AUDIT_ROUTES: Dict[Tuple[str, str], Tuple[AuditCategory, AuditAction]] = {
@@ -32,26 +32,26 @@ class AuditMiddleware(BaseHTTPMiddleware):
         ("POST", r"/api/v1/public/auth/token"): (AuditCategory.AUTH, AuditAction.AUTH_LOGIN),
         ("POST", r"/api/v1/public/auth/logout"): (AuditCategory.AUTH, AuditAction.AUTH_LOGOUT),
         ("POST", r"/api/v1/public/auth/refresh"): (AuditCategory.AUTH, AuditAction.AUTH_REFRESH),
-        
+
         # KYC 管理 - 使用 /review 端点
         ("POST", r"/api/v1/admin/kyc/\d+/review"): (AuditCategory.KYC, AuditAction.KYC_REVIEW),
         ("POST", r"/api/v1/admin/kyc/\d+/retry-sync"): (AuditCategory.KYC, AuditAction.KYC_SYNC_RETRY),
-        
+
         # 账户管理
         ("POST", r"/api/v1/admin/accounts/\d+/block"): (AuditCategory.ACCOUNT, AuditAction.ACCOUNT_BLOCK),
         ("POST", r"/api/v1/admin/accounts/\d+/unblock"): (AuditCategory.ACCOUNT, AuditAction.ACCOUNT_UNBLOCK),
-        
+
         # 会话管理
         ("POST", r"/api/v1/admin/auth/sessions/[^/]+/revoke"): (AuditCategory.AUTH, AuditAction.USER_SESSION_REVOKE),
         ("DELETE", r"/api/v1/admin/auth/blacklist/[^/]+"): (AuditCategory.AUTH, AuditAction.USER_BLACKLIST_REMOVE),
-        
+
         # 合约管理
         ("POST", r"/api/v1/admin/contracts/register/prepare"): (AuditCategory.CONTRACT, AuditAction.CONTRACT_REGISTER),
         ("POST", r"/api/v1/admin/contracts/register/confirm"): (AuditCategory.CONTRACT, AuditAction.CONTRACT_REGISTER),
         ("POST", r"/api/v1/admin/contracts/unregister/prepare"): (AuditCategory.CONTRACT, AuditAction.CONTRACT_UNREGISTER),
         ("POST", r"/api/v1/admin/contracts/unregister/confirm"): (AuditCategory.CONTRACT, AuditAction.CONTRACT_UNREGISTER),
         ("POST", r"/api/v1/admin/contracts/provider/sync"): (AuditCategory.CONTRACT, AuditAction.CONTRACT_SYNC),
-        
+
         # 资产管理
         ("POST", r"/api/v1/admin/assets"): (AuditCategory.ASSET, AuditAction.ASSET_CREATE),
         ("PUT", r"/api/v1/admin/assets/\d+"): (AuditCategory.ASSET, AuditAction.ASSET_UPDATE),
@@ -59,15 +59,15 @@ class AuditMiddleware(BaseHTTPMiddleware):
         ("POST", r"/api/v1/admin/assets/\d+/price"): (AuditCategory.ASSET, AuditAction.ASSET_PRICE_UPDATE),
         ("POST", r"/api/v1/admin/assets/\d+/bind-project"): (AuditCategory.ASSET, AuditAction.ASSET_BIND_CONTRACT),
         ("DELETE", r"/api/v1/admin/assets/\d+/unbind"): (AuditCategory.ASSET, AuditAction.ASSET_UNBIND_CONTRACT),
-        
+
         # 权限管理
         ("POST", r"/api/v1/admin/permissions/grant"): (AuditCategory.PERMISSION, AuditAction.PERMISSION_GRANT),
         ("POST", r"/api/v1/admin/permissions/revoke"): (AuditCategory.PERMISSION, AuditAction.PERMISSION_REVOKE),
     }
-    
+
     # 编译正则表达式
     _compiled_routes = None
-    
+
     @classmethod
     def _get_compiled_routes(cls):
         """获取编译后的路由正则"""
@@ -82,10 +82,10 @@ class AuditMiddleware(BaseHTTPMiddleware):
         """中间件处理"""
         start_time = time.time()
         request_id = str(uuid.uuid4())
-        
+
         # 注入 request_id 到 request.state
         request.state.request_id = request_id
-        
+
         # 检查是否需要审计，如果是登录请求则缓存请求体
         audit_config = self._match_route(request.method, request.url.path)
         if audit_config:
@@ -99,17 +99,17 @@ class AuditMiddleware(BaseHTTPMiddleware):
                     request._body = body
                 except Exception:
                     pass
-        
+
         # 执行请求
         response = await call_next(request)
-        
+
         # 记录审计日志
         if audit_config:
             duration_ms = int((time.time() - start_time) * 1000)
             await self._log_audit(
                 request, response, audit_config, request_id, duration_ms
             )
-        
+
         return response
 
     def _match_route(
@@ -131,7 +131,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
     ) -> None:
         """记录审计日志"""
         category, action = audit_config
-        
+
         # 确定状态
         if response.status_code >= 500:
             status = AuditStatus.FAILED
@@ -139,18 +139,18 @@ class AuditMiddleware(BaseHTTPMiddleware):
             status = AuditStatus.FAILED
         else:
             status = AuditStatus.SUCCESS
-        
+
         # 获取操作者信息
         operator_id = None
         operator_address = None
         operator_type = None
-        
+
         if hasattr(request.state, "is_authenticated") and request.state.is_authenticated:
             operator_address = getattr(request.state, "wallet_address", None)
             # 尝试获取 operator_id (如果有的话)
             operator_id = getattr(request.state, "account_id", None)
             operator_type = "user"
-        
+
         # 对于登录操作，尝试从缓存的请求体中获取地址
         if not operator_address and action == AuditAction.AUTH_LOGIN:
             cached_body = getattr(request.state, "_cached_body", None)
@@ -161,26 +161,26 @@ class AuditMiddleware(BaseHTTPMiddleware):
                     operator_address = body_data.get("address", "").lower() if body_data.get("address") else None
                 except Exception:
                     pass
-        
+
         # 从路径中提取 target_id
         target_id = self._extract_target_id(request.url.path)
         target_type = self._get_target_type(category)
         target_address = self._extract_target_address(request.url.path)
-        
+
         # 获取 IP 地址
         ip_address = self._get_client_ip(request)
-        
+
         # 获取 User-Agent
         user_agent = request.headers.get("User-Agent", "")[:500]
-        
+
         # 生成描述
         description = self._generate_description(action, target_id, target_address)
-        
+
         # 异步记录审计日志
         try:
             # 延迟导入避免循环依赖
             from src.services.audit.service import audit_service
-            
+
             await audit_service.log_async(
                 category=category,
                 action=action,
@@ -209,16 +209,16 @@ class AuditMiddleware(BaseHTTPMiddleware):
         if forwarded_for:
             # 取第一个 IP
             return forwarded_for.split(",")[0].strip()
-        
+
         # 其次从 X-Real-IP 获取
         real_ip = request.headers.get("X-Real-IP")
         if real_ip:
             return real_ip
-        
+
         # 最后从 client.host 获取
         if request.client:
             return request.client.host
-        
+
         return "unknown"
 
     def _extract_target_id(self, path: str) -> Optional[int]:
@@ -251,8 +251,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
         return category_to_target.get(category)
 
     def _generate_description(
-        self, 
-        action: AuditAction, 
+        self,
+        action: AuditAction,
         target_id: Optional[int],
         target_address: Optional[str]
     ) -> str:
@@ -286,7 +286,7 @@ def add_audit_route(
 ) -> None:
     """
     动态添加审计路由
-    
+
     Args:
         method: HTTP 方法
         path_pattern: 路径正则模式

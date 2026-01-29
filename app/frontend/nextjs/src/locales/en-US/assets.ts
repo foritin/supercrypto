@@ -24,6 +24,7 @@ const assets = {
       pending: "Pending",
       closed: "Closed",
       paused: "Paused",
+      sold_out: "Sold Out",
     },
     // Asset types
     type: {
@@ -31,6 +32,7 @@ const assets = {
       bond: "Bond",
       commodity: "Commodity",
       equity: "Equity",
+      other: "Other",
     },
     // Detail page
     detail: {
@@ -59,6 +61,126 @@ const assets = {
       contract: "Contract Address",
       contractAddress: "Contract Address",
       viewDocuments: "View Documents",
+      backToAssets: "Back to Assets",
+      viewSmartContracts: "View Smart Contracts",
+      availableNow: "Available Now",
+    },
+    // Tabs
+    tabs: {
+      highlights: "Highlights",
+      investment: "Investment",
+      details: "Details",
+      blockchain: "Blockchain",
+    },
+    // Highlights section
+    highlights: {
+      title: "Property Highlights",
+      bedrooms: "Bedrooms",
+      bathrooms: "Bathrooms",
+      sqft: "Sq Ft",
+      sqm: "Sq M",
+      lotSize: "Lot Size",
+      yearBuilt: "Year Built",
+      yearRenovated: "Year Renovated",
+      propertyType: "Property Type",
+      stories: "Stories",
+      rentalStatus: "Rental Status",
+      monthlyRent: "Monthly Rent",
+      leaseEndDate: "Lease End Date",
+      amenities: "Amenities",
+      neighborhood: "Neighborhood",
+      schools: "Schools",
+      transit: "Transit",
+      shopping: "Shopping",
+      // Financial info
+      tokenType: "Token Type",
+      standardEquity: "Standard Equity",
+      expectedIncome: "Expected Income",
+      totalTokens: "Total Tokens",
+      // Property info
+      assetType: "Asset Type",
+      fullAddress: "Full Address",
+      symbol: "Symbol",
+      constructionYear: "Construction Year",
+      bedroomBath: "Bedroom/Bath",
+      beds: "Beds",
+      baths: "Baths",
+      rentalType: "Rental Type",
+      longTerm: "Long Term",
+      rented: "Rented?",
+      // Property types
+      propertyTypes: {
+        single_family: "Single Family",
+        multi_family: "Multi Family",
+        condo: "Condo",
+        commercial: "Commercial",
+      },
+      // Rental statuses
+      rentalStatuses: {
+        occupied: "Occupied",
+        vacant: "Vacant",
+        partial: "Partially Occupied",
+      },
+    },
+    // Financials section
+    financials: {
+      title: "Financial Details",
+      tokenPrice: "Token Price",
+      totalInvestment: "Total Investment",
+      apy3m: "3M APY",
+      apy6m: "6M APY",
+      apy12m: "12M APY",
+      minInvestment: "Min. Investment",
+      expectedReturn: "Expected Annual Return",
+    },
+    // Documents section
+    documents: {
+      title: "Related Documents",
+      valuation: "Valuation Report",
+      valuationTitle: "Valuation Report",
+      legal: "Legal Documents",
+      legalTitle: "Legal Documents",
+      financial: "Financial Report",
+      other: "Other Documents",
+      otherTitle: "Other Documents",
+      download: "Download",
+      noDocuments: "No documents available",
+      // Access restrictions
+      connectWalletRequired: "Connect Wallet to View",
+      connectWalletHint: "Please connect your wallet to access investment documents",
+      kycRequired: "Complete KYC to View",
+      kycHint: "Please complete identity verification to access investment documents",
+      goToKyc: "Complete KYC",
+    },
+    // About section
+    about: {
+      title: "About the Offering",
+      location: "Location",
+      defaultDescription: "This tokenized real-world asset offers investors an opportunity to participate in property ownership through blockchain technology. Each token represents a fractional ownership stake, providing exposure to rental income and potential property appreciation.",
+    },
+    // Blockchain section
+    blockchain: {
+      title: "Blockchain Information",
+      contractAddress: "Contract Address",
+      contractNotDeployed: "Contract not deployed yet",
+      documents: "Documents",
+      viewLegalDocuments: "View Legal Documents",
+    },
+    // Investment panel
+    invest: {
+      totalInvestment: "Total Investment",
+      subscribed: "Subscribed",
+      remaining: "Remaining",
+      funded: "Funded",
+      available: "Available",
+      expectedReturn: "Expected Annual Return",
+      tokenPrice: "Token Price",
+      subscribeNow: "Subscribe Now",
+      kycRequired: "KYC Required",
+      connectWallet: "Connect Wallet to Subscribe",
+      connectWalletHint: "Please connect your wallet to invest",
+      completeKyc: "Complete KYC",
+      toInvest: "to invest",
     },
     // Legacy flat structure (keep for compatibility)
     filterByStatus: "Filter by Status",

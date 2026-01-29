@@ -39,6 +39,34 @@ class MediaService:
     def __init__(self):
         self.storage = get_storage_service()
 
+    async def get_presigned_url(self, file_path: str, expires: int = 3600) -> str:
+        """
+        获取文件的预签名临时访问 URL
+        
+        Args:
+            file_path: 文件相对路径
+            expires: 过期时间（秒），默认 1 小时
+            
+        Returns:
+            预签名的临时访问 URL
+        """
+        return await self.storage.get_presigned_url(file_path, expires)
+
+    async def get_presigned_urls_batch(
+        self, file_paths: list[str], expires: int = 3600
+    ) -> dict[str, str]:
+        """
+        批量获取文件的预签名临时访问 URL（复用连接）
+        
+        Args:
+            file_paths: 文件相对路径列表
+            expires: 过期时间（秒），默认 1 小时
+            
+        Returns:
+            {原始路径: 预签名URL} 的字典
+        """
+        return await self.storage.get_presigned_urls_batch(file_paths, expires)
+
     async def upload_media(
         self,
         asset_id: int,
@@ -119,32 +147,180 @@ class MediaService:
         )
         return media
 
-    async def delete_media(self, asset_id: int, media_id: int) -> bool:
+    async def upload_media_batch(
+        self,
+        asset_id: int,
+        files: list[UploadFile],
+        media_type: MediaType,
+    ) -> list[tuple[bool, AssetMedia | None, str | None]]:
         """
-        删除媒体文件
+        批量上传媒体文件（复用连接）
 
         Args:
             asset_id: 资产 ID
-            media_id: 媒体 ID
+            files: 上传的文件列表
+            media_type: 媒体类型
 
         Returns:
-            是否删除成功
+            列表，每个元素为 (success, media, error_msg)
         """
-        media = await AssetMedia.filter(id=media_id, asset_id=asset_id).first()
-        if not media:
-            raise MediaServiceError(f"媒体 {media_id} 不存在或不属于资产 {asset_id}")
+        if not files:
+            return []
 
-        # 从存储删除文件
-        try:
-            await self.storage.delete_file(media.url)
-        except Exception as e:
-            logger.warning(f"删除存储文件失败（继续删除数据库记录）: {e}")
+        # 检查资产是否存在
+        asset = await Asset.filter(id=asset_id).first()
+        if not asset:
+            raise MediaServiceError(f"资产 {asset_id} 不存在")
 
-        # 删除数据库记录
-        await media.delete()
+        # 获取当前最大排序号
+        max_order_record = (
+            await AssetMedia.filter(asset_id=asset_id, media_type=media_type)
+            .order_by("-sort_order")
+            .first()
+        )
+        next_order = (max_order_record.sort_order + 1) if max_order_record else 0
 
-        logger.info(f"媒体删除成功: asset_id={asset_id}, media_id={media_id}")
-        return True
+        # 检查是否需要设置主图（仅封面图）
+        existing_cover_count = 0
+        if media_type == MediaType.COVER:
+            existing_cover_count = await AssetMedia.filter(
+                asset_id=asset_id, media_type=MediaType.COVER
+            ).count()
+
+        results: list[tuple[bool, AssetMedia | None, str | None]] = []
+
+        # 预处理文件：验证并读取内容
+        prepared_files: list[tuple[UploadFile, bytes, int]] = []
+        for file in files:
+            try:
+                # 验证文件
+                file_size, _ = self.storage.validate_file(
+                    file, media_type.value, file.content_type
+                )
+                # 读取内容
+                content = await file.read()
+                prepared_files.append((file, content, file_size))
+            except (FileSizeExceeded, InvalidFileType) as e:
+                results.append((False, None, str(e)))
+
+        if not prepared_files:
+            return results
+
+        # 使用单个连接上传所有文件
+        from src.shared.common.adapters import get_async_minio_adapter
+
+        async with get_async_minio_adapter() as minio:
+            for file, content, file_size in prepared_files:
+                try:
+                    # 生成文件路径
+                    file_path = self.storage.generate_file_path(
+                        asset_id, media_type.value, file.filename
+                    )
+
+                    # 上传到 MinIO
+                    await minio.put_object(self.storage.bucket, file_path, content)
+                    url = self.storage.get_file_url(file_path)
+
+                    logger.info(f"File uploaded to MinIO: {file_path} ({file_size} bytes)")
+
+                    # 确定是否为主图
+                    is_primary = False
+                    if media_type == MediaType.COVER and existing_cover_count == 0:
+                        is_primary = True
+                        existing_cover_count += 1
+
+                    # 创建媒体记录
+                    media = await AssetMedia.create(
+                        asset_id=asset_id,
+                        media_type=media_type,
+                        title=file.filename,
+                        url=url,
+                        file_name=file.filename,
+                        file_size=file.size,
+                        mime_type=file.content_type,
+                        sort_order=next_order,
+                        is_primary=is_primary,
+                    )
+                    next_order += 1
+
+                    logger.info(
+                        f"媒体上传成功: asset_id={asset_id}, media_id={media.id}, type={media_type.value}"
+                    )
+                    results.append((True, media, None))
+
+                except Exception as e:
+                    logger.error(f"文件上传失败: {e}")
+                    results.append((False, None, str(e)))
+
+        return results
+
+    async def delete_media_batch(
+        self, asset_id: int, media_ids: list[int]
+    ) -> list[tuple[int, bool, str | None]]:
+        """
+        批量删除媒体文件（复用连接）
+
+        Args:
+            asset_id: 资产 ID
+            media_ids: 媒体 ID 列表
+
+        Returns:
+            列表，每个元素为 (media_id, success, error_msg)
+        """
+        if not media_ids:
+            return []
+
+        # 查询所有媒体记录
+        media_list = await AssetMedia.filter(
+            id__in=media_ids, asset_id=asset_id
+        ).all()
+        media_map = {m.id: m for m in media_list}
+
+        results: list[tuple[int, bool, str | None]] = []
+
+        # 收集需要删除的文件路径
+        files_to_delete: list[tuple[int, str, AssetMedia]] = []
+        for media_id in media_ids:
+            if media_id not in media_map:
+                results.append(
+                    (media_id, False, f"媒体 {media_id} 不存在或不属于资产 {asset_id}")
+                )
+            else:
+                media = media_map[media_id]
+                if media.url:
+                    files_to_delete.append((media_id, media.url, media))
+                else:
+                    # 没有 URL 的直接删除数据库记录
+                    await media.delete()
+                    results.append((media_id, True, None))
+                    logger.info(f"媒体删除成功: asset_id={asset_id}, media_id={media_id}")
+
+        if not files_to_delete:
+            return results
+
+        # 使用单个连接删除所有文件
+        from src.shared.common.adapters import get_async_minio_adapter
+
+        async with get_async_minio_adapter() as minio:
+            for media_id, file_path, media in files_to_delete:
+                try:
+                    # 移除开头的斜杠
+                    object_path = file_path[1:] if file_path.startswith("/") else file_path
+                    await minio.remove_object(self.storage.bucket, object_path)
+                    logger.info(f"File deleted from MinIO: {object_path}")
+
+                    # 删除数据库记录
+                    await media.delete()
+                    results.append((media_id, True, None))
+                    logger.info(f"媒体删除成功: asset_id={asset_id}, media_id={media_id}")
+
+                except Exception as e:
+                    logger.warning(f"删除存储文件失败: {e}，继续删除数据库记录")
+                    # 即使存储删除失败，也删除数据库记录
+                    await media.delete()
+                    results.append((media_id, True, None))
+
+        return results
 
     async def update_media(
         self,

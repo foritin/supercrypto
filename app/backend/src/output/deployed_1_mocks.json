@@ -1,6 +1,6 @@
 {
   "step": "1_mocks",
-  "network": "local",
+  "network": "hardhat",
   "deployer": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
   "contracts": {
     "MockUSDT": "0xb09da8a5B236fE0295A345035287e80bb0008290",

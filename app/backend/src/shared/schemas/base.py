@@ -5,7 +5,7 @@
 from datetime import datetime
 from typing import Any, Generic, Optional, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # 从 mixins 导入，保持向后兼容
 from .mixins import IDMixin, TimestampMixin
@@ -28,8 +28,8 @@ class ApiResponse(BaseModel, Generic[T]):
         default_factory=datetime.utcnow, description="响应时间戳(UTC)"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "code": 0,
                 "message": "success",
@@ -37,6 +37,7 @@ class ApiResponse(BaseModel, Generic[T]):
                 "timestamp": "2025-11-16T10:00:00Z",
             }
         }
+    )
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
@@ -63,8 +64,8 @@ class PaginatedResponse(BaseModel, Generic[T]):
         """是否有上一页"""
         return self.page > 1
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "items": [{"id": 1}, {"id": 2}],
                 "total": 100,
@@ -73,6 +74,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
                 "total_pages": 10,
             }
         }
+    )
 
 
 class ErrorResponse(BaseModel):
@@ -89,8 +91,8 @@ class ErrorResponse(BaseModel):
         default_factory=datetime.utcnow, description="时间戳(UTC)"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "code": 400,
                 "message": "Bad Request",
@@ -98,6 +100,7 @@ class ErrorResponse(BaseModel):
                 "timestamp": "2025-11-16T10:00:00Z",
             }
         }
+    )
 
 
 # 保持向后兼容的导出

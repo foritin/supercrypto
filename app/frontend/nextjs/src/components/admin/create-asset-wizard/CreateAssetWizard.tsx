@@ -113,8 +113,7 @@ function WizardContent({
           await assetService.uploadMedia(
             newAsset.id,
             coverFile[0].originFileObj,
-            'cover',
-            'Cover Image'
+            'cover'
           )
         } catch (e) {
           console.error('Cover upload failed:', e)
@@ -129,8 +128,7 @@ function WizardContent({
             await assetService.uploadMedia(
               newAsset.id,
               file.originFileObj,
-              'gallery',
-              file.name
+              'gallery'
             )
           } catch (e) {
             console.error('Gallery upload failed:', e)

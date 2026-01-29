@@ -357,6 +357,7 @@ const admin = {
       approve: "通过",
       reject: "拒绝",
       viewReason: "查看原因",
+      viewDetail: "详情",
       allStatus: "全部状态",
       filterByStatus: "按状态筛选",
       totalRecords: "共 {{total}} 条记录",
@@ -413,6 +414,8 @@ const admin = {
       bindDescription:
         '选择一个项目，将该项目下的所有合约绑定到资产 "{{asset}}"',
       selectProject: "选择项目",
+      loadingProjects: "加载项目中...",
+      noProjectsAvailable: "暂无可用项目",
       contracts: "个合约",
       contractsToBindTitle: "将绑定以下合约",
       bindSuccess: "已成功绑定 {{project}} 项目的 {{count}} 个合约",
@@ -597,9 +600,6 @@ const admin = {
       refresh: "刷新",
       network: "网络",
       name: "合约名称",
-      status: {
-        not_deployed: "未部署",
-      },
       deployed: "已部署",
       notDeployed: "未部署",
       deployStep: "部署阶段",
@@ -631,6 +631,7 @@ const admin = {
         address: "地址",
         type: "类型",
         dependencies: "依赖",
+        optionalDependencies: "可选依赖",
         deployedAt: "部署时间",
         listView: "列表视图",
         treeView: "树形视图",
@@ -638,6 +639,8 @@ const admin = {
         viewDetails: "查看详情",
         actions: "操作",
         project: "项目",
+        projectContracts: "项目合约",
+        noData: "暂无合约数据",
       },
       // 合约分区
       globalContracts: {
@@ -651,6 +654,7 @@ const admin = {
       // 详情面板
       detail: {
         title: "合约详情",
+        description: "合约详情面板",
         needsUpdateWarning: "依赖需要更新",
         needsUpdateDesc: "此合约的某个依赖合约已重新部署，需要更新绑定地址。",
         notRegisteredWarning: "未注册",
@@ -667,6 +671,7 @@ const admin = {
         deployedAt: "部署时间",
         updateDependency: "更新依赖",
         close: "关闭",
+        primaryContract: "主合约",
       },
       // 注册相关
       register: {
@@ -676,6 +681,7 @@ const admin = {
         confirming: "等待交易确认...",
         success: "{{name}} 注册成功! TX: {{tx}}",
         failed: "注册失败: {{error}}",
+        rejected: "用户取消了交易签名",
         switchingNetwork: "正在切换到 Hardhat 网络...",
         switchRejected: "网络切换被拒绝，请手动切换到 Hardhat 网络。",
         switchFailed: "网络切换失败，请在 MetaMask 中手动切换到 Hardhat 网络。",
@@ -698,8 +704,24 @@ const admin = {
         confirming: "等待交易确认...",
         success: "{{name}} 解除注册成功! TX: {{tx}}",
         failed: "解除注册失败: {{error}}",
+        rejected: "用户取消了交易签名",
         providerNotDeployed: "AddressProvider 合约未部署",
         ownerReadFailed: "无法读取 owner",
+      },
+      // 主合约相关
+      primary: {
+        setButton: "设为主合约",
+        unsetButton: "取消主合约",
+        setting: "设置中...",
+        unsetting: "取消中...",
+        confirmSetTitle: "确认设为主合约",
+        confirmSetDesc: "您即将将合约 {{name}} 设为项目 {{project}} 的主合约。每个项目只能有一个主合约。",
+        confirmSet: "确认设置",
+        confirmUnsetTitle: "确认取消主合约",
+        confirmUnsetDesc: "您即将取消合约 {{name}} 的主合约标记。取消后，项目 {{project}} 将没有主合约。",
+        confirmUnset: "确认取消",
+        success: "主合约更新成功",
+        failed: "主合约更新失败: {{error}}",
       },
       // 更新弹窗
       updateModal: {
@@ -746,7 +768,7 @@ const admin = {
         "RWATokenSTO 重新部署后，需要更新 Subscription 和 Staking 的 setRWAToken",
       platformTokenRedeployed:
         "PlatformToken 重新部署后，需要更新 Staking 和 LiquidityMining 的 setPlatformToken",
-      usdtRedeployed: "MockUSDT 重新部署后，需要更新 Subscription 的 setUSDT",
+      usdtRedeployed: "USDT 重新部署后，需要更新 Subscription 的 setUSDT",
       // 筛选器
       filters: {
         searchPlaceholder: "搜索合约名称",
@@ -764,8 +786,8 @@ const admin = {
         commonType: "共享合约",
         mockType: "模拟合约",
         reset: "重置筛选",
-        showDeleted: "显示已解绑",
-        showDeletedTooltip: "显示已从 Provider 解除注册的合约",
+        showNotRegistered: "显示未注册",
+        showNotRegisteredTooltip: "显示尚未注册到 Provider 的合约",
       },
       // 状态（纯 Provider 模式）
       status: {
@@ -782,6 +804,7 @@ const admin = {
         unknown: "未知",
         registered: "已注册",
         ready: "就绪",
+        optional: "可选",
         missingDeps: "缺少依赖",
         // 兼容旧版
         deployedAndBinded: "已部署且已注册",
@@ -821,20 +844,100 @@ const admin = {
         copied: "已复制",
         synced: "已同步",
       },
-      // 表格
-      table: {
-        name: "合约名称",
-        address: "地址",
-        dependencies: "依赖",
-        deployedAt: "部署时间",
-        listView: "列表视图",
-        treeView: "树形视图",
-        total: "共",
-        viewDetails: "查看详情",
-        actions: "操作",
-        project: "项目",
-        projectContracts: "项目合约",
+      // 项目就绪状态
+      projectReadiness: {
+        title: "项目状态",
+        ready: "就绪",
+        partiallyReady: "部分就绪",
+        notReady: "未就绪",
+        canBindAsset: "可绑定 Asset",
+        boundToAsset: "已绑定",
+        // 就绪条件
+        conditions: {
+          allRegistered: "所有合约已注册",
+          allRegisteredNo: "部分合约未注册",
+          noMissingDeps: "依赖完整",
+          noMissingDepsNo: "存在缺失依赖",
+          hasPrimary: "已设置主合约",
+          hasPrimaryNo: "未设置主合约",
+        },
+        // 提示
+        tooltip: {
+          ready: "项目已就绪，可以绑定到 Asset",
+          partiallyReady: "项目部分就绪，请完成以下条件",
+          notReady: "项目未就绪，请完成以下条件",
+          boundAsset: "已绑定到资产「{{assetName}}」",
+          canBind: "项目已就绪，可以绑定到 Asset",
+        },
       },
+    },
+    // 媒体管理
+    media: {
+      title: "媒体管理",
+      // 媒体类型
+      types: {
+        cover: "封面图",
+        gallery: "相册",
+        valuation: "估值报告",
+        legal: "法律文件",
+        financial: "财务文件",
+      },
+      // 上传区域
+      upload: {
+        dragOrClick: "点击或拖拽文件到此区域上传",
+        dragOrClickMultiple: "点击或拖拽文件到此区域上传（支持多选）",
+        uploading: "上传中...",
+        support: "支持: {{accept}} | 最大: {{size}}MB",
+        remaining: "还可上传 {{count}} 个",
+      },
+      // 操作
+      actions: {
+        setPrimary: "设为主图",
+        delete: "删除",
+        download: "下载",
+        close: "关闭",
+      },
+      // 状态
+      status: {
+        primary: "主图",
+        unnamed: "未命名",
+      },
+      // 消息
+      messages: {
+        loadFailed: "加载媒体列表失败",
+        uploadSuccess: "上传成功",
+        uploadFailed: "上传失败",
+        deleteSuccess: "删除成功",
+        deleteFailed: "删除失败",
+        setPrimarySuccess: "已设为主图",
+        setPrimaryFailed: "设置失败",
+        fileSizeExceeded: "文件大小超过限制 ({{size}}MB)",
+        maxCountReached: "已达到最大数量 {{count}} 个",
+        uploadBatchSuccess: "成功上传 {{count}} 个文件",
+        uploadBatchFailed: "{{count}} 个文件上传失败",
+        deleteBatchSuccess: "成功删除 {{count}} 个文件",
+        deleteBatchFailed: "{{count}} 个文件删除失败",
+      },
+      // 批量操作
+      batch: {
+        selectMode: "批量选择",
+        selectAll: "全选",
+        deselectAll: "取消全选",
+        selected: "已选 {{count}} 项",
+        cancel: "取消",
+        deleteSelected: "删除选中 ({{count}})",
+      },
+      // 确认对话框
+      confirm: {
+        deleteTitle: "确定删除此媒体文件？",
+        deleteDescription: "此操作无法撤销，文件将被永久删除。",
+        deleteBatchTitle: "确定删除选中的媒体文件？",
+        deleteBatchDescription: "将删除 {{count}} 个文件，此操作无法撤销。",
+        cancel: "取消",
+        delete: "删除",
+      },
+      // 空状态
+      empty: "暂无媒体文件",
     },
   },
 };

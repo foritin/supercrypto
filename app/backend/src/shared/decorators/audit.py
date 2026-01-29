@@ -25,9 +25,9 @@ def audit_log(
 ):
     """
     审计日志装饰器
-    
+
     用于在服务方法上声明式添加审计日志记录
-    
+
     Args:
         category: 审计类别
         action: 审计操作
@@ -35,7 +35,7 @@ def audit_log(
         capture_args: 要捕获的参数名列表
         capture_result: 是否捕获返回值
         async_log: 是否异步记录（不阻塞主业务）
-    
+
     Example:
         @audit_log(
             category=AuditCategory.KYC,
@@ -55,31 +55,31 @@ def audit_log(
             result = None
             status = AuditStatus.SUCCESS
             error_message = None
-            
+
             # 捕获参数
             if capture_args:
                 old_value = {}
                 for arg_name in capture_args:
                     if arg_name in kwargs:
                         old_value[arg_name] = _serialize_value(kwargs[arg_name])
-            
+
             try:
                 result = await func(*args, **kwargs)
                 return result
-                
+
             except Exception as e:
                 status = AuditStatus.FAILED
                 error_message = str(e)
                 raise
-                
+
             finally:
                 duration_ms = int((time.time() - start_time) * 1000)
-                
+
                 # 准备新值
                 new_value = None
                 if capture_result and result is not None:
                     new_value = _serialize_value(result)
-                
+
                 # 尝试从参数中提取 target_id
                 target_id = None
                 if capture_args:
@@ -88,13 +88,13 @@ def audit_log(
                         if id_name in kwargs:
                             target_id = kwargs[id_name]
                             break
-                
+
                 # 尝试从 self 获取 operator 信息
                 operator_id = None
                 operator_address = None
                 request_id = None
                 ip_address = None
-                
+
                 # 如果第一个参数是 self，尝试获取 request 信息
                 if args and hasattr(args[0], "request"):
                     request = args[0].request
@@ -104,7 +104,7 @@ def audit_log(
                         request_id = getattr(request.state, "request_id", None)
                     if hasattr(request, "client") and request.client:
                         ip_address = request.client.host
-                
+
                 # 记录审计日志
                 await _log_audit(
                     category=category,
@@ -122,7 +122,7 @@ def audit_log(
                     ip_address=ip_address,
                     async_log=async_log,
                 )
-        
+
         @wraps(func)
         def sync_wrapper(*args, **kwargs) -> Any:
             # 同步函数不支持审计装饰器
@@ -130,13 +130,13 @@ def audit_log(
                 f"audit_log decorator on sync function {func.__name__} is not supported"
             )
             return func(*args, **kwargs)
-        
+
         # 根据函数类型返回对应的 wrapper
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         else:
             return sync_wrapper
-    
+
     return decorator
 
 
@@ -160,7 +160,7 @@ async def _log_audit(
     try:
         # 延迟导入避免循环依赖
         from src.services.audit.service import audit_service
-        
+
         if async_log:
             await audit_service.log_async(
                 category=category,
@@ -201,26 +201,26 @@ def _serialize_value(value: Any) -> Any:
     """序列化值为可 JSON 化的格式"""
     if value is None:
         return None
-    
+
     # 基本类型直接返回
     if isinstance(value, (str, int, float, bool)):
         return value
-    
+
     # 列表
     if isinstance(value, list):
         return [_serialize_value(v) for v in value]
-    
+
     # 字典
     if isinstance(value, dict):
         return {k: _serialize_value(v) for k, v in value.items()}
-    
+
     # Pydantic 模型
     if hasattr(value, "model_dump"):
         return value.model_dump()
-    
+
     # 有 dict 方法的对象
     if hasattr(value, "dict"):
         return value.dict()
-    
+
     # 其他对象转字符串
     return str(value)

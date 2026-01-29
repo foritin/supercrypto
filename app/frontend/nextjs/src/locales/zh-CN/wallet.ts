@@ -27,6 +27,26 @@ const wallet = {
       signRejected: "签名被拒绝，请签名以完成登录",
       loginFailed: "登录失败，请重试",
     },
+    // 账户卡片 Modal
+    accountModal: {
+      kycVerified: "KYC ✓",
+      kycPending: "KYC 待验证",
+      clickToViewDetails: "点击查看详情",
+      authenticated: "已认证",
+      notAuthenticated: "未认证",
+      completeKycToInvest: "完成 KYC 解锁投资",
+      detailsTitle: "详细信息",
+      ens: "ENS",
+      walletLabel: "钱包",
+      networkLabel: "网络",
+      txCount: "交易次数",
+      connectedAt: "连接时间",
+      fullAddress: "完整地址",
+      disconnectConfirmTitle: "确认断开连接？",
+      disconnectConfirmDesc: "断开后需要重新连接并签名登录才能继续使用。",
+      cancel: "取消",
+      confirmDisconnect: "确认断开",
+    },
   },
   metamask: {
     install: {

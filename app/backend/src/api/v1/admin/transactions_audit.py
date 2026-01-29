@@ -9,15 +9,11 @@ from typing import Optional
 from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, Query
 
-from src.services.audit.schemas import TransactionStats
 from src.services.audit.transaction_service import (
     TransactionAuditService,
     transaction_audit_service,
 )
-from src.shared.schemas.enums.audit import (
-    TransactionAuditStatus,
-    TransactionAuditType,
-)
+from src.shared.schemas.enums.audit import TransactionAuditStatus, TransactionAuditType
 from src.shared.security import require_admin
 
 router = APIRouter()
@@ -54,7 +50,7 @@ async def query_transactions(
 ):
     """
     查询交易审计记录
-    
+
     支持的过滤条件：
     - chain_id: 链ID
     - from_address: 发送方地址
@@ -78,11 +74,11 @@ async def query_transactions(
         page=page,
         page_size=page_size,
     )
-    
+
     pagination = PaginationInfo(
         total=total, page=page, page_size=page_size, total_pages=total_pages
     )
-    
+
     return create_success_response(
         list_data=txs,
         pagination=pagination,
@@ -103,7 +99,7 @@ async def get_transaction_stats(
 ):
     """
     获取交易统计数据
-    
+
     返回：
     - total_transactions: 总交易数
     - pending_count: 待确认数
@@ -135,7 +131,7 @@ async def get_pending_transactions(
 ):
     """
     获取待确认交易列表
-    
+
     用于监控和处理待确认的链上交易
     """
     txs = await service.get_pending_transactions(chain_id=chain_id)
@@ -154,7 +150,7 @@ async def get_transaction(
 ):
     """
     获取交易详情
-    
+
     Args:
         tx_hash: 交易哈希
     """

@@ -357,6 +357,7 @@ const admin = {
       approve: "Approve",
       reject: "Reject",
       viewReason: "View Reason",
+      viewDetail: "Details",
       allStatus: "All Status",
       filterByStatus: "Filter by Status",
       totalRecords: "Total {{total}} records",
@@ -412,6 +413,8 @@ const admin = {
       bindContractsTitle: "Bind Project Contracts",
       bindDescription: "Select a project to bind all its contracts to asset \"{{asset}}\"",
       selectProject: "Select Project",
+      loadingProjects: "Loading projects...",
+      noProjectsAvailable: "No projects available",
       contracts: "contracts",
       contractsToBindTitle: "Contracts to be bound",
       bindSuccess: "Successfully bound {{count}} contracts from {{project}} project",
@@ -632,6 +635,7 @@ const admin = {
         address: "Address",
         type: "Type",
         dependencies: "Dependencies",
+        optionalDependencies: "Optional Deps",
         deployedAt: "Deployed At",
         listView: "List View",
         treeView: "Tree View",
@@ -639,6 +643,8 @@ const admin = {
         viewDetails: "View Details",
         actions: "Actions",
         project: "Project",
+        projectContracts: "Project Contracts",
+        noData: "No contract data",
       },
       // Contract sections
       globalContracts: {
@@ -652,6 +658,7 @@ const admin = {
       // Detail panel
       detail: {
         title: "Contract Details",
+        description: "Contract detail panel",
         needsUpdateWarning: "Dependency Needs Update",
         needsUpdateDesc: "One of the contract's dependencies has been redeployed. Please update the binding address.",
         notRegisteredWarning: "Not Registered",
@@ -668,6 +675,7 @@ const admin = {
         deployedAt: "Deployed At",
         updateDependency: "Update Dependency",
         close: "Close",
+        primaryContract: "Primary",
       },
       // Register actions
       register: {
@@ -677,6 +685,7 @@ const admin = {
         confirming: "Waiting for transaction confirmation...",
         success: "{{name}} registered successfully! TX: {{tx}}",
         failed: "Registration failed: {{error}}",
+        rejected: "User rejected the transaction",
         switchingNetwork: "Switching to Hardhat network...",
         switchRejected: "Network switch rejected. Please switch to Hardhat network manually.",
         switchFailed: "Failed to switch network. Please switch to Hardhat network manually in MetaMask.",
@@ -699,8 +708,24 @@ const admin = {
         confirming: "Waiting for transaction confirmation...",
         success: "{{name}} unregistered successfully! TX: {{tx}}",
         failed: "Unregistration failed: {{error}}",
+        rejected: "User rejected the transaction",
         providerNotDeployed: "AddressProvider contract not deployed",
         ownerReadFailed: "Failed to read owner",
+      },
+      // Primary contract actions
+      primary: {
+        setButton: "Set as Primary",
+        unsetButton: "Unset Primary",
+        setting: "Setting...",
+        unsetting: "Unsetting...",
+        confirmSetTitle: "Confirm Set as Primary",
+        confirmSetDesc: "You are about to set contract {{name}} as the primary contract for project {{project}}. Each project can only have one primary contract.",
+        confirmSet: "Confirm",
+        confirmUnsetTitle: "Confirm Unset Primary",
+        confirmUnsetDesc: "You are about to unset contract {{name}} as the primary contract. After this, project {{project}} will have no primary contract.",
+        confirmUnset: "Confirm",
+        success: "Primary contract updated successfully",
+        failed: "Failed to update primary contract: {{error}}",
       },
       // Update modal
       updateModal: {
@@ -744,7 +769,7 @@ const admin = {
       kycManagerRedeployed: "If KYCManager is redeployed, all dependent contracts need to call setKYCManager",
       rwaTokenRedeployed: "If RWATokenSTO is redeployed, update Subscription and Staking's setRWAToken",
       platformTokenRedeployed: "If PlatformToken is redeployed, update Staking and LiquidityMining's setPlatformToken",
-      usdtRedeployed: "If MockUSDT is redeployed, update Subscription's setUSDT",
+      usdtRedeployed: "If USDT is redeployed, update Subscription's setUSDT",
       // Filters
       filters: {
         searchPlaceholder: "Search contract name",
@@ -762,8 +787,8 @@ const admin = {
         commonType: "Common",
         mockType: "Mock",
         reset: "Reset Filters",
-        showDeleted: "Show Unregistered",
-        showDeletedTooltip: "Show contracts that have been unregistered from Provider",
+        showNotRegistered: "Show Not Registered",
+        showNotRegisteredTooltip: "Show contracts that have not been registered to Provider",
       },
       // Status (Pure Provider Mode)
       status: {
@@ -780,6 +805,7 @@ const admin = {
         unknown: "Unknown",
         registered: "Registered",
         ready: "Ready",
+        optional: "Optional",
         missingDeps: "Missing Dependencies",
         // Legacy aliases
         deployedAndBinded: "Deployed & Binded",
@@ -819,6 +845,100 @@ const admin = {
         copied: "Copied",
         synced: "Synced",
       },
+      // Project Readiness Status
+      projectReadiness: {
+        title: "Project Status",
+        ready: "Ready",
+        partiallyReady: "Partially Ready",
+        notReady: "Not Ready",
+        canBindAsset: "Can Bind Asset",
+        boundToAsset: "Bound",
+        // Readiness conditions
+        conditions: {
+          allRegistered: "All contracts registered",
+          allRegisteredNo: "Some contracts not registered",
+          noMissingDeps: "Dependencies complete",
+          noMissingDepsNo: "Missing dependencies",
+          hasPrimary: "Primary contract set",
+          hasPrimaryNo: "No primary contract",
+        },
+        // Tooltips
+        tooltip: {
+          ready: "Project is ready and can be bound to an Asset",
+          partiallyReady: "Project is partially ready, please complete the following conditions",
+          notReady: "Project is not ready, please complete the following conditions",
+          boundAsset: "Bound to asset \"{{assetName}}\"",
+          canBind: "Project is ready and can be bound to an Asset",
+        },
+      },
+    },
+    // Media Management
+    media: {
+      title: "Media Management",
+      // Media types
+      types: {
+        cover: "Cover Image",
+        gallery: "Gallery",
+        valuation: "Valuation Report",
+        legal: "Legal Documents",
+        financial: "Financial Documents",
+      },
+      // Upload area
+      upload: {
+        dragOrClick: "Click or drag files to upload",
+        dragOrClickMultiple: "Click or drag files to upload (multiple selection supported)",
+        uploading: "Uploading...",
+        support: "Supports: {{accept}} | Max: {{size}}MB",
+        remaining: "{{count}} remaining",
+      },
+      // Actions
+      actions: {
+        setPrimary: "Set as Primary",
+        delete: "Delete",
+        download: "Download",
+        close: "Close",
+      },
+      // Status
+      status: {
+        primary: "Primary",
+        unnamed: "Unnamed",
+      },
+      // Messages
+      messages: {
+        loadFailed: "Failed to load media list",
+        uploadSuccess: "Upload successful",
+        uploadFailed: "Upload failed",
+        deleteSuccess: "Delete successful",
+        deleteFailed: "Delete failed",
+        setPrimarySuccess: "Set as primary",
+        setPrimaryFailed: "Failed to set primary",
+        fileSizeExceeded: "File size exceeds limit ({{size}}MB)",
+        maxCountReached: "Maximum {{count}} files reached",
+        uploadBatchSuccess: "Successfully uploaded {{count}} files",
+        uploadBatchFailed: "{{count}} files failed to upload",
+        deleteBatchSuccess: "Successfully deleted {{count}} files",
+        deleteBatchFailed: "{{count}} files failed to delete",
+      },
+      // Batch operations
+      batch: {
+        selectMode: "Select",
+        selectAll: "Select All",
+        deselectAll: "Deselect All",
+        selected: "{{count}} selected",
+        cancel: "Cancel",
+        deleteSelected: "Delete Selected ({{count}})",
+      },
+      // Confirm dialog
+      confirm: {
+        deleteTitle: "Delete this media file?",
+        deleteDescription: "This action cannot be undone. The file will be permanently deleted.",
+        deleteBatchTitle: "Delete selected media files?",
+        deleteBatchDescription: "{{count}} files will be deleted. This action cannot be undone.",
+        cancel: "Cancel",
+        delete: "Delete",
+      },
+      // Empty state
+      empty: "No media files",
     },
   },
 }

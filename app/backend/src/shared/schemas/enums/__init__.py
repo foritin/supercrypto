@@ -31,7 +31,10 @@ from .contract import (
     DependencyType,
     ProjectReadiness,
 )
-from .kyc import IdType, KycStatus, OnChainSyncStatus, WalletType
+
+# 错误码
+from .error_codes import ErrorCode
+from .kyc import IdType, KycStatus, OnChainSyncStatus
 
 # 质押相关
 from .staking import StakingPeriod, StakingStatus
@@ -47,7 +50,6 @@ __all__ = [
     "KycStatus",
     "OnChainSyncStatus",
     "IdType",
-    "WalletType",
     # Asset
     "AssetStatus",
     "AssetType",
@@ -80,4 +82,6 @@ __all__ = [
     "DependencyType",
     "ContractRegistryStatus",
     "ProjectReadiness",
+    # Error Codes
+    "ErrorCode",
 ]

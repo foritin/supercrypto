@@ -18,6 +18,8 @@ interface UseTypewriterOptions {
   loop?: boolean;
   /** 是否启用，默认 true */
   enabled?: boolean;
+  /** 打字速度（毫秒/字符），默认 50 */
+  typeSpeed?: number;
 }
 
 export const useTypewriter = (
@@ -77,7 +79,8 @@ export const useTypewriterOnce = (
   text: string,
   options: Omit<UseTypewriterOptions, 'loop'> = {}
 ) => {
-  const { typeSpeed = 50, enabled = true } = options;
+  const typeSpeed = options.typeSpeed ?? 50;
+  const enabled = options.enabled ?? true;
   const [displayText, setDisplayText] = useState('');
   const [isComplete, setIsComplete] = useState(false);
 

@@ -1,30 +1,32 @@
 """
 KYC 认证模型
+
+重构说明 (2026-01-29):
+- 表名从 user_kyc 改为 account_kyc
+- 字段 wallet_address 改为 address (与 Account 模型保持一致)
+- 唯一约束从 wallet_address 改为 (address, network) 组合
 """
 
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-from src.shared.schemas.enums import IdType, KycStatus, OnChainSyncStatus, WalletType
+from src.shared.schemas.enums import IdType, KycStatus, NetWork, OnChainSyncStatus
 
 
-class UserKyc(AbstractModel, TimestampMixin):
-    """用户 KYC 认证表"""
+class AccountKyc(AbstractModel, TimestampMixin):
+    """账户 KYC 认证表"""
 
-    wallet_address = fields.CharField(
-        max_length=42, unique=True, description="钱包地址 (小写)"
+    address = fields.CharField(
+        max_length=42, description="钱包地址 (小写)"
     )
-    wallet = fields.CharEnumField(
-        WalletType, max_length=20, default=WalletType.LOCAL, description="钱包类型"
+    network = fields.CharEnumField(
+        NetWork, max_length=20, default=NetWork.HARDHAT, description="网络类型"
     )
     status = fields.CharEnumField(
         KycStatus, max_length=20, default=KycStatus.NOT_STARTED, description="KYC 状态"
     )
     submitted_at = fields.DatetimeField(null=True, description="提交时间")
     reviewed_at = fields.DatetimeField(null=True, description="审核时间")
-    reviewer_id = fields.IntField(
-        null=True, description="审核人 ID (deprecated, use reviewer_address)"
-    )
     reviewer_address = fields.CharField(
         max_length=42, null=True, description="审核人钱包地址"
     )
@@ -83,11 +85,16 @@ class UserKyc(AbstractModel, TimestampMixin):
     on_chain_error = fields.TextField(null=True, description="链上同步失败原因")
 
     class Meta:
-        table = "user_kyc"
-        table_description = "用户 KYC 认证表"
+        table = "account_kyc"
+        table_description = "账户 KYC 认证表"
+        unique_together = (("address", "network"),)
         indexes = [
             ("status",),
         ]
 
     def __str__(self):
-        return f"UserKyc(id={self.id}, wallet={self.wallet_address[:10]}..., status={self.status})"
+        return f"AccountKyc(id={self.id}, address={self.address[:10]}..., network={self.network}, status={self.status})"
+
+
+# 向后兼容别名 (deprecated, 将在未来版本移除)
+UserKyc = AccountKyc

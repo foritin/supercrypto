@@ -6,24 +6,21 @@
 清理数据库中的合约部署相关记录，用于重新部署测试。
 
 清理的表:
-    - contract: 合约部署记录
-    - contract_dependency: 合约依赖关系
-    - contract_meta: 合约元数据
+    - contract_deployment: 合约部署记录
+    - contract_config: 合约配置
     - provider_registry: Provider 注册状态
-    - project_contract_config: 项目合约配置
-    - contract_deployment_status: 合约部署状态
     - asset: 清除合约绑定字段 (project, contract_address)
     - asset_contract_binding: 资产-合约绑定关系
 
 Usage:
-    python scripts/reset_deploy.py
+    python scripts/tools_reset_deploy.py
 
     # 指定项目清理
-    python scripts/reset_deploy.py --project vanke
-    python scripts/reset_deploy.py --project common
+    python scripts/tools_reset_deploy.py --project vanke
+    python scripts/tools_reset_deploy.py --project common
 
     # 清理所有
-    python scripts/reset_deploy.py --all
+    python scripts/tools_reset_deploy.py --all
 """
 
 import argparse
@@ -43,59 +40,44 @@ os.chdir(backend_dir)
 from tortoise import Tortoise
 
 from src.models.asset import Asset, AssetContractBinding
-from src.models.contracts import Contract, ContractDependency, ContractMeta
+from src.models.contracts import ContractConfig, ContractDeployment
 from src.models.contracts.provider_registry import ProviderRegistry
-from src.models.project_registry import ContractDeploymentStatus, ProjectContractConfig
 from src.shared.aerich_redirect import TORTOISE_ORM
 
 
 async def get_deploy_stats(project_name: str | None = None) -> dict:
     """获取部署统计信息"""
     stats: dict = {
-        "contracts": [],
-        "dependencies": 0,
-        "metas": 0,
+        "deployments": [],
+        "configs": 0,
         "registries": 0,
-        "project_configs": 0,
-        "deployment_statuses": 0,
         "asset_bindings": 0,
         "assets_with_contract": 0,
     }
 
-    # 查询合约
+    # 查询部署记录
     if project_name:
-        contracts = await Contract.filter(project_name=project_name).all()
+        deployments = await ContractDeployment.filter(project_name=project_name).all()
     else:
-        contracts = await Contract.all()
+        deployments = await ContractDeployment.all()
 
-    for c in contracts:
-        stats["contracts"].append(
+    for d in deployments:
+        stats["deployments"].append(
             {
-                "id": c.id,
-                "name": c.name,
-                "address": c.address,
-                "project": c.project_name,
-                "network": c.network,
+                "id": d.id,
+                "name": d.name,
+                "address": d.address,
+                "project": d.project_name,
+                "network": d.network.value if d.network else None,
             }
         )
 
-    # 查询依赖
+    # 查询合约配置
     if project_name:
-        contract_ids = [c.id for c in contracts]
-        if contract_ids:
-            deps = await ContractDependency.filter(contract_id__in=contract_ids).count()
-        else:
-            deps = 0
+        configs = await ContractConfig.filter(project_name=project_name).count()
     else:
-        deps = await ContractDependency.all().count()
-    stats["dependencies"] = deps
-
-    # 查询合约元数据
-    if project_name:
-        metas = await ContractMeta.filter(project_name=project_name).count()
-    else:
-        metas = await ContractMeta.all().count()
-    stats["metas"] = metas
+        configs = await ContractConfig.all().count()
+    stats["configs"] = configs
 
     # 查询 Provider 注册
     if project_name:
@@ -104,28 +86,10 @@ async def get_deploy_stats(project_name: str | None = None) -> dict:
         registries = await ProviderRegistry.all().count()
     stats["registries"] = registries
 
-    # 查询项目合约配置
-    if project_name:
-        project_configs = await ProjectContractConfig.filter(project_name=project_name).count()
-    else:
-        project_configs = await ProjectContractConfig.all().count()
-    stats["project_configs"] = project_configs
-
-    # 查询部署状态 (通过 config 关联)
-    if project_name:
-        config_ids = await ProjectContractConfig.filter(project_name=project_name).values_list("id", flat=True)
-        if config_ids:
-            deployment_statuses = await ContractDeploymentStatus.filter(config_id__in=config_ids).count()
-        else:
-            deployment_statuses = 0
-    else:
-        deployment_statuses = await ContractDeploymentStatus.all().count()
-    stats["deployment_statuses"] = deployment_statuses
-
     # 查询资产-合约绑定
     if project_name:
         # 获取该项目的合约地址
-        contract_addresses = [c.address for c in contracts]
+        contract_addresses = [d.address for d in deployments]
         if contract_addresses:
             asset_bindings = await AssetContractBinding.filter(
                 contract_address__in=contract_addresses
@@ -164,31 +128,25 @@ async def reset_deploy(project_name: str | None = None, force: bool = False) -> 
     print("\n📋 将要清理的内容:")
     print("-" * 60)
 
-    # 显示合约列表
-    if stats["contracts"]:
-        print(f"\n🔷 合约记录 ({len(stats['contracts'])} 条):")
-        for c in stats["contracts"]:
+    # 显示部署记录列表
+    if stats["deployments"]:
+        print(f"\n🔷 部署记录 ({len(stats['deployments'])} 条):")
+        for d in stats["deployments"]:
             print(
-                f"   • {c['name']} @ {c['address'][:16]}... ({c['project']}/{c['network']})"
+                f"   • {d['name']} @ {d['address'][:16]}... ({d['project']}/{d['network']})"
             )
     else:
-        print("\n🔷 合约记录: 0 条")
+        print("\n🔷 部署记录: 0 条")
 
-    print(f"\n🔗 依赖关系: {stats['dependencies']} 条")
-    print(f"📄 合约元数据: {stats['metas']} 条")
+    print(f"\n📄 合约配置: {stats['configs']} 条")
     print(f"📝 Provider 注册: {stats['registries']} 条")
-    print(f"⚙️  项目配置: {stats['project_configs']} 条")
-    print(f"🚀 部署状态: {stats['deployment_statuses']} 条")
     print(f"🔗 资产绑定: {stats['asset_bindings']} 条")
     print(f"📦 绑定合约的资产: {stats['assets_with_contract']} 个")
 
     total = (
-        len(stats["contracts"])
-        + stats["dependencies"]
-        + stats["metas"]
+        len(stats["deployments"])
+        + stats["configs"]
         + stats["registries"]
-        + stats["project_configs"]
-        + stats["deployment_statuses"]
         + stats["asset_bindings"]
         + stats["assets_with_contract"]
     )
@@ -212,41 +170,25 @@ async def reset_deploy(project_name: str | None = None, force: bool = False) -> 
     # 执行清理
     print("\n🔄 正在清理...")
 
-    deleted_contracts = 0
-    deleted_deps = 0
-    deleted_metas = 0
+    deleted_deployments = 0
+    deleted_configs = 0
     deleted_registries = 0
-    deleted_project_configs = 0
-    deleted_deployment_statuses = 0
     deleted_asset_bindings = 0
     updated_assets = 0
 
     if project_name:
         # 清理指定项目
-        contract_ids = [c["id"] for c in stats["contracts"]]
-        contract_addresses = [c["address"] for c in stats["contracts"]]
+        contract_addresses = [d["address"] for d in stats["deployments"]]
 
-        if contract_ids:
-            deleted_deps = await ContractDependency.filter(
-                contract_id__in=contract_ids
-            ).delete()
-
-        deleted_contracts = await Contract.filter(project_name=project_name).delete()
-        deleted_metas = await ContractMeta.filter(project_name=project_name).delete()
+        # 删除部署记录
+        deleted_deployments = await ContractDeployment.filter(project_name=project_name).delete()
+        
+        # 删除合约配置
+        deleted_configs = await ContractConfig.filter(project_name=project_name).delete()
+        
+        # 删除 Provider 注册
         deleted_registries = await ProviderRegistry.filter(
             category=project_name
-        ).delete()
-
-        # 清理项目注册表 (先删除部署状态，再删除配置)
-        config_ids = await ProjectContractConfig.filter(
-            project_name=project_name
-        ).values_list("id", flat=True)
-        if config_ids:
-            deleted_deployment_statuses = await ContractDeploymentStatus.filter(
-                config_id__in=config_ids
-            ).delete()
-        deleted_project_configs = await ProjectContractConfig.filter(
-            project_name=project_name
         ).delete()
 
         # 清理资产绑定
@@ -260,12 +202,9 @@ async def reset_deploy(project_name: str | None = None, force: bool = False) -> 
         )
     else:
         # 清理所有
-        deleted_deps = await ContractDependency.all().delete()
-        deleted_contracts = await Contract.all().delete()
-        deleted_metas = await ContractMeta.all().delete()
+        deleted_deployments = await ContractDeployment.all().delete()
+        deleted_configs = await ContractConfig.all().delete()
         deleted_registries = await ProviderRegistry.all().delete()
-        deleted_deployment_statuses = await ContractDeploymentStatus.all().delete()
-        deleted_project_configs = await ProjectContractConfig.all().delete()
         deleted_asset_bindings = await AssetContractBinding.all().delete()
         # 清除所有资产的合约绑定字段
         updated_assets = await Asset.filter(contract_address__isnull=False).update(
@@ -273,12 +212,9 @@ async def reset_deploy(project_name: str | None = None, force: bool = False) -> 
         )
 
     print("\n✅ 清理完成:")
-    print(f"   • 合约记录: {deleted_contracts} 条")
-    print(f"   • 依赖关系: {deleted_deps} 条")
-    print(f"   • 合约元数据: {deleted_metas} 条")
+    print(f"   • 部署记录: {deleted_deployments} 条")
+    print(f"   • 合约配置: {deleted_configs} 条")
     print(f"   • Provider 注册: {deleted_registries} 条")
-    print(f"   • 项目配置: {deleted_project_configs} 条")
-    print(f"   • 部署状态: {deleted_deployment_statuses} 条")
     print(f"   • 资产绑定: {deleted_asset_bindings} 条")
     print(f"   • 更新资产: {updated_assets} 个 (清除合约绑定)")
     print("=" * 60)
@@ -298,18 +234,15 @@ async def show_stats(project_name: str | None = None) -> None:
             print(f"   项目: {project_name}")
         print("=" * 60)
 
-        if stats["contracts"]:
-            print(f"\n🔷 合约 ({len(stats['contracts'])} 条):")
-            for c in stats["contracts"]:
-                print(f"   • {c['name']} @ {c['address'][:16]}...")
+        if stats["deployments"]:
+            print(f"\n🔷 部署记录 ({len(stats['deployments'])} 条):")
+            for d in stats["deployments"]:
+                print(f"   • {d['name']} @ {d['address'][:16]}...")
         else:
-            print("\n🔷 合约: 0 条")
+            print("\n🔷 部署记录: 0 条")
 
-        print(f"\n🔗 依赖: {stats['dependencies']} 条")
-        print(f"📄 元数据: {stats['metas']} 条")
-        print(f"📝 注册: {stats['registries']} 条")
-        print(f"⚙️  项目配置: {stats['project_configs']} 条")
-        print(f"🚀 部署状态: {stats['deployment_statuses']} 条")
+        print(f"\n📄 合约配置: {stats['configs']} 条")
+        print(f"📝 Provider 注册: {stats['registries']} 条")
         print(f"🔗 资产绑定: {stats['asset_bindings']} 条")
         print(f"📦 绑定合约的资产: {stats['assets_with_contract']} 个")
     finally:

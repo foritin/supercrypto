@@ -127,7 +127,6 @@ class KycFullResponse(KycStatusResponse, IDMixin, TimestampMixin):
     """KYC 完整响应 (包含 ID 和时间戳)"""
 
     environment: str = Field(..., description="环境")
-    reviewer_id: Optional[int] = Field(None, description="审核人 ID (deprecated)")
     reviewer_address: Optional[str] = Field(None, description="审核人钱包地址")
     external_kyc_id: Optional[str] = Field(None, description="第三方 KYC ID")
 

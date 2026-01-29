@@ -11,7 +11,7 @@ import { PUBLIC_PATHS, ADMIN_PATHS } from '@/constants/api-paths'
 export type AssetStatus = 'active' | 'paused' | 'sold_out' | 'closed'
 export type AssetType = 'real_estate' | 'bond' | 'commodity' | 'equity' | 'other'
 // MVP 媒体类型 - 与后端 MediaType 枚举同步
-export type MediaType = 'cover' | 'gallery' | 'valuation' | 'legal' | 'financial' | 'floor_plan' | 'video'
+export type MediaType = 'cover' | 'gallery' | 'valuation' | 'legal' | 'financial' | 'floor_plan' | 'video' | 'other'
 
 export interface AssetMediaItem {
   id: number
@@ -23,6 +23,33 @@ export interface AssetMediaItem {
   file_name: string | null
   sort_order: number
   is_primary: boolean
+}
+
+export interface MediaBatchUploadResult {
+  success: boolean
+  file_name: string
+  media: AssetMediaItem | null
+  error: string | null
+}
+
+export interface MediaBatchUploadResponse {
+  total: number
+  success_count: number
+  failed_count: number
+  results: MediaBatchUploadResult[]
+}
+
+export interface MediaBatchDeleteResult {
+  media_id: number
+  success: boolean
+  error: string | null
+}
+
+export interface MediaBatchDeleteResponse {
+  total: number
+  success_count: number
+  failed_count: number
+  results: MediaBatchDeleteResult[]
 }
 
 export interface AssetFeaturesData {
@@ -53,6 +80,7 @@ export interface AssetListItem {
   symbol: string
   asset_type: AssetType
   image_url: string | null
+  cover_image_url: string | null  // 封面图预签名 URL（从 AssetMedia 获取）
   current_price: number
   apy_3m: number
   apy_6m: number
@@ -305,34 +333,44 @@ export const assetService = {
   },
 
   /**
-   * 上传媒体文件
+   * 批量上传媒体文件（复用连接，减少开销）
+   * 即使只上传一个文件也使用此接口
    */
   async uploadMedia(
     assetId: number,
-    file: File,
-    mediaType: MediaType,
-    title?: string,
-    description?: string
-  ): Promise<AssetMediaItem> {
+    files: File | File[],
+    mediaType: MediaType
+  ): Promise<MediaBatchUploadResponse> {
+    const fileArray = Array.isArray(files) ? files : [files]
     const formData = new FormData()
-    formData.append('file', file)
+    fileArray.forEach((file) => {
+      formData.append('files', file)
+    })
     formData.append('media_type', mediaType)
-    if (title) formData.append('title', title)
-    if (description) formData.append('description', description)
 
     return (
-      await api.post<API.ResponseData<AssetMediaItem>>(
+      await api.post<API.ResponseData<MediaBatchUploadResponse>>(
         ADMIN_PATHS.ASSET_MEDIA(assetId),
         formData
       )
-    ).object_data as AssetMediaItem
+    ).object_data as MediaBatchUploadResponse
   },
 
   /**
-   * 删除媒体文件
+   * 批量删除媒体文件（复用连接，减少开销）
+   * 即使只删除一个文件也使用此接口
    */
-  async deleteMedia(assetId: number, mediaId: number): Promise<void> {
-    await api.delete(ADMIN_PATHS.ASSET_MEDIA_DETAIL(assetId, mediaId))
+  async deleteMedia(
+    assetId: number,
+    mediaIds: number | number[]
+  ): Promise<MediaBatchDeleteResponse> {
+    const idArray = Array.isArray(mediaIds) ? mediaIds : [mediaIds]
+    return (
+      await api.post<API.ResponseData<MediaBatchDeleteResponse>>(
+        `${ADMIN_PATHS.ASSET_MEDIA(assetId)}/delete`,
+        { media_ids: idArray }
+      )
+    ).object_data as MediaBatchDeleteResponse
   },
 
   /**
@@ -413,6 +451,7 @@ export const MEDIA_TYPE_NAMES: Record<MediaType, string> = {
   financial: 'Financial Documents',
   floor_plan: 'Floor Plan',
   video: 'Video',
+  other: 'Other Documents',
 }
 export const PROPERTY_TYPE_NAMES: Record<string, string> = {
   single_family: 'Single Family',

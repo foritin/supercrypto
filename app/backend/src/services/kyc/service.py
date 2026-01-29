@@ -7,16 +7,21 @@ from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 from falib.utils.config import SETTINGS
+from falib.utils.log import get_logger
 
-from src.models.kyc import UserKyc
+from src.models.kyc import AccountKyc
 from src.services.kyc.schemas import (
+    ContractKycStatus,
     KycApplyRequest,
+    KycContractComparisonResponse,
     KycFullResponse,
     KycReviewRequest,
     KycStatusResponse,
 )
 from src.shared.common.exceptions import BusinessException
 from src.shared.schemas.enums import KycStatus, OnChainSyncStatus
+
+logger = get_logger("kyc.service")
 
 
 class KycService:
@@ -39,7 +44,7 @@ class KycService:
         """
         address = wallet_address.lower()
 
-        kyc = await UserKyc.filter(wallet_address=address).first()
+        kyc = await AccountKyc.filter(address=address).first()
 
         if not kyc:
             # 返回默认状态 (not_started)
@@ -54,13 +59,74 @@ class KycService:
             )
 
         return KycStatusResponse(
-            wallet_address=kyc.wallet_address,
+            wallet_address=kyc.address,
             status=kyc.status,
             submitted_at=kyc.submitted_at,
             reviewed_at=kyc.reviewed_at,
             reject_reason=kyc.reject_reason,
             country_code=kyc.country_code,
             is_accredited=kyc.is_accredited,
+        )
+
+    async def get_contract_comparison(
+        self, wallet_address: str
+    ) -> Optional[KycContractComparisonResponse]:
+        """
+        获取数据库与合约 KYC 状态对比
+
+        将 Router 层的数据库和合约查询逻辑封装到 Service 层，
+        遵循分层架构原则。
+
+        Args:
+            wallet_address: 钱包地址
+
+        Returns:
+            KycContractComparisonResponse 或 None (如果数据库中不存在记录)
+        """
+        from src.services.kyc.contract_service import KycContractService
+
+        address = wallet_address.lower()
+
+        # 获取数据库状态
+        kyc = await AccountKyc.filter(
+            address=address, network=self.environment
+        ).first()
+
+        if not kyc:
+            return None
+
+        # 获取合约状态
+        contract_service = KycContractService()
+        contract_verified: Optional[bool] = None
+        contract_info: Optional[ContractKycStatus] = None
+        contract_error: Optional[str] = None
+
+        try:
+            contract_verified = await contract_service.is_verified(address)
+            info = await contract_service.get_investor_info(address)
+            if info:
+                contract_info = ContractKycStatus(**info)
+        except Exception as e:
+            contract_error = str(e)
+            logger.warning(f"Failed to get contract status for {address}: {e}")
+
+        # 判断一致性
+        is_consistent = False
+        if contract_verified is not None:
+            db_approved = kyc.status == KycStatus.APPROVED
+            is_consistent = db_approved == contract_verified
+
+        return KycContractComparisonResponse(
+            wallet_address=address,
+            db_status=kyc.status.value,
+            db_is_accredited=kyc.is_accredited,
+            db_sync_status=kyc.on_chain_sync_status.value
+            if kyc.on_chain_sync_status
+            else None,
+            contract_verified=contract_verified,
+            contract_info=contract_info,
+            contract_error=contract_error,
+            is_consistent=is_consistent,
         )
 
     async def apply(self, data: KycApplyRequest) -> KycFullResponse:
@@ -83,7 +149,7 @@ class KycService:
         id_number_last4 = data.id_number[-4:]
 
         # 检查是否已存在申请
-        existing = await UserKyc.filter(wallet_address=address).first()
+        existing = await AccountKyc.filter(address=address).first()
 
         if existing:
             if existing.status == KycStatus.PENDING:
@@ -98,7 +164,6 @@ class KycService:
                 existing.submitted_at = datetime.now(timezone.utc)
                 existing.reject_reason = None
                 existing.reviewed_at = None
-                existing.reviewer_id = None
                 existing.reviewer_address = None
                 existing.country_code = data.country_code
                 # Story 2.7: 更新身份信息
@@ -119,8 +184,8 @@ class KycService:
                 return self._to_full_response(existing)
 
         # 创建新申请
-        kyc = await UserKyc.create(
-            wallet_address=address,
+        kyc = await AccountKyc.create(
+            address=address,
             status=KycStatus.PENDING,
             submitted_at=datetime.now(timezone.utc),
             country_code=data.country_code,
@@ -148,7 +213,7 @@ class KycService:
         Returns:
             KYC 完整响应或 None
         """
-        kyc = await UserKyc.filter(id=kyc_id).first()
+        kyc = await AccountKyc.filter(id=kyc_id).first()
 
         if not kyc:
             return None
@@ -169,7 +234,7 @@ class KycService:
         Returns:
             (列表, 总数, 总页数)
         """
-        query = UserKyc.all()
+        query = AccountKyc.all()
 
         if status:
             query = query.filter(status=status)
@@ -203,7 +268,7 @@ class KycService:
         """
         from src.services.kyc.strategies import get_kyc_strategy
 
-        kyc = await UserKyc.filter(id=kyc_id).first()
+        kyc = await AccountKyc.filter(id=kyc_id).first()
 
         if not kyc:
             raise BusinessException(code=404, message="KYC record not found")
@@ -264,7 +329,7 @@ class KycService:
         """
         from src.services.kyc.strategies import get_kyc_strategy
 
-        kyc = await UserKyc.filter(id=kyc_id).first()
+        kyc = await AccountKyc.filter(id=kyc_id).first()
 
         if not kyc:
             raise BusinessException(code=404, message="KYC record not found")
@@ -315,17 +380,17 @@ class KycService:
             KYC 响应
 
         Raises:
-            BusinessException: 如果不是 local/test 环境
+            BusinessException: 如果不是 hardhat/sepolia 环境
         """
-        if self.environment not in ("local", "test"):
+        if self.environment not in ("hardhat", "sepolia"):
             raise BusinessException(
                 code=403,
-                message="Quick KYC approval only allowed in local/test environment",
+                message="Quick KYC approval only allowed in hardhat/sepolia environment",
             )
 
         address = wallet_address.lower()
 
-        kyc = await UserKyc.filter(wallet_address=address).first()
+        kyc = await AccountKyc.filter(address=address).first()
 
         if kyc:
             kyc.status = KycStatus.APPROVED
@@ -335,8 +400,8 @@ class KycService:
             kyc.on_chain_sync_status = OnChainSyncStatus.SYNCED
             await kyc.save()
         else:
-            kyc = await UserKyc.create(
-                wallet_address=address,
+            kyc = await AccountKyc.create(
+                address=address,
                 status=KycStatus.APPROVED,
                 submitted_at=datetime.now(timezone.utc),
                 reviewed_at=datetime.now(timezone.utc),
@@ -348,7 +413,7 @@ class KycService:
 
     async def reset_kyc(self, wallet_address: str) -> bool:
         """
-        重置 KYC 状态 (开发工具，仅 local 环境)
+        重置 KYC 状态 (开发工具，仅 hardhat 环境)
 
         Args:
             wallet_address: 钱包地址
@@ -357,29 +422,28 @@ class KycService:
             是否成功
 
         Raises:
-            BusinessException: 如果不是 local 环境
+            BusinessException: 如果不是 hardhat 环境
         """
-        if self.environment != "local":
+        if self.environment != "hardhat":
             raise BusinessException(
-                code=403, message="KYC reset only allowed in local environment"
+                code=403, message="KYC reset only allowed in hardhat environment"
             )
 
         address = wallet_address.lower()
 
-        deleted = await UserKyc.filter(wallet_address=address).delete()
+        deleted = await AccountKyc.filter(address=address).delete()
 
         return deleted > 0
 
-    def _to_full_response(self, kyc: UserKyc) -> KycFullResponse:
+    def _to_full_response(self, kyc: AccountKyc) -> KycFullResponse:
         """转换为完整响应"""
         return KycFullResponse(
             id=kyc.id,
-            wallet_address=kyc.wallet_address,
+            wallet_address=kyc.address,
             environment=self.environment,  # 使用当前环境
             status=kyc.status,
             submitted_at=kyc.submitted_at,
             reviewed_at=kyc.reviewed_at,
-            reviewer_id=kyc.reviewer_id,
             reviewer_address=kyc.reviewer_address,
             reject_reason=kyc.reject_reason,
             external_kyc_id=kyc.external_kyc_id,

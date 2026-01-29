@@ -4,6 +4,7 @@
 负责通用审计日志的记录和查询
 遵循只追加不修改的原则
 """
+
 import asyncio
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
@@ -13,12 +14,7 @@ from falib.utils.log import get_logger
 
 from src.models.audit import AuditLog
 from src.models.base import get_utc_time
-from src.services.audit.schemas import (
-    AuditLogCreate,
-    AuditLogQuery,
-    AuditLogResponse,
-    AuditStats,
-)
+from src.services.audit.schemas import AuditLogQuery, AuditLogResponse, AuditStats
 from src.shared.common.exceptions import NotFoundException
 from src.shared.common.utils import calculate_total_pages
 from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
@@ -29,7 +25,7 @@ logger = get_logger("audit.service")
 class AuditService:
     """
     审计服务
-    
+
     提供审计日志的记录和查询功能
     所有日志只追加，不允许修改或删除
     """
@@ -37,7 +33,7 @@ class AuditService:
     @property
     def environment(self) -> str:
         """当前环境"""
-        return getattr(SETTINGS, "ENVIRONMENT", "local")
+        return getattr(SETTINGS, "ENVIRONMENT", "hardhat")
 
     async def log(
         self,
@@ -65,7 +61,7 @@ class AuditService:
     ) -> AuditLog:
         """
         记录审计日志
-        
+
         Args:
             category: 审计类别
             action: 操作类型
@@ -88,7 +84,7 @@ class AuditService:
             duration_ms: 操作耗时(毫秒)
             error_code: 错误码
             error_message: 错误信息
-        
+
         Returns:
             AuditLog: 创建的审计日志
         """
@@ -118,35 +114,33 @@ class AuditService:
                 error_message=error_message,
                 environment=self.environment,
             )
-            
+
             logger.debug(
                 f"Audit log created: {action.value} by operator={operator_id} "
                 f"on {target_type}:{target_id} status={status.value}"
             )
             return audit_log
-            
+
         except Exception as e:
             # 审计日志记录失败不应阻塞主业务
             logger.error(f"Failed to create audit log: {e}")
             raise
 
     async def log_async(
-        self,
-        category: AuditCategory,
-        action: AuditAction,
-        **kwargs
+        self, category: AuditCategory, action: AuditAction, **kwargs
     ) -> None:
         """
         异步记录审计日志（不阻塞主业务）
-        
+
         使用 asyncio.create_task 在后台记录日志
         """
+
         async def _log():
             try:
                 await self.log(category=category, action=action, **kwargs)
             except Exception as e:
                 logger.error(f"Async audit log failed: {e}")
-        
+
         asyncio.create_task(_log())
 
     async def query(
@@ -167,7 +161,7 @@ class AuditService:
     ) -> Tuple[List[AuditLogResponse], int, int]:
         """
         查询审计日志
-        
+
         Args:
             category: 类别过滤
             action: 操作类型过滤
@@ -182,12 +176,12 @@ class AuditService:
             ip_address: IP地址过滤
             page: 页码
             page_size: 每页数量
-        
+
         Returns:
             Tuple[List[AuditLogResponse], int, int]: (日志列表, 总数, 总页数)
         """
         query = AuditLog.all()
-        
+
         # 应用过滤条件
         if category:
             query = query.filter(category=category)
@@ -211,15 +205,17 @@ class AuditService:
             query = query.filter(tx_hash=tx_hash)
         if ip_address:
             query = query.filter(ip_address=ip_address)
-        
+
         # 计算总数和分页
         total = await query.count()
         total_pages = calculate_total_pages(total, page_size)
-        
+
         # 获取数据
         offset = (page - 1) * page_size
-        logs = await query.order_by("-operated_at").offset(offset).limit(page_size).all()
-        
+        logs = (
+            await query.order_by("-operated_at").offset(offset).limit(page_size).all()
+        )
+
         return [self._to_response(log) for log in logs], total, total_pages
 
     async def query_by_params(
@@ -245,67 +241,66 @@ class AuditService:
     async def get_by_id(self, log_id: int) -> AuditLogResponse:
         """
         获取单条审计日志
-        
+
         Args:
             log_id: 日志ID
-        
+
         Returns:
             AuditLogResponse: 审计日志
-        
+
         Raises:
             NotFoundException: 日志不存在
         """
         log = await AuditLog.get_or_none(id=log_id)
         if not log:
             raise NotFoundException(
-                f"Audit log {log_id} not found",
-                detail={"log_id": log_id}
+                f"Audit log {log_id} not found", detail={"log_id": log_id}
             )
         return self._to_response(log)
 
     async def get_operator_history(
-        self,
-        operator_id: int,
-        limit: int = 50
+        self, operator_id: int, limit: int = 50
     ) -> List[AuditLogResponse]:
         """
         获取操作者历史
-        
+
         Args:
             operator_id: 操作者ID
             limit: 返回数量限制
-        
+
         Returns:
             List[AuditLogResponse]: 审计日志列表
         """
-        logs = await AuditLog.filter(
-            operator_id=operator_id
-        ).order_by("-operated_at").limit(limit).all()
-        
+        logs = (
+            await AuditLog.filter(operator_id=operator_id)
+            .order_by("-operated_at")
+            .limit(limit)
+            .all()
+        )
+
         return [self._to_response(log) for log in logs]
 
     async def get_target_history(
-        self,
-        target_type: str,
-        target_id: int,
-        limit: int = 50
+        self, target_type: str, target_id: int, limit: int = 50
     ) -> List[AuditLogResponse]:
         """
         获取目标对象历史
-        
+
         Args:
             target_type: 目标类型
             target_id: 目标ID
             limit: 返回数量限制
-        
+
         Returns:
             List[AuditLogResponse]: 审计日志列表
         """
-        logs = await AuditLog.filter(
-            target_type=target_type,
-            target_id=target_id
-        ).order_by("-operated_at").limit(limit).all()
-        
+        logs = (
+            await AuditLog.filter(target_type=target_type, target_id=target_id)
+            .order_by("-operated_at")
+            .limit(limit)
+            .all()
+        )
+
         return [self._to_response(log) for log in logs]
 
     async def get_stats(
@@ -315,48 +310,51 @@ class AuditService:
     ) -> AuditStats:
         """
         获取统计数据
-        
+
         Args:
             start_time: 开始时间
             end_time: 结束时间
-        
+
         Returns:
             AuditStats: 统计数据
         """
         query = AuditLog.all()
-        
+
         if start_time:
             query = query.filter(operated_at__gte=start_time)
         if end_time:
             query = query.filter(operated_at__lte=end_time)
-        
+
         # 总数
         total = await query.count()
-        
+
         # 按状态统计
         success_count = await query.filter(status=AuditStatus.SUCCESS).count()
         failed_count = await query.filter(status=AuditStatus.FAILED).count()
         pending_count = await query.filter(status=AuditStatus.PENDING).count()
-        
+
         # 按类别统计
         by_category = {}
         for category in AuditCategory:
             count = await query.filter(category=category).count()
             if count > 0:
                 by_category[category.value] = count
-        
+
         # 按操作统计 (只统计有数据的)
         by_action = {}
         # 使用 group by 代替 distinct 来避免 PostgreSQL 的 ORDER BY 限制
         from tortoise.functions import Count
-        action_stats = await query.annotate(
-            count=Count("id")
-        ).group_by("action").values("action", "count")
-        
+
+        action_stats = (
+            await query.annotate(count=Count("id"))
+            .group_by("action")
+            .values("action", "count")
+        )
+
         for stat in action_stats:
             if stat["count"] > 0:
                 by_action[stat["action"]] = stat["count"]
-        
+
         return AuditStats(
             total_operations=total,
             success_count=success_count,

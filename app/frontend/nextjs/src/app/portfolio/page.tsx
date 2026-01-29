@@ -65,6 +65,7 @@ import {
 } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { notification } from "@/lib/notification";
+import { getErrorMessage } from "@/utils/error-handler";
 import { cn } from "@/lib/utils";
 
 // 统计卡片组件
@@ -225,7 +226,7 @@ export default function PortfolioPage() {
       setDetailModalOpen(false);
       fetchSubscriptions();
     } catch (err) {
-      notification.error((err as Error).message || t("portfolio.redeemFailed"));
+      notification.error(getErrorMessage(err));
     } finally {
       setIsRedeeming(false);
     }

@@ -3,7 +3,7 @@ Contract Config Loader
 合约配置加载服务
 
 从 YAML 文件加载合约配置，支持：
-- 多环境配置 (local/dev/prod)
+- 多环境配置 (hardhat/sepolia/mainnet)
 - 配置验证 (Pydantic)
 - 缓存加载
 
@@ -83,7 +83,7 @@ def get_config_path() -> Path:
     获取配置文件路径
 
     优先级:
-    1. contracts.{environment}.yaml (如 contracts.local.yaml)
+    1. contracts.{environment}.yaml (如 contracts.hardhat.yaml)
     2. contracts.yaml (默认)
 
     Returns:
@@ -93,7 +93,7 @@ def get_config_path() -> Path:
         FileNotFoundError: 如果配置文件不存在
     """
     config_dir = _get_config_dir()
-    env = getattr(SETTINGS, "environment", "local")
+    env = getattr(SETTINGS, "environment", "hardhat")
 
     # 尝试环境特定配置
     env_config = config_dir / f"contracts.{env}.yaml"

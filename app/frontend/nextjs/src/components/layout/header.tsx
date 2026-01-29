@@ -5,6 +5,7 @@ import { Settings, Wrench, Menu as MenuIcon, ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { RemoveScroll } from "react-remove-scroll";
 import { WalletConnect } from "@/components/wallet-connect";
 import { LanguageSwitcher } from "@/components/web3/language-switcher";
 import { useCurrentUser } from "@/hooks";
@@ -27,9 +28,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Environment check - only show dev tools in local/test environment
-const ENV = process.env.NEXT_PUBLIC_ENV || "local";
-const IS_DEV_ENV = ENV === "local" || ENV === "test";
+// Environment check - only show dev tools in development environment
+const ENV = process.env.NEXT_PUBLIC_ENV || "development";
+const IS_DEV_ENV = ENV === "development";
 
 /**
  * 导航菜单项类型定义
@@ -132,7 +133,7 @@ export function Header() {
         },
       ];
 
-      // Add dev tools in local/test environment
+      // Add dev tools in development environment
       if (IS_DEV_ENV) {
         adminChildren.push({
           key: "dev-tools",
@@ -159,12 +160,11 @@ export function Header() {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-[1000] grid grid-cols-[1fr_auto_1fr] items-center transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-[1000] transition-all duration-300",
         // Requirements: 13.1, 13.2, 13.3 - 透明/磨砂切换
         scrolled && "border-b backdrop-blur-[12px]"
       )}
       style={{
-        padding: "var(--header-padding-y) var(--header-padding-x)",
         // 首屏透明，滚动后磨砂玻璃
         background: scrolled ? "rgba(10, 15, 13, 0.85)" : "transparent",
         height: "var(--header-height)",
@@ -172,8 +172,26 @@ export function Header() {
         boxShadow: scrolled ? "0 4px 30px rgba(0, 0, 0, 0.3)" : "none",
       }}
     >
-      {/* 左侧：Logo - 左对齐 */}
-      <div className="flex items-center justify-self-start">
+      {/* 
+        官方方案：https://github.com/radix-ui/website/pull/740
+        Components that hide the scrollbar (like Dialog, Select) add margin to body
+        to account for the scrollbar gap to avoid layout jank. This does not
+        work for position: fixed elements. Since we use react-remove-scroll
+        under the hood for those primitives, we can add this helper class
+        provided by that lib to deal with that for the Header.
+        https://github.com/theKashey/react-remove-scroll#positionfixed-elements
+      */}
+      <div
+        className={cn(
+          "grid grid-cols-[1fr_auto_1fr] items-center h-full",
+          RemoveScroll.classNames.fullWidth
+        )}
+        style={{
+          padding: "var(--header-padding-y) var(--header-padding-x)",
+        }}
+      >
+        {/* 左侧：Logo - 左对齐 */}
+        <div className="flex items-center justify-self-start">
         <Link
           href="/"
           aria-label={`${isHydrated ? t("header.title") : "SlimCrypto"} - 首页`}
@@ -373,6 +391,7 @@ export function Header() {
             </nav>
           </SheetContent>
         </Sheet>
+      </div>
       </div>
     </header>
   );

@@ -33,10 +33,10 @@ import { kycApplySchema } from '@/lib/validations/kyc'
 import { priceUpdateSchema } from '@/lib/validations/price'
 
 // Test form component that uses react-hook-form with zod validation
-interface TestFormProps<T extends z.ZodType> {
-  schema: T
-  defaultValues: Partial<z.infer<T>>
-  onSubmit: (data: z.infer<T>) => void
+interface TestFormProps {
+  schema: z.ZodObject<z.ZodRawShape>
+  defaultValues: Record<string, unknown>
+  onSubmit: (data: Record<string, unknown>) => void
   fields: Array<{
     name: string
     label: string
@@ -44,15 +44,15 @@ interface TestFormProps<T extends z.ZodType> {
   }>
 }
 
-function TestForm<T extends z.ZodType>({ 
+function TestForm({ 
   schema, 
   defaultValues, 
   onSubmit, 
   fields 
-}: TestFormProps<T>) {
-  const form = useForm<z.infer<T>>({
+}: TestFormProps) {
+  const form = useForm({
     resolver: zodResolver(schema),
-    defaultValues: defaultValues as z.infer<T>,
+    defaultValues,
   })
 
   return (
@@ -62,7 +62,7 @@ function TestForm<T extends z.ZodType>({
           <FormField
             key={field.name}
             control={form.control}
-            name={field.name as any}
+            name={field.name}
             render={({ field: formField }) => (
               <FormItem>
                 <FormLabel>{field.label}</FormLabel>
@@ -70,7 +70,7 @@ function TestForm<T extends z.ZodType>({
                   <Input 
                     {...formField} 
                     type={field.type || 'text'}
-                    value={formField.value ?? ''}
+                    value={typeof formField.value === 'string' || typeof formField.value === 'number' ? formField.value : ''}
                     onChange={(e) => {
                       const value = field.type === 'number' 
                         ? (e.target.value === '' ? undefined : Number(e.target.value))

@@ -1,9 +1,10 @@
 """
 Transaction领域 - Schema定义
 """
-from typing import Optional
-from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field
 
 from src.shared.schemas.base import IDMixin, TimestampMixin
 
@@ -45,7 +46,7 @@ class TransactionResponse(TransactionBase, IDMixin, TimestampMixin):
     block_timestamp: Optional[datetime] = Field(None, description="区块时间")
     wallet_id: Optional[int] = Field(None, description="关联钱包ID")
     note: Optional[str] = Field(None, description="备注")
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -87,7 +88,7 @@ class TransactionStats(BaseModel):
     confirmed_count: int = Field(description="已确认数量")
     failed_count: int = Field(description="失败数量")
     total_amount: str = Field(description="总金额")
-    
+
     class Config:
         json_schema_extra = {
             "example": {

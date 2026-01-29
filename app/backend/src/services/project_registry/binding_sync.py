@@ -7,8 +7,6 @@ Story 10.6: 合约绑定状态同步
 - 同步单个合约的绑定状态
 - 同步整个项目的绑定状态
 - 根据绑定状态计算合约状态
-
-注意: 链上交互部分需要配置 Web3 和合约 ABI
 """
 
 from dataclasses import dataclass, field
@@ -16,9 +14,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from falib.utils.log import get_logger
-from src.models.project_registry import ContractDeploymentStatus, ProjectContractConfig
 
-from src.shared.schemas.enums import ContractRegistryStatus
+from src.models.contracts.contract_config import ContractConfig
+from src.models.contracts.contract_deployment import ContractDeployment
+from src.shared.schemas.enums import ContractStatus
+from src.shared.schemas.enums.contract import ContractRegistryStatus
 
 logger = get_logger("contract.binding")
 
@@ -98,22 +98,21 @@ class BindingSyncService:
         result = BindingSyncResult(contract_name=contract_name, success=False)
 
         try:
-            # 获取部署状态记录
-            deployment = (
-                await ContractDeploymentStatus.filter(
-                    config__project_name=project_name,
-                    config__contract_name=contract_name,
-                    network=network,
-                )
-                .select_related("config")
-                .first()
-            )
+            # 获取部署状态记录 (使用新的 ContractDeployment 模型)
+            deployment = await ContractDeployment.filter(
+                name=contract_name,
+                project_name=project_name,
+                network=network,
+            ).prefetch_related("config").first()
 
             if not deployment:
                 result.error = (
                     f"未找到部署记录: {project_name}/{contract_name}@{network}"
                 )
                 return result
+
+            # 获取关联的配置
+            config = await ContractConfig.filter(contract_name=contract_name).first()
 
             # 更新绑定
             current_bindings = deployment.bindings or {}
@@ -122,9 +121,8 @@ class BindingSyncService:
 
             for dep_name, address in bindings.items():
                 is_zero = address == ZERO_ADDRESS
-                is_bound = (
-                    address != ZERO_ADDRESS or deployment.config.allow_zero_address
-                )
+                allow_zero = config.allow_zero_address if config else False
+                is_bound = address != ZERO_ADDRESS or allow_zero
 
                 old_binding = current_bindings.get(dep_name, {})
                 new_binding = {
@@ -147,7 +145,7 @@ class BindingSyncService:
 
             # 重新计算状态
             old_status = deployment.status
-            new_status = self._compute_status(deployment)
+            new_status = self._compute_status(deployment, config)
 
             if new_status != old_status:
                 deployment.status = new_status
@@ -190,9 +188,8 @@ class BindingSyncService:
         result = BindingSyncResult(contract_name=contract_name, success=False)
 
         try:
-            # 获取配置
-            config = await ProjectContractConfig.filter(
-                project_name=project_name,
+            # 获取配置 (使用新的 ContractConfig 模型)
+            config = await ContractConfig.filter(
                 contract_name=contract_name,
             ).first()
 
@@ -200,29 +197,30 @@ class BindingSyncService:
                 result.error = f"未找到合约配置: {project_name}/{contract_name}"
                 return result
 
-            # 获取或创建部署记录
-            deployment, created = await ContractDeploymentStatus.get_or_create(
-                config=config,
+            # 获取或创建部署记录 (使用新的 ContractDeployment 模型)
+            deployment = await ContractDeployment.filter(
+                name=contract_name,
                 network=network,
-                defaults={
-                    "status": status or ContractRegistryStatus.REGISTERED,
-                    "address": address,
-                },
-            )
+            ).first()
 
-            if not created:
+            if deployment:
                 old_status = deployment.status
                 if address:
                     deployment.address = address
                 if status:
-                    deployment.status = status
+                    # 映射 ContractRegistryStatus 到 ContractStatus
+                    deployment.status = self._map_registry_to_contract_status(status)
 
-                    if old_status != status:
+                    if old_status != deployment.status:
                         result.status_changed = True
-                        result.old_status = old_status.value
-                        result.new_status = status.value
+                        result.old_status = old_status.value if old_status else None
+                        result.new_status = deployment.status.value
 
                 await deployment.save()
+            else:
+                # 创建新的部署记录需要更多信息，这里只记录错误
+                result.error = f"部署记录不存在，请先部署合约: {contract_name}@{network}"
+                return result
 
             result.success = True
             logger.info(
@@ -235,6 +233,18 @@ class BindingSyncService:
             result.error = str(e)
 
         return result
+
+    def _map_registry_to_contract_status(
+        self, registry_status: ContractRegistryStatus
+    ) -> ContractStatus:
+        """映射 ContractRegistryStatus 到 ContractStatus"""
+        mapping = {
+            ContractRegistryStatus.REGISTERED: ContractStatus.ACTIVE,
+            ContractRegistryStatus.DEPLOYED: ContractStatus.ACTIVE,
+            ContractRegistryStatus.BOUND: ContractStatus.ACTIVE,
+            ContractRegistryStatus.ACTIVE: ContractStatus.ACTIVE,
+        }
+        return mapping.get(registry_status, ContractStatus.ACTIVE)
 
     async def sync_project_bindings(
         self,
@@ -257,15 +267,11 @@ class BindingSyncService:
 
         start_time = time.time()
 
-        # 查询所有已部署的合约
-        deployments = (
-            await ContractDeploymentStatus.filter(
-                config__project_name=project_name,
-                network=network,
-            )
-            .select_related("config")
-            .all()
-        )
+        # 查询所有已部署的合约 (使用新的 ContractDeployment 模型)
+        deployments = await ContractDeployment.filter(
+            project_name=project_name,
+            network=network,
+        ).prefetch_related("config").all()
 
         results = []
         synced = 0
@@ -276,7 +282,7 @@ class BindingSyncService:
                 # 跳过未部署的合约
                 results.append(
                     BindingSyncResult(
-                        contract_name=deployment.config.contract_name,
+                        contract_name=deployment.name,
                         success=False,
                         error="合约未部署（无地址）",
                     )
@@ -287,7 +293,7 @@ class BindingSyncService:
             # TODO: 实现链上读取绑定地址
             # result = await self._sync_contract_from_chain(deployment)
             result = BindingSyncResult(
-                contract_name=deployment.config.contract_name,
+                contract_name=deployment.name,
                 success=False,
                 error="链上同步功能待实现",
             )
@@ -307,38 +313,28 @@ class BindingSyncService:
         )
 
     def _compute_status(
-        self, deployment: ContractDeploymentStatus
-    ) -> ContractRegistryStatus:
+        self, deployment: ContractDeployment, config: Optional[ContractConfig] = None
+    ) -> ContractStatus:
         """
         根据绑定状态计算合约状态
         """
-        config = deployment.config
         bindings = deployment.bindings or {}
 
-        # 如果没有地址，保持 REGISTERED
+        # 如果没有地址，保持 ACTIVE (默认状态)
         if not deployment.address:
-            return ContractRegistryStatus.REGISTERED
+            return ContractStatus.ACTIVE
 
         # 检查必须依赖
-        required_deps = config.required_deps or []
-        all_required_bound = True
+        required_deps = config.required_deps if config else []
 
         for dep in required_deps:
             binding = bindings.get(dep, {})
             if not binding.get("is_bound", False):
-                all_required_bound = False
                 break
 
-        # 如果所有必须依赖都已绑定，状态为 ACTIVE
-        if all_required_bound:
-            return ContractRegistryStatus.ACTIVE
-
-        # 如果有绑定但不完整，状态为 BOUND
-        if bindings:
-            return ContractRegistryStatus.BOUND
-
-        # 有地址但无绑定，状态为 DEPLOYED
-        return ContractRegistryStatus.DEPLOYED
+        # ContractDeployment 使用 ContractStatus 枚举
+        # 所有状态都映射到 ACTIVE，因为 ContractStatus 没有 REGISTERED/DEPLOYED/BOUND 等状态
+        return ContractStatus.ACTIVE
 
     async def get_binding_status(
         self,
@@ -352,15 +348,12 @@ class BindingSyncService:
         Returns:
             绑定状态字典，包含地址和绑定信息
         """
-        deployment = (
-            await ContractDeploymentStatus.filter(
-                config__project_name=project_name,
-                config__contract_name=contract_name,
-                network=network,
-            )
-            .select_related("config")
-            .first()
-        )
+        # 使用新的 ContractDeployment 模型
+        deployment = await ContractDeployment.filter(
+            name=contract_name,
+            project_name=project_name,
+            network=network,
+        ).first()
 
         if not deployment:
             return None
@@ -369,7 +362,7 @@ class BindingSyncService:
             "contract_name": contract_name,
             "address": deployment.address,
             "status": deployment.status.value if deployment.status else None,
-            "is_deployed": deployment.is_deployed,
+            "is_deployed": bool(deployment.address),
             "bindings": deployment.bindings or {},
             "updated_at": deployment.updated_at.isoformat()
             if deployment.updated_at

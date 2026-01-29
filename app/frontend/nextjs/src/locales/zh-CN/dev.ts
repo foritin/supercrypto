@@ -31,6 +31,7 @@ const dev = {
       transferSuccess: "成功转账 {{amount}} {{symbol}} 给 {{recipient}}",
       selectRecipient: "选择接收者",
       selectRecipientPlaceholder: "选择接收代币的用户",
+      noRecipients: "暂无可选用户",
       addToWallet: "添加 {{symbol}} 到 MetaMask",
       mintAndTransfer: "铸造并转账",
       adminOnly: "仅管理员可用",

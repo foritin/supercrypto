@@ -10,9 +10,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
-// Environment check - only show dev tools in local/test environment
-const ENV = process.env.NEXT_PUBLIC_ENV || 'local'
-const IS_DEV_ENV = ENV === 'local' || ENV === 'test'
+// Environment check - only show dev tools in development environment
+const ENV = process.env.NEXT_PUBLIC_ENV || 'development'
+const IS_DEV_ENV = ENV === 'development'
 
 export default function DevToolsPage() {
   const { t } = useTranslation()

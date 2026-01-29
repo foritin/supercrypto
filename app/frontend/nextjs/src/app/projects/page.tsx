@@ -15,7 +15,7 @@ import { RefreshCw, FolderOpen, AlertCircle, Inbox } from 'lucide-react';
 import { useState } from 'react';
 
 export default function ProjectsPage() {
-  const { data, error, isLoading, refetch } = useProjects('local');
+  const { data, error, isLoading, refetch } = useProjects('hardhat');
   const [syncing, setSyncing] = useState<string | null>(null);
 
   const handleSyncAll = async () => {

@@ -55,7 +55,7 @@ router = APIRouter(prefix="/projects", tags=["项目注册表"])
 # ===== 依赖注入 =====
 
 
-def get_network(network: str = Query("local", description="网络名称")) -> str:
+def get_network(network: str = Query("hardhat", description="网络名称")) -> str:
     """获取网络参数"""
     return network
 

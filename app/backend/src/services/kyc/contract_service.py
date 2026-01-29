@@ -53,9 +53,9 @@ class KycContractService:
 
         # 环境映射到 NetType
         net_type_map = {
-            "local": NetType.LOCAL,
-            "test": NetType.TEST,
-            "main": NetType.MAIN,
+            "hardhat": NetType.LOCAL,
+            "sepolia": NetType.TEST,
+            "mainnet": NetType.MAIN,
         }
         net_type = net_type_map.get(env, NetType.LOCAL)
 
@@ -70,14 +70,14 @@ class KycContractService:
         """
         获取 KYCManager 合约地址
 
-        直接从 Contract 表查询，避免循环依赖 ContractService
+        从 ContractDeployment 表查询，避免循环依赖 ContractService
         """
         if self._contract_address is None:
-            from src.models.contracts.contract import Contract
+            from src.models.contracts.contract_deployment import ContractDeployment
             from src.shared.schemas.enums import ContractStatus
 
             # KYCManager 是 GLOBAL scope，project_name 为 _common
-            contract = await Contract.filter(
+            contract = await ContractDeployment.filter(
                 name="KYCManager",
                 project_name="_common",
                 network=SETTINGS.NETWORK,

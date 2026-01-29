@@ -78,6 +78,7 @@ const config: Config = {
         'slide-down': 'slideDown 0.3s ease-out',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'shimmer': 'shimmer 2s infinite',
+        'border-glow': 'borderGlow 4s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -96,6 +97,10 @@ const config: Config = {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(100%)' },
         },
+        borderGlow: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
       },
       boxShadow: {
         'glass': '0 8px 32px rgba(0, 0, 0, 0.3)',
@@ -110,7 +115,7 @@ const config: Config = {
   },
   plugins: [
     // 添加自定义插件
-    function({ addUtilities, theme }) {
+    function({ addUtilities, theme }: { addUtilities: (utilities: Record<string, Record<string, string>>) => void; theme: (path: string) => string }) {
       const newUtilities = {
         '.glass': {
           background: theme('colors.glass.bg'),

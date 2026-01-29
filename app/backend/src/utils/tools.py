@@ -4,23 +4,23 @@ from pathlib import Path
 
 class PathTools:
     """路径工具类
-    
+
     提供项目中常用的路径操作方法
     """
 
     @classmethod
     def get_root_path(cls) -> Path:
         """获取项目根路径
-        
+
         Returns:
             Path: 项目根路径
         """
         return Path(__file__).parent.parent
-    
+
     @classmethod
     def get_userdata_path(cls, phone_number: str, media_type: str) -> Path:
         """获取user_data存储路径
-        
+
         Returns:
             Path: user_data目录路径
         """
@@ -31,7 +31,7 @@ class PathTools:
     @classmethod
     def get_picture_path(cls) -> Path:
         """获取图片存储路径
-        
+
         Returns:
             Path: 图片目录路径
         """
@@ -40,16 +40,16 @@ class PathTools:
     @classmethod
     def get_output_path(cls) -> Path:
         """获取输出文件存储路径
-        
+
         Returns:
             Path: 输出目录路径
         """
         return Path.joinpath(cls.get_root_path(), "output")
-    
+
     @classmethod
     def get_scrapy_path(cls) -> Path:
         """获取爬虫数据存储路径
-        
+
         Returns:
             Path: 爬虫数据目录路径
         """
@@ -58,7 +58,7 @@ class PathTools:
     @classmethod
     def get_log_path(cls) -> Path:
         """获取日志存储路径
-        
+
         Returns:
             Path: 日志目录路径
         """

@@ -31,6 +31,7 @@ const dev = {
       transferSuccess: "Successfully transferred {{amount}} {{symbol}} to {{recipient}}",
       selectRecipient: "Select Recipient",
       selectRecipientPlaceholder: "Select a user to receive tokens",
+      noRecipients: "No recipients available",
       addToWallet: "Add {{symbol}} to MetaMask",
       mintAndTransfer: "Mint & Transfer",
       adminOnly: "Admin Only",

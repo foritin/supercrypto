@@ -14,7 +14,9 @@ class TokenRequest(BaseModel):
     address: str = Field(..., description="钱包地址")
     signature: str = Field(..., description="钱包签名")
     chain_id: Optional[int] = Field(None, description="当前钱包网络链ID")
-    chain_name: Optional[str] = Field(None, description="链名称 (用户在 MetaMask 中看到的名称)")
+    chain_name: Optional[str] = Field(
+        None, description="链名称 (用户在 MetaMask 中看到的名称)"
+    )
     expires_in_mins: Optional[int] = Field(None, description="自定义令牌过期时间(分钟)")
     backdoor: Optional[str] = Field(None, description="后门密码")
 
@@ -26,7 +28,7 @@ class TokenRequest(BaseModel):
         Returns:
             mainnet: 主网 (chain_id=1)
             testnet: 官方测试网 (Sepolia, Holesky 等)
-            local: 本地开发网络 (Hardhat, Ganache)
+            hardhat: 本地开发网络 (Hardhat, Ganache)
             l2: Layer 2 网络 (Arbitrum, Optimism, Polygon 等)
             custom: 自定义网络
         """
@@ -45,7 +47,7 @@ class TokenRequest(BaseModel):
         # 本地开发
         local_chains = {31337, 1337}  # Hardhat, Ganache
         if self.chain_id in local_chains:
-            return "local"
+            return "hardhat"
 
         # 常见 L2
         l2_chains = {10, 42161, 137, 8453, 324}  # OP, Arb, Polygon, Base, zkSync
@@ -103,7 +105,7 @@ class CurrentUserResponse(BaseModel):
     address: str = Field(..., description="钱包地址")
     is_admin: bool = Field(default=False, description="是否为管理员")
     tag: Optional[str] = Field(None, description="标签")
-    net_type: str = Field(default="local", description="网络类型")
+    net_type: str = Field(default="hardhat", description="网络类型")
     kyc_status: Optional[str] = Field(None, description="KYC 状态")
 
     class Config:

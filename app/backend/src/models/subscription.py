@@ -1,13 +1,14 @@
 """
 Subscription 认购模型
 """
+
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-from src.shared.schemas.enums import LockPeriod, SubscriptionStatus, TokenType
+from src.shared.schemas.enums import SubscriptionStatus, TokenType
 
 
 class Subscription(AbstractModel, TimestampMixin):
@@ -75,7 +76,7 @@ class Subscription(AbstractModel, TimestampMixin):
 
     # 环境区分
     environment = fields.CharField(
-        max_length=20, default="local", description="环境标识"
+        max_length=20, default="hardhat", description="环境标识"
     )
 
     class Meta:
@@ -95,14 +96,20 @@ class Subscription(AbstractModel, TimestampMixin):
 
     @property
     def is_matured(self) -> bool:
-        """是否已到期"""
+        """是否已到期 (活期模式: 始终可赎回)"""
+        # 活期模式: lock_period == 0，始终可赎回
+        if self.lock_period == 0:
+            return True
         if not self.end_date:
             return False
         return datetime.now(timezone.utc) >= self.end_date
 
     @property
     def days_remaining(self) -> int:
-        """剩余天数"""
+        """剩余天数 (活期模式: 始终返回 0)"""
+        # 活期模式: 随时可赎回
+        if self.lock_period == 0:
+            return 0
         if not self.end_date:
             return 0
         delta = self.end_date - datetime.now(timezone.utc)
@@ -120,12 +127,18 @@ class Subscription(AbstractModel, TimestampMixin):
     def calculate_expected_interest(
         cls, amount: Decimal, apy: Decimal, lock_months: int
     ) -> Decimal:
-        """计算预期利息"""
+        """计算预期利息 (活期模式: lock_months=0 时按实际持有时间计算)"""
+        if lock_months == 0:
+            # 活期模式：预期利息暂时按 1 个月估算
+            return amount * (apy / 100) * (Decimal(1) / Decimal(12))
         # 利息 = 本金 × APY × (锁定月数/12)
         return amount * (apy / 100) * (Decimal(lock_months) / Decimal(12))
 
     @classmethod
     def calculate_end_date(cls, start_date: datetime, lock_months: int) -> datetime:
-        """计算到期日期"""
+        """计算到期日期 (活期模式: lock_months=0 时立即可赎回)"""
+        if lock_months == 0:
+            # 活期模式：立即可赎回
+            return start_date
         # 简单计算：每月按30天
         return start_date + timedelta(days=lock_months * 30)

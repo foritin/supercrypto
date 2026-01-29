@@ -334,10 +334,10 @@ function getLayoutedElements(
 // ============================================
 interface ContractDependencyTreeProps {
   onContractClick?: (contractId: string) => void;
-  showDeleted?: boolean;
+  showNotRegistered?: boolean;
 }
 
-export function ContractDependencyTree({ onContractClick, showDeleted = false }: ContractDependencyTreeProps) {
+export function ContractDependencyTree({ onContractClick, showNotRegistered = true }: ContractDependencyTreeProps) {
   const { t } = useTranslation();
 
   const { data: graphData, isLoading, error } = useQuery({
@@ -359,10 +359,13 @@ export function ContractDependencyTree({ onContractClick, showDeleted = false }:
       return { layoutedNodes: [], layoutedEdges: [] };
     }
 
-    // 根据 showDeleted 过滤节点
-    const filteredNodes = showDeleted 
-      ? graphData.nodes 
-      : graphData.nodes.filter(node => !node.isDeleted);
+    // 根据 showNotRegistered 过滤节点（包括未注册和已解绑的）
+    let filteredNodes = graphData.nodes;
+    
+    // 过滤未注册的节点（包括 not_registered 状态和已删除的）
+    if (!showNotRegistered) {
+      filteredNodes = filteredNodes.filter(node => node.status !== 'not_registered' && !node.isDeleted);
+    }
 
     // 获取过滤后的节点 ID 集合
     const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
@@ -417,7 +420,7 @@ export function ContractDependencyTree({ onContractClick, showDeleted = false }:
     const { nodes: ln, edges: le } = getLayoutedElements(nodes, edges, 'TB');
     return { layoutedNodes: ln, layoutedEdges: le };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graphData, showDeleted]);
+  }, [graphData, showNotRegistered]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
   const [rfEdges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);

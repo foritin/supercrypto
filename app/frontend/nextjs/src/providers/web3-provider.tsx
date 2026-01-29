@@ -1,7 +1,7 @@
 'use client'
 
 import { WagmiProvider, http } from 'wagmi'
-import { sepolia, mainnet, type Chain } from 'wagmi/chains'
+import { sepolia, mainnet, arbitrum, type Chain } from 'wagmi/chains'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import {
@@ -12,7 +12,8 @@ import {
 import '@rainbow-me/rainbowkit/styles.css'
 
 // 获取环境配置
-const ENV = process.env.NEXT_PUBLIC_ENV || 'local'
+const ENV = process.env.NEXT_PUBLIC_ENV || 'development'
+const IS_PRODUCTION = ENV === 'production'
 
 // Hardhat RPC URL - 优先环境变量，默认远程开发服务器
 const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://YOUR_RPC_HOST:8545'
@@ -34,28 +35,30 @@ const customHardhat: Chain = {
   },
 }
 
-// 根据环境选择默认链
-const getDefaultChain = () => {
-  switch (ENV) {
-    case 'main':
-      return mainnet
-    case 'test':
-      return sepolia
-    default:
-      return customHardhat
-  }
-}
+// 根据环境选择网络列表
+// development: Hardhat, Sepolia
+// production: Ethereum, Arbitrum
+const supportedChains: readonly [Chain, ...Chain[]] = IS_PRODUCTION
+  ? [mainnet, arbitrum]
+  : [customHardhat, sepolia]
+
+// 根据环境配置 transports
+const transports: Record<number, ReturnType<typeof http>> = IS_PRODUCTION
+  ? {
+      [mainnet.id]: http(),
+      [arbitrum.id]: http(),
+    }
+  : {
+      [customHardhat.id]: http(HARDHAT_RPC_URL),
+      [sepolia.id]: http(),
+    }
 
 // RainbowKit + Wagmi 配置
 const config = getDefaultConfig({
   appName: 'SuperCrypto',
   projectId: WALLETCONNECT_PROJECT_ID,
-  chains: [customHardhat, sepolia, mainnet],
-  transports: {
-    [customHardhat.id]: http(HARDHAT_RPC_URL),
-    [sepolia.id]: http(),
-    [mainnet.id]: http(),
-  },
+  chains: supportedChains,
+  transports,
   ssr: true, // 启用 SSR 支持
 })
 
@@ -69,7 +72,7 @@ const customTheme = darkTheme({
 })
 
 // 导出环境信息
-export { ENV, getDefaultChain }
+export { ENV, IS_PRODUCTION, supportedChains }
 
 export function Web3Provider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(

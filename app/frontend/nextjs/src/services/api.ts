@@ -21,11 +21,13 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/a
  */
 export class ApiError extends Error {
   code: number
-  detail?: string
+  errorCode?: number
+  detail?: Record<string, unknown>
 
-  constructor(code: number, message: string, detail?: string) {
+  constructor(code: number, message: string, errorCode?: number, detail?: Record<string, unknown>) {
     super(message)
     this.code = code
+    this.errorCode = errorCode
     this.detail = detail
     this.name = 'ApiError'
   }
@@ -162,16 +164,27 @@ axiosInstance.interceptors.response.use(
     }
     
     // Session 被管理员撤销
-    if (error.response?.data?.data?.msg?.includes('Session revoked') ||
-        error.response?.data?.data?.msg?.includes('session_revoked')) {
+    const responseDataAny = error.response?.data as Record<string, unknown> | undefined
+    const dataObjAny = responseDataAny?.data as Record<string, unknown> | undefined
+    if (dataObjAny?.msg && (
+        String(dataObjAny.msg).includes('Session revoked') ||
+        String(dataObjAny.msg).includes('session_revoked'))) {
       handleLogout('您已被管理员强制下线')
       return Promise.reject(new ApiError(401, '会话已被撤销'))
     }
     
     // 其他错误
     if (error.response?.data) {
-      const { code, data } = error.response.data
-      throw new ApiError(code, data?.msg || 'Request failed')
+      const responseData = error.response.data as unknown as Record<string, unknown>
+      // 支持两种错误格式：
+      // 1. 业务异常格式: { code, message, error_code, detail, path }
+      // 2. 标准 API 格式: { code, data: { msg } }
+      const dataObj = responseData.data as Record<string, unknown> | undefined
+      const errorMessage = (responseData.message as string) || (dataObj?.msg as string) || 'Request failed'
+      const errorCode = typeof responseData.code === 'number' ? responseData.code : error.response.status
+      const errorCodeNum = typeof responseData.error_code === 'number' ? responseData.error_code : undefined
+      const detailObj = typeof responseData.detail === 'object' ? responseData.detail as Record<string, unknown> : undefined
+      throw new ApiError(errorCode, errorMessage, errorCodeNum, detailObj)
     }
     throw new ApiError(500, error.message || 'Network error')
   }

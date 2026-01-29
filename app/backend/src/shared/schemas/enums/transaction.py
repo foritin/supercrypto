@@ -20,12 +20,12 @@ class TransactionType(str, Enum):
     STAKE = "stake"                # 质押
     UNSTAKE = "unstake"            # 解押
     CLAIM = "claim"                # 领取奖励
-    
+
     # 链上交易类型
     TRANSFER = "transfer"          # 转账
     APPROVE = "approve"            # 授权
     MINT = "mint"                  # 铸造
-    
+
     # 其他
     OTHER = "other"                # 其他
 

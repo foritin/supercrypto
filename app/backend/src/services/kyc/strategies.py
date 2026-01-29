@@ -13,7 +13,7 @@ from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
 
 if TYPE_CHECKING:
-    from src.models.kyc import UserKyc
+    from src.models.kyc import AccountKyc
 
 logger = get_logger("kyc.strategy")
 
@@ -22,7 +22,7 @@ class KycReviewStrategy(ABC):
     """KYC 审核策略抽象基类"""
 
     @abstractmethod
-    async def submit_for_review(self, kyc: "UserKyc") -> str:
+    async def submit_for_review(self, kyc: "AccountKyc") -> str:
         """
         提交审核
 
@@ -36,7 +36,7 @@ class KycReviewStrategy(ABC):
 
     @abstractmethod
     async def process_approval(
-        self, kyc: "UserKyc", reviewer_address: str
+        self, kyc: "AccountKyc", reviewer_address: str
     ) -> Tuple[str, bool]:
         """
         处理审核通过
@@ -59,13 +59,13 @@ class LocalTestKycStrategy(KycReviewStrategy):
     - 审核通过后同步到 KYCManager 合约
     """
 
-    async def submit_for_review(self, kyc: "UserKyc") -> str:
+    async def submit_for_review(self, kyc: "AccountKyc") -> str:
         """提交等待管理员审核"""
-        logger.info(f"KYC submitted for admin review: {kyc.wallet_address}")
+        logger.info(f"KYC submitted for admin review: {kyc.address}")
         return "pending_admin_review"
 
     async def process_approval(
-        self, kyc: "UserKyc", reviewer_address: str
+        self, kyc: "AccountKyc", reviewer_address: str
     ) -> Tuple[str, bool]:
         """
         审核通过后同步到合约
@@ -75,13 +75,13 @@ class LocalTestKycStrategy(KycReviewStrategy):
         from src.services.kyc.contract_service import KycContractService
 
         logger.info(
-            f"Processing KYC approval for {kyc.wallet_address}, "
+            f"Processing KYC approval for {kyc.address}, "
             f"syncing to KYCManager contract..."
         )
 
         contract_service = KycContractService()
         return await contract_service.add_investor(
-            investor_address=kyc.wallet_address,
+            investor_address=kyc.address,
             country_code=kyc.country_code or "XX",
             is_accredited=kyc.is_accredited,
         )
@@ -95,20 +95,20 @@ class MainnetKycStrategy(KycReviewStrategy):
     - 不同步到链上 (链上 KYC 由第三方服务管理)
     """
 
-    async def submit_for_review(self, kyc: "UserKyc") -> str:
+    async def submit_for_review(self, kyc: "AccountKyc") -> str:
         """
         提交到第三方 KYC 服务
 
         TODO: 实现第三方 API 调用
         """
         logger.info(
-            f"KYC submitted to third-party service: {kyc.wallet_address} (not implemented)"
+            f"KYC submitted to third-party service: {kyc.address} (not implemented)"
         )
         # TODO: 调用第三方 API (Sumsub/Jumio/Onfido)
         return "pending_third_party"
 
     async def process_approval(
-        self, kyc: "UserKyc", reviewer_address: str
+        self, kyc: "AccountKyc", reviewer_address: str
     ) -> Tuple[str, bool]:
         """
         Main 环境不同步到链上
@@ -116,7 +116,7 @@ class MainnetKycStrategy(KycReviewStrategy):
         链上 KYC 状态由第三方服务管理
         """
         logger.info(
-            f"KYC approved in mainnet mode: {kyc.wallet_address}, "
+            f"KYC approved in mainnet mode: {kyc.address}, "
             "skipping on-chain sync"
         )
         # Main 环境不同步到链上，返回空 tx_hash

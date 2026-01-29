@@ -110,7 +110,7 @@ type Story = StoryObj<typeof Icon>;
  */
 export const Default: Story = {
   args: {
-    name: 'Home',
+    name: 'House',
     size: 'default',
     variant: 'default',
   },
@@ -122,12 +122,12 @@ export const Default: Story = {
 export const Sizes: Story = {
   render: () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-      <Icon name="Home" size="small" variant="cyan" ariaLabel="小图标" />
-      <Icon name="Home" size="default" variant="cyan" ariaLabel="默认图标" />
-      <Icon name="Home" size="medium" variant="cyan" ariaLabel="中等图标" />
-      <Icon name="Home" size="large" variant="cyan" ariaLabel="大图标" />
-      <Icon name="Home" size="xlarge" variant="cyan" ariaLabel="超大图标" />
-      <Icon name="Home" size="xxlarge" variant="cyan" ariaLabel="特大图标" />
+      <Icon name="House" size="small" variant="cyan" ariaLabel="小图标" />
+      <Icon name="House" size="default" variant="cyan" ariaLabel="默认图标" />
+      <Icon name="House" size="medium" variant="cyan" ariaLabel="中等图标" />
+      <Icon name="House" size="large" variant="cyan" ariaLabel="大图标" />
+      <Icon name="House" size="xlarge" variant="cyan" ariaLabel="超大图标" />
+      <Icon name="House" size="xxlarge" variant="cyan" ariaLabel="特大图标" />
     </div>
   ),
   parameters: {
@@ -145,12 +145,12 @@ export const Sizes: Story = {
 export const Colors: Story = {
   render: () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-      <Icon name="CheckCircle" size="large" variant="gold" ariaLabel="金色检查" />
-      <Icon name="CheckCircle" size="large" variant="cyan" ariaLabel="青色检查" />
-      <Icon name="CheckCircle" size="large" variant="default" ariaLabel="默认检查" />
-      <Icon name="CheckCircle" size="large" variant="inherit" ariaLabel="继承检查" />
-      <Icon name="CheckCircle" size="large" variant="white" ariaLabel="白色检查" />
-      <Icon name="CheckCircle" size="large" variant="gray" ariaLabel="灰色检查" />
+      <Icon name="CircleCheck" size="large" variant="gold" ariaLabel="金色检查" />
+      <Icon name="CircleCheck" size="large" variant="cyan" ariaLabel="青色检查" />
+      <Icon name="CircleCheck" size="large" variant="default" ariaLabel="默认检查" />
+      <Icon name="CircleCheck" size="large" variant="inherit" ariaLabel="继承检查" />
+      <Icon name="CircleCheck" size="large" variant="white" ariaLabel="白色检查" />
+      <Icon name="CircleCheck" size="large" variant="gray" ariaLabel="灰色检查" />
     </div>
   ),
   parameters: {
@@ -168,7 +168,7 @@ export const Colors: Story = {
 export const CommonIcons: Story = {
   render: () => (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '16px' }}>
-      <Icon name="Home" size="large" variant="cyan" ariaLabel="首页" />
+      <Icon name="House" size="large" variant="cyan" ariaLabel="首页" />
       <Icon name="Settings" size="large" variant="default" ariaLabel="设置" />
       <Icon name="Wallet" size="large" variant="gold" ariaLabel="钱包" />
       <Icon name="User" size="large" variant="cyan" ariaLabel="用户" />
@@ -197,17 +197,17 @@ export const CommonIcons: Story = {
 export const StatusIcons: Story = {
   render: () => (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '16px' }}>
-      <Icon name="CheckCircle" size="xlarge" variant="cyan" ariaLabel="成功" />
-      <Icon name="XCircle" size="xlarge" variant="default" ariaLabel="错误" />
-      <Icon name="AlertCircle" size="xlarge" variant="gold" ariaLabel="警告" />
+      <Icon name="CircleCheck" size="xlarge" variant="cyan" ariaLabel="成功" />
+      <Icon name="CircleX" size="xlarge" variant="default" ariaLabel="错误" />
+      <Icon name="CircleAlert" size="xlarge" variant="gold" ariaLabel="警告" />
       <Icon name="Info" size="xlarge" variant="cyan" ariaLabel="信息" />
-      <Icon name="Loader2" size="xlarge" variant="gold" animated ariaLabel="加载中" />
+      <Icon name="LoaderCircle" size="xlarge" variant="gold" animated ariaLabel="加载中" />
     </div>
   ),
   parameters: {
     docs: {
       description: {
-        story: '展示用于状态反馈和系统消息的图标。Loader2 带有旋转动画，用于加载状态。',
+        story: '展示用于状态反馈和系统消息的图标。LoaderCircle 带有旋转动画，用于加载状态。',
       },
     },
   },
@@ -219,7 +219,7 @@ export const StatusIcons: Story = {
 export const AnimatedIcons: Story = {
   render: () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-      <Icon name="Loader2" size="xlarge" variant="gold" animated ariaLabel="加载中" />
+      <Icon name="LoaderCircle" size="xlarge" variant="gold" animated ariaLabel="加载中" />
       <Icon name="RefreshCw" size="xlarge" variant="cyan" animated ariaLabel="刷新" />
     </div>
   ),
@@ -243,14 +243,12 @@ export const InteractiveIcons: Story = {
         size="large"
         variant="default"
         ariaLabel="打开设置"
-        style={{ cursor: 'pointer' }}
       />
       <Icon
         name="LogOut"
         size="large"
         variant="gold"
         ariaLabel="登出"
-        style={{ cursor: 'pointer' }}
       />
       <Icon
         name="RefreshCw"
@@ -258,7 +256,6 @@ export const InteractiveIcons: Story = {
         variant="cyan"
         ariaLabel="刷新数据"
         animated
-        style={{ cursor: 'pointer' }}
       />
     </div>
   ),
@@ -277,7 +274,7 @@ export const InteractiveIcons: Story = {
 export const DarkMode: Story = {
   render: () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-      <Icon name="Home" size="large" variant="gold" ariaLabel="首页" />
+      <Icon name="House" size="large" variant="gold" ariaLabel="首页" />
       <Icon name="Wallet" size="large" variant="cyan" ariaLabel="钱包" />
       <Icon name="Settings" size="large" variant="default" ariaLabel="设置" />
       <Icon name="User" size="large" variant="white" ariaLabel="用户" />
@@ -301,7 +298,7 @@ export const DarkMode: Story = {
 export const Accessibility: Story = {
   render: () => (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '16px' }}>
-      <Icon name="Home" size="large" variant="cyan" ariaLabel="返回首页" />
+      <Icon name="House" size="large" variant="cyan" ariaLabel="返回首页" />
       <Icon name="Wallet" size="large" variant="gold" ariaLabel="连接钱包" />
       <Icon name="Settings" size="large" variant="default" ariaLabel="打开设置" />
       <Icon name="User" size="large" variant="cyan" ariaLabel="用户资料" />

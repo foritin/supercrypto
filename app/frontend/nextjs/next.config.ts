@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
     NEXT_PUBLIC_CHAIN_ID: process.env.NEXT_PUBLIC_CHAIN_ID || '31337',
-    NEXT_PUBLIC_ENV: process.env.NEXT_PUBLIC_ENV || 'local',
+    NEXT_PUBLIC_ENV: process.env.NEXT_PUBLIC_ENV || 'development',
   },
 
   // 图片优化

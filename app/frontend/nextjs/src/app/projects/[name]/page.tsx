@@ -47,8 +47,8 @@ export default function ProjectDetailPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncType, setSyncType] = useState<'config' | 'bindings' | null>(null);
 
-  const { data: status, error, isLoading, refetch } = useProjectStatus(name, 'local');
-  const { data: deploymentPlan, refetch: refetchPlan } = useDeploymentOrder(name, 'local');
+  const { data: status, error, isLoading, refetch } = useProjectStatus(name, 'hardhat');
+  const { data: deploymentPlan, refetch: refetchPlan } = useDeploymentOrder(name, 'hardhat');
 
   const handleSyncConfig = async () => {
     setSyncing(true);
@@ -69,7 +69,7 @@ export default function ProjectDetailPage() {
     setSyncing(true);
     setSyncType('bindings');
     try {
-      await syncProjectBindings(name, 'local');
+      await syncProjectBindings(name, 'hardhat');
       refetch();
       refetchPlan();
     } catch (e) {
@@ -238,7 +238,7 @@ export default function ProjectDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0 overflow-hidden">
-              <DependencyGraph projectName={name} network="local" />
+              <DependencyGraph projectName={name} network="hardhat" />
             </CardContent>
           </Card>
         </div>

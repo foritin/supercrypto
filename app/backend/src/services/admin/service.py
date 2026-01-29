@@ -7,24 +7,22 @@ from decimal import Decimal
 from typing import List, Optional, Tuple
 
 from falib.utils.config import SETTINGS
-from tortoise.functions import Count, Sum
+from tortoise.functions import Sum
 
+from src.models.asset import Asset
+from src.models.audit import AuditLog
+from src.models.kyc import AccountKyc
+from src.models.staking import RewardClaim, StakingRecord
+from src.models.subscription import Subscription
 from src.services.admin.schemas import (
     AuditLogListQuery,
     AuditLogResponse,
-    CreateAuditLogRequest,
     PlatformStatsResponse,
     StakingPoolStatsResponse,
     TVLBreakdown,
     TVLStatsResponse,
     UserStatsResponse,
 )
-from src.models.account import Account
-from src.models.asset import Asset
-from src.models.audit import AuditLog
-from src.models.kyc import UserKyc
-from src.models.staking import RewardClaim, StakingRecord
-from src.models.subscription import Subscription
 from src.shared.schemas.enums import (
     AssetStatus,
     AuditAction,
@@ -123,31 +121,31 @@ class AdminService:
     async def get_user_stats(self) -> UserStatsResponse:
         """获取用户统计"""
         # KYC 状态统计
-        kyc_approved = await UserKyc.filter(
-            status=KycStatus.APPROVED, environment=self.environment
+        kyc_approved = await AccountKyc.filter(
+            status=KycStatus.APPROVED, network=self.environment
         ).count()
 
-        kyc_pending = await UserKyc.filter(
-            status=KycStatus.PENDING, environment=self.environment
+        kyc_pending = await AccountKyc.filter(
+            status=KycStatus.PENDING, network=self.environment
         ).count()
 
-        kyc_rejected = await UserKyc.filter(
-            status=KycStatus.REJECTED, environment=self.environment
+        kyc_rejected = await AccountKyc.filter(
+            status=KycStatus.REJECTED, network=self.environment
         ).count()
 
-        total_users = await UserKyc.filter(environment=self.environment).count()
+        total_users = await AccountKyc.filter(network=self.environment).count()
 
         # 新增用户统计
         now = datetime.now(timezone.utc)
         day_ago = now - timedelta(days=1)
         week_ago = now - timedelta(days=7)
 
-        new_24h = await UserKyc.filter(
-            created_at__gte=day_ago, environment=self.environment
+        new_24h = await AccountKyc.filter(
+            created_at__gte=day_ago, network=self.environment
         ).count()
 
-        new_7d = await UserKyc.filter(
-            created_at__gte=week_ago, environment=self.environment
+        new_7d = await AccountKyc.filter(
+            created_at__gte=week_ago, network=self.environment
         ).count()
 
         # KYC 转化率

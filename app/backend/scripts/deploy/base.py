@@ -72,6 +72,13 @@ class ContractConfig:
         register_to_provider: 部署后是否注册到 Provider
         provider_key: Provider 中的 key (bytes32)
         description: 合约描述
+        
+        # 元数据字段 (用于 UI 展示和依赖检查)
+        dependency_type: 依赖类型 (primary/required/business/optional)
+        is_primary: 是否为项目主合约
+        deploy_order: 部署顺序权重
+        required_deps: 必须依赖列表 (合约名称)
+        optional_deps: 可选依赖列表 (合约名称)
     """
 
     name: str
@@ -84,7 +91,7 @@ class ContractConfig:
     # 构造函数参数
     constructor_args: dict = field(default_factory=dict)
 
-    # 依赖配置 (纯 Provider 模式)
+    # 依赖配置 (纯 Provider 模式 - Provider Key 列表)
     provider_deps: list[str] = field(default_factory=list)
 
     # 部署选项
@@ -94,6 +101,13 @@ class ContractConfig:
 
     # 元数据
     description: str = ""
+    
+    # 元数据字段 (用于 UI 展示和依赖检查)
+    dependency_type: str = "business"  # primary/required/business/optional
+    is_primary: bool = False
+    deploy_order: int = 100
+    required_deps: list[str] = field(default_factory=list)  # 合约名称列表
+    optional_deps: list[str] = field(default_factory=list)  # 合约名称列表
 
     def get_constructor_args(self, deployed: dict, provider=None) -> list:
         """
@@ -129,11 +143,17 @@ class ProjectConfig:
         name: 项目名称 (如 "vanke")
         display_name: 显示名称 (如 "Vanke Real Estate")
         contracts: 合约配置列表 (部署顺序由列表顺序决定)
+        description: 项目描述
+        version: 项目版本
+        primary_contract: 主合约名称
     """
 
     name: str
     display_name: str
     contracts: list[ContractConfig]
+    description: str = ""
+    version: str = "1.0.0"
+    primary_contract: str = ""  # 主合约名称
 
 
 # ============================================

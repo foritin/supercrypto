@@ -8,9 +8,11 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from falib.utils.log import get_logger
-from src.models.project_registry import ContractDeploymentStatus, ProjectContractConfig
 
-from src.shared.schemas.enums import (
+from src.models.contracts.contract_config import ContractConfig
+from src.models.contracts.contract_deployment import ContractDeployment
+from src.shared.schemas.enums import ContractStatus
+from src.shared.schemas.enums.contract import (
     ContractRegistryStatus,
     DependencyType,
     ProjectReadiness,
@@ -83,7 +85,7 @@ class ProjectStatusReport:
 class ProjectReadinessChecker:
     """项目就绪状态检查器"""
 
-    def __init__(self, network: str = "local"):
+    def __init__(self, network: str = "hardhat"):
         self.network = network
         self.config_loader = get_config_loader()
 
@@ -105,8 +107,8 @@ class ProjectReadinessChecker:
             project_name=project_name, readiness=ProjectReadiness.NOT_READY
         )
 
-        # 1. 获取项目所有合约配置
-        configs = await ProjectContractConfig.filter(project_name=project_name).all()
+        # 1. 获取项目所有合约配置 (使用新的 ContractConfig 模型)
+        configs = await ContractConfig.filter(project_name=project_name).all()
 
         if not configs:
             report.summary = f"项目 '{project_name}' 未找到任何合约配置"
@@ -142,7 +144,7 @@ class ProjectReadinessChecker:
         return report
 
     async def _build_contract_info(
-        self, config: ProjectContractConfig, network: str
+        self, config: ContractConfig, network: str
     ) -> ContractReadinessInfo:
         """构建单个合约状态信息"""
         info = ContractReadinessInfo(
@@ -155,16 +157,19 @@ class ProjectReadinessChecker:
             optional_deps=config.optional_deps or [],
         )
 
-        # 获取部署状态
-        deployment = await ContractDeploymentStatus.filter(
-            config=config, network=network
+        # 获取部署状态 (使用新的 ContractDeployment 模型)
+        deployment = await ContractDeployment.filter(
+            name=config.contract_name, network=network
         ).first()
 
         if deployment:
-            info.is_deployed = deployment.is_deployed
-            info.current_status = deployment.status
+            info.is_deployed = bool(deployment.address)
+            # 映射 ContractStatus 到 ContractRegistryStatus
+            info.current_status = self._map_contract_to_registry_status(
+                deployment.status
+            )
             info.address = deployment.address
-            info.network = deployment.network
+            info.network = deployment.network.value if deployment.network else network
 
             # 分析绑定状态
             bindings = deployment.bindings or {}
@@ -190,6 +195,20 @@ class ProjectReadinessChecker:
             info.blocking_reason = self._get_blocking_reason(info)
 
         return info
+
+    def _map_contract_to_registry_status(
+        self, status: Optional[ContractStatus]
+    ) -> ContractRegistryStatus:
+        """映射 ContractStatus 到 ContractRegistryStatus"""
+        if status == ContractStatus.ACTIVE:
+            return ContractRegistryStatus.ACTIVE
+        elif status == ContractStatus.PAUSED:
+            return ContractRegistryStatus.DEPLOYED
+        elif status == ContractStatus.DEPRECATED:
+            return ContractRegistryStatus.DEPLOYED
+        elif status == ContractStatus.FROZEN:
+            return ContractRegistryStatus.DEPLOYED
+        return ContractRegistryStatus.REGISTERED
 
     def _is_contract_ready(self, info: ContractReadinessInfo) -> bool:
         """判断合约是否就绪"""
@@ -388,7 +407,7 @@ class ProjectReadinessChecker:
 _checker_instances: Dict[str, ProjectReadinessChecker] = {}
 
 
-def get_readiness_checker(network: str = "local") -> ProjectReadinessChecker:
+def get_readiness_checker(network: str = "hardhat") -> ProjectReadinessChecker:
     """获取就绪检查器实例"""
     if network not in _checker_instances:
         _checker_instances[network] = ProjectReadinessChecker(network)

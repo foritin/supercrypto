@@ -9,6 +9,7 @@ import subscription from './subscription'
 import staking from './staking'
 import admin from './admin'
 import dev from './dev'
+import errors from './errors'
 
 const valueZH = {
   ...common,
@@ -22,6 +23,7 @@ const valueZH = {
   ...staking,
   ...admin,
   ...dev,
+  ...errors,
 }
 
 export default valueZH

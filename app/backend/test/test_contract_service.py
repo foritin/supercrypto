@@ -7,6 +7,10 @@ Contract Service 单元测试
 - get_project_primary_contract: 获取项目的主合约
 
 Validates: Requirements 1.4, 1.5, 4.5
+
+注意：由于 ContractService 已重构为组合模式，实际实现在子服务中：
+- set_primary/unset_primary -> sync_service.py
+- get_project_primary_contract -> status_service.py
 """
 
 import asyncio
@@ -14,12 +18,18 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.services.contract.service import ContractService
-from src.shared.schemas.enums import ContractScope, ContractStatus, NetWork
+from src.shared.schemas.enums import ContractScope, ContractStatus, NetWork, ErrorCode
+from src.shared.common.exceptions import BusinessException
 
 
 def run_async(coro):
     """辅助函数：运行异步协程"""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 class TestContractServiceSetPrimary:
@@ -74,7 +84,7 @@ class TestContractServiceSetPrimary:
         Validates: Requirements 1.4, 4.5
         """
         with patch(
-            "src.services.contract.service.ContractModel"
+            "src.services.contract.sync_service.ContractDeployment"
         ) as MockContractModel:
             # 模拟合约查询 - 合约存在
             # 第一次调用返回合约，第二次调用（检查主合约）返回 None
@@ -118,7 +128,7 @@ class TestContractServiceSetPrimary:
         existing_primary.is_primary = True
 
         with patch(
-            "src.services.contract.service.ContractModel"
+            "src.services.contract.sync_service.ContractDeployment"
         ) as MockContractModel:
             call_count = 0
 
@@ -131,11 +141,12 @@ class TestContractServiceSetPrimary:
 
             MockContractModel.filter.return_value.first = mock_first
 
-            # 执行并验证抛出错误
-            with pytest.raises(ValueError) as exc_info:
+            # 执行并验证抛出 BusinessException
+            with pytest.raises(BusinessException) as exc_info:
                 run_async(contract_service.set_primary(contract_id=1))
 
-            assert "该项目已有主合约" in str(exc_info.value)
+            assert exc_info.value.error_code == ErrorCode.PROJECT_ALREADY_HAS_PRIMARY.value
+            assert exc_info.value.code == 400
 
     def test_set_primary_global_scope(
         self, contract_service, mock_global_contract
@@ -151,19 +162,18 @@ class TestContractServiceSetPrimary:
         Validates: Requirements 4.5, 5.3
         """
         with patch(
-            "src.services.contract.service.ContractModel"
+            "src.services.contract.sync_service.ContractDeployment"
         ) as MockContractModel:
             MockContractModel.filter.return_value.first = AsyncMock(
                 return_value=mock_global_contract
             )
 
-            # 执行并验证抛出错误
-            with pytest.raises(ValueError) as exc_info:
+            # 执行并验证抛出 BusinessException
+            with pytest.raises(BusinessException) as exc_info:
                 run_async(contract_service.set_primary(contract_id=2))
 
-            assert "只有项目专属合约（PROJECT scope）可以设为主合约" in str(
-                exc_info.value
-            )
+            assert exc_info.value.error_code == ErrorCode.CONTRACT_NOT_PROJECT_SCOPE.value
+            assert exc_info.value.code == 400
 
     def test_set_primary_contract_not_found(self, contract_service):
         """
@@ -174,15 +184,16 @@ class TestContractServiceSetPrimary:
         2. 验证抛出错误
         """
         with patch(
-            "src.services.contract.service.ContractModel"
+            "src.services.contract.sync_service.ContractDeployment"
         ) as MockContractModel:
             MockContractModel.filter.return_value.first = AsyncMock(return_value=None)
 
-            # 执行并验证抛出错误
-            with pytest.raises(ValueError) as exc_info:
+            # 执行并验证抛出 BusinessException
+            with pytest.raises(BusinessException) as exc_info:
                 run_async(contract_service.set_primary(contract_id=999))
 
-            assert "合约不存在" in str(exc_info.value)
+            assert exc_info.value.error_code == ErrorCode.CONTRACT_DEPLOYMENT_NOT_FOUND.value
+            assert exc_info.value.code == 404
 
 
 class TestContractServiceUnsetPrimary:
@@ -238,7 +249,7 @@ class TestContractServiceUnsetPrimary:
         Validates: Requirements 4.3
         """
         with patch(
-            "src.services.contract.service.ContractModel"
+            "src.services.contract.sync_service.ContractDeployment"
         ) as MockContractModel:
             MockContractModel.filter.return_value.first = AsyncMock(
                 return_value=mock_primary_contract
@@ -263,17 +274,18 @@ class TestContractServiceUnsetPrimary:
         3. 验证抛出错误
         """
         with patch(
-            "src.services.contract.service.ContractModel"
+            "src.services.contract.sync_service.ContractDeployment"
         ) as MockContractModel:
             MockContractModel.filter.return_value.first = AsyncMock(
                 return_value=mock_non_primary_contract
             )
 
-            # 执行并验证抛出错误
-            with pytest.raises(ValueError) as exc_info:
+            # 执行并验证抛出 BusinessException
+            with pytest.raises(BusinessException) as exc_info:
                 run_async(contract_service.unset_primary(contract_id=2))
 
-            assert "该合约不是主合约" in str(exc_info.value)
+            assert exc_info.value.error_code == ErrorCode.CONTRACT_NOT_PRIMARY.value
+            assert exc_info.value.code == 400
 
     def test_unset_primary_contract_not_found(self, contract_service):
         """
@@ -284,15 +296,16 @@ class TestContractServiceUnsetPrimary:
         2. 验证抛出错误
         """
         with patch(
-            "src.services.contract.service.ContractModel"
+            "src.services.contract.sync_service.ContractDeployment"
         ) as MockContractModel:
             MockContractModel.filter.return_value.first = AsyncMock(return_value=None)
 
-            # 执行并验证抛出错误
-            with pytest.raises(ValueError) as exc_info:
+            # 执行并验证抛出 BusinessException
+            with pytest.raises(BusinessException) as exc_info:
                 run_async(contract_service.unset_primary(contract_id=999))
 
-            assert "合约不存在" in str(exc_info.value)
+            assert exc_info.value.error_code == ErrorCode.CONTRACT_DEPLOYMENT_NOT_FOUND.value
+            assert exc_info.value.code == 404
 
 
 class TestContractServiceGetProjectPrimaryContract:
@@ -333,9 +346,9 @@ class TestContractServiceGetProjectPrimaryContract:
         Validates: Requirements 5.5
         """
         with patch(
-            "src.services.contract.service.ContractModel"
-        ) as MockContractModel:
-            MockContractModel.filter.return_value.first = AsyncMock(
+            "src.services.contract.status_service.ContractDeployment"
+        ) as MockContractDeployment:
+            MockContractDeployment.filter.return_value.first = AsyncMock(
                 return_value=mock_primary_contract
             )
 
@@ -362,9 +375,9 @@ class TestContractServiceGetProjectPrimaryContract:
         Validates: Requirements 5.5
         """
         with patch(
-            "src.services.contract.service.ContractModel"
-        ) as MockContractModel:
-            MockContractModel.filter.return_value.first = AsyncMock(return_value=None)
+            "src.services.contract.status_service.ContractDeployment"
+        ) as MockContractDeployment:
+            MockContractDeployment.filter.return_value.first = AsyncMock(return_value=None)
 
             # 执行
             result = run_async(

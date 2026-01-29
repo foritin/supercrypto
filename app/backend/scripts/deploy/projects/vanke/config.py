@@ -40,8 +40,11 @@ class VankeProviderKey:
 VANKE_PROJECT = ProjectConfig(
     name="vanke",
     display_name="Vanke Real Estate",
+    description="万科 RWA 资产代币化项目",
+    version="1.0.0",
+    primary_contract="VankeRWAToken",
     contracts=[
-        # 1. RWA 代币 - TOKEN 类型
+        # 1. RWA 代币 - TOKEN 类型 (主合约)
         ContractConfig(
             name="VankeRWAToken",
             contract_class_name="VankeRWAToken",
@@ -52,6 +55,10 @@ VANKE_PROJECT = ProjectConfig(
             register_to_provider=True,
             provider_key=VankeProviderKey.RWA_TOKEN,
             description="万科 RWA Token - 资产代币化",
+            dependency_type="primary",
+            is_primary=True,
+            deploy_order=10,
+            required_deps=["KYC"],
         ),
         # 2. 平台代币 - TOKEN 类型
         ContractConfig(
@@ -63,6 +70,8 @@ VANKE_PROJECT = ProjectConfig(
             register_to_provider=True,
             provider_key=VankeProviderKey.PLATFORM_TOKEN,
             description="万科平台 Token - 平台激励代币",
+            dependency_type="business",
+            deploy_order=11,
         ),
         # 3. 认购合约 - DEFI 类型
         ContractConfig(
@@ -71,10 +80,16 @@ VANKE_PROJECT = ProjectConfig(
             scope="project",
             contract_type="defi",
             constructor_args={},
-            provider_deps=["KYC_MANAGER", "USDT", "VANKE_RWA_TOKEN"],
+            # USDT/USDC 是可选的支付代币，实际使用时二选一
+            provider_deps=["KYC_MANAGER", "VANKE_RWA_TOKEN"],
             register_to_provider=True,
             provider_key=VankeProviderKey.SUBSCRIPTION,
             description="万科认购合约 - 处理用户认购",
+            dependency_type="business",
+            deploy_order=12,
+            required_deps=["KYC", "VankeRWAToken"],
+            # USDT 或 USDC 任选其一作为支付代币
+            optional_deps=["USDT", "USDC"],
         ),
         # 4. 质押合约 - DEFI 类型
         ContractConfig(
@@ -92,6 +107,14 @@ VANKE_PROJECT = ProjectConfig(
             register_to_provider=True,
             provider_key=VankeProviderKey.STAKING,
             description="万科质押合约 - RWA Token 质押",
+            dependency_type="business",
+            deploy_order=13,
+            required_deps=[
+                "KYC",
+                "VankeRWAToken",
+                "VankePlatformToken",
+                "VankeSubscription",
+            ],
         ),
         # 5. 流动性挖矿 - DEFI 类型
         ContractConfig(
@@ -106,6 +129,10 @@ VANKE_PROJECT = ProjectConfig(
             register_to_provider=True,
             provider_key=VankeProviderKey.LIQUIDITY_MINING,
             description="万科流动性挖矿 - 流动性激励",
+            dependency_type="optional",
+            deploy_order=14,
+            required_deps=["VankePlatformToken"],
+            optional_deps=["KYC"],
         ),
     ],
 )

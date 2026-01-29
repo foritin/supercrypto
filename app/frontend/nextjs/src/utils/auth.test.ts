@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
-  setJwtToken,
+  saveTokens,
   getJwtToken,
-  clearJwtToken,
   hasJwtToken,
   setWalletConnected,
   wasWalletConnected,
@@ -10,6 +9,16 @@ import {
   parseJwtPayload,
   isJwtExpired,
 } from './auth'
+
+// Helper to set JWT token directly for testing
+const setJwtToken = (token: string) => {
+  localStorage.setItem('supercrypto-jwt', token)
+}
+
+// Helper to clear JWT token directly for testing
+const clearJwtToken = () => {
+  localStorage.removeItem('supercrypto-jwt')
+}
 
 describe('Auth Utils', () => {
   beforeEach(() => {

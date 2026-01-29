@@ -2,7 +2,7 @@
  * 媒体管理组件
  * 
  * 用于管理资产的媒体文件（图片、文档等）
- * 支持：上传、删除、排序、设置主图
+ * 支持：上传、删除、批量删除、排序、设置主图
  * 
  * Migrated from Ant Design to shadcn/ui
  * @validates Requirements 8.6
@@ -10,6 +10,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { 
   Trash2, 
   Star, 
@@ -18,7 +19,10 @@ import {
   Upload,
   Download,
   Loader2,
-  X
+  X,
+  CheckSquare,
+  Square,
+  XCircle
 } from 'lucide-react'
 import {
   Dialog,
@@ -45,9 +49,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { notification } from '@/lib/notification'
 import { assetService, type AssetMediaItem, type MediaType, type MediaStats } from '@/services/asset'
@@ -55,36 +60,36 @@ import { assetService, type AssetMediaItem, type MediaType, type MediaStats } fr
 // 媒体类型配置
 const MEDIA_TYPE_CONFIG: Record<
   string,
-  { label: string; accept: string; maxSize: number; maxCount: number; required?: boolean }
+  { labelKey: string; accept: string; maxSize: number; maxCount: number; required?: boolean }
 > = {
   cover: {
-    label: '封面图',
+    labelKey: 'admin.media.types.cover',
     accept: 'image/*',
     maxSize: 5 * 1024 * 1024, // 5MB
     maxCount: 1,
   },
   gallery: {
-    label: '相册',
+    labelKey: 'admin.media.types.gallery',
     accept: 'image/*',
     maxSize: 5 * 1024 * 1024,
     maxCount: 20,
   },
   valuation: {
-    label: '估值报告',
+    labelKey: 'admin.media.types.valuation',
     accept: '.pdf,.doc,.docx',
     maxSize: 10 * 1024 * 1024, // 10MB
     maxCount: 5,
     required: true,
   },
   legal: {
-    label: '法律文件',
+    labelKey: 'admin.media.types.legal',
     accept: '.pdf,.doc,.docx',
     maxSize: 10 * 1024 * 1024,
     maxCount: 10,
     required: true,
   },
   financial: {
-    label: '财务文件',
+    labelKey: 'admin.media.types.financial',
     accept: '.pdf,.doc,.docx,.xls,.xlsx',
     maxSize: 10 * 1024 * 1024,
     maxCount: 10,
@@ -102,14 +107,20 @@ interface MediaManagerProps {
  * 媒体管理器组件
  */
 export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManagerProps) {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<MediaType>('cover')
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [mediaList, setMediaList] = useState<AssetMediaItem[]>([])
   const [stats, setStats] = useState<MediaStats | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // 批量选择状态
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
 
   // 加载媒体列表
   const loadMedia = useCallback(async () => {
@@ -123,67 +134,154 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
       setMediaList(media)
       setStats(statsData)
     } catch (error) {
-      notification.error('加载媒体列表失败')
+      notification.error(t('admin.media.messages.loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [assetId])
+  }, [assetId, t])
 
   useEffect(() => {
     if (visible) {
       loadMedia()
+    } else {
+      // 关闭时重置选择状态
+      setSelectionMode(false)
+      setSelectedIds(new Set())
     }
   }, [visible, loadMedia])
 
-  // 过滤当前类型的媒体
-  const currentMedia = mediaList.filter((m) => m.media_type === activeTab)
+  // 切换标签页时清除选择
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [activeTab])
 
-  // 上传处理
-  const handleUpload = async (file: File) => {
+  // 批量上传处理
+  const handleUploadFiles = async (files: File[]) => {
     const config = MEDIA_TYPE_CONFIG[activeTab]
-    if (!config) return false
+    if (!config || files.length === 0) return
 
-    // 验证文件大小
-    if (file.size > config.maxSize) {
-      notification.error(`文件大小超过限制 (${config.maxSize / 1024 / 1024}MB)`)
-      return false
+    // 检查数量限制
+    const currentCount = mediaList.filter((m) => m.media_type === activeTab).length
+    const remainingSlots = config.maxCount - currentCount
+    
+    if (remainingSlots <= 0) {
+      notification.error(t('admin.media.messages.maxCountReached', { count: config.maxCount }))
+      return
     }
 
+    // 限制上传数量
+    const filesToUpload = files.slice(0, remainingSlots)
+    
+    // 预先验证文件大小
+    const validFiles: File[] = []
+    for (const file of filesToUpload) {
+      if (file.size > config.maxSize) {
+        notification.error(t('admin.media.messages.fileSizeExceeded', { 
+          name: file.name,
+          size: config.maxSize / 1024 / 1024 
+        }))
+      } else {
+        validFiles.push(file)
+      }
+    }
+
+    if (validFiles.length === 0) return
+
     setUploading(true)
+
     try {
-      await assetService.uploadMedia(assetId, file, activeTab, file.name)
-      notification.success('上传成功')
-      loadMedia()
-      onUpdate?.()
+      // 使用统一的批量上传接口
+      const result = await assetService.uploadMedia(assetId, validFiles, activeTab)
+      
+      if (result.success_count > 0) {
+        notification.success(t('admin.media.messages.uploadBatchSuccess', { count: result.success_count }))
+        loadMedia()
+        onUpdate?.()
+      }
+      if (result.failed_count > 0) {
+        notification.error(t('admin.media.messages.uploadBatchFailed', { count: result.failed_count }))
+      }
     } catch (error) {
-      notification.error('上传失败')
+      notification.error(t('admin.media.messages.uploadFailed'))
     } finally {
       setUploading(false)
     }
-    return false
   }
 
-  // 删除媒体
+  // 删除单个媒体
   const handleDelete = async (mediaId: number) => {
     try {
-      await assetService.deleteMedia(assetId, mediaId)
-      notification.success('删除成功')
-      loadMedia()
-      onUpdate?.()
+      const result = await assetService.deleteMedia(assetId, mediaId)
+      if (result.success_count > 0) {
+        notification.success(t('admin.media.messages.deleteSuccess'))
+        loadMedia()
+        onUpdate?.()
+      } else {
+        const error = result.results[0]?.error || 'Unknown error'
+        notification.error(t('admin.media.messages.deleteFailed') + ': ' + error)
+      }
     } catch (error) {
-      notification.error('删除失败')
+      notification.error(t('admin.media.messages.deleteFailed'))
     }
+  }
+
+  // 批量删除媒体
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return
+
+    setDeleting(true)
+    try {
+      const result = await assetService.deleteMedia(assetId, Array.from(selectedIds))
+      if (result.success_count > 0) {
+        notification.success(t('admin.media.messages.deleteBatchSuccess', { count: result.success_count }))
+        setSelectedIds(new Set())
+        setSelectionMode(false)
+        loadMedia()
+        onUpdate?.()
+      }
+      if (result.failed_count > 0) {
+        notification.error(t('admin.media.messages.deleteBatchFailed', { count: result.failed_count }))
+      }
+    } catch (error) {
+      notification.error(t('admin.media.messages.deleteFailed'))
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // 切换选择项
+  const toggleSelection = (mediaId: number) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(mediaId)) {
+        newSet.delete(mediaId)
+      } else {
+        newSet.add(mediaId)
+      }
+      return newSet
+    })
+  }
+
+  // 全选当前标签页
+  const selectAll = () => {
+    const tabMedia = mediaList.filter((m) => m.media_type === activeTab)
+    setSelectedIds(new Set(tabMedia.map(m => m.id)))
+  }
+
+  // 取消全选
+  const deselectAll = () => {
+    setSelectedIds(new Set())
   }
 
   // 设置主图
   const handleSetPrimary = async (mediaId: number) => {
     try {
       await assetService.updateMedia(assetId, mediaId, { is_primary: true })
-      notification.success('已设为主图')
+      notification.success(t('admin.media.messages.setPrimarySuccess'))
       loadMedia()
       onUpdate?.()
     } catch (error) {
-      notification.error('设置失败')
+      notification.error(t('admin.media.messages.setPrimaryFailed'))
     }
   }
 
@@ -191,7 +289,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && files.length > 0) {
-      handleUpload(files[0])
+      handleUploadFiles(Array.from(files))
     }
     // Reset input
     if (fileInputRef.current) {
@@ -215,140 +313,194 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
     setIsDragging(false)
     const files = e.dataTransfer.files
     if (files && files.length > 0) {
-      handleUpload(files[0])
+      handleUploadFiles(Array.from(files))
     }
   }
 
   // 渲染图片卡片
-  const renderImageCard = (media: AssetMediaItem) => (
-    <Card key={media.id} className="w-[200px] overflow-hidden group">
-      <div className="relative h-[150px] overflow-hidden">
-        <img
-          src={media.url}
-          alt={media.title || '媒体'}
-          className="object-cover w-full h-full cursor-pointer transition-transform group-hover:scale-105"
-          onClick={() => setPreviewImage(media.url)}
-        />
-        {media.is_primary && (
-          <Badge 
-            className="absolute top-2 right-2 bg-yellow-500/90 text-yellow-950"
-          >
-            <Star className="w-3 h-3 mr-1 fill-current" />
-            主图
-          </Badge>
+  const renderImageCard = (media: AssetMediaItem) => {
+    const isSelected = selectedIds.has(media.id)
+    
+    return (
+      <Card 
+        key={media.id} 
+        className={cn(
+          "w-[200px] overflow-hidden group relative",
+          selectionMode && "cursor-pointer",
+          isSelected && "ring-2 ring-primary"
         )}
-      </div>
-      <CardContent className="p-3">
-        <p className="font-medium text-sm truncate">{media.title || '未命名'}</p>
-        <p className="text-xs text-muted-foreground truncate">{media.file_name}</p>
-      </CardContent>
-      <CardFooter className="p-3 pt-0 flex justify-end gap-2">
-        {!media.is_primary && activeTab === 'gallery' && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => handleSetPrimary(media.id)}
-            title="设为主图"
-          >
-            <Star className="h-4 w-4" />
-          </Button>
+        onClick={selectionMode ? () => toggleSelection(media.id) : undefined}
+      >
+        {/* 选择复选框 */}
+        {selectionMode && (
+          <div className="absolute top-2 left-2 z-10">
+            <Checkbox 
+              checked={isSelected}
+              onCheckedChange={() => toggleSelection(media.id)}
+              className="bg-black/50 border-white/50 data-[state=checked]:bg-primary"
+            />
+          </div>
         )}
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
-              title="删除"
+        
+        <div className="relative h-[150px] overflow-hidden">
+          <img
+            src={media.url}
+            alt={media.title || t('admin.media.status.unnamed')}
+            className={cn(
+              "object-cover w-full h-full transition-transform group-hover:scale-105",
+              !selectionMode && "cursor-pointer"
+            )}
+            onClick={!selectionMode ? () => setPreviewImage(media.url) : undefined}
+          />
+          {media.is_primary && (
+            <Badge 
+              className="absolute top-2 right-2 bg-yellow-500/90 text-yellow-950"
             >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>确定删除此媒体文件？</AlertDialogTitle>
-              <AlertDialogDescription>
-                此操作无法撤销，文件将被永久删除。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>取消</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => handleDelete(media.id)}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                删除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardFooter>
-    </Card>
-  )
-
-  // 渲染文档卡片
-  const renderDocumentCard = (media: AssetMediaItem) => (
-    <Card key={media.id} className="mb-2">
-      <CardContent className="p-4 flex items-center gap-4">
-        <div className="flex-shrink-0">
-          <FileText className="h-8 w-8 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium truncate">{media.title || media.file_name}</p>
-          {media.description && (
-            <p className="text-sm text-muted-foreground truncate">{media.description}</p>
+              <Star className="w-3 h-3 mr-1 fill-current" />
+              {t('admin.media.status.primary')}
+            </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-          >
-            <a href={media.url} target="_blank" rel="noopener noreferrer">
-              <Download className="h-4 w-4 mr-1" />
-              下载
-            </a>
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+        <CardContent className="p-3">
+          <p className="font-medium text-sm truncate">{media.title || t('admin.media.status.unnamed')}</p>
+          <p className="text-xs text-muted-foreground truncate">{media.file_name}</p>
+        </CardContent>
+        {!selectionMode && (
+          <CardFooter className="p-3 pt-0 flex justify-end gap-2">
+            {!media.is_primary && activeTab === 'gallery' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleSetPrimary(media.id)}
+                title={t('admin.media.actions.setPrimary')}
+              >
+                <Star className="h-4 w-4" />
+              </Button>
+            )}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  title={t('admin.media.actions.delete')}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('admin.media.confirm.deleteTitle')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('admin.media.confirm.deleteDescription')}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('admin.media.confirm.cancel')}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => handleDelete(media.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {t('admin.media.confirm.delete')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardFooter>
+        )}
+      </Card>
+    )
+  }
+
+  // 渲染文档卡片
+  const renderDocumentCard = (media: AssetMediaItem) => {
+    const isSelected = selectedIds.has(media.id)
+    
+    return (
+      <Card 
+        key={media.id} 
+        className={cn(
+          "mb-2",
+          selectionMode && "cursor-pointer",
+          isSelected && "ring-2 ring-primary"
+        )}
+        onClick={selectionMode ? () => toggleSelection(media.id) : undefined}
+      >
+        <CardContent className="p-4 flex items-center gap-4">
+          {/* 选择复选框 */}
+          {selectionMode && (
+            <Checkbox 
+              checked={isSelected}
+              onCheckedChange={() => toggleSelection(media.id)}
+              className="data-[state=checked]:bg-primary"
+            />
+          )}
+          
+          <div className="flex-shrink-0">
+            <FileText className="h-8 w-8 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium truncate">{media.title || media.file_name}</p>
+            {media.description && (
+              <p className="text-sm text-muted-foreground truncate">{media.description}</p>
+            )}
+          </div>
+          {!selectionMode && (
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-destructive hover:text-destructive"
+                asChild
               >
-                <Trash2 className="h-4 w-4 mr-1" />
-                删除
+                <a href={media.url} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 mr-1" />
+                  {t('admin.media.actions.download')}
+                </a>
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>确定删除此文件？</AlertDialogTitle>
-                <AlertDialogDescription>
-                  此操作无法撤销，文件将被永久删除。
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => handleDelete(media.id)}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  删除
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </CardContent>
-    </Card>
-  )
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    {t('admin.media.actions.delete')}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t('admin.media.confirm.deleteTitle')}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t('admin.media.confirm.deleteDescription')}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t('admin.media.confirm.cancel')}</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleDelete(media.id)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {t('admin.media.confirm.delete')}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
 
   // 渲染上传区域
   const renderUploadArea = () => {
     const config = MEDIA_TYPE_CONFIG[activeTab]
     const isImageType = activeTab === 'cover' || activeTab === 'gallery'
+    const currentCount = mediaList.filter((m) => m.media_type === activeTab).length
+    const canUploadMore = currentCount < (config?.maxCount || 1)
+    const allowMultiple = (config?.maxCount || 1) > 1
 
     return (
       <div
@@ -357,20 +509,21 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
           isDragging 
             ? "border-primary bg-primary/5" 
             : "border-white/20 hover:border-primary/50 hover:bg-white/5",
-          uploading && "pointer-events-none opacity-50"
+          (uploading || !canUploadMore) && "pointer-events-none opacity-50"
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => canUploadMore && fileInputRef.current?.click()}
       >
         <input
           ref={fileInputRef}
           type="file"
           accept={config?.accept}
+          multiple={allowMultiple}
           onChange={handleFileSelect}
           className="hidden"
-          disabled={uploading}
+          disabled={uploading || !canUploadMore}
         />
         <div className="flex flex-col items-center gap-2">
           {uploading ? (
@@ -381,12 +534,118 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
             <Upload className="h-10 w-10 text-muted-foreground" />
           )}
           <p className="text-sm text-muted-foreground">
-            {uploading ? '上传中...' : '点击或拖拽文件到此区域上传'}
+            {uploading 
+              ? t('admin.media.upload.uploading') 
+              : !canUploadMore 
+                ? t('admin.media.messages.maxCountReached', { count: config?.maxCount })
+                : allowMultiple
+                  ? t('admin.media.upload.dragOrClickMultiple')
+                  : t('admin.media.upload.dragOrClick')
+            }
           </p>
           <p className="text-xs text-muted-foreground">
-            支持: {config?.accept} | 最大: {(config?.maxSize || 0) / 1024 / 1024}MB
+            {t('admin.media.upload.support', { accept: config?.accept, size: (config?.maxSize || 0) / 1024 / 1024 })}
+            {allowMultiple && ` · ${t('admin.media.upload.remaining', { count: (config?.maxCount || 0) - currentCount })}`}
           </p>
         </div>
+      </div>
+    )
+  }
+
+  // 渲染批量操作工具栏
+  const renderBatchToolbar = () => {
+    const tabMedia = mediaList.filter((m) => m.media_type === activeTab)
+    const hasMedia = tabMedia.length > 0
+    const selectedCount = selectedIds.size
+    const allSelected = hasMedia && selectedCount === tabMedia.length
+
+    if (!hasMedia) return null
+
+    return (
+      <div className="flex items-center justify-between mb-4 p-3 bg-white/5 rounded-lg">
+        <div className="flex items-center gap-3">
+          {selectionMode ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={allSelected ? deselectAll : selectAll}
+              >
+                {allSelected ? (
+                  <>
+                    <XCircle className="h-4 w-4 mr-1" />
+                    {t('admin.media.batch.deselectAll')}
+                  </>
+                ) : (
+                  <>
+                    <CheckSquare className="h-4 w-4 mr-1" />
+                    {t('admin.media.batch.selectAll')}
+                  </>
+                )}
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                {t('admin.media.batch.selected', { count: selectedCount })}
+              </span>
+            </>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectionMode(true)}
+            >
+              <Square className="h-4 w-4 mr-1" />
+              {t('admin.media.batch.selectMode')}
+            </Button>
+          )}
+        </div>
+
+        {selectionMode && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectionMode(false)
+                setSelectedIds(new Set())
+              }}
+            >
+              {t('admin.media.batch.cancel')}
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={selectedCount === 0 || deleting}
+                >
+                  {deleting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-1" />
+                  )}
+                  {t('admin.media.batch.deleteSelected', { count: selectedCount })}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('admin.media.confirm.deleteBatchTitle')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('admin.media.confirm.deleteBatchDescription', { count: selectedCount })}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('admin.media.confirm.cancel')}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleBatchDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {t('admin.media.confirm.delete')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </div>
     )
   }
@@ -395,7 +654,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
   const renderEmptyState = () => (
     <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
       <FileText className="h-12 w-12 mb-4 opacity-50" />
-      <p>暂无媒体文件</p>
+      <p>{t('admin.media.empty')}</p>
     </div>
   )
 
@@ -418,6 +677,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
     return (
       <div>
         {renderUploadArea()}
+        {renderBatchToolbar()}
 
         {loading ? (
           renderLoadingState()
@@ -439,9 +699,9 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
   return (
     <>
       <Dialog open={visible} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-[900px] max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-[900px] max-h-[85vh] overflow-hidden flex flex-col top-[10vh] translate-y-0 data-[state=open]:slide-in-from-top-2">
           <DialogHeader>
-            <DialogTitle>媒体管理</DialogTitle>
+            <DialogTitle>{t('admin.media.title')}</DialogTitle>
           </DialogHeader>
           
           <div className="flex-1 overflow-y-auto">
@@ -453,7 +713,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
                     value={key}
                     className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary border border-white/10 data-[state=active]:border-primary/30"
                   >
-                    <span>{config.label}</span>
+                    <span>{t(config.labelKey)}</span>
                     {config.required && (
                       <span className="text-destructive ml-1">*</span>
                     )}
@@ -467,7 +727,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
               </TabsList>
 
               {Object.keys(MEDIA_TYPE_CONFIG).map((key) => (
-                <TabsContent key={key} value={key} className="mt-0">
+                <TabsContent key={key} value={key} className="mt-0 min-h-[400px]">
                   {renderTabContent(key)}
                 </TabsContent>
               ))}
@@ -476,7 +736,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
 
           <DialogFooter>
             <Button variant="outline" onClick={onClose}>
-              关闭
+              {t('admin.media.actions.close')}
             </Button>
           </DialogFooter>
         </DialogContent>

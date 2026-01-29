@@ -10,11 +10,11 @@ from typing import Optional, Tuple
 import jwt
 from falib.utils.config import SETTINGS
 
+from src.shared.common.exceptions import UnauthorizedException
 from src.shared.security.exceptions import (
     AccessTokenExpiredException,
     RefreshTokenExpiredException,
 )
-from src.shared.common.exceptions import UnauthorizedException
 
 
 def create_access_token(

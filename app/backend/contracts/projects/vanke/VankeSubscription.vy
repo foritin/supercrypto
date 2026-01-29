@@ -1,10 +1,12 @@
 # @version ^0.4.0
 """
-@title Subscription Contract (STO Compliant)
-@notice 权益代币认购和赎回合约 - 符合证券法合规要求
-@dev 使用USDT购买权益代币，支持4种锁定期，动态年化收益率
+@title Subscription Contract (STO Compliant - Flexible)
+@notice 权益代币认购和赎回合约 - 活期模式，随时可赎回
+@dev 使用 USDT 或 USDC 购买权益代币，活期产品无固定锁定期
      添加KYC验证、投资者限制等STO合规功能
      使用 AddressProvider 模式获取依赖地址
+     支持稳定币：USDT (6 decimals), USDC (6 decimals)
+     利息按实际持有时间计算
 """
 
 # 接口定义
@@ -24,6 +26,7 @@ interface IKYCManager:
 
 interface IAddressProvider:
     def get_usdt() -> address: view
+    def get_usdc() -> address: view
     def get_kyc_manager() -> address: view
     def get_vanke_rwa_token() -> address: view
 
@@ -50,6 +53,7 @@ event Subscribe:
     lockPeriod: uint256
     redeemTime: uint256
     apy: uint256
+    paymentToken: address  # 支付代币地址（USDT 或 USDC）
 
 event Redeem:
     user: indexed(address)
@@ -74,12 +78,13 @@ event Migrated:
 
 # 认购记录
 struct SubscriptionInfo:
-    principal: uint256       # 本金（USDT数量）
+    principal: uint256       # 本金（稳定币数量，6位小数）
     lockPeriod: uint256      # 锁定期（秒）
     subscribeTime: uint256   # 认购时间
     redeemTime: uint256      # 可赎回时间
     apy: uint256             # 年化收益率（基点，10000 = 100%）
     redeemed: bool           # 是否已赎回
+    paymentToken: address    # 支付代币地址（USDT 或 USDC）
 
 # 状态变量
 owner: public(address)
@@ -106,11 +111,15 @@ migrated: public(bool)  # 迁移标志
 # 为迁移添加的用户列表（追踪所有有认购记录的用户）
 userList: public(DynArray[address, 1000])
 
-# 常量 - 锁定期（秒）
-LOCK_1_MONTH: constant(uint256) = 30 * 24 * 3600       # 30天
-LOCK_3_MONTHS: constant(uint256) = 90 * 24 * 3600      # 90天
-LOCK_6_MONTHS: constant(uint256) = 180 * 24 * 3600     # 180天
-LOCK_12_MONTHS: constant(uint256) = 360 * 24 * 3600    # 360天
+# 活期模式 - 无固定锁定期，随时可赎回
+# 保留常量以兼容旧数据
+LOCK_1_MONTH: constant(uint256) = 30 * 24 * 3600       # 30天 (兼容)
+LOCK_3_MONTHS: constant(uint256) = 90 * 24 * 3600      # 90天 (兼容)
+LOCK_6_MONTHS: constant(uint256) = 180 * 24 * 3600     # 180天 (兼容)
+LOCK_12_MONTHS: constant(uint256) = 360 * 24 * 3600    # 360天 (兼容)
+
+# 活期模式标识
+FLEXIBLE_PERIOD: constant(uint256) = 0  # 0 表示活期，随时可赎回
 
 # 基点常量
 BASIS_POINTS: constant(uint256) = 10000  # 100% = 10000基点
@@ -131,11 +140,13 @@ def __init__():
     self.max_investment = 0                 # 0表示无上限
     self.require_accredited = False         # 默认不强制要求合格投资者
 
-    # 设置默认APY（基点）
-    self.lock_period_apy[LOCK_1_MONTH] = 800      # 8%
-    self.lock_period_apy[LOCK_3_MONTHS] = 1000    # 10%
-    self.lock_period_apy[LOCK_6_MONTHS] = 1200    # 12%
-    self.lock_period_apy[LOCK_12_MONTHS] = 1500   # 15%
+    # 设置活期APY（基点）- 统一利率
+    self.lock_period_apy[FLEXIBLE_PERIOD] = 600   # 活期 6% APY
+    # 保留旧锁定期配置以兼容迁移数据
+    self.lock_period_apy[LOCK_1_MONTH] = 800      # 8% (兼容)
+    self.lock_period_apy[LOCK_3_MONTHS] = 1000    # 10% (兼容)
+    self.lock_period_apy[LOCK_6_MONTHS] = 1200    # 12% (兼容)
+    self.lock_period_apy[LOCK_12_MONTHS] = 1500   # 15% (兼容)
 
 
 @external
@@ -157,6 +168,13 @@ def setAddressProvider(_address_provider: address):
 def _get_usdt() -> address:
     """@notice 从 AddressProvider 获取 USDT 地址"""
     return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_usdt()
+
+
+@view
+@internal
+def _get_usdc() -> address:
+    """@notice 从 AddressProvider 获取 USDC 地址"""
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_usdc()
 
 
 @view
@@ -194,12 +212,13 @@ def unpause():
 @external
 def set_apy(_lock_period: uint256, _apy: uint256):
     """
-    @notice 设置锁定期的年化收益率
-    @param _lock_period 锁定期（秒）
+    @notice 设置年化收益率（活期模式使用 _lock_period=0）
+    @param _lock_period 锁定期（秒），0 表示活期
     @param _apy 年化收益率（基点，10000 = 100%）
     """
     assert msg.sender == self.owner, "Only owner"
-    assert _lock_period == LOCK_1_MONTH or _lock_period == LOCK_3_MONTHS or \
+    # 活期模式支持 FLEXIBLE_PERIOD (0) 或旧锁定期（兼容）
+    assert _lock_period == FLEXIBLE_PERIOD or _lock_period == LOCK_1_MONTH or _lock_period == LOCK_3_MONTHS or \
            _lock_period == LOCK_6_MONTHS or _lock_period == LOCK_12_MONTHS, "Invalid lock period"
     assert _apy <= 10000, "APY too high"  # 最高100%
 
@@ -243,22 +262,29 @@ def set_require_accredited(_require: bool):
 
 
 @external
-def subscribe(_amount: uint256, _lock_period: uint256):
+def subscribe(_amount: uint256, _lock_period: uint256 = 0, _payment_token: address = empty(address)):
     """
-    @notice 认购权益代币（STO合规版本 - 纯 Provider 模式）
-    @param _amount USDT数量（6位小数）
-    @param _lock_period 锁定期（秒）
+    @notice 认购权益代币（活期模式 - 随时可赎回）
+    @param _amount 稳定币数量（6位小数）
+    @param _lock_period 锁定期（秒），活期模式忽略此参数，始终为 0
+    @param _payment_token 支付代币地址（USDT 或 USDC，默认为 USDT）
     """
     assert not self.migrated, "Contract migrated, use new contract"
     assert not self.paused, "Contract paused"
     assert _amount > 0, "Amount must be positive"
-    assert _lock_period == LOCK_1_MONTH or _lock_period == LOCK_3_MONTHS or \
-           _lock_period == LOCK_6_MONTHS or _lock_period == LOCK_12_MONTHS, "Invalid lock period"
+    # 活期模式：忽略 _lock_period 参数，统一使用 FLEXIBLE_PERIOD
 
     # 从 Provider 获取依赖地址
     kyc: address = self._get_kyc_manager()
     usdt: address = self._get_usdt()
+    usdc: address = self._get_usdc()
     rwa_token: address = self._get_rwa_token()
+
+    # 确定支付代币（默认 USDT，也支持 USDC）
+    payment_token: address = usdt
+    if _payment_token != empty(address):
+        assert _payment_token == usdt or _payment_token == usdc, "Invalid payment token, only USDT or USDC"
+        payment_token = _payment_token
 
     # ========== STO 合规检查 ==========
 
@@ -281,27 +307,27 @@ def subscribe(_amount: uint256, _lock_period: uint256):
 
     # ===================================
 
-    # 获取当前APY
-    apy: uint256 = self.lock_period_apy[_lock_period]
+    # 获取活期 APY
+    apy: uint256 = self.lock_period_apy[FLEXIBLE_PERIOD]
 
-    # 从用户转入USDT
-    assert extcall IERC20(usdt).transferFrom(msg.sender, self, _amount), "Transfer failed"
+    # 从用户转入稳定币（USDT 或 USDC）
+    assert extcall IERC20(payment_token).transferFrom(msg.sender, self, _amount), "Transfer failed"
 
-    # 铸造等量RWA代币给用户（USDT 6位小数 -> RWA 18位小数）
+    # 铸造等量RWA代币给用户（稳定币 6位小数 -> RWA 18位小数）
     rwa_amount: uint256 = _amount * 10 ** 12  # 转换精度
     extcall IRWAToken(rwa_token).mint(msg.sender, rwa_amount)
 
-    # 记录认购信息
+    # 记录认购信息（活期模式：lockPeriod=0, redeemTime=subscribeTime 表示随时可赎回）
     subscription_id: uint256 = self.subscriptionCount[msg.sender]
-    redeem_time: uint256 = block.timestamp + _lock_period
 
     self.subscriptions[msg.sender][subscription_id] = SubscriptionInfo(
         principal=_amount,
-        lockPeriod=_lock_period,
+        lockPeriod=FLEXIBLE_PERIOD,      # 活期：0
         subscribeTime=block.timestamp,
-        redeemTime=redeem_time,
+        redeemTime=block.timestamp,      # 活期：随时可赎回
         apy=apy,
-        redeemed=False
+        redeemed=False,
+        paymentToken=payment_token
     )
 
     self.subscriptionCount[msg.sender] += 1
@@ -310,14 +336,15 @@ def subscribe(_amount: uint256, _lock_period: uint256):
     if subscription_id == 0:
         self.userList.append(msg.sender)
 
-    log Subscribe(msg.sender, _amount, _lock_period, redeem_time, apy)
+    log Subscribe(msg.sender, _amount, FLEXIBLE_PERIOD, block.timestamp, apy, payment_token)
 
 
 @external
 def redeem(_subscription_id: uint256):
     """
-    @notice 赎回权益代币（STO合规版本）
+    @notice 赎回权益代币（活期模式 - 随时可赎回）
     @param _subscription_id 认购ID
+    @dev 活期模式：无锁定期限制，利息按实际持有时间计算
     """
     assert not self.migrated, "Contract migrated, use new contract"
     assert not self.paused, "Contract paused"
@@ -325,7 +352,6 @@ def redeem(_subscription_id: uint256):
 
     # 从 Provider 获取依赖地址
     kyc: address = self._get_kyc_manager()
-    usdt: address = self._get_usdt()
     rwa_token: address = self._get_rwa_token()
 
     # STO合规：确保用户KYC仍然有效
@@ -333,26 +359,34 @@ def redeem(_subscription_id: uint256):
 
     subscription: SubscriptionInfo = self.subscriptions[msg.sender][_subscription_id]
     assert not subscription.redeemed, "Already redeemed"
-    assert block.timestamp >= subscription.redeemTime, "Lock period not ended"
+    # 活期模式：移除锁定期检查，随时可赎回
+    # assert block.timestamp >= subscription.redeemTime, "Lock period not ended"  # 已移除
 
-    # 计算利息
+    # 获取支付代币（用户认购时使用的代币）
+    payment_token: address = subscription.paymentToken
+    # 兼容旧记录：如果 paymentToken 为空，默认使用 USDT
+    if payment_token == empty(address):
+        payment_token = self._get_usdt()
+
+    # 计算利息（活期模式：按实际持有时间计算）
+    actual_holding_period: uint256 = block.timestamp - subscription.subscribeTime
     interest: uint256 = self._calculate_interest(
         subscription.principal,
-        subscription.lockPeriod,
+        actual_holding_period,  # 使用实际持有时间而非预设锁定期
         subscription.apy
     )
 
     total: uint256 = subscription.principal + interest
 
-    # 检查合约USDT余额
-    assert staticcall IERC20(usdt).balanceOf(self) >= total, "Insufficient USDT balance"
+    # 检查合约支付代币余额
+    assert staticcall IERC20(payment_token).balanceOf(self) >= total, "Insufficient token balance"
 
     # 销毁RWA代币
     rwa_amount: uint256 = subscription.principal * 10 ** 12
     extcall IRWAToken(rwa_token).burn(msg.sender, rwa_amount)
 
-    # 转出USDT（本金+利息）
-    assert extcall IERC20(usdt).transfer(msg.sender, total), "Transfer failed"
+    # 转出支付代币（本金+利息）
+    assert extcall IERC20(payment_token).transfer(msg.sender, total), "Transfer failed"
 
     # 标记为已赎回
     self.subscriptions[msg.sender][_subscription_id].redeemed = True
@@ -403,10 +437,10 @@ def get_subscription(_user: address, _subscription_id: uint256) -> SubscriptionI
 @external
 def get_pending_reward(_user: address, _subscription_id: uint256) -> uint256:
     """
-    @notice 获取待赎回奖励
+    @notice 获取当前累计利息（活期模式：按实际持有时间计算）
     @param _user 用户地址
     @param _subscription_id 认购ID
-    @return 利息
+    @return 当前累计利息
     """
     assert _subscription_id < self.subscriptionCount[_user], "Invalid subscription ID"
 
@@ -414,9 +448,11 @@ def get_pending_reward(_user: address, _subscription_id: uint256) -> uint256:
     if subscription.redeemed:
         return 0
 
+    # 活期模式：按实际持有时间计算利息
+    actual_holding_period: uint256 = block.timestamp - subscription.subscribeTime
     return self._calculate_interest(
         subscription.principal,
-        subscription.lockPeriod,
+        actual_holding_period,  # 使用实际持有时间
         subscription.apy
     )
 
@@ -448,10 +484,11 @@ def transfer_ownership(_new_owner: address):
 @external
 def get_lock_periods() -> uint256[4]:
     """
-    @notice 获取所有锁定期
-    @return 锁定期数组
+    @notice 获取锁定期配置（活期模式返回 [0,0,0,0]）
+    @return 锁定期数组，活期模式第一个元素为 0
+    @dev 活期模式下返回 [0, ...] 表示无固定锁定期
     """
-    return [LOCK_1_MONTH, LOCK_3_MONTHS, LOCK_6_MONTHS, LOCK_12_MONTHS]
+    return [FLEXIBLE_PERIOD, FLEXIBLE_PERIOD, FLEXIBLE_PERIOD, FLEXIBLE_PERIOD]
 
 
 # ==================== 依赖查询功能 ====================
@@ -462,7 +499,7 @@ def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], D
     """
     @notice 获取合约依赖（纯 Provider 模式）
     @return (unbound_required, bound_all, unbound_optional) 未绑定必须依赖、已绑定所有依赖、未绑定可选依赖
-    @dev 必须依赖: USDT (稳定币接口), VankeRWAToken, KYC
+    @dev 必须依赖: USDT, USDC (稳定币接口), VankeRWAToken, KYC
     @dev 所有依赖通过 AddressProvider 获取
     """
     unbound_required: DynArray[String[50], 10] = []
@@ -475,6 +512,12 @@ def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], D
         unbound_required.append("USDT")
     else:
         bound_all.append("USDT")
+
+    usdc: address = self._get_usdc()
+    if usdc == empty(address):
+        unbound_required.append("USDC")
+    else:
+        bound_all.append("USDC")
 
     rwa_token: address = self._get_rwa_token()
     if rwa_token == empty(address):

@@ -46,7 +46,7 @@ interface DependencyGraphProps {
 }
 
 
-export function DependencyGraph({ projectName, network = 'local' }: DependencyGraphProps) {
+export function DependencyGraph({ projectName, network = 'hardhat' }: DependencyGraphProps) {
   const { data, error, isLoading } = useDependencyGraph(projectName, network);
 
   const [selectedNode, setSelectedNode] = useState<string | null>(null);

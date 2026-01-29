@@ -44,8 +44,8 @@ test.describe('🎨 WalletConnect Button Design Analysis', () => {
           fontSize: computed.fontSize,
           fontWeight: computed.fontWeight,
           boxShadow: computed.boxShadow,
-          width: el.offsetWidth,
-          height: el.offsetHeight,
+          width: (el as HTMLElement).offsetWidth,
+          height: (el as HTMLElement).offsetHeight,
         }
       })
       
@@ -172,11 +172,14 @@ test.describe('🎨 WalletConnect Button Design Analysis', () => {
     const walletButton = page.locator('button:has-text("Connect Wallet"), button:has-text("连接钱包")')
     
     if (await walletButton.isVisible()) {
-      const mobileStyles = await walletButton.evaluate((el) => ({
-        width: el.offsetWidth,
-        height: el.offsetHeight,
-        isVisible: el.offsetWidth > 0 && el.offsetHeight > 0
-      }))
+      const mobileStyles = await walletButton.evaluate((el) => {
+        const htmlEl = el as HTMLElement;
+        return {
+          width: htmlEl.offsetWidth,
+          height: htmlEl.offsetHeight,
+          isVisible: htmlEl.offsetWidth > 0 && htmlEl.offsetHeight > 0
+        };
+      })
       
       console.log('\n📱 Mobile Button Size:')
       console.log(JSON.stringify(mobileStyles, null, 2))

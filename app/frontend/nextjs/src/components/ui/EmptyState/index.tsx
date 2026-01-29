@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import React from 'react';
 
 interface EmptyStateProps {
   message: string;
@@ -15,38 +15,25 @@ interface EmptyStateProps {
  * 空状态组件
  * 显示友好的空数据提示，带浮动粒子动画
  */
-import React from 'react';
-
 export const EmptyState: React.FC<EmptyStateProps> = React.memo(function EmptyState({
   message,
   description,
   action,
 }) {
   return (
-    <motion.div
-      className="flex flex-col items-center justify-center py-12"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+    <div
+      className="flex flex-col items-center justify-center py-12 animate-fade-in"
     >
       {/* 浮动粒子效果 */}
       <div className="relative mb-6">
         {[...Array(3)].map((_, i) => (
-          <motion.div
+          <span
             key={i}
-            className="inline-block mx-2"
-            animate={{
-              y: [0, -10, 0],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              delay: i * 0.2,
-              ease: 'easeInOut',
-            }}
+            className="inline-block mx-2 text-4xl animate-bounce"
+            style={{ animationDelay: `${i * 200}ms` }}
           >
-            <span className="text-4xl">✨</span>
-          </motion.div>
+            ✨
+          </span>
         ))}
       </div>
 
@@ -61,19 +48,18 @@ export const EmptyState: React.FC<EmptyStateProps> = React.memo(function EmptySt
       )}
 
       {action && (
-        <motion.button
+        <button
           onClick={action.onClick}
           className="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 
                      to-blue-600 text-white font-medium
                      hover:shadow-lg hover:shadow-purple-500/50
+                     hover:scale-105 active:scale-95
                      transition-all duration-300"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
         >
           {action.label}
-        </motion.button>
+        </button>
       )}
-    </motion.div>
+    </div>
   );
 });
 

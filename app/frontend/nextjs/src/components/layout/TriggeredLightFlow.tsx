@@ -32,11 +32,11 @@ export const TriggeredLightFlow: React.FC<TriggeredLightFlowProps> = ({
   duration = 2500,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasTriggeredRef = useRef(false);
 
   // 触发光流显示（仅一次）
-  const show = () => {
+  const show = (showDuration: number) => {
     // 检查是否已经显示过
     if (hasTriggeredRef.current) {
       return;
@@ -54,29 +54,29 @@ export const TriggeredLightFlow: React.FC<TriggeredLightFlowProps> = ({
     // 自动隐藏
     timeoutRef.current = setTimeout(() => {
       setIsVisible(false);
-    }, duration);
+    }, showDuration);
   };
 
   // 处理受控模式
   useEffect(() => {
     if (controlledVisible !== undefined) {
       if (controlledVisible && !hasTriggeredRef.current) {
-        show();
+        show(duration);
       }
     }
-  }, [controlledVisible]);
+  }, [controlledVisible, duration]);
 
   // 页面加载触发（仅一次）
   useEffect(() => {
     if (trigger === 'page-load' && !hasShownLightFlow.current) {
       // 延迟 500ms 显示，让用户先看到页面内容
       const timer = setTimeout(() => {
-        show();
+        show(duration);
       }, 500);
 
       return () => clearTimeout(timer);
     }
-  }, [trigger]);
+  }, [trigger, duration]);
 
   // 清理
   useEffect(() => {
@@ -136,7 +136,8 @@ export const TriggeredLightFlow: React.FC<TriggeredLightFlowProps> = ({
  */
 export const useLightFlow = () => {
   const [isVisible, setIsVisible] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const [currentDuration, setCurrentDuration] = useState(2000);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const triggerLightFlow = (duration: number = 2000) => {
     // 清除之前的定时器
@@ -144,6 +145,7 @@ export const useLightFlow = () => {
       clearTimeout(timeoutRef.current);
     }
 
+    setCurrentDuration(duration);
     setIsVisible(true);
 
     timeoutRef.current = setTimeout(() => {
@@ -163,7 +165,7 @@ export const useLightFlow = () => {
     TriggeredLightFlow: () => (
       <TriggeredLightFlow
         visible={isVisible}
-        duration={duration}
+        duration={currentDuration}
       />
     ),
     triggerLightFlow,

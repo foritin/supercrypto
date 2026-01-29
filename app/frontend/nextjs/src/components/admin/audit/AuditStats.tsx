@@ -13,7 +13,6 @@ import {
   XCircle, 
   Clock,
   ArrowRightLeft,
-  Wallet,
 } from 'lucide-react';
 import type { AuditStats as AuditStatsType, TransactionStats } from '@/services/audit';
 
@@ -49,53 +48,70 @@ export const AuditStats: React.FC<AuditStatsProps> = ({
     : 0;
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-      {/* 总操作数 */}
-      <V6StatCard
-        title={t('admin.audit.stats.totalOperations', '总操作数')}
-        value={stats?.total_operations || 0}
-        icon={Activity}
-        variant="gold"
-        delay={0}
-      />
+    <div className="mb-6">
+      {/* 统计卡片 - 带虚线分割 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
+        {/* 总操作数 */}
+        <div className="relative">
+          <V6StatCard
+            title={t('admin.audit.stats.totalOperations', '总操作数')}
+            value={stats?.total_operations || 0}
+            icon={Activity}
+            variant="gold"
+            delay={0}
+          />
+          {/* 右侧虚线分割 - lg 屏幕显示 */}
+          <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 h-12 border-r border-dashed border-white/10" />
+        </div>
 
-      {/* 成功操作 */}
-      <V6StatCard
-        title={t('admin.audit.stats.successCount', '成功操作')}
-        value={stats?.success_count || 0}
-        icon={CheckCircle}
-        variant="cyan"
-        trend={successRate > 0 ? { value: successRate, isPositive: true } : undefined}
-        delay={0.1}
-      />
+        {/* 成功操作 */}
+        <div className="relative">
+          <V6StatCard
+            title={t('admin.audit.stats.successCount', '成功操作')}
+            value={stats?.success_count || 0}
+            suffix={successRate > 0 ? ` ( ${successRate}% )` : ''}
+            icon={CheckCircle}
+            variant="cyan"
+            delay={0.1}
+          />
+          {/* 右侧虚线分割 - lg 屏幕显示 */}
+          <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 h-12 border-r border-dashed border-white/10" />
+        </div>
 
-      {/* 失败操作 */}
-      <V6StatCard
-        title={t('admin.audit.stats.failedCount', '失败操作')}
-        value={stats?.failed_count || 0}
-        icon={XCircle}
-        variant="gold"
-        delay={0.2}
-      />
+        {/* 失败操作 */}
+        <div className="relative">
+          <V6StatCard
+            title={t('admin.audit.stats.failedCount', '失败操作')}
+            value={stats?.failed_count || 0}
+            icon={XCircle}
+            variant="gold"
+            delay={0.2}
+          />
+          {/* 右侧虚线分割 - lg 屏幕显示 */}
+          <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 h-12 border-r border-dashed border-white/10" />
+        </div>
 
-      {/* 待处理 / 交易统计 */}
-      {transactionStats ? (
-        <V6StatCard
-          title={t('admin.audit.stats.totalTransactions', '链上交易')}
-          value={transactionStats.total_transactions || 0}
-          icon={ArrowRightLeft}
-          variant="cyan"
-          delay={0.3}
-        />
-      ) : (
-        <V6StatCard
-          title={t('admin.audit.stats.pendingCount', '待处理')}
-          value={stats?.pending_count || 0}
-          icon={Clock}
-          variant="cyan"
-          delay={0.3}
-        />
-      )}
+        {/* 链上交易 */}
+        <div className="relative">
+          {transactionStats ? (
+            <V6StatCard
+              title={t('admin.audit.stats.totalTransactions', '链上交易')}
+              value={transactionStats.total_transactions || 0}
+              icon={ArrowRightLeft}
+              variant="cyan"
+              delay={0.3}
+            />
+          ) : (
+            <V6StatCard
+              title={t('admin.audit.stats.pendingCount', '待处理')}
+              value={stats?.pending_count || 0}
+              icon={Clock}
+              variant="cyan"
+              delay={0.3}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 };

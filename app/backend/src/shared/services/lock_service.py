@@ -25,6 +25,12 @@ class LockAcquireError(Exception):
     pass
 
 
+class RedisNotInitializedError(RuntimeError):
+    """Redis 未初始化异常"""
+
+    pass
+
+
 class DistributedLockService:
     """
     分布式锁服务
@@ -73,6 +79,25 @@ class DistributedLockService:
             redis_url, encoding="utf-8", decode_responses=True
         )
 
+    def _ensure_redis(self) -> redis.Redis:
+        """
+        确保 Redis 已初始化
+
+        Returns:
+            Redis 客户端实例
+
+        Raises:
+            RedisNotInitializedError: Redis 未初始化时抛出
+
+        _Requirements: 6.1, 6.2, 6.3_
+        """
+        if self._redis is None:
+            raise RedisNotInitializedError(
+                "Redis client is not initialized. "
+                "Please call get_instance() first to initialize the service."
+            )
+        return self._redis
+
     async def close(self):
         """关闭 Redis 连接"""
         if self._redis:
@@ -97,19 +122,21 @@ class DistributedLockService:
 
         Raises:
             LockAcquireError: 无法获取锁时抛出
+            RedisNotInitializedError: Redis 未初始化时抛出
 
         Example:
             async with lock_service.lock("subscription:0x123"):
                 # 临界区代码
                 pass
         """
+        redis_client = self._ensure_redis()
         lock_key = f"lock:{key}"
         lock_timeout = timeout or self.lock_timeout
         acquired = False
 
         try:
             # 尝试获取锁
-            acquired = await self._redis.set(
+            acquired = await redis_client.set(
                 lock_key,
                 "1",
                 nx=True,  # 仅当 key 不存在时设置
@@ -121,7 +148,7 @@ class DistributedLockService:
                 max_attempts = int(self.acquire_timeout / self.retry_interval)
                 for _ in range(max_attempts):
                     await asyncio.sleep(self.retry_interval)
-                    acquired = await self._redis.set(
+                    acquired = await redis_client.set(
                         lock_key, "1", nx=True, ex=lock_timeout
                     )
                     if acquired:
@@ -136,7 +163,7 @@ class DistributedLockService:
             # 释放锁
             if acquired:
                 try:
-                    await self._redis.delete(lock_key)
+                    await redis_client.delete(lock_key)
                 except Exception:
                     # 忽略释放锁时的错误
                     pass
@@ -151,11 +178,15 @@ class DistributedLockService:
 
         Returns:
             是否成功获取锁
+
+        Raises:
+            RedisNotInitializedError: Redis 未初始化时抛出
         """
+        redis_client = self._ensure_redis()
         lock_key = f"lock:{key}"
         lock_timeout = timeout or self.lock_timeout
 
-        result = await self._redis.set(lock_key, "1", nx=True, ex=lock_timeout)
+        result = await redis_client.set(lock_key, "1", nx=True, ex=lock_timeout)
         return bool(result)
 
     async def unlock(self, key: str) -> bool:
@@ -167,9 +198,13 @@ class DistributedLockService:
 
         Returns:
             是否成功释放
+
+        Raises:
+            RedisNotInitializedError: Redis 未初始化时抛出
         """
+        redis_client = self._ensure_redis()
         lock_key = f"lock:{key}"
-        result = await self._redis.delete(lock_key)
+        result = await redis_client.delete(lock_key)
         return result > 0
 
     async def is_locked(self, key: str) -> bool:
@@ -181,6 +216,10 @@ class DistributedLockService:
 
         Returns:
             锁是否存在
+
+        Raises:
+            RedisNotInitializedError: Redis 未初始化时抛出
         """
+        redis_client = self._ensure_redis()
         lock_key = f"lock:{key}"
-        return await self._redis.exists(lock_key) > 0
+        return await redis_client.exists(lock_key) > 0

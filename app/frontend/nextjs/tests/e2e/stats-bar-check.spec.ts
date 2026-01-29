@@ -11,6 +11,7 @@ test('check stats bar gap', async ({ page }) => {
   if (await statsContainer.isVisible()) {
     const styles = await statsContainer.evaluate((el) => {
       const computed = window.getComputedStyle(el);
+      const htmlEl = el as HTMLElement;
       return { 
         gap: computed.gap, 
         columnGap: computed.columnGap,
@@ -18,8 +19,8 @@ test('check stats bar gap', async ({ page }) => {
         padding: computed.padding,
         display: computed.display,
         className: el.className,
-        width: el.offsetWidth,
-        height: el.offsetHeight,
+        width: htmlEl.offsetWidth,
+        height: htmlEl.offsetHeight,
       };
     });
     console.log('\n📊 StatsBar Container Styles:');

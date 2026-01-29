@@ -4,15 +4,10 @@
 路由前缀: /api/v1/admin/accounts
 """
 
-from falib.utils.config import SETTINGS
 from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, Query, status
 
-from src.services.account.schemas import (
-    AccountCreate,
-    AccountListQuery,
-    AccountUpdate,
-)
+from src.services.account.schemas import AccountCreate, AccountListQuery, AccountUpdate
 from src.services.account.service import AccountService
 
 router = APIRouter()

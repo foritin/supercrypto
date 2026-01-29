@@ -191,7 +191,7 @@ class TestProperty3BindingOnlyProjectScope:
         mock_detail_response = MagicMock()
 
         with patch("src.services.asset.service.Asset") as MockAsset, \
-             patch("src.services.asset.service.Contract") as MockContract, \
+             patch("src.services.asset.service.ContractDeployment") as MockContract, \
              patch("src.services.asset.service.AssetContractBinding") as MockBinding, \
              patch("src.services.contract.get_contract_service") as mock_get_service, \
              patch.object(asset_service, "_to_detail_response", new=AsyncMock(return_value=mock_detail_response)):
@@ -291,7 +291,7 @@ class TestProperty3BindingOnlyProjectScope:
         )
 
         with patch("src.services.asset.service.Asset") as MockAsset, \
-             patch("src.services.asset.service.Contract") as MockContract, \
+             patch("src.services.asset.service.ContractDeployment") as MockContract, \
              patch("src.services.asset.service.AssetContractBinding") as MockBinding, \
              patch("src.services.contract.get_contract_service") as mock_get_service:
 
@@ -409,7 +409,7 @@ class TestProperty4AssetFieldAutoFill:
         mock_detail_response = MagicMock()
 
         with patch("src.services.asset.service.Asset") as MockAsset, \
-             patch("src.services.asset.service.Contract") as MockContract, \
+             patch("src.services.asset.service.ContractDeployment") as MockContract, \
              patch("src.services.asset.service.AssetContractBinding") as MockBinding, \
              patch("src.services.contract.get_contract_service") as mock_get_service, \
              patch.object(asset_service, "_to_detail_response", new=AsyncMock(return_value=mock_detail_response)):
@@ -511,7 +511,7 @@ class TestProperty4AssetFieldAutoFill:
         mock_detail_response = MagicMock()
 
         with patch("src.services.asset.service.Asset") as MockAsset, \
-             patch("src.services.asset.service.Contract") as MockContract, \
+             patch("src.services.asset.service.ContractDeployment") as MockContract, \
              patch("src.services.asset.service.AssetContractBinding") as MockBinding, \
              patch("src.services.contract.get_contract_service") as mock_get_service, \
              patch.object(asset_service, "_to_detail_response", new=AsyncMock(return_value=mock_detail_response)):
@@ -618,7 +618,7 @@ class TestProperty4AssetFieldAutoFill:
         mock_detail_response = MagicMock()
 
         with patch("src.services.asset.service.Asset") as MockAsset, \
-             patch("src.services.asset.service.Contract") as MockContract, \
+             patch("src.services.asset.service.ContractDeployment") as MockContract, \
              patch("src.services.asset.service.AssetContractBinding") as MockBinding, \
              patch("src.services.contract.get_contract_service") as mock_get_service, \
              patch.object(asset_service, "_to_detail_response", new=AsyncMock(return_value=mock_detail_response)):

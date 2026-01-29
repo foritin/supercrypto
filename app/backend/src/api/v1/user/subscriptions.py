@@ -9,10 +9,7 @@ from typing import Optional
 from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from src.services.subscription.schemas import (
-    RedeemRequest,
-    SubscriptionCreateRequest,
-)
+from src.services.subscription.schemas import RedeemRequest, SubscriptionCreateRequest
 from src.services.subscription.service import SubscriptionService
 from src.shared.schemas.enums import SubscriptionStatus
 from src.shared.security import require_user

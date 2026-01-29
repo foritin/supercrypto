@@ -10,7 +10,6 @@ from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
-from src.services.audit.schemas import AuditLogQuery, AuditStats
 from src.services.audit.service import AuditService, audit_service
 from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
 from src.shared.security import require_admin
@@ -51,7 +50,7 @@ async def query_audit_logs(
 ):
     """
     查询审计日志
-    
+
     支持的过滤条件：
     - category: 审计类别 (account/permission/contract/asset/auth/system/kyc/staking)
     - action: 操作类型
@@ -79,11 +78,11 @@ async def query_audit_logs(
         page=page,
         page_size=page_size,
     )
-    
+
     pagination = PaginationInfo(
         total=total, page=page, page_size=page_size, total_pages=total_pages
     )
-    
+
     return create_success_response(
         list_data=logs,
         pagination=pagination,
@@ -103,7 +102,7 @@ async def get_audit_stats(
 ):
     """
     获取审计统计数据
-    
+
     返回：
     - total_operations: 总操作数
     - success_count: 成功数
@@ -136,15 +135,15 @@ async def export_audit_logs(
 ):
     """
     导出审计日志为 CSV 格式
-    
+
     最多导出 10000 条记录
     """
     import csv
     import io
-    
+
     # 限制导出数量
     MAX_EXPORT = 10000
-    
+
     logs, total, _ = await service.query(
         category=category,
         action=action,
@@ -155,11 +154,11 @@ async def export_audit_logs(
         page=1,
         page_size=MAX_EXPORT,
     )
-    
+
     # 生成 CSV
     output = io.StringIO()
     writer = csv.writer(output)
-    
+
     # 写入表头
     writer.writerow([
         "ID", "时间", "类别", "操作", "状态",
@@ -168,7 +167,7 @@ async def export_audit_logs(
         "描述", "原因", "IP地址", "交易哈希",
         "耗时(ms)", "错误码", "错误信息"
     ])
-    
+
     # 写入数据
     for log in logs:
         writer.writerow([
@@ -191,9 +190,9 @@ async def export_audit_logs(
             log.error_code or "",
             log.error_message or "",
         ])
-    
+
     output.seek(0)
-    
+
     # 返回 CSV 文件
     return StreamingResponse(
         iter([output.getvalue()]),

@@ -24,7 +24,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
-interface KycRequiredGuardProps {
+export interface KycRequiredGuardProps {
   children: ReactNode
   /**
    * KYC 未通过时显示的模式

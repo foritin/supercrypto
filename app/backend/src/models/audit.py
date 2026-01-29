@@ -11,6 +11,9 @@
 - 只追加不修改：审计日志只能追加，不能修改或删除
 - 异步记录：审计日志记录不阻塞主业务流程
 """
+
+from typing import Optional
+
 from tortoise import fields
 
 from src.models.base import AbstractModel, get_utc_time
@@ -20,7 +23,7 @@ from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
 
 class AuditLogImmutableError(BusinessException):
     """审计日志不可变异常"""
-    
+
     def __init__(self, message: str = "Audit log is immutable"):
         super().__init__(message=message, code=403)
 
@@ -28,86 +31,92 @@ class AuditLogImmutableError(BusinessException):
 class AuditLog(AbstractModel):
     """
     通用审计日志表
-    
+
     记录所有需要审计的操作，支持灵活扩展
     只追加，永不修改或删除
     """
-    
+
     # 基本信息
     category = fields.CharEnumField(
-        AuditCategory,
-        max_length=50,
-        description="审计类别",
-        index=True
+        AuditCategory, max_length=50, description="审计类别", index=True
     )
     action = fields.CharEnumField(
-        AuditAction,
-        max_length=100,
-        description="操作类型",
-        index=True
+        AuditAction, max_length=100, description="操作类型", index=True
     )
     status = fields.CharEnumField(
         AuditStatus,
         max_length=20,
         default=AuditStatus.SUCCESS,
         description="操作状态",
-        index=True
+        index=True,
     )
-    
+
     # 操作主体信息
     operator_id = fields.IntField(null=True, description="操作者账户ID", index=True)
-    operator_address = fields.CharField(max_length=128, null=True, description="操作者钱包地址")
-    operator_type = fields.CharField(max_length=50, null=True, description="操作者类型(user/admin/system)")
-    
+    operator_address = fields.CharField(
+        max_length=128, null=True, description="操作者钱包地址"
+    )
+    operator_type = fields.CharField(
+        max_length=50, null=True, description="操作者类型(user/admin/system)"
+    )
+
     # 操作目标信息
     target_id = fields.IntField(null=True, description="目标对象ID", index=True)
-    target_type = fields.CharField(max_length=50, null=True, description="目标对象类型", index=True)
-    target_address = fields.CharField(max_length=128, null=True, description="目标钱包地址")
-    
+    target_type = fields.CharField(
+        max_length=50, null=True, description="目标对象类型", index=True
+    )
+    target_address = fields.CharField(
+        max_length=128, null=True, description="目标钱包地址"
+    )
+
     # 操作详情
     reason = fields.TextField(null=True, description="操作原因/备注")
     description = fields.TextField(null=True, description="操作描述")
-    
+
     # 操作前后数据（JSON格式）
     old_value = fields.JSONField(null=True, description="操作前的值")
     new_value = fields.JSONField(null=True, description="操作后的值")
     extra_data = fields.JSONField(null=True, description="额外数据（灵活扩展）")
-    
+
     # 请求信息
-    ip_address = fields.CharField(max_length=45, null=True, description="操作IP地址", index=True)
+    ip_address = fields.CharField(
+        max_length=45, null=True, description="操作IP地址", index=True
+    )
     user_agent = fields.CharField(max_length=500, null=True, description="用户代理")
-    request_id = fields.CharField(max_length=64, null=True, description="请求ID", index=True)
-    
+    request_id = fields.CharField(
+        max_length=64, null=True, description="请求ID", index=True
+    )
+
     # 区块链相关（如果适用）
-    tx_hash = fields.CharField(max_length=128, null=True, description="交易哈希", index=True)
+    tx_hash = fields.CharField(
+        max_length=128, null=True, description="交易哈希", index=True
+    )
     block_number = fields.BigIntField(null=True, description="区块高度")
     gas_used = fields.BigIntField(null=True, description="Gas消耗")
-    
+
     # 时间信息
     operated_at = fields.DatetimeField(
-        default=get_utc_time,
-        description="操作时间(UTC)",
-        index=True
+        default=get_utc_time, description="操作时间(UTC)", index=True
     )
     duration_ms = fields.IntField(null=True, description="操作耗时(毫秒)")
-    
+
     # 错误信息（如果失败）
     error_code = fields.CharField(max_length=50, null=True, description="错误码")
     error_message = fields.TextField(null=True, description="错误信息")
-    
+
     # 环境
     environment = fields.CharField(
         max_length=32,
-        default="local",
-        description="环境: local/test/main",
-        index=True
+        default="hardhat",
+        description="环境: hardhat/sepolia/mainnet",
+        index=True,
     )
-    
+
     class Meta:
         table = "audit_log"
         table_description = "通用审计日志表"
         ordering = ["-operated_at"]
-        
+
         # 复合索引 - 根据常见查询优化
         indexes = [
             # 按操作者查询
@@ -119,16 +128,16 @@ class AuditLog(AbstractModel):
             # 按状态查询（查找失败操作）
             ("status", "operated_at"),
         ]
-    
+
     def __str__(self):
         return f"AuditLog({self.action} by operator={self.operator_id} on {self.target_type}:{self.target_id} at {self.operated_at})"
-    
+
     # ==================== 不可变性保护 ====================
-    
+
     async def save(self, *args, **kwargs):
         """
         重写保存方法，禁止更新已存在的记录
-        
+
         只允许创建新记录，不允许修改已存在的记录
         """
         if self.id is not None:
@@ -139,7 +148,7 @@ class AuditLog(AbstractModel):
                     f"Cannot update audit log {self.id}: audit logs are immutable"
                 )
         return await super().save(*args, **kwargs)
-    
+
     async def delete(self, *args, **kwargs):
         """
         重写删除方法，禁止删除审计日志
@@ -147,12 +156,12 @@ class AuditLog(AbstractModel):
         raise AuditLogImmutableError(
             f"Cannot delete audit log {self.id}: audit logs are immutable"
         )
-    
+
     @classmethod
     async def bulk_update(cls, *args, **kwargs):
         """禁止批量更新"""
         raise AuditLogImmutableError("Bulk update is not allowed for audit logs")
-    
+
     @classmethod
     async def bulk_delete(cls, *args, **kwargs):
         """禁止批量删除"""
@@ -161,40 +170,41 @@ class AuditLog(AbstractModel):
 
 # ==================== 审计日志辅助函数 ====================
 
+
 async def log_audit(
     category: AuditCategory,
     action: AuditAction,
     status: AuditStatus = AuditStatus.SUCCESS,
     # 操作者信息
-    operator_id: int = None,
-    operator_address: str = None,
-    operator_type: str = None,
+    operator_id: Optional[int] = None,
+    operator_address: Optional[str] = None,
+    operator_type: Optional[str] = None,
     # 目标信息
-    target_id: int = None,
-    target_type: str = None,
-    target_address: str = None,
+    target_id: Optional[int] = None,
+    target_type: Optional[str] = None,
+    target_address: Optional[str] = None,
     # 操作详情
-    reason: str = None,
-    description: str = None,
-    old_value: dict = None,
-    new_value: dict = None,
-    extra_data: dict = None,
+    reason: Optional[str] = None,
+    description: Optional[str] = None,
+    old_value: Optional[dict] = None,
+    new_value: Optional[dict] = None,
+    extra_data: Optional[dict] = None,
     # 请求信息
-    ip_address: str = None,
-    user_agent: str = None,
-    request_id: str = None,
+    ip_address: Optional[str] = None,
+    user_agent: Optional[str] = None,
+    request_id: Optional[str] = None,
     # 区块链信息
-    tx_hash: str = None,
-    block_number: int = None,
-    gas_used: int = None,
+    tx_hash: Optional[str] = None,
+    block_number: Optional[int] = None,
+    gas_used: Optional[int] = None,
     # 其他
-    duration_ms: int = None,
-    error_code: str = None,
-    error_message: str = None,
+    duration_ms: Optional[int] = None,
+    error_code: Optional[str] = None,
+    error_message: Optional[str] = None,
 ) -> AuditLog:
     """
     记录审计日志
-    
+
     Args:
         category: 审计类别
         action: 操作类型
@@ -219,7 +229,7 @@ async def log_audit(
         duration_ms: 耗时
         error_code: 错误码
         error_message: 错误信息
-    
+
     Returns:
         AuditLog: 审计日志对象
     """
@@ -252,20 +262,20 @@ async def log_audit(
 
 
 async def query_audit_logs(
-    category: AuditCategory = None,
-    action: AuditAction = None,
-    operator_id: int = None,
-    target_type: str = None,
-    target_id: int = None,
-    status: AuditStatus = None,
-    start_time = None,
-    end_time = None,
+    category: Optional[AuditCategory] = None,
+    action: Optional[AuditAction] = None,
+    operator_id: Optional[int] = None,
+    target_type: Optional[str] = None,
+    target_id: Optional[int] = None,
+    status: Optional[AuditStatus] = None,
+    start_time=None,
+    end_time=None,
     limit: int = 100,
-    offset: int = 0
+    offset: int = 0,
 ) -> list:
     """
     查询审计日志
-    
+
     Args:
         category: 类别过滤
         action: 操作类型过滤
@@ -277,12 +287,12 @@ async def query_audit_logs(
         end_time: 结束时间
         limit: 返回数量限制
         offset: 偏移量
-    
+
     Returns:
         list: 审计日志列表
     """
     query = AuditLog.all()
-    
+
     if category:
         query = query.filter(category=category)
     if action:
@@ -299,39 +309,53 @@ async def query_audit_logs(
         query = query.filter(operated_at__gte=start_time)
     if end_time:
         query = query.filter(operated_at__lte=end_time)
-    
+
     return await query.order_by("-operated_at").offset(offset).limit(limit).all()
 
 
 async def get_operator_audit_history(operator_id: int, limit: int = 50) -> list:
     """获取操作者的审计历史"""
-    return await AuditLog.filter(
-        operator_id=operator_id
-    ).order_by("-operated_at").limit(limit).all()
+    return (
+        await AuditLog.filter(operator_id=operator_id)
+        .order_by("-operated_at")
+        .limit(limit)
+        .all()
+    )
 
 
-async def get_target_audit_history(target_type: str, target_id: int, limit: int = 50) -> list:
+async def get_target_audit_history(
+    target_type: str, target_id: int, limit: int = 50
+) -> list:
     """获取目标对象的审计历史"""
-    return await AuditLog.filter(
-        target_type=target_type,
-        target_id=target_id
-    ).order_by("-operated_at").limit(limit).all()
+    return (
+        await AuditLog.filter(target_type=target_type, target_id=target_id)
+        .order_by("-operated_at")
+        .limit(limit)
+        .all()
+    )
 
 
 async def get_failed_operations(limit: int = 100) -> list:
     """获取失败的操作记录"""
-    return await AuditLog.filter(
-        status=AuditStatus.FAILED
-    ).order_by("-operated_at").limit(limit).all()
+    return (
+        await AuditLog.filter(status=AuditStatus.FAILED)
+        .order_by("-operated_at")
+        .limit(limit)
+        .all()
+    )
 
 
 async def get_security_events(limit: int = 100) -> list:
     """获取安全相关事件（封禁、失败登录等）"""
-    return await AuditLog.filter(
-        action__in=[
-            AuditAction.ACCOUNT_BLOCK,
-            AuditAction.AUTH_LOGIN_FAILED,
-            AuditAction.PERMISSION_REVOKE,
-        ]
-    ).order_by("-operated_at").limit(limit).all()
-
+    return (
+        await AuditLog.filter(
+            action__in=[
+                AuditAction.ACCOUNT_BLOCK,
+                AuditAction.AUTH_LOGIN_FAILED,
+                AuditAction.PERMISSION_REVOKE,
+            ]
+        )
+        .order_by("-operated_at")
+        .limit(limit)
+        .all()
+    )

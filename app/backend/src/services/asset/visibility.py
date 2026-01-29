@@ -48,7 +48,7 @@ class VisibilityChecker:
 
         可见性规则:
         1. status == 'active'
-        2. 有绑定的合约（通过 contract_address 快速判断）
+        2. 有绑定的合约（通过 primary_contract_address 判断）
         3. 至少设置一个 APY（3m/6m/12m > 0）
 
         Args:
@@ -61,8 +61,8 @@ class VisibilityChecker:
         if asset.status != AssetStatus.ACTIVE:
             return False
 
-        # 规则 2: 必须绑定合约
-        if not asset.contract_address:
+        # 规则 2: 必须绑定合约 (使用 primary_contract_address property)
+        if not asset.primary_contract_address:
             return False
 
         # 规则 3: 必须设置至少一个 APY
@@ -89,8 +89,8 @@ class VisibilityChecker:
         if asset.status != AssetStatus.ACTIVE:
             issues.append(f"状态不是 active（当前: {asset.status.value}）")
 
-        # 检查合约绑定
-        if not asset.contract_address:
+        # 检查合约绑定 (使用 primary_contract_address property)
+        if not asset.primary_contract_address:
             issues.append("未绑定主合约")
 
         # 检查 APY

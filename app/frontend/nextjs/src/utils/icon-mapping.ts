@@ -10,7 +10,7 @@ import {
   Home,
   Settings,
   Wallet,
-  Bank,
+  Landmark, // 替代 Bank
   FileText,
   Zap,
   Gift,
@@ -23,8 +23,8 @@ import {
   X,
   Eye,
   EyeOff,
-  Tool,
-  Api,
+  Wrench, // 替代 Tool
+  Cable, // 替代 Api
   Rocket,
   Flame,
   FileBarChart,
@@ -41,20 +41,20 @@ import {
   Link,
   Calendar,
   Home as HomeIcon,
-  Environment,
-  Team,
+  MapPin, // 替代 Environment
+  UsersRound, // 替代 Team
   Clock,
-  Delete,
-  Warning,
+  Trash2, // 替代 Delete
+  AlertTriangle, // 替代 Warning
   AlertCircle,
   CheckCircle,
   Lock,
   ArrowRight,
-  Down,
-  Swap,
-  Disconnect,
-  Loading as LoadingIcon,
-  Safety,
+  ChevronDown, // 替代 Down
+  ArrowLeftRight, // 替代 Swap
+  Unplug, // 替代 Disconnect
+  Loader2, // 替代 Loading
+  ShieldCheck, // 替代 Safety
   Undo,
 } from 'lucide-react';
 
@@ -68,7 +68,7 @@ export const iconMap: Record<string, React.ElementType> = {
   HomeIcon: HomeIcon,
   SettingOutlined: Settings,
   WalletOutlined: Wallet,
-  BankOutlined: Bank,
+  BankOutlined: Landmark,
 
   // Feature Icons
   FileTextOutlined: FileText,
@@ -84,8 +84,8 @@ export const iconMap: Record<string, React.ElementType> = {
   EyeOffOutlined: EyeOff,
 
   // Admin Icons
-  ToolOutlined: Tool,
-  ApiOutlined: Api,
+  ToolOutlined: Wrench,
+  ApiOutlined: Cable,
   RocketOutlined: Rocket,
 
   // Stats & Charts
@@ -94,10 +94,10 @@ export const iconMap: Record<string, React.ElementType> = {
   TeamOutlined: Users,
 
   // UI Elements
-  DownOutlined: Down,
-  DisconnectOutlined: Disconnect,
-  LoadingOutlined: LoadingIcon,
-  SwapOutlined: Swap,
+  DownOutlined: ChevronDown,
+  DisconnectOutlined: Unplug,
+  LoadingOutlined: Loader2,
+  SwapOutlined: ArrowLeftRight,
 
   // Development Tools
   PlusOutlined: Plus,
@@ -108,14 +108,14 @@ export const iconMap: Record<string, React.ElementType> = {
   LinkOutlined: Link,
   CalendarOutlined: Calendar,
   HomeWorkOutlined: HomeIcon,
-  EnvironmentOutlined: Environment,
+  EnvironmentOutlined: MapPin,
   FieldTimeOutlined: Clock,
 
   // Status & Feedback
-  DeleteOutlined: Delete,
-  WarningOutlined: Warning,
+  DeleteOutlined: Trash2,
+  WarningOutlined: AlertTriangle,
   ExclamationCircleOutlined: AlertCircle,
-  SafetyCertificateOutlined: Check,
+  SafetyCertificateOutlined: ShieldCheck,
   UndoOutlined: Undo,
 
   // Social & External

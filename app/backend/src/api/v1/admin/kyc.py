@@ -10,7 +10,6 @@ from falib.utils.log import get_logger
 from fastapi import APIRouter, Depends
 
 from src.services.kyc.schemas import (
-    ContractKycStatus,
     KycContractComparisonResponse,
     KycFullResponse,
     KycReviewRequest,
@@ -180,55 +179,13 @@ async def get_contract_kyc_status(
 
     返回数据库状态和合约状态的对比，帮助管理员排查同步问题。
     """
-    from src.models.kyc import UserKyc
-    from src.services.kyc.contract_service import KycContractService
+    result = await service.get_contract_comparison(wallet_address)
 
-    address = wallet_address.lower()
-
-    # 获取数据库状态
-    kyc = await UserKyc.filter(
-        wallet_address=address, environment=service.environment
-    ).first()
-
-    if not kyc:
+    if not result:
         return ApiResponse(
             code=404,
             message="KYC record not found in database",
             data=None,
         )
 
-    # 获取合约状态
-    contract_service = KycContractService()
-    contract_verified = None
-    contract_info = None
-    contract_error = None
-
-    try:
-        contract_verified = await contract_service.is_verified(address)
-        info = await contract_service.get_investor_info(address)
-        if info:
-            contract_info = ContractKycStatus(**info)
-    except Exception as e:
-        contract_error = str(e)
-        logger.warning(f"Failed to get contract status for {address}: {e}")
-
-    # 判断一致性
-    is_consistent = False
-    if contract_verified is not None:
-        db_approved = kyc.status == KycStatus.APPROVED
-        is_consistent = db_approved == contract_verified
-
-    return ApiResponse(
-        data=KycContractComparisonResponse(
-            wallet_address=address,
-            db_status=kyc.status.value,
-            db_is_accredited=kyc.is_accredited,
-            db_sync_status=kyc.on_chain_sync_status.value
-            if kyc.on_chain_sync_status
-            else None,
-            contract_verified=contract_verified,
-            contract_info=contract_info,
-            contract_error=contract_error,
-            is_consistent=is_consistent,
-        )
-    )
+    return ApiResponse(data=result)

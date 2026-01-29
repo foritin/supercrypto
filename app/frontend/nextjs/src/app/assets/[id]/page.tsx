@@ -21,8 +21,13 @@ import {
   Wallet,
   ExternalLink,
   Loader2,
+  Download,
+  FileSpreadsheet,
+  Scale,
+  Lock,
 } from "lucide-react";
-import { assetService, type AssetDetail, ASSET_TYPE_NAMES, type AssetType, type AssetStatus } from "@/services/asset";
+import { assetService, type AssetDetail, type AssetType, type AssetStatus, type AssetMediaItem } from "@/services/asset";
+import { useKycStatus } from "@/hooks";
 import { SubscriptionModal } from "@/components/subscription/subscription-modal";
 import { MediaGallery } from "@/components/asset/media-gallery";
 import { PropertyHighlights } from "@/components/asset/property-highlights";
@@ -42,12 +47,12 @@ const ASSET_TYPE_ICONS: Record<AssetType, React.ReactNode> = {
   other: <Building2 className="h-4 w-4" />,
 };
 
-// 状态配置
-const STATUS_CONFIG: Record<AssetStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  active: { label: "Available", color: "#00D4AA", bg: "rgba(0,212,170,0.1)", icon: <CheckCircle className="h-4 w-4" /> },
-  paused: { label: "Paused", color: "#FAAD14", bg: "rgba(250,173,20,0.1)", icon: <PauseCircle className="h-4 w-4" /> },
-  sold_out: { label: "Sold Out", color: "#FF4D4F", bg: "rgba(255,77,79,0.1)", icon: <Clock className="h-4 w-4" /> },
-  closed: { label: "Closed", color: "#8C8C8C", bg: "rgba(140,140,140,0.1)", icon: <Clock className="h-4 w-4" /> },
+// 状态配置 - 使用 i18n key
+const STATUS_CONFIG: Record<AssetStatus, { labelKey: string; color: string; bg: string; icon: React.ReactNode }> = {
+  active: { labelKey: "assets.status.active", color: "#00D4AA", bg: "rgba(0,212,170,0.1)", icon: <CheckCircle className="h-4 w-4" /> },
+  paused: { labelKey: "assets.status.paused", color: "#FAAD14", bg: "rgba(250,173,20,0.1)", icon: <PauseCircle className="h-4 w-4" /> },
+  sold_out: { labelKey: "assets.status.sold_out", color: "#FF4D4F", bg: "rgba(255,77,79,0.1)", icon: <Clock className="h-4 w-4" /> },
+  closed: { labelKey: "assets.status.closed", color: "#8C8C8C", bg: "rgba(140,140,140,0.1)", icon: <Clock className="h-4 w-4" /> },
 };
 
 export default function AssetDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -55,6 +60,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
   const { t } = useTranslation();
   const router = useRouter();
   const { isConnected } = useAccount();
+  const { isApproved: isKycApproved } = useKycStatus();
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("highlights");
@@ -68,7 +74,15 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
     setError(null);
     try {
       const result = await assetService.getAsset(Number(resolvedParams.id));
-      setAsset(result);
+      
+      // 获取媒体列表（带预签名 URL）
+      const mediaList = await assetService.getAssetMedia(Number(resolvedParams.id));
+      
+      // 将媒体列表合并到资产详情中
+      setAsset({
+        ...result,
+        media: mediaList,
+      });
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -133,7 +147,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
           <div className="flex items-center gap-2 mb-4 text-white/50 text-sm">
             <Button variant="ghost" size="sm" onClick={() => router.push("/assets")} className="text-white/70 hover:text-white">
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Assets
+              {t("assets.detail.backToAssets")}
             </Button>
             <span className="text-white/30">/</span>
             <span className="text-white/80">{asset.name}</span>
@@ -146,14 +160,8 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
               <div className="flex items-center gap-4">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[rgba(0,212,170,0.1)] border border-[rgba(0,212,170,0.2)] rounded-md text-[#00D4AA] text-xs">
                   {ASSET_TYPE_ICONS[asset.asset_type as AssetType]}
-                  {ASSET_TYPE_NAMES[asset.asset_type as AssetType]}
+                  {t(`assets.type.${asset.asset_type}`)}
                 </span>
-                {asset.contract_address && (
-                  <span className="inline-flex items-center gap-1.5 text-white/50 text-xs cursor-pointer hover:text-[#00D4AA] transition-colors">
-                    VIEW SMART CONTRACTS
-                    <ExternalLink className="h-3 w-3" />
-                  </span>
-                )}
               </div>
             </div>
             <div
@@ -161,7 +169,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
               style={{ background: statusInfo.bg, color: statusInfo.color }}
             >
               {statusInfo.icon}
-              <span>{statusInfo.label}</span>
+              <span>{t(statusInfo.labelKey)}</span>
             </div>
           </div>
 
@@ -177,82 +185,193 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 <TabsList className="w-full justify-start bg-transparent border-b border-white/10 rounded-none h-auto p-0 gap-0">
                   <TabsTrigger
                     value="highlights"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
                   >
-                    HIGHLIGHTS
+                    {t("assets.tabs.highlights")}
                   </TabsTrigger>
                   <TabsTrigger
-                    value="financials"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3"
+                    value="investment"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
                   >
-                    FINANCIALS
+                    {t("assets.tabs.investment")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="details"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
                   >
-                    DETAILS
+                    {t("assets.tabs.details")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="blockchain"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
                   >
-                    BLOCKCHAIN
+                    {t("assets.tabs.blockchain")}
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="highlights" className="mt-4">
-                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4">PROPERTY HIGHLIGHTS</div>
+                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 uppercase">{t("assets.highlights.title")}</div>
                   <PropertyHighlights asset={asset} />
                 </TabsContent>
 
-                <TabsContent value="financials" className="mt-4">
-                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4">FINANCIAL DETAILS</div>
+                <TabsContent value="investment" className="mt-4">
+                  {/* 财务数据 */}
+                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 uppercase">{t("assets.financials.title")}</div>
                   <Card className="bg-white/[0.02] border-white/[0.06]">
                     <CardContent className="p-6">
                       <div className="grid grid-cols-2 gap-6">
                         <div className="flex flex-col gap-1">
-                          <span className="text-white/50 text-xs">Token Price</span>
+                          <span className="text-white/50 text-xs">{t("assets.financials.tokenPrice")}</span>
                           <span className="text-white text-xl font-semibold">${asset.current_price.toFixed(2)}</span>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span className="text-white/50 text-xs">Total Investment</span>
+                          <span className="text-white/50 text-xs">{t("assets.financials.totalInvestment")}</span>
                           <span className="text-white text-xl font-semibold">{formatAmount(asset.total_supply)}</span>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span className="text-white/50 text-xs">3M APY</span>
+                          <span className="text-white/50 text-xs">{t("assets.financials.apy3m")}</span>
                           <span className="text-white text-xl font-semibold">{asset.apy_3m.toFixed(1)}%</span>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span className="text-white/50 text-xs">6M APY</span>
+                          <span className="text-white/50 text-xs">{t("assets.financials.apy6m")}</span>
                           <span className="text-white text-xl font-semibold">{asset.apy_6m.toFixed(1)}%</span>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span className="text-white/50 text-xs">12M APY</span>
+                          <span className="text-white/50 text-xs">{t("assets.financials.apy12m")}</span>
                           <span className="text-[#00D4AA] text-xl font-semibold">{asset.apy_12m.toFixed(1)}%</span>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span className="text-white/50 text-xs">Min. Investment</span>
+                          <span className="text-white/50 text-xs">{t("assets.financials.minInvestment")}</span>
                           <span className="text-white text-xl font-semibold">{formatAmount(asset.min_subscription)}</span>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
+
+                  {/* 相关文档 - 分类显示 */}
+                  {(() => {
+                    const allDocuments = asset.media?.filter(
+                      (m: AssetMediaItem) => ["valuation", "legal", "financial", "other"].includes(m.media_type)
+                    ) || [];
+                    
+                    if (allDocuments.length === 0) return null;
+                    
+                    // 检查访问权限
+                    const canAccessDocuments = isConnected && isKycApproved;
+                    
+                    // 按类型分组
+                    const valuationDocs = allDocuments.filter((m: AssetMediaItem) => m.media_type === "valuation");
+                    const legalDocs = allDocuments.filter((m: AssetMediaItem) => m.media_type === "legal");
+                    const otherDocs = allDocuments.filter((m: AssetMediaItem) => ["financial", "other"].includes(m.media_type));
+                    
+                    const getDocIcon = (type: string) => {
+                      switch (type) {
+                        case "valuation": return <FileSpreadsheet className="h-5 w-5 text-[#00D4AA]" />;
+                        case "legal": return <Scale className="h-5 w-5 text-[#00D4AA]" />;
+                        default: return <FileText className="h-5 w-5 text-[#00D4AA]" />;
+                      }
+                    };
+                    
+                    const renderDocList = (docs: AssetMediaItem[], title: string) => {
+                      if (docs.length === 0) return null;
+                      return (
+                        <div className="mb-4 last:mb-0">
+                          <div className="text-white/60 text-xs font-medium mb-2">{title}</div>
+                          <div className="space-y-2">
+                            {docs.map((doc: AssetMediaItem) => (
+                              <div
+                                key={doc.id}
+                                className="flex items-center justify-between p-3 bg-white/[0.02] rounded-lg hover:bg-white/[0.04] transition-colors"
+                              >
+                                <div className="flex items-center gap-3">
+                                  {getDocIcon(doc.media_type)}
+                                  <div className="text-white text-sm font-medium truncate max-w-[300px]">
+                                    {doc.title || doc.file_name || doc.media_type}
+                                  </div>
+                                </div>
+                                <a
+                                  href={doc.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgba(0,212,170,0.1)] hover:bg-[rgba(0,212,170,0.2)] border border-[rgba(0,212,170,0.2)] rounded-md text-[#00D4AA] text-xs font-medium transition-colors shrink-0"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  {t("assets.documents.download")}
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    };
+
+                    // 访问限制遮罩
+                    const renderAccessOverlay = () => {
+                      if (canAccessDocuments) return null;
+                      
+                      const isWalletIssue = !isConnected;
+                      
+                      return (
+                        <div className="absolute inset-0 bg-[#0a0f0d]/90 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center z-10">
+                          <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                            <Lock className="h-6 w-6 text-white/40" />
+                          </div>
+                          <div className="text-white font-medium text-base mb-2">
+                            {isWalletIssue 
+                              ? t("assets.documents.connectWalletRequired")
+                              : t("assets.documents.kycRequired")
+                            }
+                          </div>
+                          <div className="text-white/50 text-sm text-center max-w-[280px] mb-4">
+                            {isWalletIssue
+                              ? t("assets.documents.connectWalletHint")
+                              : t("assets.documents.kycHint")
+                            }
+                          </div>
+                          {!isWalletIssue && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => router.push("/kyc")}
+                              className="border-[#00D4AA]/30 text-[#00D4AA] hover:bg-[#00D4AA]/10"
+                            >
+                              {t("assets.documents.goToKyc")}
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    };
+                    
+                    return (
+                      <>
+                        <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 mt-6 uppercase">{t("assets.documents.title")}</div>
+                        <Card className="bg-white/[0.02] border-white/[0.06] relative overflow-hidden">
+                          <CardContent className="p-4">
+                            {renderDocList(valuationDocs, t("assets.documents.valuationTitle"))}
+                            {renderDocList(legalDocs, t("assets.documents.legalTitle"))}
+                            {renderDocList(otherDocs, t("assets.documents.otherTitle"))}
+                          </CardContent>
+                          {renderAccessOverlay()}
+                        </Card>
+                      </>
+                    );
+                  })()}
                 </TabsContent>
 
                 <TabsContent value="details" className="mt-4">
-                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4">ABOUT THE OFFERING</div>
+                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 uppercase">{t("assets.about.title")}</div>
                   <Card className="bg-white/[0.02] border-white/[0.06]">
                     <CardContent className="p-6">
                       <p className="text-white/75 leading-relaxed">
-                        {asset.description || "This tokenized real-world asset offers investors an opportunity to participate in property ownership through blockchain technology. Each token represents a fractional ownership stake, providing exposure to rental income and potential property appreciation."}
+                        {asset.description || t("assets.about.defaultDescription")}
                       </p>
                     </CardContent>
                   </Card>
                   
                   {asset.location && (
                     <>
-                      <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 mt-6">LOCATION</div>
+                      <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 mt-6 uppercase">{t("assets.about.location")}</div>
                       <Card className="bg-white/[0.02] border-white/[0.06]">
                         <CardContent className="p-6">
                           <div className="flex items-center gap-2">
@@ -266,50 +385,46 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 </TabsContent>
 
                 <TabsContent value="blockchain" className="mt-4">
-                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4">BLOCKCHAIN INFORMATION</div>
+                  <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 uppercase">{t("assets.blockchain.title")}</div>
                   <Card className="bg-white/[0.02] border-white/[0.06]">
                     <CardContent className="p-6">
                       {asset.contract_address ? (
-                        <div className="mb-2">
-                          <span className="block text-white/50 text-xs mb-2">Contract Address</span>
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 bg-white/5 px-3 py-2 rounded-md text-sm text-white overflow-hidden text-ellipsis">
-                              {asset.contract_address}
-                            </code>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => copyAddress(asset.contract_address!)}
-                                >
-                                  {copied ? <Check className="h-4 w-4 text-[#00D4AA]" /> : <Copy className="h-4 w-4" />}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {copied ? "Copied!" : "Copy"}
-                              </TooltipContent>
-                            </Tooltip>
+                        <>
+                          <div className="mb-4">
+                            <span className="block text-white/50 text-xs mb-2">{t("assets.blockchain.contractAddress")}</span>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 bg-white/5 px-3 py-2 rounded-md text-sm text-white overflow-hidden text-ellipsis">
+                                {asset.contract_address}
+                              </code>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => copyAddress(asset.contract_address!)}
+                                  >
+                                    {copied ? <Check className="h-4 w-4 text-[#00D4AA]" /> : <Copy className="h-4 w-4" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {copied ? t("common.copied") : t("common.copy")}
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <span className="text-white/50">Contract not deployed yet</span>
-                      )}
-                      
-                      {asset.document_url && (
-                        <div className="mt-4">
-                          <span className="block text-white/50 text-xs mb-2">Documents</span>
                           <a
-                            href={asset.document_url}
+                            href={`https://etherscan.io/address/${asset.contract_address}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-[#00D4AA] hover:underline"
+                            className="inline-flex items-center gap-2 text-[#00D4AA] hover:underline text-sm"
                           >
-                            <FileText className="h-4 w-4" />
-                            View Legal Documents
+                            {t("assets.detail.viewSmartContracts")}
+                            <ExternalLink className="h-3 w-3" />
                           </a>
-                        </div>
+                        </>
+                      ) : (
+                        <span className="text-white/50">{t("assets.blockchain.contractNotDeployed")}</span>
                       )}
                     </CardContent>
                   </Card>
@@ -322,23 +437,23 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
               <div className="sticky top-[88px] bg-gradient-to-b from-white/[0.03] to-white/[0.01] border border-white/[0.08] rounded-2xl p-6">
                 {/* 投资头部 */}
                 <div className="text-center mb-4">
-                  <span className="text-white/50 text-xs tracking-wider">TOTAL INVESTMENT</span>
+                  <span className="text-white/50 text-xs tracking-wider uppercase">{t("assets.invest.totalInvestment")}</span>
                   <h2 className="text-3xl font-bold text-white mt-2">{formatAmount(asset.total_supply)}</h2>
                 </div>
 
                 {/* 状态标签 */}
-                <div className="text-center px-4 py-2 bg-gradient-to-r from-[#00D4AA] to-[#00B894] rounded-full text-black font-bold text-xs tracking-wider mb-5">
-                  {asset.status === "active" ? "AVAILABLE NOW" : statusInfo.label.toUpperCase()}
+                <div className="text-center px-4 py-2 bg-gradient-to-r from-[#00D4AA] to-[#00B894] rounded-full text-black font-bold text-xs tracking-wider mb-5 uppercase">
+                  {asset.status === "active" ? t("assets.detail.availableNow") : t(statusInfo.labelKey)}
                 </div>
 
                 {/* 购买信息 */}
                 <div className="flex justify-around mb-4">
                   <div className="text-center">
-                    <span className="block text-white/50 text-[11px] mb-1">SUBSCRIBED</span>
+                    <span className="block text-white/50 text-[11px] mb-1 uppercase">{t("assets.invest.subscribed")}</span>
                     <span className="block text-white text-lg font-semibold">{formatAmount(asset.subscribed_amount)}</span>
                   </div>
                   <div className="text-center">
-                    <span className="block text-white/50 text-[11px] mb-1">REMAINING</span>
+                    <span className="block text-white/50 text-[11px] mb-1 uppercase">{t("assets.invest.remaining")}</span>
                     <span className="block text-[#00D4AA] text-lg font-semibold">{formatAmount(asset.remaining_amount)}</span>
                   </div>
                 </div>
@@ -347,8 +462,8 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="mb-2">
                   <Progress value={progress} indicatorColor="#00D4AA" className="h-2" />
                   <div className="flex justify-between mt-2 text-xs text-white/50">
-                    <span>{progress.toFixed(1)}% Funded</span>
-                    <span>{(100 - progress).toFixed(1)}% Available</span>
+                    <span>{progress.toFixed(1)}% {t("assets.invest.funded")}</span>
+                    <span>{(100 - progress).toFixed(1)}% {t("assets.invest.available")}</span>
                   </div>
                 </div>
 
@@ -358,11 +473,11 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 {/* APY 信息 */}
                 <div className="mb-5">
                   <div className="flex justify-between py-2 border-b border-white/[0.06]">
-                    <span className="text-white/60">Expected Annual Return</span>
+                    <span className="text-white/60">{t("assets.invest.expectedReturn")}</span>
                     <span className="text-[#00D4AA] font-semibold">{asset.apy_12m.toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between py-2">
-                    <span className="text-white/60">Token Price</span>
+                    <span className="text-white/60">{t("assets.invest.tokenPrice")}</span>
                     <span className="text-[#00D4AA] font-semibold">${asset.current_price.toFixed(2)}</span>
                   </div>
                 </div>
@@ -371,16 +486,34 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 <Button
                   size="lg"
                   className="w-full h-[52px] text-base font-semibold rounded-xl"
-                  disabled={!isConnected || asset.status !== "active"}
+                  disabled={!isConnected || !isKycApproved || asset.status !== "active"}
                   onClick={() => setShowSubscribeModal(true)}
                 >
                   <Wallet className="h-5 w-5 mr-2" />
-                  {isConnected ? "Subscribe Now" : "Connect Wallet to Subscribe"}
+                  {!isConnected 
+                    ? t("assets.invest.connectWallet") 
+                    : !isKycApproved 
+                      ? t("assets.invest.kycRequired")
+                      : t("assets.invest.subscribeNow")
+                  }
                 </Button>
 
                 {!isConnected && (
                   <p className="text-center mt-3 text-sm text-white/40">
-                    Please connect your wallet to invest
+                    {t("assets.invest.connectWalletHint")}
+                  </p>
+                )}
+                
+                {isConnected && !isKycApproved && (
+                  <p className="text-center mt-3 text-sm text-white/40">
+                    <Button
+                      variant="link"
+                      className="text-[#00D4AA] p-0 h-auto"
+                      onClick={() => router.push("/kyc")}
+                    >
+                      {t("assets.invest.completeKyc")}
+                    </Button>
+                    {" "}{t("assets.invest.toInvest")}
                   </p>
                 )}
               </div>

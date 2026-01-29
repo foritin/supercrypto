@@ -37,7 +37,7 @@ export function MediaGallery({
   const images =
     media && media.length > 0
       ? media
-          .filter((m) => ["image", "cover"].includes(m.media_type))
+          .filter((m) => ["gallery", "cover"].includes(m.media_type))
           .map((m) => m.url)
       : coverImage
       ? [coverImage, ...PLACEHOLDER_IMAGES.slice(1)]

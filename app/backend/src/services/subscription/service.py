@@ -16,6 +16,8 @@ from typing import List, Optional, Tuple
 from falib.utils.config import SETTINGS
 from tortoise.exceptions import IntegrityError
 
+from src.models.asset import Asset
+from src.models.subscription import Subscription
 from src.services.asset.service import AssetService
 from src.services.subscription.schemas import (
     SubscriptionCreateRequest,
@@ -23,15 +25,8 @@ from src.services.subscription.schemas import (
     SubscriptionPreviewResponse,
     SubscriptionResponse,
 )
-from src.models.asset import Asset
-from src.models.subscription import Subscription
-from src.shared.schemas.enums import (
-    AssetStatus,
-    LockPeriod,
-    SubscriptionStatus,
-    TokenType,
-)
 from src.shared.common.exceptions import BusinessException
+from src.shared.schemas.enums import SubscriptionStatus
 from src.shared.services.lock_service import DistributedLockService, LockAcquireError
 
 
@@ -444,16 +439,25 @@ class SubscriptionService:
         }
 
     def _get_apy_for_period(self, asset: Asset, lock_period: int) -> Decimal:
-        """获取锁定期对应的 APY"""
-        if lock_period == 3:
+        """获取锁定期对应的 APY (活期模式使用基础 APY)"""
+        if lock_period == 0:  # 活期模式
+            return (
+                asset.apy_flexible
+                if hasattr(asset, "apy_flexible")
+                else asset.apy_3m * Decimal("0.6")
+            )  # 活期约为 3月期的 60%
+        elif lock_period == 3:
             return asset.apy_3m
         elif lock_period == 6:
             return asset.apy_6m
         elif lock_period == 12:
             return asset.apy_12m
         else:
-            raise BusinessException(
-                code=400, message=f"Invalid lock period: {lock_period}"
+            # 默认使用活期 APY
+            return (
+                asset.apy_flexible
+                if hasattr(asset, "apy_flexible")
+                else asset.apy_3m * Decimal("0.6")
             )
 
     async def _to_response(self, subscription: Subscription) -> SubscriptionResponse:

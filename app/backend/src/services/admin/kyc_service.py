@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
 
-from src.models.kyc import UserKyc
+from src.models.kyc import AccountKyc
 from src.shared.schemas.enums import KycStatus, OnChainSyncStatus
 from src.shared.services.minio_service import get_minio_service
 
@@ -33,7 +33,7 @@ class AdminKycService:
 
     async def list_pending(
         self, page: int = 1, page_size: int = 10
-    ) -> Tuple[List[UserKyc], int, int]:
+    ) -> Tuple[List[AccountKyc], int, int]:
         """
         获取待审核列表
 
@@ -42,10 +42,10 @@ class AdminKycService:
             page_size: 每页数量
 
         Returns:
-            Tuple[List[UserKyc], int, int]: (列表, 总数, 总页数)
+            Tuple[List[AccountKyc], int, int]: (列表, 总数, 总页数)
         """
-        query = UserKyc.filter(
-            status=KycStatus.PENDING, environment=self.environment
+        query = AccountKyc.filter(
+            status=KycStatus.PENDING, network=self.environment
         ).order_by("-created_at")
 
         total = await query.count()
@@ -56,7 +56,7 @@ class AdminKycService:
 
     async def list_by_status(
         self, status: Optional[KycStatus] = None, page: int = 1, page_size: int = 10
-    ) -> Tuple[List[UserKyc], int, int]:
+    ) -> Tuple[List[AccountKyc], int, int]:
         """
         按状态获取 KYC 列表
 
@@ -66,9 +66,9 @@ class AdminKycService:
             page_size: 每页数量
 
         Returns:
-            Tuple[List[UserKyc], int, int]: (列表, 总数, 总页数)
+            Tuple[List[AccountKyc], int, int]: (列表, 总数, 总页数)
         """
-        query = UserKyc.filter(environment=self.environment)
+        query = AccountKyc.filter(network=self.environment)
 
         if status:
             query = query.filter(status=status)
@@ -81,7 +81,7 @@ class AdminKycService:
 
         return items, total, total_pages
 
-    async def get_detail(self, kyc_id: int) -> Optional[UserKyc]:
+    async def get_detail(self, kyc_id: int) -> Optional[AccountKyc]:
         """
         获取 KYC 详情
 
@@ -89,9 +89,9 @@ class AdminKycService:
             kyc_id: KYC ID
 
         Returns:
-            UserKyc 或 None
+            AccountKyc 或 None
         """
-        return await UserKyc.filter(id=kyc_id, environment=self.environment).first()
+        return await AccountKyc.filter(id=kyc_id, network=self.environment).first()
 
     async def get_detail_with_documents(self, kyc_id: int) -> Optional[Dict[str, Any]]:
         """
@@ -150,10 +150,10 @@ class AdminKycService:
         on_chain_error = None
 
         try:
-            on_chain_verified = await contract_service.is_verified(kyc.wallet_address)
+            on_chain_verified = await contract_service.is_verified(kyc.address)
             if on_chain_verified:
                 on_chain_info = await contract_service.get_investor_info(
-                    kyc.wallet_address
+                    kyc.address
                 )
         except Exception as e:
             on_chain_error = str(e)
@@ -178,16 +178,16 @@ class AdminKycService:
             },
         }
 
-    async def list_failed_sync(self) -> List[UserKyc]:
+    async def list_failed_sync(self) -> List[AccountKyc]:
         """
         获取同步失败的 KYC 列表
 
         Returns:
             同步失败的 KYC 列表
         """
-        return await UserKyc.filter(
+        return await AccountKyc.filter(
             on_chain_sync_status=OnChainSyncStatus.FAILED,
-            environment=self.environment,
+            network=self.environment,
         ).order_by("-updated_at")
 
     async def get_stats(self) -> Dict[str, int]:
@@ -202,7 +202,7 @@ class AdminKycService:
 
         # 使用单次聚合查询代替 N+4 查询
         result = (
-            await UserKyc.filter(environment=self.environment)
+            await AccountKyc.filter(network=self.environment)
             .annotate(
                 pending_count=Count("id", _filter=Q(status=KycStatus.PENDING)),
                 approved_count=Count("id", _filter=Q(status=KycStatus.APPROVED)),

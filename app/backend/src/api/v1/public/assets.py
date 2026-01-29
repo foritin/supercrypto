@@ -15,7 +15,8 @@ from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from src.services.asset.service import AssetService
-from src.shared.schemas.enums import AssetStatus, AssetType
+from src.services.asset.media_service import MediaService, get_media_service
+from src.shared.schemas.enums import AssetStatus, AssetType, MediaType
 
 router = APIRouter()
 
@@ -135,3 +136,59 @@ async def get_price_history(
     return create_success_response(
         list_data=[item.model_dump(mode="json") for item in history]
     )
+
+
+@router.get(
+    "/{asset_id}/media",
+    summary="获取资产媒体列表",
+    description="获取资产的所有媒体文件（图片、文档等），URL 为预签名临时访问链接",
+)
+async def get_asset_media(
+    asset_id: int,
+    media_type: Optional[MediaType] = Query(None, description="按类型筛选"),
+    media_service: MediaService = Depends(get_media_service),
+    asset_service: AssetService = Depends(get_asset_service),
+):
+    """
+    获取资产媒体列表（Public API）
+
+    - **asset_id**: 资产ID
+    - **media_type**: 可选，按类型筛选 (cover, gallery, valuation, legal, financial, floor_plan, video)
+
+    返回的 URL 为 MinIO 预签名临时访问链接，有效期 1 小时
+    """
+    # 先检查资产是否存在且可见
+    asset = await asset_service.get_asset(asset_id, public_only=True)
+    if not asset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found"
+        )
+
+    # 获取媒体列表
+    media_list = await media_service.list_media(asset_id, media_type)
+
+    # 收集所有需要转换的 URL
+    file_paths = [m.url for m in media_list if m.url]
+
+    # 批量获取预签名 URL（复用连接）
+    presigned_urls = (
+        await media_service.get_presigned_urls_batch(file_paths) if file_paths else {}
+    )
+
+    # 转换为响应格式
+    result = []
+    for m in media_list:
+        data = {
+            "id": m.id,
+            "media_type": m.media_type.value if hasattr(m.media_type, "value") else m.media_type,
+            "title": m.title,
+            "description": m.description,
+            "url": presigned_urls.get(m.url, m.url) if m.url else None,
+            "thumbnail_url": m.thumbnail_url,
+            "file_name": m.file_name,
+            "sort_order": m.sort_order,
+            "is_primary": m.is_primary,
+        }
+        result.append(data)
+
+    return create_success_response(list_data=result)

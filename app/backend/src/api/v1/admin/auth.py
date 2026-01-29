@@ -69,7 +69,7 @@ async def revoke_user_sessions(
     """
     from src.services.audit.service import audit_service
     from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-    
+
     wallet_address = wallet_address.lower()
 
     # 防止管理员下线自己
@@ -146,7 +146,7 @@ async def remove_user_from_blacklist(
     """
     from src.services.audit.service import audit_service
     from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-    
+
     wallet_address = wallet_address.lower()
 
     # 检查是否在黑名单

@@ -144,6 +144,10 @@ export { RippleButton } from './RippleButton';
 // Enhanced Toast
 export { EnhancedToast } from './EnhancedToast';
 
+// File Upload
+export { FileUpload, validateFileType, validateFileSize } from './file-upload';
+export type { FileUploadProps, FileUploadError } from './file-upload';
+
 // ============================================
 // Table Components (@tanstack/react-table)
 // ============================================

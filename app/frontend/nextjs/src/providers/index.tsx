@@ -27,38 +27,12 @@ export function Providers({ children }: { children: ReactNode }) {
               color: "#ffffff",
               backdropFilter: "blur(12px)",
             },
-            // 成功消息样式
-            success: {
-              style: {
-                background: "rgba(0, 212, 170, 0.1)",
-                border: "1px solid rgba(0, 212, 170, 0.3)",
-                color: "#00D4AA",
-              },
-            },
-            // 错误消息样式
-            error: {
-              duration: 5000,
-              style: {
-                background: "rgba(255, 77, 79, 0.1)",
-                border: "1px solid rgba(255, 77, 79, 0.3)",
-                color: "#FF4D4F",
-              },
-            },
-            // 警告消息样式
-            warning: {
-              style: {
-                background: "rgba(255, 215, 0, 0.1)",
-                border: "1px solid rgba(255, 215, 0, 0.3)",
-                color: "#FFD700",
-              },
-            },
-            // 信息消息样式
-            info: {
-              style: {
-                background: "rgba(24, 144, 255, 0.1)",
-                border: "1px solid rgba(24, 144, 255, 0.3)",
-                color: "#1890FF",
-              },
+            // 类型特定样式通过 classNames 处理
+            classNames: {
+              success: 'bg-[rgba(0,212,170,0.1)] border-[rgba(0,212,170,0.3)] text-[#00D4AA]',
+              error: 'bg-[rgba(255,77,79,0.1)] border-[rgba(255,77,79,0.3)] text-[#FF4D4F]',
+              warning: 'bg-[rgba(255,215,0,0.1)] border-[rgba(255,215,0,0.3)] text-[#FFD700]',
+              info: 'bg-[rgba(24,144,255,0.1)] border-[rgba(24,144,255,0.3)] text-[#1890FF]',
             },
           }}
         />

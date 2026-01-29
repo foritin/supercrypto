@@ -6,13 +6,14 @@ Auth 服务模块
 """
 
 from src.services.auth.schemas import (
-    CurrentUserResponse,
-    LogoutRequest,
-    RefreshTokenRequest,
-    SessionInfo,
-    TokenRequest,
-    TokenResponse,
+                                       CurrentUserResponse,
+                                       LogoutRequest,
+                                       RefreshTokenRequest,
+                                       SessionInfo,
+                                       TokenRequest,
+                                       TokenResponse,
 )
+from src.services.auth.service import AuthService, get_auth_service
 from src.shared.services import SessionService, session_service
 
 __all__ = [
@@ -24,6 +25,8 @@ __all__ = [
     "CurrentUserResponse",
     "SessionInfo",
     # Services
+    "AuthService",
+    "get_auth_service",
     "SessionService",
     "session_service",
 ]

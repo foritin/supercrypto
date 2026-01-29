@@ -11,11 +11,8 @@
 from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, HTTPException, status
 
-from src.shared.constants.registry import get_registry
-from src.shared.constants.schemas import ConstantItem
-
 # 确保常量已注册
-from src.shared.constants.definitions import register_all_constants
+from src.shared.constants.registry import get_registry
 
 router = APIRouter()
 

@@ -125,9 +125,8 @@ async def get_token_recipients(
     if not service.is_reset_allowed():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="This feature is only available in local/test environment",
+            detail="This feature is only available in hardhat environment",
         )
 
-    recipients = await service.get_token_recipients(admin_address)
+    recipients = await service.get_token_recipients()
     return success_response(list_data=[r.model_dump() for r in recipients])
-

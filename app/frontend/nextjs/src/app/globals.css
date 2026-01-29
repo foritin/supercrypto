@@ -11,6 +11,9 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
+/* 第三方库样式 */
+@import "react-day-picker/style.css";
+
 /* 样式模块导入 - 精简版 */
 @import "../styles/variables.css";       /* CSS 变量/主题 */
 @import "../styles/animations.css";      /* @keyframes 动画 */

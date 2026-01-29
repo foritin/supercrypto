@@ -1,13 +1,13 @@
 """
 Staking Domain - Schemas
 """
-from typing import Optional, List
-from decimal import Decimal
 from datetime import datetime
+from decimal import Decimal
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
-from src.shared.schemas.enums import StakingPeriod, StakingStatus
-
+from src.shared.schemas.enums import StakingStatus
 
 # ============ 请求 Schemas ============
 

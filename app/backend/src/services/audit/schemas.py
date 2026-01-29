@@ -4,16 +4,12 @@
 定义审计服务的请求/响应数据结构
 """
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
 from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-from src.shared.schemas.enums.audit import (
-    TransactionAuditStatus,
-    TransactionAuditType,
-)
-
+from src.shared.schemas.enums.audit import TransactionAuditStatus, TransactionAuditType
 
 # ==================== 审计日志 Schemas ====================
 

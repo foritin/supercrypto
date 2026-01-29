@@ -4,6 +4,8 @@
  * 显示当前 KYC 状态并提供操作按钮
  * 
  * 已从 Ant Design 迁移到 shadcn/ui
+ * 
+ * @validates Requirements 8.1, 8.2, 8.3 - 响应式设计
  */
 import {
   ShieldCheck,
@@ -19,6 +21,7 @@ import { useAccount } from 'wagmi'
 import { useKycStatus, useKycApply, getKycStatusInfo } from '@/hooks/use-kyc-status'
 import { KycStatus } from '@/services/kyc'
 import { useRouter } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 // shadcn/ui 组件
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -27,7 +30,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 
-interface KycStatusCardProps {
+export interface KycStatusCardProps {
   onStartKyc?: () => void
 }
 
@@ -57,18 +60,31 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
   const statusInfo = getKycStatusInfo(status)
 
   // 未连接钱包 - 显示连接钱包提示
+  // Requirements 8.1: 移动端单列布局，8.2: 桌面端居中卡片布局
   if (!isConnected) {
     return (
       <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
+        <CardContent className={cn(
+          "flex flex-col items-center justify-center",
+          // Mobile: 较小内边距
+          "py-8 px-4",
+          // Desktop: 正常内边距
+          "sm:py-12 sm:px-6"
+        )}>
           <ShieldCheck 
-            className="w-16 h-16 text-muted-foreground mb-6" 
+            className={cn(
+              // Mobile: 较小图标
+              "w-12 h-12 mb-4",
+              // Desktop: 正常图标
+              "sm:w-16 sm:h-16 sm:mb-6",
+              "text-muted-foreground"
+            )}
             aria-hidden="true" 
           />
-          <h3 className="text-lg font-semibold mb-2">
+          <h3 className="text-base sm:text-lg font-semibold mb-2 text-center">
             {t('kyc.connectWalletFirst')}
           </h3>
-          <p className="text-muted-foreground text-center max-w-sm">
+          <p className="text-sm sm:text-base text-muted-foreground text-center max-w-sm">
             {t('kyc.connectWalletDescription')}
           </p>
         </CardContent>
@@ -80,10 +96,16 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Skeleton className="w-16 h-16 rounded-full mb-6" />
-          <Skeleton className="h-6 w-48 mb-2" />
-          <Skeleton className="h-4 w-64" />
+        <CardContent className={cn(
+          "flex flex-col items-center justify-center",
+          // Mobile: 较小内边距
+          "py-8 px-4",
+          // Desktop: 正常内边距
+          "sm:py-12 sm:px-6"
+        )}>
+          <Skeleton className="w-12 h-12 sm:w-16 sm:h-16 rounded-full mb-4 sm:mb-6" />
+          <Skeleton className="h-5 sm:h-6 w-40 sm:w-48 mb-2" />
+          <Skeleton className="h-4 w-56 sm:w-64" />
         </CardContent>
       </Card>
     )
@@ -93,16 +115,23 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
   if (isError) {
     return (
       <Card>
-        <CardContent className="py-6">
+        <CardContent className="py-4 px-3 sm:py-6 sm:px-6">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{t('kyc.error.loadFailed')}</AlertTitle>
-            <AlertDescription className="flex items-center justify-between mt-2">
-              <span>{t('common.tryAgainLater')}</span>
+            <AlertTitle className="text-sm sm:text-base">{t('kyc.error.loadFailed')}</AlertTitle>
+            <AlertDescription className={cn(
+              // Mobile: 垂直堆叠
+              "flex flex-col gap-3 mt-2",
+              // Desktop: 水平布局
+              "sm:flex-row sm:items-center sm:justify-between"
+            )}>
+              <span className="text-xs sm:text-sm">{t('common.tryAgainLater')}</span>
+              {/* Requirements 8.3: 触摸目标尺寸优化 - 最小 44x44px */}
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => refetch()}
+                className="min-h-[44px] w-full sm:w-auto"
               >
                 <RotateCw className="w-4 h-4 mr-2" aria-hidden="true" />
                 {t('common.retry')}
@@ -129,26 +158,39 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
   }
 
   // 根据状态渲染内容
+  // Requirements 8.1, 8.2, 8.3: 响应式布局和触摸目标优化
   const renderContent = () => {
     switch (status) {
       case KycStatus.APPROVED:
         return (
-          <div className="flex flex-col items-center justify-center py-8">
-            <div className="w-16 h-16 rounded-full bg-[#00D4AA]/20 flex items-center justify-center mb-6">
+          <div className={cn(
+            "flex flex-col items-center justify-center",
+            // Mobile: 较小内边距
+            "py-6 px-4",
+            // Desktop: 正常内边距
+            "sm:py-8 sm:px-6"
+          )}>
+            <div className={cn(
+              // Mobile: 较小图标容器
+              "w-12 h-12 mb-4",
+              // Desktop: 正常图标容器
+              "sm:w-16 sm:h-16 sm:mb-6",
+              "rounded-full bg-[#00D4AA]/20 flex items-center justify-center"
+            )}>
               <CheckCircle2 
-                className="w-10 h-10 text-[#00D4AA]" 
+                className="w-8 h-8 sm:w-10 sm:h-10 text-[#00D4AA]" 
                 aria-hidden="true" 
               />
             </div>
-            <h3 className="text-lg font-semibold mb-2">
+            <h3 className="text-base sm:text-lg font-semibold mb-2 text-center">
               {t('kyc.approved.title')}
             </h3>
-            <p className="text-muted-foreground text-center mb-4">
+            <p className="text-sm sm:text-base text-muted-foreground text-center mb-4">
               {t('kyc.approved.description')}
             </p>
             <div className="flex flex-col items-center gap-2">
               {kycData?.reviewed_at && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {t('kyc.approved.date', { 
                     date: new Date(kycData.reviewed_at).toLocaleDateString() 
                   })}
@@ -165,29 +207,43 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
 
       case KycStatus.PENDING:
         return (
-          <div className="flex flex-col items-center justify-center py-8">
-            <div className="w-16 h-16 rounded-full bg-[#1677ff]/20 flex items-center justify-center mb-6">
+          <div className={cn(
+            "flex flex-col items-center justify-center",
+            // Mobile: 较小内边距
+            "py-6 px-4",
+            // Desktop: 正常内边距
+            "sm:py-8 sm:px-6"
+          )}>
+            <div className={cn(
+              // Mobile: 较小图标容器
+              "w-12 h-12 mb-4",
+              // Desktop: 正常图标容器
+              "sm:w-16 sm:h-16 sm:mb-6",
+              "rounded-full bg-[#1677ff]/20 flex items-center justify-center"
+            )}>
               <Clock 
-                className="w-10 h-10 text-[#1677ff]" 
+                className="w-8 h-8 sm:w-10 sm:h-10 text-[#1677ff]" 
                 aria-hidden="true" 
               />
             </div>
-            <h3 className="text-lg font-semibold mb-2">
+            <h3 className="text-base sm:text-lg font-semibold mb-2 text-center">
               {t('kyc.pending.title')}
             </h3>
-            <p className="text-muted-foreground text-center mb-4">
+            <p className="text-sm sm:text-base text-muted-foreground text-center mb-4">
               {t('kyc.pending.description')}
             </p>
             {kycData?.submitted_at && (
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                 {t('kyc.pending.submitted', { 
                   date: new Date(kycData.submitted_at).toLocaleDateString() 
                 })}
               </p>
             )}
+            {/* Requirements 8.3: 触摸目标尺寸优化 - 最小 44x44px */}
             <Button 
               variant="outline" 
               onClick={() => refetch()}
+              className="min-h-[44px] w-full sm:w-auto"
             >
               <RotateCw className="w-4 h-4 mr-2" aria-hidden="true" />
               {t('kyc.pending.refresh')}
@@ -197,31 +253,45 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
 
       case KycStatus.REJECTED:
         return (
-          <div className="flex flex-col items-center justify-center py-8">
-            <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mb-6">
+          <div className={cn(
+            "flex flex-col items-center justify-center",
+            // Mobile: 较小内边距
+            "py-6 px-4",
+            // Desktop: 正常内边距
+            "sm:py-8 sm:px-6"
+          )}>
+            <div className={cn(
+              // Mobile: 较小图标容器
+              "w-12 h-12 mb-4",
+              // Desktop: 正常图标容器
+              "sm:w-16 sm:h-16 sm:mb-6",
+              "rounded-full bg-destructive/20 flex items-center justify-center"
+            )}>
               <XCircle 
-                className="w-10 h-10 text-destructive" 
+                className="w-8 h-8 sm:w-10 sm:h-10 text-destructive" 
                 aria-hidden="true" 
               />
             </div>
-            <h3 className="text-lg font-semibold mb-2">
+            <h3 className="text-base sm:text-lg font-semibold mb-2 text-center">
               {t('kyc.rejected.title')}
             </h3>
-            <p className="text-muted-foreground text-center mb-4">
+            <p className="text-sm sm:text-base text-muted-foreground text-center mb-4">
               {t('kyc.rejected.description')}
             </p>
             {kycData?.reject_reason && (
-              <Alert variant="destructive" className="mb-4 text-left max-w-md">
+              <Alert variant="destructive" className="mb-4 text-left w-full max-w-md">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>{t('kyc.rejected.reason')}</AlertTitle>
-                <AlertDescription>
+                <AlertTitle className="text-sm sm:text-base">{t('kyc.rejected.reason')}</AlertTitle>
+                <AlertDescription className="text-xs sm:text-sm">
                   {kycData.reject_reason}
                 </AlertDescription>
               </Alert>
             )}
+            {/* Requirements 8.3: 触摸目标尺寸优化 - 最小 44x44px */}
             <Button 
               onClick={handleStartKyc} 
               disabled={isApplying}
+              className="min-h-[44px] w-full sm:w-auto"
             >
               {isApplying ? (
                 <RotateCw className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
@@ -234,31 +304,45 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
       case KycStatus.NOT_STARTED:
       default:
         return (
-          <div className="flex flex-col items-center justify-center py-8">
+          <div className={cn(
+            "flex flex-col items-center justify-center",
+            // Mobile: 较小内边距
+            "py-6 px-4",
+            // Desktop: 正常内边距
+            "sm:py-8 sm:px-6"
+          )}>
             <ShieldCheck 
-              className="w-16 h-16 text-muted-foreground mb-6" 
+              className={cn(
+                // Mobile: 较小图标
+                "w-12 h-12 mb-4",
+                // Desktop: 正常图标
+                "sm:w-16 sm:h-16 sm:mb-6",
+                "text-muted-foreground"
+              )}
               aria-hidden="true" 
             />
-            <h3 className="text-lg font-semibold mb-2">
+            <h3 className="text-base sm:text-lg font-semibold mb-2 text-center">
               {t('kyc.notStarted.title')}
             </h3>
-            <p className="text-muted-foreground text-center max-w-md mb-6">
+            <p className="text-sm sm:text-base text-muted-foreground text-center max-w-md mb-4 sm:mb-6">
               {t('kyc.notStarted.description')}
             </p>
-            <div className="w-full max-w-sm mb-6">
-              <h4 className="text-sm font-medium mb-3 text-center">
+            <div className="w-full max-w-sm mb-4 sm:mb-6">
+              <h4 className="text-xs sm:text-sm font-medium mb-2 sm:mb-3 text-center">
                 {t('kyc.notStarted.requirements')}
               </h4>
-              <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+              <ul className="text-xs sm:text-sm text-muted-foreground space-y-1.5 sm:space-y-2 list-disc list-inside">
                 <li>{t('kyc.notStarted.req1')}</li>
                 <li>{t('kyc.notStarted.req2')}</li>
                 <li>{t('kyc.notStarted.req3')}</li>
               </ul>
             </div>
+            {/* Requirements 8.3: 触摸目标尺寸优化 - 最小 44x44px */}
             <Button 
               size="lg"
               onClick={handleStartKyc}
               disabled={isApplying}
+              className="min-h-[48px] w-full sm:w-auto"
             >
               {isApplying ? (
                 <RotateCw className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />

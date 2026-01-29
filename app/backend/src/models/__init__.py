@@ -12,12 +12,11 @@ from src.models.asset import Asset, AssetContractBinding, AssetPriceHistory
 from src.models.asset_media import AssetFeatures, AssetMedia
 from src.models.audit import AuditLog, log_audit, query_audit_logs
 from src.models.base import AbstractModel, TimestampMixin
-from src.models.contracts.contract import Contract
-from src.models.contracts.contract_dependency import ContractDependency
-from src.models.contracts.contract_meta import ContractMeta
+from src.models.chain import Chain
+from src.models.contracts.contract_config import ContractConfig
+from src.models.contracts.contract_deployment import ContractDeployment
 from src.models.contracts.provider_registry import ProviderRegistry
-from src.models.kyc import UserKyc
-from src.models.project_registry import ContractDeploymentStatus, ProjectContractConfig
+from src.models.kyc import AccountKyc, UserKyc  # UserKyc is deprecated alias
 from src.models.staking import (
     BASE_DAILY_RATE,
     STAKING_MULTIPLIERS,
@@ -26,7 +25,6 @@ from src.models.staking import (
     StakingRecord,
 )
 from src.models.subscription import Subscription
-from src.models.transaction import Transaction
 from src.models.transaction_audit import (
     TransactionAudit,
     get_pending_transactions,
@@ -35,40 +33,29 @@ from src.models.transaction_audit import (
     record_transaction,
     update_transaction_status,
 )
-from src.models.wallet import Wallet
 
 # 枚举 - 从 shared.schemas.enums 统一导入（向后兼容）
 from src.shared.schemas.enums import (
-    # Asset
     AssetStatus,
     AssetType,
-    # Audit
     AuditAction,
     AuditCategory,
     AuditStatus,
-    TransactionAuditStatus,
-    TransactionAuditType,
-    # Contract
     ChainID,
-    # KYC
     IdType,
     KycStatus,
-    # Subscription
     LockPeriod,
     MediaType,
-    # Account
-    # Base
     NetWork,
     OnChainSyncStatus,
-    # Staking
     StakingPeriod,
     StakingStatus,
     SubscriptionStatus,
     TokenType,
-    # Transaction
+    TransactionAuditStatus,
+    TransactionAuditType,
     TransactionStatus,
     TransactionType,
-    WalletType,
 )
 
 __all__ = [
@@ -77,12 +64,11 @@ __all__ = [
     "TimestampMixin",
     # Account
     "Account",
-    # Wallet
-    "Wallet",
-    # Transaction
-    "Transaction",
+    # Chain
+    "Chain",
     # KYC
-    "UserKyc",
+    "AccountKyc",
+    "UserKyc",  # deprecated alias
     # Asset
     "Asset",
     "AssetPriceHistory",
@@ -91,14 +77,10 @@ __all__ = [
     "AssetFeatures",
     # Subscription
     "Subscription",
-    # Contract
-    "Contract",
-    "ContractMeta",
-    "ContractDependency",
+    # 合约模型
+    "ContractConfig",
+    "ContractDeployment",
     "ProviderRegistry",
-    # Project Registry (Epic 10)
-    "ProjectContractConfig",
-    "ContractDeploymentStatus",
     # Staking
     "StakingRecord",
     "StakingLimit",
@@ -121,7 +103,6 @@ __all__ = [
     "KycStatus",
     "OnChainSyncStatus",
     "IdType",
-    "WalletType",
     # Asset
     "AssetStatus",
     "AssetType",
@@ -144,4 +125,6 @@ __all__ = [
     "AuditStatus",
     "TransactionAuditType",
     "TransactionAuditStatus",
+    # Contract
+    "ChainID",
 ]

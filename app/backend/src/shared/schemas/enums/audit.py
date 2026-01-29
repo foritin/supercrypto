@@ -21,10 +21,10 @@ class AuditCategory(str, Enum):
 class AuditAction(str, Enum):
     """
     审计操作类型枚举 - 统一合并版
-    
+
     命名规范: {类别}.{动作} 或 {类别}_{动作}
     """
-    
+
     # ========== 账户操作 ==========
     ACCOUNT_CREATE = "account.create"
     ACCOUNT_UPDATE = "account.update"
@@ -34,11 +34,11 @@ class AuditAction(str, Enum):
     ACCOUNT_RESTORE = "account.restore"
     ACCOUNT_FREEZE = "account_freeze"
     ACCOUNT_UNFREEZE = "account_unfreeze"
-    
+
     # ========== 权限操作 ==========
     PERMISSION_GRANT = "permission.grant"
     PERMISSION_REVOKE = "permission.revoke"
-    
+
     # ========== 认证操作 ==========
     AUTH_LOGIN = "auth.login"
     AUTH_LOGOUT = "auth.logout"
@@ -47,14 +47,14 @@ class AuditAction(str, Enum):
     AUTH_REFRESH = "auth.refresh"
     USER_SESSION_REVOKE = "user_session_revoke"
     USER_BLACKLIST_REMOVE = "user_blacklist_remove"
-    
+
     # ========== KYC 操作 ==========
     KYC_APPROVE = "kyc_approve"
     KYC_REJECT = "kyc_reject"
     KYC_RESET = "kyc_reset"
     KYC_REVIEW = "kyc_review"
     KYC_SYNC_RETRY = "kyc_sync_retry"
-    
+
     # ========== 资产操作 ==========
     ASSET_CREATE = "asset_create"
     ASSET_UPDATE = "asset_update"
@@ -69,7 +69,7 @@ class AuditAction(str, Enum):
     ASSET_PRICE_UPDATE = "asset_price_update"
     ASSET_BIND_CONTRACT = "asset_bind_contract"
     ASSET_UNBIND_CONTRACT = "asset_unbind_contract"
-    
+
     # ========== 合约操作 ==========
     CONTRACT_DEPLOY = "contract.deploy"
     CONTRACT_CALL = "contract.call"
@@ -85,34 +85,34 @@ class AuditAction(str, Enum):
     CONTRACT_REGISTER = "contract.register"
     CONTRACT_UNREGISTER = "contract.unregister"
     CONTRACT_SYNC = "contract.sync"
-    
+
     # ========== 质押挖矿 ==========
     STAKING_CONFIG_UPDATE = "staking_config_update"
     STAKING_PAUSE = "staking_pause"
     STAKING_RESUME = "staking_resume"
-    
+
     # ========== 代币管理 ==========
     TOKEN_AIRDROP = "token_airdrop"
     TOKEN_MINT = "token_mint"
-    
+
     # ========== 预言机 ==========
     ORACLE_PRICE_UPDATE = "oracle_price_update"
-    
+
     # ========== 紧急控制 ==========
     EMERGENCY_PAUSE = "emergency_pause"
     EMERGENCY_UNPAUSE = "emergency_unpause"
     BLACKLIST_ADD = "blacklist_add"
     BLACKLIST_REMOVE = "blacklist_remove"
-    
+
     # ========== 系统操作 ==========
     SYSTEM_CONFIG_UPDATE = "system.config_update"
     SYSTEM_MAINTENANCE = "system.maintenance"
-    
+
     # ========== 开发工具 ==========
     DEV_QUICK_KYC = "dev_quick_kyc"
     DEV_MINT_TOKEN = "dev_mint_token"
     DEV_RESET_DATA = "dev_reset_data"
-    
+
     # ========== 其他 ==========
     OTHER = "other"
 

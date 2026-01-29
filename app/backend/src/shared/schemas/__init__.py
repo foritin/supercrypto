@@ -9,54 +9,35 @@
 """
 
 # 基础响应模型
-from .base import (
-    ApiResponse,
-    ErrorResponse,
-    PaginatedResponse,
-)
-
-# 混入类
-from .mixins import (
-    IDMixin,
-    TimestampMixin,
-)
+from .base import ApiResponse, ErrorResponse, PaginatedResponse
 
 # 通用参数
-from .common import (
-    PaginationParams,
-    SortParams,
-)
+from .common import PaginationParams, SortParams
 
 # 枚举 - 统一从 enums 包导入
-from .enums import (
-    # KYC
-    IdType,
-    KycStatus,
-    OnChainSyncStatus,
-    WalletType,
-    # Asset
+from .enums import (  # Asset; Audit; KYC; Subscription; Account; Staking; Transaction
     AssetStatus,
     AssetType,
-    MediaType,
-    # Subscription
-    LockPeriod,
-    SubscriptionStatus,
-    TokenType,
-    # Staking
-    StakingPeriod,
-    StakingStatus,
-    # Transaction
-    TransactionStatus,
-    TransactionType,
-    # Account
-    NetType,
-    NetworkType,
-    # Audit
     AuditAction,
     AuditCategory,
     AuditStatus,
+    IdType,
+    KycStatus,
+    LockPeriod,
+    MediaType,
+    NetType,
+    NetworkType,
+    OnChainSyncStatus,
+    StakingPeriod,
+    StakingStatus,
+    SubscriptionStatus,
+    TokenType,
+    TransactionStatus,
+    TransactionType,
 )
 
+# 混入类
+from .mixins import IDMixin, TimestampMixin
 
 __all__ = [
     # Base
@@ -73,7 +54,6 @@ __all__ = [
     "KycStatus",
     "OnChainSyncStatus",
     "IdType",
-    "WalletType",
     # Enums - Asset
     "AssetStatus",
     "AssetType",

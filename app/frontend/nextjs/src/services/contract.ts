@@ -8,6 +8,12 @@
  */
 import { api } from "@/services/api";
 import { PUBLIC_PATHS, ADMIN_PATHS } from "@/constants/api-paths";
+import type {
+  ReadinessDetails,
+  BoundAssetInfo,
+  ContractActions,
+  ProjectReadinessStatus,
+} from "@/types/contract";
 // API.ResponseData 类型已在 types/api.d.ts 中全局声明
 
 // 合约地址响应
@@ -88,7 +94,7 @@ export const contractService = {
   },
 };
 
-// Subscription 合约 ABI (关键函数)
+// Subscription 合约 ABI (关键函数 - 活期模式)
 export const SUBSCRIPTION_ABI = [
   // 读取函数
   "function minInvestment() view returns (uint256)",
@@ -99,9 +105,11 @@ export const SUBSCRIPTION_ABI = [
   "function subscriptionCount(address user) view returns (uint256)",
   "function getSubscription(address user, uint256 subscriptionId) view returns ((uint256 principal, uint256 lockPeriod, uint256 subscribeTime, uint256 redeemTime, uint256 apy, bool redeemed))",
   "function calculateInterest(uint256 principal, uint256 lockPeriod, uint256 apy) view returns (uint256)",
+  "function getPendingReward(address user, uint256 subscriptionId) view returns (uint256)",
   "function getLockPeriods() view returns (uint256[4])",
 
-  // 写入函数
+  // 写入函数 (活期模式: lockPeriod 参数可选，默认0)
+  "function subscribe(uint256 amount)",
   "function subscribe(uint256 amount, uint256 lockPeriod)",
   "function redeem(uint256 subscriptionId)",
 
@@ -125,23 +133,22 @@ export const ERC20_ABI = [
   "function mint(address to, uint256 amount)",
 ] as const;
 
-// 锁定期常量 (秒)
+// 活期模式常量
+export const FLEXIBLE_PERIOD = 0;  // 活期，随时可赎回
+
+// 锁定期常量 (秒) - 保留以兼容旧数据
 export const LOCK_PERIODS = {
-  "1": 30 * 24 * 3600, // 30 days
-  "3": 90 * 24 * 3600, // 90 days
-  "6": 180 * 24 * 3600, // 180 days
-  "12": 360 * 24 * 3600, // 360 days
+  "0": 0, // 活期
+  "1": 30 * 24 * 3600, // 30 days (兼容)
+  "3": 90 * 24 * 3600, // 90 days (兼容)
+  "6": 180 * 24 * 3600, // 180 days (兼容)
+  "12": 360 * 24 * 3600, // 360 days (兼容)
 } as const;
 
-// 将月份转换为秒
+// 将月份转换为秒 (活期模式: 返回 0)
 export function monthsToSeconds(months: number): number {
-  const mapping: Record<number, number> = {
-    1: LOCK_PERIODS["1"],
-    3: LOCK_PERIODS["3"],
-    6: LOCK_PERIODS["6"],
-    12: LOCK_PERIODS["12"],
-  };
-  return mapping[months] || LOCK_PERIODS["3"];
+  // 活期模式: 始终返回 0
+  return FLEXIBLE_PERIOD;
 }
 
 // 基点转换为百分比
@@ -195,6 +202,7 @@ export interface DependencyStatusItem {
 
 // 合约状态（纯 Provider 模式）
 export interface ContractStatusItem {
+  id: number | null;                        // 合约 ID (部署后才有)
   name: string;
   project: string;                          // 项目分组
   address: string | null;                   // 本地 DB 地址
@@ -203,7 +211,8 @@ export interface ContractStatusItem {
   registration_status: RegistrationStatus;  // 注册状态
   provider_address: string | null;          // Provider 上的地址
   provider_key: string | null;              // Provider Key
-  dependencies: DependencyStatusItem[];     // 依赖列表
+  dependencies: DependencyStatusItem[];     // 必选依赖列表
+  optional_dependencies?: DependencyStatusItem[];  // 可选依赖列表
   scope: "global" | "project";              // 作用域：global(公共) / project(项目)
   contract_type: ContractType | null;       // 合约类型
   type_config?: ContractTypeConfig;         // 类型配置
@@ -213,6 +222,8 @@ export interface ContractStatusItem {
   // 新增字段：主合约相关 (Requirements: 4.1, 4.6)
   is_primary: boolean;                      // 是否为主合约
   symbol: string | null;                    // Token Symbol
+  // 新增字段：操作权限 (Requirements: 5.1-5.5, 8.5-8.6)
+  actions: ContractActions;                 // 合约操作权限
 }
 
 // 项目配置
@@ -227,11 +238,17 @@ export interface ProjectContractsGroup {
   project: string;
   config: ProjectInfo;
   contracts: ContractStatusItem[];
-  // 新增字段：主合约相关信息 (Requirements: 7.3, 7.4)
+  // 主合约相关信息 (Requirements: 7.3, 7.4)
   has_primary: boolean;                         // 是否有主合约
   primary_contract: ContractStatusItem | null;  // 主合约信息
-  is_ready: boolean;                            // 项目是否就绪
-  missing_dependencies: string[];               // 缺失的必选依赖列表
+  is_ready: boolean;                            // 项目是否就绪 (兼容旧字段)
+  // 就绪详情 (Requirements: 1.1-1.6, 3.1-3.2)
+  project_readiness: ProjectReadinessStatus;    // 就绪状态: ready/partially_ready/not_ready
+  readiness_details: ReadinessDetails;          // 三个条件的详细状态
+  // 绑定状态 (Requirements: 2.1-2.5, 3.3-3.5)
+  is_bound_to_asset: boolean;                   // 是否已绑定 Asset
+  bound_asset: BoundAssetInfo | null;           // 绑定的 Asset 信息
+  can_bind_asset: boolean;                      // 是否可以绑定 Asset
 }
 
 // 统计信息
@@ -572,6 +589,29 @@ export const contractAdminService = {
       }
     );
     return response.object_data as ContractValidationResponse;
+  },
+
+  /**
+   * 设置合约为主合约（管理员）
+   * 只有项目合约（scope=project）可以设为主合约
+   * @param contractId 合约 ID
+   */
+  async setPrimary(contractId: number): Promise<ContractStatusItem> {
+    const response = await api.patch<API.ResponseData<ContractStatusItem>>(
+      ADMIN_PATHS.CONTRACT_SET_PRIMARY(contractId)
+    );
+    return response.object_data as ContractStatusItem;
+  },
+
+  /**
+   * 取消合约的主合约标记（管理员）
+   * @param contractId 合约 ID
+   */
+  async unsetPrimary(contractId: number): Promise<ContractStatusItem> {
+    const response = await api.patch<API.ResponseData<ContractStatusItem>>(
+      ADMIN_PATHS.CONTRACT_UNSET_PRIMARY(contractId)
+    );
+    return response.object_data as ContractStatusItem;
   },
 };
 

@@ -9,33 +9,32 @@
 """
 
 # JWT 工具
-from src.shared.security.jwt import (
-    create_access_token,
-    create_refresh_token,
-    refresh_tokens,
-    verify_token,
-)
-
-# 钱包签名
-from src.shared.security.wallet import (
-    create_sensitive_operation_message,
-    SensitiveOperationRequest,
-    verify_sensitive_operation_signature,
-    verify_wallet_signature,
-)
-
 # FastAPI 依赖
 from src.shared.security.deps import (
-    extract_token_from_header,
-    require_admin,
-    require_user,
-    verify_jwt_and_get_address,
+                                      extract_token_from_header,
+                                      require_admin,
+                                      require_user,
+                                      verify_jwt_and_get_address,
 )
 
 # 异常类型
 from src.shared.security.exceptions import (
-    AccessTokenExpiredException,
-    RefreshTokenExpiredException,
+                                      AccessTokenExpiredException,
+                                      RefreshTokenExpiredException,
+)
+from src.shared.security.jwt import (
+                                      create_access_token,
+                                      create_refresh_token,
+                                      refresh_tokens,
+                                      verify_token,
+)
+
+# 钱包签名
+from src.shared.security.wallet import (
+                                      SensitiveOperationRequest,
+                                      create_sensitive_operation_message,
+                                      verify_sensitive_operation_signature,
+                                      verify_wallet_signature,
 )
 
 __all__ = [

@@ -24,6 +24,7 @@ const assets = {
       pending: "待上线",
       closed: "已结束",
       paused: "已暂停",
+      sold_out: "已售罄",
     },
     // 资产类型
     type: {
@@ -31,6 +32,7 @@ const assets = {
       bond: "债券",
       commodity: "大宗商品",
       equity: "股权",
+      other: "其他",
     },
     // 详情页
     detail: {
@@ -59,6 +61,126 @@ const assets = {
       contract: "合约地址",
       contractAddress: "合约地址",
       viewDocuments: "查看文档",
+      backToAssets: "返回资产列表",
+      viewSmartContracts: "查看智能合约",
+      availableNow: "立即可投",
+    },
+    // 标签页
+    tabs: {
+      highlights: "亮点",
+      investment: "投资信息",
+      details: "详情",
+      blockchain: "区块链",
+    },
+    // 亮点部分
+    highlights: {
+      title: "房产亮点",
+      bedrooms: "卧室",
+      bathrooms: "浴室",
+      sqft: "平方英尺",
+      sqm: "平方米",
+      lotSize: "占地面积",
+      yearBuilt: "建造年份",
+      yearRenovated: "翻新年份",
+      propertyType: "房产类型",
+      stories: "楼层",
+      rentalStatus: "租赁状态",
+      monthlyRent: "月租金",
+      leaseEndDate: "租约到期",
+      amenities: "配套设施",
+      neighborhood: "周边环境",
+      schools: "学校",
+      transit: "交通",
+      shopping: "购物",
+      // 财务信息
+      tokenType: "代币类型",
+      standardEquity: "标准权益",
+      expectedIncome: "预期收益",
+      totalTokens: "代币总量",
+      // 物业信息
+      assetType: "资产类型",
+      fullAddress: "完整地址",
+      symbol: "代币符号",
+      constructionYear: "建造年份",
+      bedroomBath: "卧室/浴室",
+      beds: "卧",
+      baths: "浴",
+      rentalType: "租赁类型",
+      longTerm: "长期租赁",
+      rented: "已出租?",
+      // 房产类型
+      propertyTypes: {
+        single_family: "独栋住宅",
+        multi_family: "多户住宅",
+        condo: "公寓",
+        commercial: "商业地产",
+      },
+      // 租赁状态
+      rentalStatuses: {
+        occupied: "已出租",
+        vacant: "空置",
+        partial: "部分出租",
+      },
+    },
+    // 财务部分
+    financials: {
+      title: "财务详情",
+      tokenPrice: "代币价格",
+      totalInvestment: "总投资额",
+      apy3m: "3个月年化",
+      apy6m: "6个月年化",
+      apy12m: "12个月年化",
+      minInvestment: "最低投资",
+      expectedReturn: "预期年化收益",
+    },
+    // 文档部分
+    documents: {
+      title: "相关文档",
+      valuation: "估值报告",
+      valuationTitle: "估值报告",
+      legal: "法律文件",
+      legalTitle: "法律文件",
+      financial: "财务报告",
+      other: "其他文档",
+      otherTitle: "其他文档",
+      download: "下载",
+      noDocuments: "暂无文档",
+      // 访问限制
+      connectWalletRequired: "连接钱包查看文档",
+      connectWalletHint: "请先连接您的钱包以查看投资相关文档",
+      kycRequired: "完成 KYC 验证查看文档",
+      kycHint: "请先完成身份认证以查看投资相关文档",
+      goToKyc: "前往认证",
+    },
+    // 详情部分
+    about: {
+      title: "关于此项目",
+      location: "位置",
+      defaultDescription: "此代币化真实世界资产为投资者提供了通过区块链技术参与房产所有权的机会。每个代币代表一份部分所有权，可获得租金收入和潜在的房产增值收益。",
+    },
+    // 区块链部分
+    blockchain: {
+      title: "区块链信息",
+      contractAddress: "合约地址",
+      contractNotDeployed: "合约尚未部署",
+      documents: "文档",
+      viewLegalDocuments: "查看法律文档",
+    },
+    // 投资面板
+    invest: {
+      totalInvestment: "总投资额",
+      subscribed: "已认购",
+      remaining: "剩余",
+      funded: "已募集",
+      available: "可投资",
+      expectedReturn: "预期年化收益",
+      tokenPrice: "代币价格",
+      subscribeNow: "立即认购",
+      kycRequired: "需要完成 KYC",
+      connectWallet: "连接钱包后认购",
+      connectWalletHint: "请连接钱包进行投资",
+      completeKyc: "完成身份认证",
+      toInvest: "后即可投资",
     },
     // 旧的扁平结构（保留兼容）
     filterByStatus: "按状态筛选",
