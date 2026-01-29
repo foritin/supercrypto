@@ -560,7 +560,7 @@ export function KycWizard({
       </div>
 
       {/* 步骤内容 - 响应式内边距 */}
-      <div className="flex-1 p-4 sm:p-6">
+      <div className="flex-1 p-5 sm:p-8">
         {/* 提交错误提示 - 使用 role="alert" 确保屏幕阅读器播报 */}
         {submitError && (
           <div
@@ -584,82 +584,69 @@ export function KycWizard({
       {currentStep !== 2 && (
         <div
           className={cn(
-            // Mobile: 垂直堆叠布局，全宽按钮
-            'flex flex-col-reverse gap-3',
-            // Desktop: 水平布局
-            'sm:flex-row sm:items-center sm:justify-between',
-            // 响应式内边距
-            'p-4 sm:p-6',
-            'border-t border-white/[0.08]'
+            'flex items-center justify-between',
+            'p-5 sm:p-8 pt-4 sm:pt-6',
+            'border-t border-white/[0.04]'
           )}
           role="navigation"
           aria-label={t('kyc.navigation.ariaLabel')}
         >
-          {/* 左侧按钮 */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* 取消按钮 - Requirements 8.3: 触摸目标尺寸优化 */}
-            <Button
-              variant="ghost"
-              onClick={handleCancel}
-              disabled={isSubmitting}
-              // Mobile: 全宽按钮，最小高度 44px
-              className="flex-1 sm:flex-none gap-2 text-white/60 hover:text-white min-h-[44px]"
-              aria-label={t('kyc.navigation.cancelAriaLabel')}
-            >
-              <X className="w-4 h-4" aria-hidden="true" />
-              {t('kyc.navigation.cancel')}
-            </Button>
-
-            {/* 上一步按钮 - Requirements 8.3: 触摸目标尺寸优化 */}
+          {/* 左侧：上一步按钮（如果不是第一步）或空白 */}
+          <div className="flex-1">
             {!isFirstStep && (
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={goToPreviousStep}
                 disabled={isSubmitting}
-                // Mobile: 全宽按钮，最小高度 44px
-                className="flex-1 sm:flex-none gap-2 min-h-[44px]"
+                className="gap-2 text-white/40 hover:text-white/70 hover:bg-white/5 px-2 -ml-2"
                 aria-label={t('kyc.navigation.previousAriaLabel')}
               >
                 <ChevronLeft className="w-4 h-4" aria-hidden="true" />
-                {t('kyc.navigation.previous')}
+                <span className="text-sm">{t('kyc.navigation.back', 'Back')}</span>
               </Button>
             )}
           </div>
 
-          {/* 右侧按钮 - Requirements 8.3: 触摸目标尺寸优化 */}
-          <div className="w-full sm:w-auto">
+          {/* 右侧：继续/提交按钮 */}
+          <div>
             {isLastStep ? (
-              /* 提交按钮 - Mobile: 全宽 */
+              /* 提交按钮 */
               <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit}
-                // Mobile: 全宽按钮，最小高度 44px
-                className="w-full sm:w-auto gap-2 min-w-[120px] min-h-[44px]"
+                className={cn(
+                  'gap-2 min-w-[140px] h-10 px-6',
+                  'bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-[#0a0f0d] font-medium',
+                  'disabled:opacity-50 disabled:cursor-not-allowed'
+                )}
                 aria-label={isSubmitting ? t('kyc.navigation.submittingAriaLabel') : t('kyc.navigation.submitAriaLabel')}
                 aria-busy={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                    {t('kyc.confirmation.submitting')}
+                    <span>{t('kyc.confirmation.submitting', 'Submitting...')}</span>
                   </>
                 ) : (
                   <>
+                    <span>{t('kyc.confirmation.submit', 'Submit')}</span>
                     <CheckCircle className="w-4 h-4" aria-hidden="true" />
-                    {t('kyc.confirmation.submit')}
                   </>
                 )}
               </Button>
             ) : (
-              /* 下一步按钮 - Mobile: 全宽 */
+              /* 继续按钮 */
               <Button
                 onClick={goToNextStep}
                 disabled={!canGoNext}
-                // Mobile: 全宽按钮，最小高度 44px
-                className="w-full sm:w-auto gap-2 min-h-[44px]"
-                aria-label={t('kyc.navigation.nextAriaLabel')}
+                className={cn(
+                  'gap-2 min-w-[140px] h-10 px-6',
+                  'bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-[#0a0f0d] font-medium',
+                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30'
+                )}
+                aria-label={t('kyc.navigation.continueAriaLabel', 'Continue to next step')}
               >
-                {t('kyc.navigation.next')}
+                <span>{t('kyc.navigation.continue', 'Continue')}</span>
                 <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </Button>
             )}

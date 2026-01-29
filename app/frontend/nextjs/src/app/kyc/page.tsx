@@ -14,7 +14,7 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAccount } from 'wagmi'
-import { ShieldCheck, ArrowLeft } from 'lucide-react'
+import { ShieldCheck, ArrowLeft, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -90,43 +90,48 @@ export default function KycPage() {
         使用 max-w-[600px] 确保桌面端居中显示
       */}
       <div className="w-full max-w-[600px] mx-auto">
-        {/* 页面标题 */}
+        {/* 页面标题 - 极简设计 */}
         <div className="mb-6 sm:mb-8">
           {viewState === 'wizard' ? (
-            // 向导模式：显示返回按钮
-            // Mobile: 垂直堆叠布局
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            // 向导模式：极简顶部导航
+            <div className="flex items-center justify-between">
+              {/* 左侧：返回箭头（仅图标） */}
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={handleBackToStatus}
-                // Requirements 8.3: 触摸目标尺寸优化 - 最小 44x44px
-                className="gap-2 text-white/60 hover:text-white min-h-[44px] min-w-[44px] self-start"
+                className="text-white/40 hover:text-white/70 hover:bg-white/5 w-9 h-9"
+                aria-label={t('common.back')}
               >
                 <ArrowLeft className="w-4 h-4" />
-                {t('common.back')}
               </Button>
-              <div>
-                {/* Mobile: 较小标题，Desktop: 正常标题 */}
-                <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2 sm:gap-3">
-                  <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-[#00D4AA]" />
-                  {t('kyc.wizard.title')}
+              
+              {/* 中间：标题 */}
+              <div className="text-center">
+                <h1 className="text-base sm:text-lg font-medium text-white/90">
+                  {t('kyc.wizard.title', 'Identity Verification')}
                 </h1>
-                <p className="text-sm sm:text-base text-white/60 mt-1">
-                  {t('kyc.wizard.description')}
-                </p>
               </div>
+              
+              {/* 右侧：关闭按钮（仅图标） */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBackToStatus}
+                className="text-white/40 hover:text-white/70 hover:bg-white/5 w-9 h-9"
+                aria-label={t('common.close')}
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           ) : (
             // 状态模式：显示页面标题
-            <div>
-              {/* Mobile: 较小标题，Desktop: 正常标题 */}
-              <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2 sm:gap-3">
-                <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-[#00D4AA]" />
-                {t('kyc.pageTitle')}
+            <div className="text-center">
+              <h1 className="text-lg sm:text-xl font-medium text-white/90">
+                {t('kyc.pageTitle', 'Identity Verification')}
               </h1>
-              <p className="text-sm sm:text-base text-white/60 mt-1">
-                {t('kyc.pageDescription')}
+              <p className="text-xs sm:text-sm text-white/40 mt-1">
+                {t('kyc.pageDescription', 'Complete verification to unlock all features')}
               </p>
             </div>
           )}

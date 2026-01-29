@@ -243,20 +243,18 @@ export function Step1BasicInfo({
 
   return (
     <Form {...form}>
-      {/* Requirements 8.1: 移动端单列布局 */}
-      <form className={cn('space-y-4 sm:space-y-5', className)}>
+      <form className={cn('space-y-5', className)}>
         {/* 姓名字段 */}
         <FormField
           control={form.control}
           name="fullName"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="kyc-fullname" className="flex items-center text-sm sm:text-base text-white/90">
+            <FormItem className="space-y-2">
+              <FormLabel htmlFor="kyc-fullname" className="flex items-center text-sm text-white/50 font-normal">
                 {t('kyc.fields.fullName')}
                 <RequiredMark />
               </FormLabel>
               <FormControl>
-                {/* Requirements 8.3: 触摸目标尺寸优化 - 最小高度 44px */}
                 <Input
                   id="kyc-fullname"
                   placeholder={t('kyc.fields.fullNamePlaceholder')}
@@ -265,10 +263,9 @@ export function Step1BasicInfo({
                   aria-describedby={errors.fullName ? 'kyc-fullname-error' : undefined}
                   aria-invalid={!!errors.fullName}
                   autoComplete="name"
-                  className="min-h-[44px]"
                 />
               </FormControl>
-              <FormMessage id="kyc-fullname-error" />
+              <FormMessage id="kyc-fullname-error" className="text-xs" />
             </FormItem>
           )}
         />
@@ -278,29 +275,26 @@ export function Step1BasicInfo({
           control={form.control}
           name="dateOfBirth"
           render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel htmlFor="kyc-dob" className="flex items-center text-sm sm:text-base text-white/90">
+            <FormItem className="flex flex-col space-y-2">
+              <FormLabel htmlFor="kyc-dob" className="flex items-center text-sm text-white/50 font-normal">
                 {t('kyc.fields.dateOfBirth')}
                 <RequiredMark />
               </FormLabel>
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
                   <FormControl>
-                    {/* Requirements 8.3: 触摸目标尺寸优化 - 最小高度 44px */}
                     <Button
                       id="kyc-dob"
                       variant="outline"
                       className={cn(
                         'w-full justify-start text-left font-normal',
-                        // Mobile: 较大触摸目标
-                        'min-h-[44px] rounded-xl border bg-[rgba(26,36,30,0.8)]',
-                        'hover:bg-[rgba(26,36,30,0.9)] hover:border-white/20',
-                        'focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary/80',
-                        !field.value && 'text-muted-foreground',
-                        // 验证失败时显示红色边框
+                        'rounded-lg border bg-transparent',
+                        'hover:border-white/20',
+                        'focus-visible:ring-0 focus-visible:border-[#00D4AA]/50',
+                        !field.value && 'text-white/40',
                         errors.dateOfBirth 
-                          ? 'border-destructive hover:border-destructive focus-visible:ring-destructive focus-visible:border-destructive' 
-                          : 'border-white/10'
+                          ? 'border-destructive hover:border-destructive' 
+                          : 'border-white/[0.08]'
                       )}
                       aria-describedby={errors.dateOfBirth ? 'kyc-dob-error' : undefined}
                       aria-invalid={!!errors.dateOfBirth}
@@ -338,6 +332,11 @@ export function Step1BasicInfo({
           )}
         />
 
+        {/* 细微分隔线 */}
+        <div className="py-2">
+          <div className="h-px bg-white/[0.04]" />
+        </div>
+
         {/* 国籍字段 */}
         <FormField
           control={form.control}
@@ -347,8 +346,8 @@ export function Step1BasicInfo({
             const selectedCountry = getCountryByCode(field.value)
             
             return (
-              <FormItem>
-                <FormLabel htmlFor="kyc-nationality" className="flex items-center text-sm sm:text-base text-white/90">
+              <FormItem className="space-y-2">
+                <FormLabel htmlFor="kyc-nationality" className="flex items-center text-sm text-white/50 font-normal">
                   {t('kyc.fields.nationality')}
                   <RequiredMark />
                 </FormLabel>
@@ -357,21 +356,16 @@ export function Step1BasicInfo({
                   value={field.value}
                 >
                   <FormControl>
-                    {/* Requirements 8.3: 触摸目标尺寸优化 - 最小高度 44px */}
                     <SelectTrigger
                       id="kyc-nationality"
                       aria-describedby={errors.nationality ? 'kyc-nationality-error' : undefined}
                       aria-invalid={!!errors.nationality}
-                      className="min-h-[44px]"
                     >
                       <SelectValue placeholder={t('kyc.fields.nationalityPlaceholder')}>
                         {selectedCountry && (
                           <span className="flex items-center gap-2">
                             <span className="text-base">{selectedCountry.flag}</span>
                             <span>{isZh ? selectedCountry.name : selectedCountry.nameEn}</span>
-                            {selectedCountry.dialCode && (
-                              <span className="text-muted-foreground">({selectedCountry.dialCode})</span>
-                            )}
                           </span>
                         )}
                       </SelectValue>
@@ -406,13 +400,12 @@ export function Step1BasicInfo({
           control={form.control}
           name="address"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="kyc-address" className="flex items-center text-sm sm:text-base text-white/90">
+            <FormItem className="space-y-2">
+              <FormLabel htmlFor="kyc-address" className="flex items-center text-sm text-white/50 font-normal">
                 {t('kyc.fields.address')}
                 <RequiredMark />
               </FormLabel>
               <FormControl>
-                {/* Requirements 8.3: 触摸目标尺寸优化 - 最小高度 44px */}
                 <Input
                   id="kyc-address"
                   placeholder={t('kyc.fields.addressPlaceholder')}
@@ -420,10 +413,9 @@ export function Step1BasicInfo({
                   aria-describedby={errors.address ? 'kyc-address-error' : undefined}
                   aria-invalid={!!errors.address}
                   autoComplete="street-address"
-                  className="min-h-[44px]"
                 />
               </FormControl>
-              <FormMessage id="kyc-address-error" />
+              <FormMessage id="kyc-address-error" className="text-xs" />
             </FormItem>
           )}
         />

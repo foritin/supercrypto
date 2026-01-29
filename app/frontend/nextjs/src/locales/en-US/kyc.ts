@@ -79,10 +79,14 @@ const kyc = {
     stepper: {
       ariaLabel: "KYC verification progress",
       stepProgress: "Step {{current}} / {{total}}",
+      stepOf: "Step {{current}}/{{total}}",
       progressAriaLabel: "KYC verification progress: {{current}} / {{total}}",
       statusCompleted: "Completed",
       statusCurrent: "In progress",
       statusPending: "Pending",
+      completed: "Completed",
+      current: "In progress",
+      pending: "Pending",
       clickToReturn: "Click to return",
     },
     // Form field labels

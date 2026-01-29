@@ -79,10 +79,14 @@ const kyc = {
     stepper: {
       ariaLabel: "KYC 认证进度",
       stepProgress: "步骤 {{current}} / {{total}}",
+      stepOf: "步骤 {{current}}/{{total}}",
       progressAriaLabel: "KYC 认证进度: {{current}} / {{total}}",
       statusCompleted: "已完成",
       statusCurrent: "进行中",
       statusPending: "待完成",
+      completed: "已完成",
+      current: "进行中",
+      pending: "待完成",
       clickToReturn: "点击返回",
     },
     // 表单字段标签

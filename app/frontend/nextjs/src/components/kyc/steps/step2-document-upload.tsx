@@ -197,15 +197,14 @@ export function Step2DocumentUpload({
 
   return (
     <Form {...form}>
-      {/* Requirements 8.1: 移动端单列布局 */}
-      <form className={cn('space-y-5 sm:space-y-6', className)}>
+      <form className={cn('space-y-5', className)}>
         {/* 证件类型选择 */}
         <FormField
           control={form.control}
           name="idType"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center text-sm sm:text-base text-white/90">
+            <FormItem className="space-y-2">
+              <FormLabel className="flex items-center text-sm text-white/50 font-normal">
                 证件类型
                 <RequiredMark />
               </FormLabel>
@@ -213,7 +212,6 @@ export function Step2DocumentUpload({
                 <div
                   role="radiogroup"
                   aria-label="选择证件类型"
-                  // Mobile: 单列布局，Desktop: 三列布局
                   className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mt-2"
                 >
                   {ID_TYPE_OPTIONS.map((option) => {
@@ -222,16 +220,14 @@ export function Step2DocumentUpload({
                       <label
                         key={option.value}
                         className={cn(
-                          // Requirements 8.3: 触摸目标尺寸优化 - 最小高度 44px
                           'relative flex items-center sm:flex-col sm:items-center',
                           'p-3 sm:p-4 rounded-xl cursor-pointer',
                           'border transition-all duration-200',
-                          'hover:border-[#00D4AA]/50',
-                          // Mobile: 水平布局，Desktop: 垂直布局
+                          'hover:border-[#00D4AA]/30',
                           'min-h-[56px] sm:min-h-0',
                           isSelected
-                            ? 'border-[#00D4AA] bg-[#00D4AA]/10 shadow-[0_0_20px_rgba(0,212,170,0.15)]'
-                            : 'border-white/10 bg-[rgba(26,36,30,0.6)]'
+                            ? 'border-[#00D4AA]/60 bg-[#00D4AA]/5'
+                            : 'border-white/[0.06] bg-white/[0.02]'
                         )}
                       >
                         <input
@@ -244,10 +240,9 @@ export function Step2DocumentUpload({
                           ref={option.value === 'passport' ? firstInputRef : undefined}
                           aria-describedby={`idtype-${option.value}-desc`}
                         />
-                        {/* 选中指示器 - Mobile: 左侧，Desktop: 右上角 */}
+                        {/* 选中指示器 */}
                         <div
                           className={cn(
-                            // Mobile: 左侧位置
                             'relative sm:absolute sm:top-2 sm:right-2',
                             'w-5 h-5 sm:w-4 sm:h-4 rounded-full border-2 transition-all',
                             'mr-3 sm:mr-0 flex-shrink-0',
@@ -262,7 +257,7 @@ export function Step2DocumentUpload({
                             </div>
                           )}
                         </div>
-                        {/* 图标 - Mobile: 隐藏，Desktop: 显示 */}
+                        {/* 图标 */}
                         <div
                           className={cn(
                             'hidden sm:flex p-3 rounded-lg mb-2 transition-colors',
@@ -283,7 +278,6 @@ export function Step2DocumentUpload({
                           >
                             {option.label}
                           </span>
-                          {/* 英文名称 */}
                           <span
                             id={`idtype-${option.value}-desc`}
                             className="text-xs text-white/40 mt-0.5 block"
@@ -306,13 +300,12 @@ export function Step2DocumentUpload({
           control={form.control}
           name="idNumber"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="kyc-idnumber" className="flex items-center text-sm sm:text-base text-white/90">
+            <FormItem className="space-y-2">
+              <FormLabel htmlFor="kyc-idnumber" className="flex items-center text-sm text-white/50 font-normal">
                 证件号码
                 <RequiredMark />
               </FormLabel>
               <FormControl>
-                {/* Requirements 8.3: 触摸目标尺寸优化 - 最小高度 44px */}
                 <Input
                   id="kyc-idnumber"
                   placeholder="请输入您的证件号码"
@@ -320,7 +313,6 @@ export function Step2DocumentUpload({
                   aria-describedby={errors.idNumber ? 'kyc-idnumber-error' : undefined}
                   aria-invalid={!!errors.idNumber}
                   autoComplete="off"
-                  className="min-h-[44px]"
                 />
               </FormControl>
               <FormMessage id="kyc-idnumber-error" />
@@ -328,16 +320,16 @@ export function Step2DocumentUpload({
           )}
         />
 
-        {/* 证件照片上传区域 */}
-        <div className="space-y-3 sm:space-y-4">
-          <div className="flex items-center text-sm sm:text-base text-white/90 font-medium">
-            证件照片
-            <RequiredMark />
-          </div>
+        {/* 细微分隔线 */}
+        <div className="py-2">
+          <div className="h-px bg-white/[0.04]" />
+        </div>
 
+        {/* 证件照片上传区域 */}
+        <div className="space-y-3">
           {/* 上传提示 */}
-          <div className="p-2.5 sm:p-3 rounded-lg bg-[#00D4AA]/5 border border-[#00D4AA]/20">
-            <p className="text-xs text-white/60">
+          <div className="p-3 rounded-lg bg-white/[0.02]">
+            <p className="text-xs text-white/40">
               请上传清晰的证件照片，确保所有信息可读。支持 JPG、PNG 格式，单个文件最大 5MB。
             </p>
           </div>
