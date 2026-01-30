@@ -16,7 +16,7 @@ import * as React from 'react'
 import { useEffect, useRef, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CalendarIcon } from 'lucide-react'
+import { CalendarIcon, Shield } from 'lucide-react'
 import { format } from 'date-fns'
 import { zhCN, enUS } from 'date-fns/locale'
 import { useTranslation } from 'react-i18next'
@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils'
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -129,6 +130,32 @@ export function getCountryByCode(code: string) {
  */
 function RequiredMark() {
   return <span className="text-primary ml-1" aria-hidden="true">*</span>
+}
+
+/**
+ * SecurityBadge - 数据安全说明徽章组件
+ * 
+ * 在表单顶部显示安全提示，增强用户信任感
+ * @validates Requirements 2.1, 2.2, 2.3, 2.4, 2.5
+ */
+interface SecurityBadgeProps {
+  className?: string
+}
+
+function SecurityBadge({ className }: SecurityBadgeProps) {
+  const { t } = useTranslation()
+  return (
+    <div className={cn(
+      "flex items-center gap-2 p-3 rounded-lg",
+      "bg-[#00D4AA]/5 border border-[#00D4AA]/10 mb-6",
+      className
+    )}>
+      <Shield className="w-5 h-5 text-[#00D4AA]" />
+      <span className="text-sm text-white/70">
+        {t('kyc.securityNote')}
+      </span>
+    </div>
+  )
 }
 
 /**
@@ -244,6 +271,9 @@ export function Step1BasicInfo({
   return (
     <Form {...form}>
       <form className={cn('space-y-5', className)}>
+        {/* 数据安全说明徽章 */}
+        <SecurityBadge />
+
         {/* 姓名字段 */}
         <FormField
           control={form.control}
@@ -265,6 +295,9 @@ export function Step1BasicInfo({
                   autoComplete="name"
                 />
               </FormControl>
+              <FormDescription className="text-xs text-white/40">
+                {t('kyc.fields.fullNameHint')}
+              </FormDescription>
               <FormMessage id="kyc-fullname-error" className="text-xs" />
             </FormItem>
           )}
@@ -327,6 +360,9 @@ export function Step1BasicInfo({
                   />
                 </PopoverContent>
               </Popover>
+              <FormDescription className="text-xs text-white/40">
+                {t('kyc.fields.dateOfBirthHint')}
+              </FormDescription>
               <FormMessage id="kyc-dob-error" />
             </FormItem>
           )}
@@ -415,6 +451,9 @@ export function Step1BasicInfo({
                   autoComplete="street-address"
                 />
               </FormControl>
+              <FormDescription className="text-xs text-white/40">
+                {t('kyc.fields.addressHint')}
+              </FormDescription>
               <FormMessage id="kyc-address-error" className="text-xs" />
             </FormItem>
           )}

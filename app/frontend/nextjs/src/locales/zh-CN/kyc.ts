@@ -6,6 +6,10 @@ const kyc = {
     connectWalletFirst: "请先连接钱包",
     connectWalletDescription: "请连接您的钱包以查看和管理 KYC 状态。",
     accreditedInvestor: "合格投资者",
+    // 新增 - 预估时间和安全提示
+    estimatedTime: "预计 3-5 分钟完成",
+    securityNote: "您的信息将被加密存储，仅用于身份验证",
+    autoSaved: "已自动保存",
     wizard: {
       title: "KYC 认证申请",
       description: "请按步骤完成身份认证",
@@ -93,12 +97,15 @@ const kyc = {
     fields: {
       fullName: "姓名",
       fullNamePlaceholder: "请输入您的真实姓名",
+      fullNameHint: "请与证件上的姓名保持一致",
       dateOfBirth: "出生日期",
       dateOfBirthPlaceholder: "请选择出生日期",
+      dateOfBirthHint: "必须年满 18 周岁",
       nationality: "国籍",
       nationalityPlaceholder: "请选择国籍",
       address: "居住地址",
       addressPlaceholder: "请输入您的居住地址",
+      addressHint: "请填写当前居住地址",
       idType: "证件类型",
       idNumber: "证件号码",
       idNumberPlaceholder: "请输入您的证件号码",
@@ -136,6 +143,12 @@ const kyc = {
       preview: "预览",
       retake: "重新拍摄",
       notUploaded: "未上传",
+    },
+    // 新增 - 拍照提示
+    photoTips: {
+      lighting: "确保光线充足",
+      focus: "保持证件清晰对焦",
+      complete: "确保四角完整可见",
     },
     // 验证错误消息
     errors: {
@@ -185,7 +198,10 @@ const kyc = {
       blinkPrompt: "请眨眼",
       success: "检测成功",
       failed: "检测失败",
+      failedTitle: "检测未通过",
+      failedReason: "可能原因：光线不足、面部遮挡",
       retry: "重试",
+      switchToManual: "改为手动上传",
       retryCount: "重试 {{current}}/{{max}}",
       maxRetriesReached: "已达到最大重试次数，请手动上传自拍照",
       manualUploadLink: "无法使用摄像头？手动上传",

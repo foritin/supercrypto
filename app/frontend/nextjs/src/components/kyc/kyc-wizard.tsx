@@ -25,6 +25,8 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
+  Clock,
+  Check,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -169,6 +171,66 @@ function toApiRequest(data: KycWizardFormData): KycApplyRequest {
 
 // ============ 主组件 ============
 
+// ============ 内部组件 ============
+
+/**
+ * EstimatedTimeIndicator - 预估完成时间指示器
+ *
+ * 显示在 KycStepper 上方，告知用户预计完成时间
+ *
+ * @validates Requirements 1.1, 1.2, 1.3, 1.4
+ */
+interface EstimatedTimeIndicatorProps {
+  className?: string
+}
+
+function EstimatedTimeIndicator({ className }: EstimatedTimeIndicatorProps) {
+  const { t } = useTranslation()
+  return (
+    <div className={cn("text-center text-sm text-white/50 mb-4", className)}>
+      <Clock className="inline w-4 h-4 mr-1" />
+      {t('kyc.estimatedTime')}
+    </div>
+  )
+}
+
+/**
+ * AutoSaveIndicator - 自动保存提示组件
+ *
+ * 显示在页面底部居中，当表单数据保存到本地存储时显示
+ *
+ * @validates Requirements 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
+ */
+interface AutoSaveIndicatorProps {
+  visible: boolean
+  className?: string
+}
+
+function AutoSaveIndicator({ visible, className }: AutoSaveIndicatorProps) {
+  const { t } = useTranslation()
+
+  if (!visible) return null
+
+  return (
+    <div
+      className={cn(
+        "fixed bottom-4 left-1/2 -translate-x-1/2 z-50",
+        "px-4 py-2 rounded-full",
+        "bg-[#111916] border border-white/10",
+        "text-sm text-white/60 flex items-center gap-2",
+        "animate-fade-in",
+        "backdrop-blur-sm",
+        className
+      )}
+    >
+      <Check className="w-4 h-4 text-[#00D4AA]" />
+      {t('kyc.autoSaved')}
+    </div>
+  )
+}
+
+// ============ 主组件实现 ============
+
 /**
  * KycWizard - KYC 申请向导组件
  *
@@ -216,6 +278,9 @@ export function KycWizard({
   // 提交成功状态
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
+  // 自动保存提示状态
+  const [showAutoSaveIndicator, setShowAutoSaveIndicator] = useState(false)
+
   // ============ 计算属性 ============
 
   const { currentStep, formData, stepValidation, isSubmitting, submitError } = state
@@ -250,6 +315,12 @@ export function KycWizard({
         formData: newFormData,
       }
     })
+    // 显示自动保存提示
+    setShowAutoSaveIndicator(true)
+    // 3 秒后自动隐藏
+    setTimeout(() => {
+      setShowAutoSaveIndicator(false)
+    }, 3000)
   }, [])
 
   /**
@@ -553,6 +624,8 @@ export function KycWizard({
     >
       {/* 步骤进度条 - 响应式内边距 */}
       <div className="p-4 sm:p-6 border-b border-white/[0.08]">
+        {/* 预估完成时间指示器 */}
+        <EstimatedTimeIndicator />
         <KycStepper
           currentStep={currentStep}
           onStepClick={goToStep}
@@ -676,6 +749,9 @@ export function KycWizard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 自动保存提示 */}
+      <AutoSaveIndicator visible={showAutoSaveIndicator} />
     </div>
   )
 }

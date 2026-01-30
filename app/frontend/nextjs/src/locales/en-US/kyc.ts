@@ -6,6 +6,10 @@ const kyc = {
     connectWalletFirst: "Connect Wallet First",
     connectWalletDescription: "Please connect your wallet to view and manage your KYC status.",
     accreditedInvestor: "Accredited Investor",
+    // New - Estimated time and security note
+    estimatedTime: "Estimated 3-5 minutes to complete",
+    securityNote: "Your information will be encrypted and used only for identity verification",
+    autoSaved: "Auto-saved",
     wizard: {
       title: "KYC Application",
       description: "Please complete the verification steps",
@@ -93,12 +97,15 @@ const kyc = {
     fields: {
       fullName: "Full Name",
       fullNamePlaceholder: "Enter your full legal name",
+      fullNameHint: "Please enter the name exactly as it appears on your ID",
       dateOfBirth: "Date of Birth",
       dateOfBirthPlaceholder: "Select your date of birth",
+      dateOfBirthHint: "You must be at least 18 years old",
       nationality: "Nationality",
       nationalityPlaceholder: "Select your nationality",
       address: "Residential Address",
       addressPlaceholder: "Enter your residential address",
+      addressHint: "Please enter your current residential address",
       idType: "ID Type",
       idNumber: "ID Number",
       idNumberPlaceholder: "Enter your ID number",
@@ -136,6 +143,12 @@ const kyc = {
       preview: "Preview",
       retake: "Retake",
       notUploaded: "Not uploaded",
+    },
+    // New - Photo tips
+    photoTips: {
+      lighting: "Ensure good lighting",
+      focus: "Keep the document in focus",
+      complete: "Ensure all four corners are visible",
     },
     // Validation error messages
     errors: {
@@ -185,7 +198,10 @@ const kyc = {
       blinkPrompt: "Please blink",
       success: "Detection successful",
       failed: "Detection failed",
+      failedTitle: "Detection Failed",
+      failedReason: "Possible reasons: Poor lighting, face obstruction",
       retry: "Retry",
+      switchToManual: "Switch to Manual Upload",
       retryCount: "Retry {{current}}/{{max}}",
       maxRetriesReached: "Maximum retries reached, please upload selfie manually",
       manualUploadLink: "Can't use camera? Upload manually",
