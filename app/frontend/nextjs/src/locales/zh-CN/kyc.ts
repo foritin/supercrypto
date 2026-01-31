@@ -68,8 +68,8 @@ const kyc = {
     submitError: {
       title: "提交失败",
     },
-    // 步骤标题
-    steps: {
+    // 步骤标题（用于 stepper）
+    stepsTitle: {
       step1: "基本信息",
       step1Description: "填写您的个人基本信息",
       step2: "证件上传",
@@ -143,8 +143,53 @@ const kyc = {
       preview: "预览",
       retake: "重新拍摄",
       notUploaded: "未上传",
+      // 证件类型特定上传区域
+      passport: {
+        front: {
+          title: "护照 - 信息页",
+          hint: "请上传护照信息页",
+          ariaLabel: "上传护照信息页照片",
+        },
+        back: {
+          title: "护照 - 签名页",
+          hint: "请上传签名页（如有）",
+          ariaLabel: "上传护照签名页照片",
+        },
+      },
+      idCard: {
+        front: {
+          title: "身份证 - 正面",
+          hint: "请上传身份证人像面",
+          ariaLabel: "上传身份证正面照片",
+        },
+        back: {
+          title: "身份证 - 背面",
+          hint: "请上传身份证国徽面",
+          ariaLabel: "上传身份证背面照片",
+        },
+      },
+      driverLicense: {
+        front: {
+          title: "驾驶证 - 正面",
+          hint: "请上传驾驶证正面",
+          ariaLabel: "上传驾驶证正面照片",
+        },
+        back: {
+          title: "驾驶证 - 背面",
+          hint: "请上传驾驶证背面",
+          ariaLabel: "上传驾驶证背面照片",
+        },
+      },
+      guide: {
+        placeInFrame: "将证件放置在边框内，确保信息清晰可见",
+        formats: "支持 JPG、PNG 格式，最大 5MB",
+        tipsTitle: "拍摄提示",
+        tip1: "确保证件在有效期内",
+        tip2: "避免反光、模糊或遮挡",
+        tip3: "所有信息需清晰可读",
+      },
     },
-    // 新增 - 拍照提示
+    // 拍照提示
     photoTips: {
       lighting: "确保光线充足",
       focus: "保持证件清晰对焦",
@@ -262,6 +307,8 @@ const kyc = {
     navigation: {
       next: "下一步",
       previous: "上一步",
+      back: "返回",
+      continue: "继续",
       cancel: "取消",
       submit: "提交",
       complete: "已完成，可进入下一步",
@@ -269,6 +316,7 @@ const kyc = {
       cancelAriaLabel: "取消 KYC 认证流程",
       previousAriaLabel: "返回上一步",
       nextAriaLabel: "进入下一步",
+      continueAriaLabel: "继续下一步",
       submitAriaLabel: "提交 KYC 申请",
       submittingAriaLabel: "正在提交 KYC 申请",
     },
@@ -278,6 +326,64 @@ const kyc = {
       description: "您已填写的信息将被保存，下次可以继续填写。确定要退出 KYC 认证流程吗？",
       confirm: "确认取消",
       cancel: "继续填写",
+    },
+    // 步骤预览
+    preview: {
+      title: "身份验证",
+      description: "完成身份验证以解锁所有平台功能，包括投资 RWA 资产和更高的交易限额。",
+      step: "第 {{number}} 步",
+      startButton: "开始验证",
+      eta: "预计用时：3-5 分钟",
+      requirements: {
+        title: "开始之前",
+        id: "有效的政府签发的身份证件",
+        selfie: "清晰的自拍照用于验证",
+        address: "地址证明文件",
+      },
+    },
+    // 步骤名称（用于预览页面）
+    steps: {
+      step1: "基本信息",
+      step1Description: "填写您的个人基本信息",
+      step2: "证件上传",
+      step2Description: "上传您的身份证件照片",
+      step3: "自拍验证",
+      step3Description: "完成活体检测以验证身份",
+      step4: "确认提交",
+      step4Description: "核对信息并提交申请",
+      personal: {
+        title: "个人信息",
+        description: "输入您的全名、出生日期和居住地址",
+        duration: "1 分钟",
+      },
+      document: {
+        title: "证件上传",
+        description: "上传清晰的政府签发证件照片",
+        duration: "1-2 分钟",
+      },
+      selfie: {
+        title: "自拍验证",
+        description: "拍摄自拍或上传照片进行身份确认",
+        duration: "1 分钟",
+      },
+      confirm: {
+        title: "确认并提交",
+        description: "查看所有信息并同意隐私政策",
+        duration: "30 秒",
+      },
+    },
+    // 进度恢复
+    restore: {
+      title: "恢复您的进度？",
+      description: "您之前在 {{step}} 的进度已保存 {{time}}。是否要继续之前的操作？",
+      resume: "继续",
+      restart: "重新开始",
+      timeAgo: {
+        days: "{{count}} 天前",
+        hours: "{{count}} 小时前",
+        minutes: "{{count}} 分钟前",
+        justNow: "刚刚",
+      },
     },
   },
 }

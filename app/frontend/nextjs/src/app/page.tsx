@@ -52,12 +52,21 @@ export default function HomePage() {
       {/* Phoenix Prototype: 全局噪点纹理 */}
       <div className="noise-overlay" />
 
-      {/* Hero Section with Video Background */}
+      {/* Hero Section with Video/Static Background */}
       <section className="hero-section">
-        {/* 视频背景 */}
+        {/* 背景 - 移动端使用静态图片，桌面端使用视频 */}
         <div className="hero-video-container">
+          {/* 移动端: 静态图片 (MOBILE-1) */}
+          <div 
+            className="absolute inset-0 md:hidden bg-cover bg-center"
+            style={{
+              backgroundImage: 'url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070")',
+            }}
+          />
+          
+          {/* 桌面端: 视频背景 */}
           <video
-            className="hero-video"
+            className="hero-video hidden md:block"
             autoPlay
             muted
             loop
@@ -68,7 +77,7 @@ export default function HomePage() {
           </video>
         </div>
 
-        {/* 视频遮罩层 */}
+        {/* 背景遮罩层 */}
         <div className="hero-video-overlay" />
 
         {/* Hero Content */}

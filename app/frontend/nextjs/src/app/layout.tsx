@@ -4,6 +4,8 @@ import "./globals.css";
 import { Providers } from "@/providers";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ThemeProvider } from "@/contexts/theme-context";
+import { GlobalRiskDisclaimer } from "@/components/compliance";
+import { CookieConsent } from "@/components/cookie-consent";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -36,6 +38,8 @@ export default function RootLayout({
             <MainLayout>{children}</MainLayout>
           </Providers>
         </ThemeProvider>
+        <GlobalRiskDisclaimer />
+        <CookieConsent />
       </body>
     </html>
   );

@@ -47,6 +47,48 @@ const common = {
     copyright: "© {{year}} SlimCrypto. All rights reserved.",
     terms: "Terms of Service",
     privacy: "Privacy Policy",
+    tagline: "Institutional-grade RWA investment platform",
+    quickLinks: "Quick Links",
+    legal: "Legal",
+    assets: "Assets",
+    portfolio: "Portfolio",
+    partners: "Partners",
+    riskDisclosure: "Risk Disclosure",
+    rights: "All rights reserved.",
+    investmentRisk: "Investment involves risk",
+  },
+  riskDisclaimer: {
+    title: "Investment Risk Warning",
+    content: "Cryptocurrency investments carry significant risks including potential loss of capital. Past performance does not guarantee future results. Please read our full risk disclosure and consult a financial advisor before investing.",
+    accept: "I Understand",
+    learnMore: "Learn more",
+  },
+  cookieConsent: {
+    title: "We use cookies",
+    description: "We use cookies to enhance your experience, analyze site traffic, and for marketing purposes. You can customize your preferences or accept all cookies.",
+    acceptAll: "Accept All",
+    reject: "Reject Non-Essential",
+    customize: "Customize",
+    settingsButton: "Cookie Settings",
+    settings: {
+      title: "Cookie Preferences",
+      description: "Customize your cookie preferences. Necessary cookies are always enabled as they are essential for the website to function properly.",
+      save: "Save Preferences",
+    },
+    categories: {
+      necessary: {
+        title: "Necessary",
+        description: "Essential for the website to function properly. These cannot be disabled.",
+      },
+      analytics: {
+        title: "Analytics",
+        description: "Help us understand how visitors interact with our website by collecting and reporting information anonymously.",
+      },
+      marketing: {
+        title: "Marketing",
+        description: "Used to track visitors across websites to display relevant and engaging advertisements.",
+      },
+    },
   },
 }
 

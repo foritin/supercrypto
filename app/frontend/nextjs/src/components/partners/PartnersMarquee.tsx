@@ -3,19 +3,23 @@
 import React from 'react';
 import Image from 'next/image';
 import { Partner } from './partners-data';
+import { PartnerDisclaimer } from './PartnerDisclaimer';
 import './PartnersMarquee.css';
 
 /**
  * ════════════════════════════════════════════════════════════════
  * PARTNERS MARQUEE - 合作伙伴无限滚动墙
  * 
- * 用途: 展示金融机构/区块链生态合作伙伴，增强信任感
+ * 用途: 展示金融机构/区块链生态合作伙伴
  * 特点: 无限滚动、hover 暂停、灰度/彩色切换
+ * 合规: 包含免责声明，明确 Logo 使用目的
  * 
  * Usage:
  *   <PartnersMarquee
- *     title="Backed By Leading Institutions"
+ *     title="Industry Infrastructure"
+ *     subtitle="Built on proven technologies and standards"
  *     partners={INSTITUTION_PARTNERS}
+ *     showDisclaimer={true}
  *   />
  * ════════════════════════════════════════════════════════════════
  */
@@ -27,7 +31,7 @@ export interface PartnersMarqueeProps {
   subtitle?: string;
   /** 合作伙伴列表 */
   partners: Partner[];
-  /** 动画时长(秒)，默认 30 */
+  /** 动画时长(秒)，默认 35 */
   speed?: number;
   /** 滚动方向 */
   direction?: 'left' | 'right';
@@ -35,6 +39,8 @@ export interface PartnersMarqueeProps {
   pauseOnHover?: boolean;
   /** 默认灰度显示 */
   grayscale?: boolean;
+  /** 显示免责声明 */
+  showDisclaimer?: boolean;
   /** 自定义类名 */
   className?: string;
   /** 自定义样式 */
@@ -45,10 +51,11 @@ export const PartnersMarquee: React.FC<PartnersMarqueeProps> = ({
   title,
   subtitle,
   partners,
-  speed = 30,
+  speed = 35,
   direction = 'left',
   pauseOnHover = true,
   grayscale = true,
+  showDisclaimer = true,
   className = '',
   style,
 }) => {
@@ -87,6 +94,7 @@ export const PartnersMarquee: React.FC<PartnersMarqueeProps> = ({
               <div
                 key={`${partner.id}-${index}`}
                 className={`partners-marquee__item ${grayscale ? 'grayscale' : ''}`}
+                title={partner.name}
               >
                 <Image
                   src={partner.logo}
@@ -100,6 +108,14 @@ export const PartnersMarquee: React.FC<PartnersMarqueeProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Disclaimer */}
+        {showDisclaimer && (
+          <PartnerDisclaimer 
+            variant="short" 
+            className="partners-marquee__disclaimer"
+          />
+        )}
       </div>
     </section>
   );

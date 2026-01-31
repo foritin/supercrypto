@@ -16,6 +16,7 @@ import * as React from 'react'
 import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useTranslation } from 'react-i18next'
 import { CreditCard, FileText, Car } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -35,7 +36,6 @@ import {
   type Step2FormValues,
   step2DefaultValues,
   type KycIdType,
-  KYC_ID_TYPE_NAMES,
 } from '@/lib/validations/kyc-wizard'
 
 // ============ 类型定义 ============
@@ -62,14 +62,14 @@ export interface Step2DocumentUploadProps {
 interface IdTypeOption {
   /** 证件类型值 */
   value: KycIdType
-  /** 显示名称 */
-  label: string
-  /** 英文名称 */
-  labelEn: string
+  /** 翻译 key */
+  labelKey: string
+  /** 英文翻译 key */
+  labelEnKey: string
   /** 图标 */
   icon: React.ReactNode
-  /** 描述 */
-  description: string
+  /** 描述翻译 key */
+  descriptionKey: string
 }
 
 /**
@@ -78,24 +78,24 @@ interface IdTypeOption {
 const ID_TYPE_OPTIONS: IdTypeOption[] = [
   {
     value: 'passport',
-    label: KYC_ID_TYPE_NAMES.passport,
-    labelEn: 'Passport',
+    labelKey: 'kyc.idTypes.passport',
+    labelEnKey: 'kyc.idTypes.passportEn',
     icon: <FileText className="w-5 h-5" />,
-    description: '国际通用证件',
+    descriptionKey: 'kyc.idTypes.passportDescription',
   },
   {
     value: 'id_card',
-    label: KYC_ID_TYPE_NAMES.id_card,
-    labelEn: 'ID Card',
+    labelKey: 'kyc.idTypes.idCard',
+    labelEnKey: 'kyc.idTypes.idCardEn',
     icon: <CreditCard className="w-5 h-5" />,
-    description: '居民身份证',
+    descriptionKey: 'kyc.idTypes.idCardDescription',
   },
   {
     value: 'driver_license',
-    label: KYC_ID_TYPE_NAMES.driver_license,
-    labelEn: 'Driver License',
+    labelKey: 'kyc.idTypes.driverLicense',
+    labelEnKey: 'kyc.idTypes.driverLicenseEn',
     icon: <Car className="w-5 h-5" />,
-    description: '机动车驾驶证',
+    descriptionKey: 'kyc.idTypes.driverLicenseDescription',
   },
 ]
 
@@ -122,6 +122,8 @@ export function Step2DocumentUpload({
   onValidChange,
   className,
 }: Step2DocumentUploadProps) {
+  const { t } = useTranslation()
+  
   // Ref for focus management
   const firstInputRef = useRef<HTMLInputElement>(null)
 
@@ -205,13 +207,13 @@ export function Step2DocumentUpload({
           render={({ field }) => (
             <FormItem className="space-y-2">
               <FormLabel className="flex items-center text-sm text-white/50 font-normal">
-                证件类型
+                {t('kyc.fields.idType')}
                 <RequiredMark />
               </FormLabel>
               <FormControl>
                 <div
                   role="radiogroup"
-                  aria-label="选择证件类型"
+                  aria-label={t('kyc.fields.idType')}
                   className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mt-2"
                 >
                   {ID_TYPE_OPTIONS.map((option) => {
@@ -276,13 +278,13 @@ export function Step2DocumentUpload({
                               isSelected ? 'text-white' : 'text-white/80'
                             )}
                           >
-                            {option.label}
+                            {t(option.labelKey)}
                           </span>
                           <span
                             id={`idtype-${option.value}-desc`}
                             className="text-xs text-white/40 mt-0.5 block"
                           >
-                            {option.labelEn}
+                            {t(option.labelEnKey)}
                           </span>
                         </div>
                       </label>
@@ -302,13 +304,13 @@ export function Step2DocumentUpload({
           render={({ field }) => (
             <FormItem className="space-y-2">
               <FormLabel htmlFor="kyc-idnumber" className="flex items-center text-sm text-white/50 font-normal">
-                证件号码
+                {t('kyc.fields.idNumber')}
                 <RequiredMark />
               </FormLabel>
               <FormControl>
                 <Input
                   id="kyc-idnumber"
-                  placeholder="请输入您的证件号码"
+                  placeholder={t('kyc.fields.idNumberPlaceholder')}
                   {...field}
                   aria-describedby={errors.idNumber ? 'kyc-idnumber-error' : undefined}
                   aria-invalid={!!errors.idNumber}
@@ -330,7 +332,7 @@ export function Step2DocumentUpload({
           {/* 上传提示 */}
           <div className="p-3 rounded-lg bg-white/[0.02]">
             <p className="text-xs text-white/40">
-              请上传清晰的证件照片，确保所有信息可读。支持 JPG、PNG 格式，单个文件最大 5MB。
+              {t('kyc.upload.maxSize')}
             </p>
           </div>
 

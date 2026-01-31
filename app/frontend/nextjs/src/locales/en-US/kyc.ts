@@ -68,8 +68,8 @@ const kyc = {
     submitError: {
       title: "Submission Failed",
     },
-    // Step titles
-    steps: {
+    // Step titles (for stepper)
+    stepsTitle: {
       step1: "Basic Information",
       step1Description: "Fill in your personal information",
       step2: "Document Upload",
@@ -143,8 +143,53 @@ const kyc = {
       preview: "Preview",
       retake: "Retake",
       notUploaded: "Not uploaded",
+      // ID type specific upload sections
+      passport: {
+        front: {
+          title: "Passport - Info Page",
+          hint: "Upload passport info page",
+          ariaLabel: "Upload passport information page photo",
+        },
+        back: {
+          title: "Passport - Signature Page",
+          hint: "Upload signature page (if applicable)",
+          ariaLabel: "Upload passport signature page photo",
+        },
+      },
+      idCard: {
+        front: {
+          title: "ID Card - Front",
+          hint: "Upload ID card front (portrait side)",
+          ariaLabel: "Upload ID card front photo",
+        },
+        back: {
+          title: "ID Card - Back",
+          hint: "Upload ID card back (national emblem side)",
+          ariaLabel: "Upload ID card back photo",
+        },
+      },
+      driverLicense: {
+        front: {
+          title: "Driver License - Front",
+          hint: "Upload driver license front",
+          ariaLabel: "Upload driver license front photo",
+        },
+        back: {
+          title: "Driver License - Back",
+          hint: "Upload driver license back",
+          ariaLabel: "Upload driver license back photo",
+        },
+      },
+      guide: {
+        placeInFrame: "Place document within frame, ensure clear visibility",
+        formats: "Supports JPG, PNG format, max 5MB",
+        tipsTitle: "Photo tips",
+        tip1: "Ensure document is within validity period",
+        tip2: "Avoid glare, blur or obstruction",
+        tip3: "All information must be clearly readable",
+      },
     },
-    // New - Photo tips
+    // Photo tips
     photoTips: {
       lighting: "Ensure good lighting",
       focus: "Keep the document in focus",
@@ -262,6 +307,8 @@ const kyc = {
     navigation: {
       next: "Next",
       previous: "Previous",
+      back: "Back",
+      continue: "Continue",
       cancel: "Cancel",
       submit: "Submit",
       complete: "Complete, proceed to next step",
@@ -269,6 +316,7 @@ const kyc = {
       cancelAriaLabel: "Cancel KYC verification process",
       previousAriaLabel: "Go to previous step",
       nextAriaLabel: "Go to next step",
+      continueAriaLabel: "Continue to next step",
       submitAriaLabel: "Submit KYC application",
       submittingAriaLabel: "Submitting KYC application",
     },
@@ -278,6 +326,64 @@ const kyc = {
       description: "Your entered information will be saved. You can continue later. Are you sure you want to exit the KYC verification process?",
       confirm: "Confirm Cancel",
       cancel: "Continue",
+    },
+    // Step preview
+    preview: {
+      title: "Identity Verification",
+      description: "Complete identity verification to unlock all platform features including investing in RWA assets and higher transaction limits.",
+      step: "Step {{number}}",
+      startButton: "Start Verification",
+      eta: "Estimated time: 3-5 minutes",
+      requirements: {
+        title: "Before You Start",
+        id: "Valid government-issued ID",
+        selfie: "Clear selfie for verification",
+        address: "Proof of address document",
+      },
+    },
+    // Step names (for preview page)
+    steps: {
+      step1: "Basic Information",
+      step1Description: "Fill in your personal information",
+      step2: "Document Upload",
+      step2Description: "Upload your identity document photos",
+      step3: "Selfie Verification",
+      step3Description: "Complete liveness detection to verify identity",
+      step4: "Confirmation",
+      step4Description: "Review and submit your application",
+      personal: {
+        title: "Personal Info",
+        description: "Enter your full name, date of birth, and residential address",
+        duration: "1 minute",
+      },
+      document: {
+        title: "Document Upload",
+        description: "Upload clear photos of your government-issued ID",
+        duration: "1-2 minutes",
+      },
+      selfie: {
+        title: "Selfie Verification",
+        description: "Take a selfie or upload a photo for identity confirmation",
+        duration: "1 minute",
+      },
+      confirm: {
+        title: "Review & Submit",
+        description: "Review all information and agree to the privacy policy",
+        duration: "30 seconds",
+      },
+    },
+    // Progress restore
+    restore: {
+      title: "Resume Your Progress?",
+      description: "You were at {{step}} {{time}}. Would you like to resume where you left off?",
+      resume: "Resume",
+      restart: "Start Over",
+      timeAgo: {
+        days: "{{count}} days ago",
+        hours: "{{count}} hours ago",
+        minutes: "{{count}} minutes ago",
+        justNow: "just now",
+      },
     },
   },
 }

@@ -121,6 +121,36 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   免责声明样式
+   ═══════════════════════════════════════════════════════════════ */
+
+.partner-disclaimer {
+  text-align: center;
+  padding: 0 24px;
+}
+
+.partner-disclaimer--short {
+  margin-top: 24px;
+}
+
+.partner-disclaimer__text {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.partner-disclaimer__link {
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.partner-disclaimer__link:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    响应式设计
    ═══════════════════════════════════════════════════════════════ */
 

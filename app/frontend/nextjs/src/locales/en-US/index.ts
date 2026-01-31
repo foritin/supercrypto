@@ -10,6 +10,8 @@ import staking from './staking'
 import admin from './admin'
 import dev from './dev'
 import errors from './errors'
+import faq from './faq'
+import security from './security'
 
 const valueEN = {
   ...common,
@@ -24,6 +26,8 @@ const valueEN = {
   ...admin,
   ...dev,
   ...errors,
+  ...faq,
+  ...security,
 }
 
 export default valueEN

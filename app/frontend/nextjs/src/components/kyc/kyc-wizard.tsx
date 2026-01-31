@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/alert-dialog'
 
 import { KycStepper } from './kyc-stepper'
+import { KycWizardContent } from './kyc-wizard-content'
 import { Step1BasicInfo } from './steps/step1-basic-info'
 import { Step2DocumentUpload } from './steps/step2-document-upload'
 import { Step3SelfieVerification } from './steps/step3-selfie-verification'
@@ -649,8 +650,13 @@ export function KycWizard({
           </div>
         )}
 
-        {/* 步骤内容 - 响应式最小高度 */}
-        <div className="min-h-[300px] sm:min-h-[400px]">{stepContent}</div>
+        {/* 步骤内容 - 带切换动画 */}
+        <KycWizardContent
+          currentStep={currentStep}
+          className="min-h-[300px] sm:min-h-[400px]"
+        >
+          {stepContent}
+        </KycWizardContent>
       </div>
 
       {/* 导航按钮 - Step 3 有自己的导航，不显示公共导航 */}

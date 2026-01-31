@@ -47,6 +47,48 @@ const common = {
     copyright: "© {{year}} SlimCrypto. 保留所有权利。",
     terms: "服务条款",
     privacy: "隐私政策",
+    tagline: "机构级 RWA 投资平台",
+    quickLinks: "快速链接",
+    legal: "法律合规",
+    assets: "资产",
+    portfolio: "投资组合",
+    partners: "合作伙伴",
+    riskDisclosure: "风险披露",
+    rights: "保留所有权利。",
+    investmentRisk: "投资有风险",
+  },
+  riskDisclaimer: {
+    title: "投资风险提示",
+    content: "加密货币投资具有高风险，可能导致本金损失。过往表现不代表未来收益。投资前请阅读完整的风险披露声明，并咨询专业财务顾问。",
+    accept: "我已了解",
+    learnMore: "了解更多",
+  },
+  cookieConsent: {
+    title: "我们使用 Cookie",
+    description: "我们使用 Cookie 来增强您的体验、分析网站流量以及用于营销目的。您可以自定义偏好设置或接受所有 Cookie。",
+    acceptAll: "接受全部",
+    reject: "拒绝非必要",
+    customize: "自定义",
+    settingsButton: "Cookie 设置",
+    settings: {
+      title: "Cookie 偏好设置",
+      description: "自定义您的 Cookie 偏好设置。必要的 Cookie 始终启用，因为它们是网站正常运行所必需的。",
+      save: "保存偏好设置",
+    },
+    categories: {
+      necessary: {
+        title: "必要",
+        description: "网站正常运行所必需的。这些不能被禁用。",
+      },
+      analytics: {
+        title: "分析",
+        description: "帮助我们通过匿名收集和报告信息来了解访问者如何与我们的网站互动。",
+      },
+      marketing: {
+        title: "营销",
+        description: "用于跟踪跨网站的访问者，以显示相关且有吸引力的广告。",
+      },
+    },
   },
 };
 
