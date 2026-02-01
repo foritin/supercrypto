@@ -221,10 +221,12 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
       }
       // Use ref to get latest formData
       fieldSchema.parse(formDataRef.current[field]);
-      setState((prev) => ({
-        ...prev,
-        errors: { ...prev.errors, [field]: '' },
-      }));
+      // 验证通过时，删除该字段的错误（而不是设置为空字符串）
+      setState((prev) => {
+        const newErrors = { ...prev.errors };
+        delete newErrors[field];
+        return { ...prev, errors: newErrors };
+      });
       return true;
     } catch (error) {
       let message = 'Invalid value';
