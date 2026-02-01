@@ -6,33 +6,33 @@ import { z } from 'zod';
 // KYC Form Validation Schema
 export const kycSchema = z.object({
   // Basic Info
-  firstName: z.string().min(2, 'First name must be at least 2 characters'),
-  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
-  nationality: z.string().min(2, 'Please select nationality'),
+  firstName: z.string({ required_error: 'First name is required' }).min(2, 'First name must be at least 2 characters'),
+  lastName: z.string({ required_error: 'Last name is required' }).min(2, 'Last name must be at least 2 characters'),
+  dateOfBirth: z.string({ required_error: 'Date of birth is required' }).regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date'),
+  nationality: z.string({ required_error: 'Nationality is required' }).min(2, 'Please select nationality'),
   
   // Contact Info
-  email: z.string().email('Invalid email address'),
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/, 'Invalid phone number (include country code)'),
+  email: z.string({ required_error: 'Email is required' }).email('Invalid email address'),
+  phone: z.string({ required_error: 'Phone number is required' }).regex(/^\+[1-9]\d{1,14}$/, 'Invalid phone number (include country code, e.g. +1234567890)'),
   
   // Address
-  addressLine1: z.string().min(5, 'Address is required'),
+  addressLine1: z.string({ required_error: 'Address is required' }).min(5, 'Address must be at least 5 characters'),
   addressLine2: z.string().optional(),
-  city: z.string().min(2, 'City is required'),
-  state: z.string().min(2, 'State/Province is required'),
-  postalCode: z.string().min(3, 'Postal code is required'),
-  country: z.string().min(2, 'Country is required'),
+  city: z.string({ required_error: 'City is required' }).min(2, 'City is required'),
+  state: z.string({ required_error: 'State/Province is required' }).min(2, 'State/Province is required'),
+  postalCode: z.string({ required_error: 'Postal code is required' }).min(3, 'Postal code is required'),
+  country: z.string({ required_error: 'Country is required' }).min(2, 'Country is required'),
   
   // Identity Document
-  documentType: z.enum(['passport', 'national_id', 'drivers_license']),
-  documentNumber: z.string().min(5, 'Document number is required'),
-  documentExpiry: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
+  documentType: z.enum(['passport', 'national_id', 'drivers_license'], { required_error: 'Please select document type' }),
+  documentNumber: z.string({ required_error: 'Document number is required' }).min(5, 'Document number must be at least 5 characters'),
+  documentExpiry: z.string({ required_error: 'Document expiry date is required' }).regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date'),
   
   // Liveness Check
   faceImage: z.string().optional(), // base64 image
   
   // Terms
-  agreeToTerms: z.boolean().refine((val) => val === true, 'You must agree to the terms'),
+  agreeToTerms: z.boolean({ required_error: 'You must agree to the terms' }).refine((val) => val === true, 'You must agree to the terms'),
 });
 
 export type KycFormData = z.infer<typeof kycSchema>;
