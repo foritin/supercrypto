@@ -24,7 +24,7 @@ const countries = [
 ];
 
 export function BasicInfoStep() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { formData, errors, updateFormData, validateField, showLandingPage, nextStep, saveDraft, lastSaved } = useKycContext();
 
   const handleInputChange = (field: keyof typeof formData) => (
@@ -37,16 +37,16 @@ export function BasicInfoStep() {
     validateField(field);
   };
 
-  const [touched, setTouched] = React.useState(false);
-
   const handleContinue = () => {
-    setTouched(true);
     saveDraft();
     nextStep();
   };
 
-  // Check if step is valid for button state
-  const isStepValid = touched ? Object.keys(errors).length === 0 : true;
+  // 当有错误时禁用按钮（实时响应）
+  const hasErrors = Object.keys(errors).length > 0;
+
+  // 设置日期输入框的语言
+  const dateInputLang = i18n.language?.startsWith('zh') ? 'zh-CN' : 'en-US';
 
   return (
     <Card className="p-8 glass border-[#00D4AA]/20">
@@ -122,6 +122,7 @@ export function BasicInfoStep() {
               max={new Date().toISOString().split('T')[0]}
               error={errors.dateOfBirth}
               icon={<Calendar className="h-4 w-4" />}
+              lang={dateInputLang}
             />
           </FormField>
 
@@ -168,7 +169,7 @@ export function BasicInfoStep() {
               label={t('kyc.basicInfo.phone', 'Phone Number')} 
               required 
               error={errors.phone}
-              helperText="Include country code (e.g., +1 for US)"
+              helperText={t('kyc.basicInfo.phoneHelper', 'Include country code (e.g., +1 for US)')}
             >
               <FormInput
                 type="tel"
@@ -189,7 +190,7 @@ export function BasicInfoStep() {
             variant="primary"
             size="lg"
             onClick={handleContinue}
-            disabled={touched && Object.keys(errors).length > 0}
+            disabled={hasErrors}
             className="gap-2"
           >
             {t('common.continue', 'Continue')}
