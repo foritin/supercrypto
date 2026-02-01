@@ -322,7 +322,7 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
 
   const goToStep = React.useCallback((step: number) => {
     if (step >= 0 && step <= 3) {
-      setState((prev) => ({ ...prev, currentStep: step }));
+      setState((prev) => ({ ...prev, currentStep: step, errors: {} }));
     }
   }, []);
 
@@ -406,6 +406,7 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({
       ...prev,
       currentStep: Math.max(prev.currentStep - 1, 0),
+      errors: {}, // 切换步骤时清除错误
     }));
   }, []);
 
