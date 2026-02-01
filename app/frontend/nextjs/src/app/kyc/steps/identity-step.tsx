@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useKycContext } from '@/contexts/kyc-context';
 import { DocumentUpload } from '../components/document-upload';
+import { CountrySelect } from '../components/country-select';
 import { ArrowLeft, ArrowRight, MapPin, FileText, Calendar, Home, ChevronLeft } from 'lucide-react';
 
 const documentTypes = [
@@ -161,23 +162,12 @@ export function IdentityStep() {
               <label className="block text-sm font-medium text-white/80 mb-2">
                 {t('kyc.identity.country', 'Country')}
               </label>
-              <select
+              <CountrySelect
                 value={formData.country || ''}
                 onChange={handleInputChange('country')}
                 onBlur={handleBlur('country')}
-                className="w-full h-10 px-4 rounded-lg bg-white/5 border border-white/10 text-white appearance-none focus:outline-none focus:border-[#00D4AA]/50"
-              >
-                <option value="" className="bg-[#111815]">Select country</option>
-                <option value="US" className="bg-[#111815]">United States</option>
-                <option value="CN" className="bg-[#111815]">China</option>
-                <option value="GB" className="bg-[#111815]">United Kingdom</option>
-                <option value="DE" className="bg-[#111815]">Germany</option>
-                <option value="FR" className="bg-[#111815]">France</option>
-                <option value="JP" className="bg-[#111815]">Japan</option>
-                <option value="SG" className="bg-[#111815]">Singapore</option>
-                <option value="CA" className="bg-[#111815]">Canada</option>
-                <option value="AU" className="bg-[#111815]">Australia</option>
-              </select>
+                error={errors.country}
+              />
               {errors.country && (
                 <p className="mt-1 text-sm text-red-400">{errors.country}</p>
               )}
