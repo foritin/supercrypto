@@ -15,6 +15,7 @@ const common = {
     back: "Back",
     backToHome: "Back to Home",
     next: "Next",
+    continue: "Continue",
     submit: "Submit",
     refresh: "Refresh",
     actions: "Actions",

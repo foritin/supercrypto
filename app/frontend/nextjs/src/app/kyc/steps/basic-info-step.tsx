@@ -8,24 +8,30 @@ import { useKycContext } from '@/contexts/kyc-context';
 import { FormField, FormInput, FormSelect } from '../components/form-field';
 import { ArrowRight, ArrowLeft, User, Mail, Phone, Calendar, Globe, Save } from 'lucide-react';
 
-// Country list (simplified - in production, use a full list)
-const countries = [
-  { value: '', label: 'Select nationality' },
-  { value: 'US', label: 'United States' },
-  { value: 'CN', label: 'China' },
-  { value: 'GB', label: 'United Kingdom' },
-  { value: 'DE', label: 'Germany' },
-  { value: 'FR', label: 'France' },
-  { value: 'JP', label: 'Japan' },
-  { value: 'SG', label: 'Singapore' },
-  { value: 'CA', label: 'Canada' },
-  { value: 'AU', label: 'Australia' },
-  { value: 'CH', label: 'Switzerland' },
+// Country list with i18n keys
+const countryKeys = [
+  { value: '', labelKey: 'kyc.basicInfo.selectNationality' },
+  { value: 'US', labelKey: 'kyc.basicInfo.countries.US' },
+  { value: 'CN', labelKey: 'kyc.basicInfo.countries.CN' },
+  { value: 'GB', labelKey: 'kyc.basicInfo.countries.GB' },
+  { value: 'DE', labelKey: 'kyc.basicInfo.countries.DE' },
+  { value: 'FR', labelKey: 'kyc.basicInfo.countries.FR' },
+  { value: 'JP', labelKey: 'kyc.basicInfo.countries.JP' },
+  { value: 'SG', labelKey: 'kyc.basicInfo.countries.SG' },
+  { value: 'CA', labelKey: 'kyc.basicInfo.countries.CA' },
+  { value: 'AU', labelKey: 'kyc.basicInfo.countries.AU' },
+  { value: 'CH', labelKey: 'kyc.basicInfo.countries.CH' },
 ];
 
 export function BasicInfoStep() {
   const { t, i18n } = useTranslation();
   const { formData, errors, updateFormData, validateField, showLandingPage, nextStep, saveDraft, lastSaved } = useKycContext();
+
+  // 生成国际化的国家列表
+  const countries = countryKeys.map(c => ({
+    value: c.value,
+    label: t(c.labelKey, c.value || 'Select nationality'),
+  }));
 
   const handleInputChange = (field: keyof typeof formData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>

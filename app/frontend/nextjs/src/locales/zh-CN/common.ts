@@ -15,6 +15,7 @@ const common = {
     back: "返回",
     backToHome: "返回首页",
     next: "下一步",
+    continue: "继续",
     submit: "提交",
     refresh: "刷新",
     actions: "操作",
