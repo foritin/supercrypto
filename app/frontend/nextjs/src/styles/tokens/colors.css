@@ -1,0 +1,84 @@
+/* ============================================
+   SuperCrypto - Color Design Tokens
+   ============================================
+   Based on: Glassmorphism 2.0 Design System
+   Primary: #00D4AA (Teal/Turquoise)
+   Secondary: #6366F1 (Indigo)
+   Background Base: #0A0F0D
+   ============================================ */
+
+:root {
+  /* Brand Colors */
+  --color-brand-primary: #00D4AA;
+  --color-brand-primary-light: #4DE0BF;
+  --color-brand-primary-dark: #00B896;
+  --color-brand-secondary: #6366F1;
+  --color-brand-secondary-light: #818CF8;
+  --color-brand-secondary-dark: #4F46E5;
+
+  /* Semantic Colors */
+  --color-success: #10B981;
+  --color-success-light: #86EFAC;
+  --color-success-dark: #059669;
+  
+  --color-warning: #F59E0B;
+  --color-warning-light: #FCD34D;
+  --color-warning-dark: #D97706;
+  
+  --color-error: #EF4444;
+  --color-error-light: #FCA5A5;
+  --color-error-dark: #DC2626;
+  
+  --color-info: #3B82F6;
+  --color-info-light: #93C5FD;
+  --color-info-dark: #2563EB;
+
+  /* Background Colors - Dark Theme */
+  --color-bg-base: #0A0F0D;
+  --color-bg-elevated: #111815;
+  --color-bg-overlay: #1A211E;
+  --color-bg-surface-primary: rgba(255, 255, 255, 0.05);
+  --color-bg-surface-secondary: rgba(255, 255, 255, 0.08);
+  --color-bg-surface-tertiary: rgba(255, 255, 255, 0.12);
+
+  /* Text Colors - WCAG 2.1 AA Compliant */
+  --color-text-primary: rgba(255, 255, 255, 0.95);    /* Contrast ~15:1 */
+  --color-text-secondary: rgba(255, 255, 255, 0.75);  /* Contrast ~8:1 */
+  --color-text-tertiary: rgba(255, 255, 255, 0.60);   /* Contrast ~5:1 */
+  --color-text-disabled: rgba(255, 255, 255, 0.40);   /* Contrast ~3:1 */
+  --color-text-placeholder: rgba(255, 255, 255, 0.45);
+
+  /* Border Colors */
+  --color-border-default: rgba(255, 255, 255, 0.08);
+  --color-border-focus: #00D4AA;
+  --color-border-error: rgba(239, 68, 68, 0.5);
+
+  /* Glassmorphism Colors */
+  --color-glass-bg: rgba(17, 24, 21, 0.7);
+  --color-glass-bg-elevated: rgba(26, 33, 30, 0.85);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-glass-border-elevated: rgba(255, 255, 255, 0.12);
+
+  /* Status Colors (for transactions/KYC) */
+  --color-status-pending: #F59E0B;
+  --color-status-processing: #3B82F6;
+  --color-status-completed: #10B981;
+  --color-status-failed: #EF4444;
+}
+
+/* Dark mode is default, but support light mode override */
+[data-theme="light"] {
+  --color-bg-base: #ffffff;
+  --color-bg-elevated: #f8fafc;
+  --color-bg-overlay: #f1f5f9;
+  
+  --color-text-primary: rgba(15, 23, 42, 0.95);
+  --color-text-secondary: rgba(15, 23, 42, 0.75);
+  --color-text-tertiary: rgba(15, 23, 42, 0.60);
+  --color-text-disabled: rgba(15, 23, 42, 0.40);
+  
+  --color-border-default: rgba(15, 23, 42, 0.08);
+  
+  --color-glass-bg: rgba(255, 255, 255, 0.8);
+  --color-glass-border: rgba(15, 23, 42, 0.08);
+}

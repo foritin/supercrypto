@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
+  
   // 生产构建时跳过 TypeScript 检查（framer-motion 与 React 19 兼容性问题）
   typescript: {
     ignoreBuildErrors: true,
