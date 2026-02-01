@@ -54,14 +54,22 @@ export function FormInput({ error, icon, className, type, ...props }: FormInputP
             : 'border-white/10 focus:border-[#00D4AA]/50',
           // 日期输入框样式
           isDateInput && [
-            // 日历图标样式
+            // 日历图标样式 - 使用 brightness 和 invert 让图标变白
+            '[&::-webkit-calendar-picker-indicator]:brightness-0',
             '[&::-webkit-calendar-picker-indicator]:invert',
             '[&::-webkit-calendar-picker-indicator]:opacity-60',
             '[&::-webkit-calendar-picker-indicator]:hover:opacity-100',
             '[&::-webkit-calendar-picker-indicator]:cursor-pointer',
-            // 隐藏原生日期文本（年/月/日）当没有值时
-            !hasValue && '[&::-webkit-datetime-edit]:text-transparent',
-            !hasValue && '[&::-webkit-datetime-edit-fields-wrapper]:text-transparent',
+            // 隐藏原生日期文本（年/月/日）当没有值时 - 使用 color: transparent 更可靠
+            !hasValue && '[color:transparent]',
+            !hasValue && '[&::-webkit-datetime-edit]:opacity-0',
+            !hasValue && '[&::-webkit-datetime-edit-fields-wrapper]:opacity-0',
+            !hasValue && '[&::-webkit-datetime-edit-text]:opacity-0',
+            !hasValue && '[&::-webkit-datetime-edit-month-field]:opacity-0',
+            !hasValue && '[&::-webkit-datetime-edit-day-field]:opacity-0',
+            !hasValue && '[&::-webkit-datetime-edit-year-field]:opacity-0',
+            // 有值时显示正常颜色
+            hasValue && '[color:white]',
           ],
           className
         )}
