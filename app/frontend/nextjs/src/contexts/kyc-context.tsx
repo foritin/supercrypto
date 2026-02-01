@@ -213,8 +213,8 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
 
   const validateField = React.useCallback((field: keyof KycFormData): boolean => {
     try {
-      const shape = kycSchema._def.shape();
-      const fieldSchema = shape[field];
+      // 使用 kycSchema.shape 获取字段 schema (Zod 4 API)
+      const fieldSchema = kycSchema.shape[field];
       if (!fieldSchema) {
         console.warn(`No schema found for field: ${field}`);
         return true;
@@ -229,10 +229,9 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       let message = 'Invalid value';
       if (error instanceof z.ZodError) {
-        const firstError = error.errors?.[0];
-        message = firstError?.message || 'Invalid value';
-      } else {
-        message = 'This field is required';
+        // Zod 4 使用 issues 而不是 errors
+        const firstIssue = error.issues?.[0];
+        message = firstIssue?.message || 'Invalid value';
       }
       setState((prev) => ({
         ...prev,
@@ -265,8 +264,8 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
     
     for (const field of fields) {
       try {
-        const shape = kycSchema._def.shape();
-        const fieldSchema = shape[field];
+        // 使用 kycSchema.shape 获取字段 schema (Zod 4 API)
+        const fieldSchema = kycSchema.shape[field];
         if (!fieldSchema) {
           console.warn(`No schema found for field: ${field}`);
           continue;
@@ -275,8 +274,9 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         isValid = false;
         if (error instanceof z.ZodError) {
-          const firstError = error.errors?.[0];
-          newErrors[field as string] = firstError?.message || 'Invalid value';
+          // Zod 4 使用 issues 而不是 errors
+          const firstIssue = error.issues?.[0];
+          newErrors[field as string] = firstIssue?.message || 'Invalid value';
         } else {
           newErrors[field as string] = 'This field is required';
         }
@@ -341,8 +341,8 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
         console.log(`[KYC] Validating field "${field}":`, fieldValue, `(type: ${typeof fieldValue})`);
         
         try {
-          const shape = kycSchema._def.shape();
-          const fieldSchema = shape[field];
+          // 使用 kycSchema.shape 获取字段 schema (Zod 4 API)
+          const fieldSchema = kycSchema.shape[field];
           if (!fieldSchema) {
             console.warn(`No schema found for field: ${field}`);
             continue;
@@ -351,8 +351,9 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
         } catch (error) {
           isValid = false;
           if (error instanceof z.ZodError) {
-            const firstError = error.errors?.[0];
-            newErrors[field as string] = firstError?.message || 'Invalid value';
+            // Zod 4 使用 issues 而不是 errors
+            const firstIssue = error.issues?.[0];
+            newErrors[field as string] = firstIssue?.message || 'Invalid value';
           } else {
             newErrors[field as string] = 'This field is required';
           }
