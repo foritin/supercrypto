@@ -34,6 +34,13 @@ const kyc = {
         CA: "Canada",
         AU: "Australia",
         CH: "Switzerland",
+        KR: "South Korea",
+        IN: "India",
+        BR: "Brazil",
+        RU: "Russia",
+        AE: "United Arab Emirates",
+        HK: "Hong Kong",
+        TW: "Taiwan",
       },
     },
     wizard: {

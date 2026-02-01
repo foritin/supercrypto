@@ -5,33 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useKycContext } from '@/contexts/kyc-context';
-import { FormField, FormInput, FormSelect } from '../components/form-field';
-import { ArrowRight, ArrowLeft, User, Mail, Phone, Calendar, Globe, Save } from 'lucide-react';
-
-// Country list with i18n keys
-const countryKeys = [
-  { value: '', labelKey: 'kyc.basicInfo.selectNationality' },
-  { value: 'US', labelKey: 'kyc.basicInfo.countries.US' },
-  { value: 'CN', labelKey: 'kyc.basicInfo.countries.CN' },
-  { value: 'GB', labelKey: 'kyc.basicInfo.countries.GB' },
-  { value: 'DE', labelKey: 'kyc.basicInfo.countries.DE' },
-  { value: 'FR', labelKey: 'kyc.basicInfo.countries.FR' },
-  { value: 'JP', labelKey: 'kyc.basicInfo.countries.JP' },
-  { value: 'SG', labelKey: 'kyc.basicInfo.countries.SG' },
-  { value: 'CA', labelKey: 'kyc.basicInfo.countries.CA' },
-  { value: 'AU', labelKey: 'kyc.basicInfo.countries.AU' },
-  { value: 'CH', labelKey: 'kyc.basicInfo.countries.CH' },
-];
+import { FormField, FormInput } from '../components/form-field';
+import { CountrySelect } from '../components/country-select';
+import { ArrowRight, ArrowLeft, User, Mail, Phone, Calendar, Save } from 'lucide-react';
 
 export function BasicInfoStep() {
   const { t, i18n } = useTranslation();
   const { formData, errors, updateFormData, validateField, showLandingPage, nextStep, saveDraft, lastSaved } = useKycContext();
-
-  // 生成国际化的国家列表
-  const countries = countryKeys.map(c => ({
-    value: c.value,
-    label: t(c.labelKey, c.value || 'Select nationality'),
-  }));
 
   const handleInputChange = (field: keyof typeof formData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -137,13 +117,11 @@ export function BasicInfoStep() {
             required 
             error={errors.nationality}
           >
-            <FormSelect
+            <CountrySelect
               value={formData.nationality || ''}
               onChange={handleInputChange('nationality')}
               onBlur={handleBlur('nationality')}
               error={errors.nationality}
-              icon={<Globe className="h-4 w-4" />}
-              options={countries}
             />
           </FormField>
         </div>
