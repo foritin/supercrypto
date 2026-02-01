@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { z } from 'zod';
+import { useAccount } from 'wagmi';
 
 // KYC Form Validation Schema (Zod 4 使用 message 参数)
 export const kycSchema = z.object({
@@ -118,26 +119,47 @@ const initialState: KycState = {
   errors: {},
 };
 
-const STORAGE_KEY = 'supercrypto-kyc-draft';
+// 根据钱包地址生成存储 key
+const getStorageKey = (address: string | undefined) => {
+  if (!address) return null;
+  return `supercrypto-kyc-draft-${address.toLowerCase()}`;
+};
 
 export function KycProvider({ children }: { children: React.ReactNode }) {
+  const { address } = useAccount();
   const [state, setState] = React.useState<KycState>(initialState);
   const formDataRef = React.useRef<Partial<KycFormData>>(initialState.formData);
   const isInitializedRef = React.useRef(false);
+  const currentAddressRef = React.useRef<string | undefined>(undefined);
   
   // Keep ref in sync with state
   React.useEffect(() => {
     formDataRef.current = state.formData;
   }, [state.formData]);
 
-  // Load draft on mount (client-side only)
+  // 当钱包地址变化时，重新加载对应的草稿
   React.useEffect(() => {
-    // 防止重复初始化
-    if (isInitializedRef.current) return;
-    isInitializedRef.current = true;
+    // 如果地址没有变化，跳过
+    if (currentAddressRef.current === address) return;
     
-    const saved = localStorage.getItem(STORAGE_KEY);
-    console.log('[KYC] Loading draft from localStorage:', saved);
+    console.log('[KYC] Wallet address changed:', currentAddressRef.current, '->', address);
+    currentAddressRef.current = address;
+    
+    // 重置状态
+    setState(initialState);
+    formDataRef.current = initialFormData;
+    
+    // 如果没有钱包地址，不加载草稿
+    if (!address) {
+      console.log('[KYC] No wallet address, skipping draft load');
+      return;
+    }
+    
+    const storageKey = getStorageKey(address);
+    if (!storageKey) return;
+    
+    const saved = localStorage.getItem(storageKey);
+    console.log('[KYC] Loading draft for address:', address, 'key:', storageKey, 'data:', saved);
     
     if (saved) {
       try {
@@ -170,11 +192,14 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
         console.error('[KYC] Failed to parse draft:', e);
       }
     }
-  }, []);
+  }, [address]);
 
   // Auto-save draft when form data changes
   React.useEffect(() => {
-    if (state.isDirty) {
+    if (state.isDirty && address) {
+      const storageKey = getStorageKey(address);
+      if (!storageKey) return;
+      
       const timer = setTimeout(() => {
         // 使用 ref 确保保存最新数据
         const draft = {
@@ -182,8 +207,8 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
           status: 'draft',
           lastSaved: Date.now(),
         };
-        console.log('[KYC] Auto-saving draft:', draft);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+        console.log('[KYC] Auto-saving draft for address:', address, 'data:', draft);
+        localStorage.setItem(storageKey, JSON.stringify(draft));
         setState((prev) => ({
           ...prev,
           lastSaved: Date.now(),
@@ -194,7 +219,7 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
 
       return () => clearTimeout(timer);
     }
-  }, [state.formData, state.isDirty]);
+  }, [state.formData, state.isDirty, address]);
 
   const updateFormData = React.useCallback((data: Partial<KycFormData>) => {
     setState((prev) => {
@@ -385,24 +410,40 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const saveDraft = React.useCallback(() => {
+    if (!address) {
+      console.log('[KYC] Cannot save draft: no wallet address');
+      return;
+    }
+    
+    const storageKey = getStorageKey(address);
+    if (!storageKey) return;
+    
     // 使用 ref 确保保存最新数据
     const draft = {
       formData: formDataRef.current,
       status: 'draft',
       lastSaved: Date.now(),
     };
-    console.log('[KYC] Saving draft:', draft);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+    console.log('[KYC] Saving draft for address:', address, 'data:', draft);
+    localStorage.setItem(storageKey, JSON.stringify(draft));
     setState((prev) => ({
       ...prev,
       lastSaved: Date.now(),
       isDirty: false,
       status: 'draft',
     }));
-  }, []);
+  }, [address]);
 
   const loadDraft = React.useCallback(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!address) {
+      console.log('[KYC] Cannot load draft: no wallet address');
+      return;
+    }
+    
+    const storageKey = getStorageKey(address);
+    if (!storageKey) return;
+    
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -428,17 +469,23 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
         // Ignore parse errors
       }
     }
-  }, []);
+  }, [address]);
 
   const clearDraft = React.useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    if (address) {
+      const storageKey = getStorageKey(address);
+      if (storageKey) {
+        localStorage.removeItem(storageKey);
+        console.log('[KYC] Cleared draft for address:', address);
+      }
+    }
     setState((prev) => ({
       ...prev,
       formData: initialFormData,
       lastSaved: null,
       isDirty: false,
     }));
-  }, []);
+  }, [address]);
 
   const submitKyc = React.useCallback(async (): Promise<boolean> => {
     if (!validateStep(3)) return false;
@@ -456,19 +503,31 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
       }));
 
       // Clear draft after successful submission
-      localStorage.removeItem(STORAGE_KEY);
+      if (address) {
+        const storageKey = getStorageKey(address);
+        if (storageKey) {
+          localStorage.removeItem(storageKey);
+          console.log('[KYC] Cleared draft after submission for address:', address);
+        }
+      }
       
       return true;
     } catch (error) {
       console.error('KYC submission failed:', error);
       return false;
     }
-  }, [validateStep]);
+  }, [validateStep, address]);
 
   const reset = React.useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    if (address) {
+      const storageKey = getStorageKey(address);
+      if (storageKey) {
+        localStorage.removeItem(storageKey);
+      }
+    }
     setState(initialState);
-  }, []);
+    formDataRef.current = initialFormData;
+  }, [address]);
 
   const value: KycContextType = {
     ...state,
