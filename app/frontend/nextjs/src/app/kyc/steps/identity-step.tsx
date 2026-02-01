@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { useKycContext } from '@/contexts/kyc-context';
 import { DocumentUpload } from '../components/document-upload';
 import { CountrySelect } from '../components/country-select';
-import { ArrowLeft, ArrowRight, MapPin, FileText, Calendar, Home, ChevronLeft } from 'lucide-react';
+import { FormField, FormInput } from '../components/form-field';
+import { ArrowLeft, ArrowRight, MapPin, FileText, Calendar, Home, ChevronLeft, Save } from 'lucide-react';
 
 const documentTypes = [
   { value: 'passport', label: 'Passport', icon: '🛂' },
@@ -27,6 +28,7 @@ export function IdentityStep() {
     nextStep, 
     prevStep,
     saveDraft,
+    lastSaved,
   } = useKycContext();
 
   const [uploadedFiles, setUploadedFiles] = React.useState<{
@@ -56,17 +58,25 @@ export function IdentityStep() {
   return (
     <div className="space-y-6">
       <Card className="p-8 glass border-[#00D4AA]/20">
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={showLandingPage}
-            className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-            title={t('kyc.backToOverview', 'Back to Overview')}
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <h3 className="text-xl font-semibold text-white">
-            {t('kyc.identity.title', 'Address & Identity')}
-          </h3>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={showLandingPage}
+              className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+              title={t('kyc.backToOverview', 'Back to Overview')}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <h3 className="text-xl font-semibold text-white">
+              {t('kyc.identity.title', 'Address & Identity')}
+            </h3>
+          </div>
+          {lastSaved && (
+            <span className="flex items-center gap-1 text-xs text-[#00D4AA]">
+              <Save className="h-3 w-3" />
+              {t('kyc.autoSaved', 'Auto-saved')}
+            </span>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -234,17 +244,15 @@ export function IdentityStep() {
                   <label className="block text-sm font-medium text-white/80 mb-2">
                     {t('kyc.identity.documentExpiry', 'Expiry Date')}
                   </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                    <Input
-                      type="date"
-                      value={formData.documentExpiry || ''}
-                      onChange={handleInputChange('documentExpiry')}
-                      onBlur={handleBlur('documentExpiry')}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="pl-10 bg-white/5 border-white/10 text-white"
-                    />
-                  </div>
+                  <FormInput
+                    type="date"
+                    value={formData.documentExpiry || ''}
+                    onChange={handleInputChange('documentExpiry')}
+                    onBlur={handleBlur('documentExpiry')}
+                    min={new Date().toISOString().split('T')[0]}
+                    error={errors.documentExpiry}
+                    icon={<Calendar className="h-4 w-4" />}
+                  />
                   {errors.documentExpiry && (
                     <p className="mt-1 text-sm text-red-400">{errors.documentExpiry}</p>
                   )}
