@@ -1,0 +1,265 @@
+'use client';
+
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useKycContext } from '@/contexts/kyc-context';
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  CheckCircle, 
+  User, 
+  MapPin, 
+  FileText,
+  Shield,
+  AlertCircle,
+  Loader2,
+  ChevronLeft,
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+export function ConfirmationStep() {
+  const { t } = useTranslation();
+  const { 
+    formData, 
+    errors,
+    showLandingPage,
+    submitKyc,
+    prevStep,
+    updateFormData,
+  } = useKycContext();
+
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [agreed, setAgreed] = React.useState(formData.agreeToTerms || false);
+
+  const handleSubmit = async () => {
+    if (!agreed) {
+      toast.error(t('kyc.confirmation.agreeRequired', 'Please agree to the terms to continue'));
+      return;
+    }
+
+    updateFormData({ agreeToTerms: true });
+    setIsSubmitting(true);
+
+    try {
+      const success = await submitKyc();
+      if (success) {
+        toast.success(t('kyc.confirmation.submitted', 'KYC application submitted successfully'));
+      }
+    } catch (error) {
+      toast.error(t('kyc.confirmation.error', 'Failed to submit application'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString();
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-8 glass border-[#00D4AA]/20">
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={showLandingPage}
+            className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+            title={t('kyc.backToOverview', 'Back to Overview')}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#00D4AA]/20 flex items-center justify-center">
+            <CheckCircle className="h-8 w-8 text-[#00D4AA]" />
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">
+            {t('kyc.confirmation.title', 'Review Your Information')}
+          </h3>
+          <p className="text-white/60 max-w-md mx-auto">
+            {t('kyc.confirmation.desc', 'Please review your information before submitting. Make sure all details are accurate.')}
+          </p>
+        </div>
+
+        <div className="space-y-6 max-w-2xl mx-auto">
+          {/* Personal Information */}
+          <div className="p-5 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-[#00D4AA]/20 flex items-center justify-center">
+                <User className="h-5 w-5 text-[#00D4AA]" />
+              </div>
+              <h4 className="font-semibold text-white">Personal Information</h4>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-white/40 mb-1">Full Name</p>
+                <p className="text-white font-medium">{formData.firstName} {formData.lastName}</p>
+              </div>
+              <div>
+                <p className="text-white/40 mb-1">Date of Birth</p>
+                <p className="text-white font-medium">{formatDate(formData.dateOfBirth)}</p>
+              </div>
+              <div>
+                <p className="text-white/40 mb-1">Nationality</p>
+                <p className="text-white font-medium">{formData.nationality}</p>
+              </div>
+              <div>
+                <p className="text-white/40 mb-1">Email</p>
+                <p className="text-white font-medium">{formData.email}</p>
+              </div>
+              <div>
+                <p className="text-white/40 mb-1">Phone</p>
+                <p className="text-white font-medium">{formData.phone}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Address */}
+          <div className="p-5 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-[#00D4AA]/20 flex items-center justify-center">
+                <MapPin className="h-5 w-5 text-[#00D4AA]" />
+              </div>
+              <h4 className="font-semibold text-white">Residential Address</h4>
+            </div>
+            <div className="text-sm space-y-2">
+              <p className="text-white font-medium">{formData.addressLine1}</p>
+              {formData.addressLine2 && <p className="text-white">{formData.addressLine2}</p>}
+              <p className="text-white/60">
+                {formData.city}, {formData.state} {formData.postalCode}
+              </p>
+              <p className="text-white/60">{formData.country}</p>
+            </div>
+          </div>
+
+          {/* Identity Document */}
+          <div className="p-5 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-[#00D4AA]/20 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-[#00D4AA]" />
+              </div>
+              <h4 className="font-semibold text-white">Identity Document</h4>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-white/40 mb-1">Document Type</p>
+                <p className="text-white font-medium capitalize">{formData.documentType?.replace('_', ' ')}</p>
+              </div>
+              <div>
+                <p className="text-white/40 mb-1">Document Number</p>
+                <p className="text-white font-medium">{formData.documentNumber}</p>
+              </div>
+              <div>
+                <p className="text-white/40 mb-1">Expiry Date</p>
+                <p className="text-white font-medium">{formatDate(formData.documentExpiry)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Face Verification */}
+          {formData.faceImage && (
+            <div className="p-5 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-[#00D4AA]/20 flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-[#00D4AA]" />
+                </div>
+                <h4 className="font-semibold text-white">Face Verification</h4>
+              </div>
+              <div className="flex items-center gap-3">
+                <img
+                  src={formData.faceImage}
+                  alt="Face verification"
+                  className="w-16 h-16 rounded-lg object-cover"
+                />
+                <div>
+                  <p className="text-white font-medium">Photo Captured</p>
+                  <p className="text-sm text-[#00D4AA]">Verified</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Terms Agreement */}
+          <div className="p-5 rounded-xl bg-amber-500/5 border border-amber-500/20">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => {
+                  setAgreed(e.target.checked);
+                  updateFormData({ agreeToTerms: e.target.checked });
+                }}
+                className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5 text-[#00D4AA] focus:ring-[#00D4AA]/50"
+              />
+              <div className="text-sm text-white/60">
+                <p>
+                  I confirm that all the information provided is accurate and complete. 
+                  I understand that providing false information may result in rejection 
+                  of my application and potential legal consequences.
+                </p>
+                <p className="mt-2">
+                  I agree to the{' '}
+                  <a href="/terms" className="text-[#00D4AA] hover:underline" target="_blank">
+                    Terms of Service
+                  </a>{' '}
+                  and{' '}
+                  <a href="/privacy" className="text-[#00D4AA] hover:underline" target="_blank">
+                    Privacy Policy
+                  </a>.
+                </p>
+              </div>
+            </label>
+            {errors.agreeToTerms && (
+              <p className="mt-2 text-sm text-red-400">{errors.agreeToTerms}</p>
+            )}
+          </div>
+
+          {/* Security Notice */}
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-[#00D4AA]/5 border border-[#00D4AA]/20">
+            <Shield className="h-5 w-5 text-[#00D4AA] shrink-0 mt-0.5" />
+            <p className="text-sm text-white/60">
+              Your information is encrypted and stored securely. We use industry-standard 
+              security measures to protect your personal data.
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Navigation */}
+      <div className="flex justify-between">
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={prevStep}
+          disabled={isSubmitting}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t('common.back', 'Back')}
+        </Button>
+
+        <Button
+          variant="primary"
+          size="lg"
+          onClick={handleSubmit}
+          disabled={isSubmitting || !agreed}
+          className="gap-2 min-w-[160px]"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            <>
+              {t('kyc.confirmation.submit', 'Submit Application')}
+              <ArrowRight className="h-4 w-4" />
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}

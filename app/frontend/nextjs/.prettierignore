@@ -1,0 +1,25 @@
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+
+# Environment files
+.env*
+
+# Generated files
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# Storybook
+storybook-static/
+
+# Test outputs
+test-results/
+playwright-report/

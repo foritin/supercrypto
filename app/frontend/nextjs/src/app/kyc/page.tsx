@@ -1,225 +1,182 @@
-'use client'
+'use client';
 
-/**
- * KYC 页面（优化版）
- *
- * 根据用户 KYC 状态显示不同内容：
- * - 未连接钱包：显示连接钱包提示
- * - not_started/rejected：显示状态卡片，点击按钮进入向导
- * - pending/approved：仅显示状态卡片
- *
- * 优化功能：
- * - 添加步骤预览卡片
- * - 添加进度恢复提示
- * - 优化视图切换动画
- */
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
+import { Card } from '@/components/ui/card';
+import { StepIndicator } from '@/components/ui/step-indicator';
+import { KycProvider, useKycContext, type KycStatus } from '@/contexts/kyc-context';
+import { BasicInfoStep } from './steps/basic-info-step';
+import { IdentityStep } from './steps/identity-step';
+import { LivenessStep } from './steps/liveness-step';
+import { ConfirmationStep } from './steps/confirmation-step';
+import { KycLanding } from './components/kyc-landing';
+import { KycStatusPanel } from './components/kyc-status-panel';
+import { CheckCircle, FileText, Shield, User, RotateCcw } from 'lucide-react';
 
-import { useState, useCallback, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useAccount } from 'wagmi'
-import { ArrowLeft, X, Wallet } from 'lucide-react'
+const steps = [
+  { 
+    id: 'basic-info', 
+    title: 'Basic Info', 
+    description: 'Personal details',
+    icon: User,
+  },
+  { 
+    id: 'identity', 
+    title: 'Identity', 
+    description: 'Document upload',
+    icon: FileText,
+  },
+  { 
+    id: 'liveness', 
+    title: 'Verification', 
+    description: 'Face verification',
+    icon: Shield,
+  },
+  { 
+    id: 'confirmation', 
+    title: 'Review', 
+    description: 'Confirm & submit',
+    icon: CheckCircle,
+  },
+];
 
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { KycStatusCard } from '@/components/kyc/kyc-status-card'
-import { KycWizard } from '@/components/kyc/kyc-wizard'
-import { KycStepPreview } from '@/components/kyc/kyc-step-preview'
-import { KycProgressRestore } from '@/components/kyc/kyc-progress-restore'
-import { useKycStatus } from '@/hooks/use-kyc-status'
-import { KycStatus } from '@/services/kyc'
+const statusMessages: Record<KycStatus, { title: string; description: string }> = {
+  not_started: {
+    title: 'Complete KYC Verification',
+    description: 'Verify your identity to unlock full platform features',
+  },
+  draft: {
+    title: 'Complete Your KYC',
+    description: 'Your progress has been saved. Continue where you left off.',
+  },
+  submitted: {
+    title: 'KYC Submitted',
+    description: 'Your application is being reviewed.',
+  },
+  pending_review: {
+    title: 'Under Review',
+    description: 'Our team is reviewing your documents.',
+  },
+  approved: {
+    title: 'KYC Approved',
+    description: 'Your identity has been verified.',
+  },
+  rejected: {
+    title: 'KYC Rejected',
+    description: 'Please review the feedback and resubmit.',
+  },
+};
 
-/**
- * 页面视图状态
- * - status: 显示状态卡片
- * - preview: 显示步骤预览
- * - wizard: 显示 KYC 向导
- */
-type ViewState = 'status' | 'preview' | 'wizard'
+function KycContent() {
+  const { t } = useTranslation();
+  const { currentStep, status, showLanding, formData, lastSaved, goToStep, reset } = useKycContext();
 
-export default function KycPage() {
-  const { t } = useTranslation()
-  const { isConnected } = useAccount()
-  const { status, refetch } = useKycStatus()
-
-  // 视图状态管理
-  const [viewState, setViewState] = useState<ViewState>('status')
-  const [initialWizardStep, setInitialWizardStep] = useState(0)
-
-  /**
-   * 处理开始 KYC 认证 - 显示预览
-   */
-  const handleStartKyc = useCallback(() => {
-    setViewState('preview')
-  }, [])
-
-  /**
-   * 处理从预览进入向导
-   */
-  const handleEnterWizard = useCallback(() => {
-    setViewState('wizard')
-  }, [])
-
-  /**
-   * 处理向导完成
-   */
-  const handleWizardComplete = useCallback(() => {
-    refetch()
-    setViewState('status')
-    setInitialWizardStep(0)
-  }, [refetch])
-
-  /**
-   * 处理向导取消
-   */
-  const handleWizardCancel = useCallback(() => {
-    setViewState('status')
-    setInitialWizardStep(0)
-  }, [])
-
-  /**
-   * 处理返回状态视图
-   */
-  const handleBackToStatus = useCallback(() => {
-    setViewState('status')
-    setInitialWizardStep(0)
-  }, [])
-
-  /**
-   * 处理恢复进度
-   */
-  const handleRestoreProgress = useCallback((stepIndex: number) => {
-    setInitialWizardStep(stepIndex)
-    setViewState('wizard')
-  }, [])
-
-  /**
-   * 处理清除进度
-   */
-  const handleClearProgress = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('kyc_wizard_data')
+  const renderStep = () => {
+    switch (currentStep) {
+      case 0:
+        return <BasicInfoStep />;
+      case 1:
+        return <IdentityStep />;
+      case 2:
+        return <LivenessStep />;
+      case 3:
+        return <ConfirmationStep />;
+      default:
+        return <BasicInfoStep />;
     }
-    setInitialWizardStep(0)
-  }, [])
+  };
 
-  // 判断是否可以进入向导
-  const canStartWizard = status === KycStatus.NOT_STARTED || status === KycStatus.REJECTED
+  // Show status panel for submitted/approved/rejected states
+  if (status === 'submitted' || status === 'pending_review' || status === 'approved' || status === 'rejected') {
+    return (
+      <div className="min-h-screen bg-[#0A0F0D] py-8 px-4">
+        <div className="max-w-3xl mx-auto">
+          <KycStatusPanel />
+        </div>
+      </div>
+    );
+  }
 
-  // 页面标题
-  const pageTitle = {
-    status: t('kyc.pageTitle', 'Identity Verification'),
-    preview: t('kyc.preview.title', 'Identity Verification'),
-    wizard: t('kyc.wizard.title', 'Identity Verification'),
-  }[viewState]
+  // Show landing page
+  if (showLanding) {
+    return (
+      <div className="min-h-screen bg-[#0A0F0D] py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <KycLanding />
+        </div>
+      </div>
+    );
+  }
+
+  const message = statusMessages[status];
 
   return (
-    <div className={cn(
-      'min-h-screen',
-      'py-4 px-3',
-      'sm:py-6 sm:px-4',
-      'md:py-8 md:px-6',
-      'lg:px-8'
-    )}>
-      <div className="w-full max-w-[600px] mx-auto">
-        {/* 页面标题 */}
-        <div className="mb-6 sm:mb-8">
-          {viewState === 'status' ? (
-            // 状态模式：显示页面标题
-            <div className="text-center">
-              <h1 className="text-lg sm:text-xl font-medium text-white/90">
-                {pageTitle}
-              </h1>
-              <p className="text-xs sm:text-sm text-white/40 mt-1">
-                {t('kyc.pageDescription', 'Complete verification to unlock all features')}
-              </p>
-            </div>
-          ) : (
-            // 预览/向导模式：顶部导航
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleBackToStatus}
-                className="text-white/40 hover:text-white/70 hover:bg-white/5 w-9 h-9"
-                aria-label={t('common.back')}
+    <div className="min-h-screen bg-[#0A0F0D] py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex-1" /> {/* Spacer */}
+            <h1 className="text-3xl font-bold text-white">
+              {t('kyc.title', message.title)}
+            </h1>
+            <div className="flex-1 flex justify-end">
+              <button
+                onClick={() => {
+                  if (confirm(t('kyc.resetConfirm', 'Are you sure you want to clear all entered data? This action cannot be undone.'))) {
+                    reset();
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white/60 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                title={t('kyc.reset', 'Clear all data')}
               >
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-              
-              <div className="text-center">
-                <h1 className="text-base sm:text-lg font-medium text-white/90">
-                  {pageTitle}
-                </h1>
-              </div>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleBackToStatus}
-                className="text-white/40 hover:text-white/70 hover:bg-white/5 w-9 h-9"
-                aria-label={t('common.close')}
-              >
-                <X className="w-4 h-4" />
-              </Button>
+                <RotateCcw className="h-4 w-4" />
+                <span className="hidden sm:inline">{t('kyc.reset', 'Reset')}</span>
+              </button>
             </div>
-          )}
-        </div>
-
-        {/* 主内容区域 */}
-        <div className="transition-all duration-300 ease-out">
-          {viewState === 'wizard' ? (
-            // 显示 KYC 向导
-            <KycWizard
-              key={initialWizardStep} // 强制重新挂载以使用新的初始步骤
-              initialStep={initialWizardStep}
-              onComplete={handleWizardComplete}
-              onCancel={handleWizardCancel}
-              className="shadow-[0_4px_16px_rgba(0,0,0,0.3)]"
-            />
-          ) : viewState === 'preview' ? (
-            // 显示步骤预览
-            <KycStepPreview
-              onStart={handleEnterWizard}
-              className="shadow-[0_4px_16px_rgba(0,0,0,0.3)]"
-            />
-          ) : (
-            // 显示 KYC 状态卡片
-            <div className="space-y-4">
-              {/* 进度恢复提示 */}
-              {canStartWizard && (
-                <KycProgressRestore
-                  onRestore={handleRestoreProgress}
-                  onClear={handleClearProgress}
-                  onDismiss={() => {}}
-                />
-              )}
-
-              {/* 状态卡片 */}
-              <div
-                className={cn(
-                  'bg-[rgba(17,25,22,0.8)] backdrop-blur-[12px]',
-                  'rounded-2xl border border-white/[0.08]',
-                  'shadow-[0_4px_16px_rgba(0,0,0,0.3)]',
-                  'overflow-hidden'
-                )}
-              >
-                <KycStatusCard
-                  onStartKyc={canStartWizard ? handleStartKyc : undefined}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 底部说明 - 仅在状态视图显示 */}
-        {viewState === 'status' && isConnected && (
-          <div className="mt-6 sm:mt-8 text-center">
-            <p className="text-xs sm:text-sm text-white/40">
-              {t('kyc.footer.helpText', 'Need help? Contact our support team')}
-            </p>
           </div>
-        )}
+          <p className="text-white/60 max-w-lg mx-auto text-center">
+            {t('kyc.subtitle', message.description)}
+          </p>
+          {lastSaved && (
+            <p className="text-sm text-[#00D4AA] mt-2 text-center">
+              {t('kyc.draftSaved', 'Draft saved {{time}}', {
+                time: new Date(lastSaved).toLocaleTimeString(),
+              })}
+            </p>
+          )}
+        </div>
+
+        {/* Step Indicator */}
+        <Card className="p-6 mb-6 glass border-[#00D4AA]/20">
+          <StepIndicator
+            steps={steps.map((s, i) => ({
+              id: s.id,
+              title: s.title,
+              description: s.description,
+            }))}
+            currentStep={currentStep}
+            onStepClick={(index) => {
+              if (index < currentStep) {
+                goToStep(index);
+              }
+            }}
+          />
+        </Card>
+
+        {/* Step Content */}
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+          {renderStep()}
+        </div>
       </div>
     </div>
-  )
+  );
+}
+
+export default function KycPage() {
+  return (
+    <KycProvider>
+      <KycContent />
+    </KycProvider>
+  );
 }
