@@ -35,6 +35,7 @@ interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export function FormInput({ error, icon, className, type, ...props }: FormInputProps) {
   const isDateInput = type === 'date';
+  const hasValue = props.value && String(props.value).length > 0;
   
   return (
     <div className="relative">
@@ -51,15 +52,27 @@ export function FormInput({ error, icon, className, type, ...props }: FormInputP
           error 
             ? 'border-red-500 focus:border-red-400 ring-1 ring-red-500/20' 
             : 'border-white/10 focus:border-[#00D4AA]/50',
-          // 日期输入框样式：隐藏原生 placeholder，使用自定义样式
-          isDateInput && '[&::-webkit-datetime-edit-fields-wrapper]:text-white [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer',
-          // 当日期为空时显示 placeholder 文本
-          isDateInput && !props.value && 'text-white/30',
+          // 日期输入框样式
+          isDateInput && [
+            // 日历图标样式
+            '[&::-webkit-calendar-picker-indicator]:invert',
+            '[&::-webkit-calendar-picker-indicator]:opacity-60',
+            '[&::-webkit-calendar-picker-indicator]:hover:opacity-100',
+            '[&::-webkit-calendar-picker-indicator]:cursor-pointer',
+            // 隐藏原生日期文本（年/月/日）当没有值时
+            !hasValue && '[&::-webkit-datetime-edit]:text-transparent',
+            !hasValue && '[&::-webkit-datetime-edit-fields-wrapper]:text-transparent',
+          ],
           className
         )}
-        placeholder={isDateInput ? 'YYYY-MM-DD' : props.placeholder}
         {...props}
       />
+      {/* 自定义 placeholder 覆盖层 */}
+      {isDateInput && !hasValue && (
+        <div className="absolute left-10 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none">
+          YYYY-MM-DD
+        </div>
+      )}
     </div>
   );
 }
