@@ -99,6 +99,12 @@ export interface ContractBindingItem {
   is_primary: boolean
 }
 
+export interface RecentInvestor {
+  wallet_address: string
+  amount: number
+  invested_at: string
+}
+
 export interface AssetDetail {
   id: number
   name: string
@@ -124,6 +130,10 @@ export interface AssetDetail {
   status: AssetStatus
   is_available: boolean
   environment: string
+  // 投资者统计
+  investor_count: number
+  recent_investors: RecentInvestor[] | null
+  // 时间
   created_at: string
   updated_at: string
   media?: AssetMediaItem[]

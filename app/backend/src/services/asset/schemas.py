@@ -96,6 +96,17 @@ class AssetListItem(BaseModel):
         from_attributes = True
 
 
+class RecentInvestor(BaseModel):
+    """最近投资者信息"""
+
+    wallet_address: str = Field(..., description="钱包地址（脱敏）")
+    amount: float = Field(..., description="投资金额")
+    invested_at: datetime = Field(..., description="投资时间")
+
+    class Config:
+        from_attributes = True
+
+
 class AssetDetailResponse(BaseModel):
     """资产详情响应"""
 
@@ -131,6 +142,12 @@ class AssetDetailResponse(BaseModel):
     status: AssetStatus
     is_available: bool
     environment: str
+
+    # 投资者统计
+    investor_count: int = Field(default=0, description="投资者数量")
+    recent_investors: Optional[List[RecentInvestor]] = Field(
+        None, description="最近投资者列表（最多5个）"
+    )
 
     # 可见性状态（Admin API）
     is_visible: Optional[bool] = Field(
@@ -209,7 +226,8 @@ class BindProjectRequest(BaseModel):
 
     project: str = Field(..., description="项目标识 (如 vanke, common)")
     contract_names: Optional[List[str]] = Field(
-        None, description="要绑定的合约名称列表，为空则绑定该项目下所有可用的 PROJECT scope 合约"
+        None,
+        description="要绑定的合约名称列表，为空则绑定该项目下所有可用的 PROJECT scope 合约",
     )
 
 
@@ -243,9 +261,7 @@ class ProjectContractInfo(BaseModel):
 
     # 主合约信息 (Requirements 3.1, 3.2)
     has_primary: bool = Field(default=False, description="是否有主合约")
-    primary_contract_symbol: Optional[str] = Field(
-        None, description="主合约 Symbol"
-    )
+    primary_contract_symbol: Optional[str] = Field(None, description="主合约 Symbol")
 
     # 就绪状态 (Requirements 7.3, 7.4, 7.7)
     is_ready: bool = Field(default=False, description="项目是否就绪")

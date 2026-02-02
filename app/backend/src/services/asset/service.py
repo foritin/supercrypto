@@ -16,6 +16,7 @@ from src.models.asset import (
     AssetType,
 )
 from src.models.contracts.contract_deployment import ContractDeployment
+from src.models.subscription import Subscription
 from src.services.asset.schemas import (
     AssetCreateRequest,
     AssetDetailResponse,
@@ -24,9 +25,11 @@ from src.services.asset.schemas import (
     AssetUpdateRequest,
     ContractBindingStatus,
     ProjectContractInfo,
+    RecentInvestor,
 )
 from src.shared.common.exceptions import BusinessException
 from src.shared.schemas.enums import ContractScope, ContractStatus, ErrorCode
+from src.shared.schemas.enums.subscription import SubscriptionStatus
 
 
 class AssetService:
@@ -479,6 +482,51 @@ class AssetService:
             is_visible = asset.is_visible_to_public
             visibility_issues = asset.visibility_issues if not is_visible else []
 
+        # 投资者统计 (P2-8)
+        # 有效状态：ACTIVE, MATURED, REDEEMED（排除 PENDING 和 CANCELLED）
+        valid_statuses = [
+            SubscriptionStatus.ACTIVE,
+            SubscriptionStatus.MATURED,
+            SubscriptionStatus.REDEEMED,
+        ]
+
+        # 统计唯一投资者数量
+        investor_count = (
+            await Subscription.filter(
+                asset_id=asset.id,
+                status__in=valid_statuses,
+            )
+            .distinct()
+            .values_list("wallet_address", flat=True)
+        )
+        unique_investor_count = len(set(investor_count))
+
+        # 获取最近5个投资者（按时间倒序，去重钱包）
+        recent_subs = (
+            await Subscription.filter(
+                asset_id=asset.id,
+                status__in=valid_statuses,
+            )
+            .order_by("-created_at")
+            .limit(20)
+        )  # 多取一些用于去重
+
+        seen_wallets = set()
+        recent_investors = []
+        for sub in recent_subs:
+            if sub.wallet_address not in seen_wallets and len(recent_investors) < 5:
+                seen_wallets.add(sub.wallet_address)
+                # 钱包地址脱敏：显示前6位和后4位
+                addr = sub.wallet_address
+                masked_addr = f"{addr[:6]}...{addr[-4:]}" if len(addr) > 10 else addr
+                recent_investors.append(
+                    RecentInvestor(
+                        wallet_address=masked_addr,
+                        amount=float(sub.amount),
+                        invested_at=sub.created_at,
+                    )
+                )
+
         return AssetDetailResponse(
             id=asset.id,
             name=asset.name,
@@ -504,6 +552,8 @@ class AssetService:
             status=asset.status,
             is_available=asset.is_available,
             environment=asset.environment,
+            investor_count=unique_investor_count,
+            recent_investors=recent_investors if recent_investors else None,
             is_visible=is_visible,
             visibility_issues=visibility_issues,
             created_at=asset.created_at,
@@ -582,9 +632,7 @@ class AssetService:
 
             # 获取项目就绪状态 (Requirements 7.3, 7.4, 7.7)
             # 就绪条件：有主合约 + 所有合约已部署
-            is_ready = has_primary and all(
-                c.contract_address for c in contracts_list
-            )
+            is_ready = has_primary and all(c.contract_address for c in contracts_list)
 
             result.append(
                 ProjectContractInfo(
@@ -628,20 +676,23 @@ class AssetService:
         Raises:
             BusinessException: 资产不存在、项目未就绪、项目已绑定、项目无主合约、合约已被绑定等错误
         """
-        from src.services.contract import get_contract_service, get_contract_status_service
+        from src.services.contract import (
+            get_contract_service,
+            get_contract_status_service,
+        )
 
         # === 校验项目就绪状态 (Requirements 6.1, 6.2) ===
         # 使用 status_service 的逻辑，基于 ProviderRegistry 判断就绪状态
         status_service = get_contract_status_service(self.environment)
         contract_status = await status_service.get_contract_status()
-        
+
         # 查找项目
         project_group = None
         for pg in contract_status.get("project_contracts", []):
             if pg.get("project") == project:
                 project_group = pg
                 break
-        
+
         if not project_group:
             raise BusinessException(
                 code=400,
@@ -652,7 +703,7 @@ class AssetService:
                     "message": "项目未就绪，无法绑定 Asset",
                 },
             )
-        
+
         # 检查就绪状态
         if project_group.get("project_readiness") != "ready":
             reasons: list[str] = []
@@ -663,7 +714,7 @@ class AssetService:
                 reasons.append("存在未注册的合约")
             if not readiness_details.get("no_missing_deps"):
                 reasons.append("存在未注册的依赖")
-            
+
             raise BusinessException(
                 code=400,
                 error_code=ErrorCode.PROJECT_NOT_READY,
@@ -681,7 +732,7 @@ class AssetService:
 
         if not asset:
             raise BusinessException(
-                code=404, 
+                code=404,
                 error_code=ErrorCode.ASSET_NOT_FOUND,
             )
 
@@ -717,7 +768,7 @@ class AssetService:
             contracts = [r for r in contracts if r.name in contract_names]
             if not contracts:
                 raise BusinessException(
-                    code=400, 
+                    code=400,
                     error_code=ErrorCode.CONTRACTS_NOT_FOUND,
                 )
 
