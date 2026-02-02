@@ -240,17 +240,15 @@ export function InvestPanel({
         </div>
       </div>
 
-      {/* 投资者统计 - 社交证明 */}
-      <div className="mb-5">
-        <InvestorStats 
-          investorCount={asset.investor_count || 247}
-          recentInvestors={asset.recent_investors || [
-            { wallet_address: "0x742d35Cc6634C0532925a3b8D4C9db96590f6C7E", amount: 50000, invested_at: "2024-01-15T10:30:00Z" },
-            { wallet_address: "0x8ba1f109551bD432803012645Hac136c82C3e8C", amount: 25000, invested_at: "2024-01-14T15:20:00Z" },
-            { wallet_address: "0x3f5CE5FBFe3E9af3971dD833A7D3C8B2d8E15E0D", amount: 100000, invested_at: "2024-01-13T09:45:00Z" },
-          ]}
-        />
-      </div>
+      {/* 投资者统计 - 社交证明（仅在有数据时显示） */}
+      {asset.investor_count > 0 && (
+        <div className="mb-5">
+          <InvestorStats 
+            investorCount={asset.investor_count}
+            recentInvestors={asset.recent_investors}
+          />
+        </div>
+      )}
 
       {/* 关键数据网格 */}
       <div className="grid grid-cols-2 gap-3 mb-6">
