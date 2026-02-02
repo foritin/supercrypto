@@ -240,15 +240,13 @@ export function InvestPanel({
         </div>
       </div>
 
-      {/* 投资者统计 - 社交证明（仅在有数据时显示） */}
-      {asset.investor_count > 0 && (
-        <div className="mb-5">
-          <InvestorStats 
-            investorCount={asset.investor_count}
-            recentInvestors={asset.recent_investors}
-          />
-        </div>
-      )}
+      {/* 投资者统计 - 社交证明 */}
+      <div className="mb-5">
+        <InvestorStats 
+          investorCount={asset.investor_count || 0}
+          recentInvestors={asset.recent_investors}
+        />
+      </div>
 
       {/* 关键数据网格 */}
       <div className="grid grid-cols-2 gap-3 mb-6">
