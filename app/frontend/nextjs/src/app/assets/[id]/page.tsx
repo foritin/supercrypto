@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import {
   ArrowLeft,
+  Home,
+  ChevronRight,
   Building2,
   Shield,
   Flame,
@@ -143,14 +145,38 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
       <div className="min-h-screen pb-20">
         <div className="max-w-[1200px] mx-auto px-6">
           {/* 面包屑导航 */}
-          <div className="flex items-center gap-2 mb-4 text-white/50 text-sm">
-            <Button variant="ghost" size="sm" onClick={() => router.push("/assets")} className="text-white/70 hover:text-white">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              {t("assets.detail.backToAssets")}
+          <nav className="flex items-center gap-1.5 mb-5 text-sm">
+            {/* Home */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/")}
+              className="h-8 px-2 text-white/50 hover:text-white hover:bg-white/5"
+            >
+              <Home className="h-4 w-4" />
             </Button>
-            <span className="text-white/30">/</span>
-            <span className="text-white/80">{asset.name}</span>
-          </div>
+            
+            {/* 分隔符 */}
+            <ChevronRight className="h-4 w-4 text-white/20" />
+            
+            {/* Assets 列表页 */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/assets")}
+              className="h-8 px-2 text-white/50 hover:text-white hover:bg-white/5 font-normal"
+            >
+              {t("assets.title")}
+            </Button>
+            
+            {/* 分隔符 */}
+            <ChevronRight className="h-4 w-4 text-white/20" />
+            
+            {/* 当前页面 */}
+            <span className="px-2 text-white/80 font-medium truncate max-w-[200px] sm:max-w-[300px]">
+              {asset.name}
+            </span>
+          </nav>
 
           {/* 标题栏 */}
           <div className="flex justify-between items-start mb-4 flex-wrap gap-4">
