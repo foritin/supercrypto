@@ -18,7 +18,6 @@ import {
   Check,
   FileText,
   MapPin,
-  Wallet,
   ExternalLink,
   Loader2,
   Download,
@@ -31,10 +30,9 @@ import { useKycStatus } from "@/hooks";
 import { SubscriptionModal } from "@/components/subscription/subscription-modal";
 import { MediaGallery } from "@/components/asset/media-gallery";
 import { PropertyHighlights } from "@/components/asset/property-highlights";
-import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { InvestPanel } from "@/components/asset/invest-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -138,7 +136,6 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   const statusInfo = STATUS_CONFIG[asset.status as AssetStatus];
-  const progress = (asset.subscribed_amount / asset.total_supply) * 100;
 
   return (
     <TooltipProvider>
@@ -175,7 +172,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* 主内容区 */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* 左侧：图片和详情 */}
             <div className="lg:col-span-2">
               {/* 图片画廊 */}
@@ -433,124 +430,16 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
               </Tabs>
             </div>
 
-            {/* 右侧：投资面板 */}
+            {/* 右侧：投资面板 V2 */}
             <div className="lg:col-span-1">
-              <div className="sticky top-[88px] bg-gradient-to-b from-white/[0.03] to-white/[0.01] border border-white/[0.08] rounded-2xl p-6">
-                {/* 投资头部 */}
-                <div className="text-center mb-4">
-                  <span className="text-white/50 text-xs tracking-wider uppercase">{t("assets.invest.totalInvestment")}</span>
-                  <h2 className="text-3xl font-bold text-white mt-2">
-                    <AnimatedNumber 
-                      value={asset.total_supply} 
-                      format="usd-short" 
-                      duration={1500}
-                      className="font-bold"
-                    />
-                  </h2>
-                </div>
-
-                {/* 状态标签 */}
-                <div className="text-center px-4 py-2 bg-gradient-to-r from-[#00D4AA] to-[#00B894] rounded-full text-black font-bold text-xs tracking-wider mb-5 uppercase">
-                  {asset.status === "active" ? t("assets.detail.availableNow") : t(statusInfo.labelKey)}
-                </div>
-
-                {/* 购买信息 */}
-                <div className="flex justify-around mb-4">
-                  <div className="text-center">
-                    <span className="block text-white/50 text-[11px] mb-1 uppercase">{t("assets.invest.subscribed")}</span>
-                    <span className="block text-white text-lg font-semibold">
-                      <AnimatedNumber 
-                        value={asset.subscribed_amount} 
-                        format="usd-short" 
-                        duration={1500}
-                      />
-                    </span>
-                  </div>
-                  <div className="text-center">
-                    <span className="block text-white/50 text-[11px] mb-1 uppercase">{t("assets.invest.remaining")}</span>
-                    <span className="block text-[#00D4AA] text-lg font-semibold">
-                      <AnimatedNumber 
-                        value={asset.remaining_amount} 
-                        format="usd-short" 
-                        duration={1500}
-                        className="text-[#00D4AA]"
-                      />
-                    </span>
-                  </div>
-                </div>
-
-                {/* 进度条 */}
-                <div className="mb-2">
-                  <Progress value={progress} indicatorColor="#00D4AA" className="h-2" />
-                  <div className="flex justify-between mt-2 text-xs text-white/50">
-                    <span>{progress.toFixed(1)}% {t("assets.invest.funded")}</span>
-                    <span>{(100 - progress).toFixed(1)}% {t("assets.invest.available")}</span>
-                  </div>
-                </div>
-
-                {/* 分隔线 */}
-                <div className="border-t border-white/10 my-6" />
-
-                {/* APY 信息 */}
-                <div className="mb-5">
-                  <div className="flex justify-between py-2 border-b border-white/[0.06]">
-                    <span className="text-white/60">{t("assets.invest.expectedReturn")}</span>
-                    <span className="text-[#00D4AA] font-semibold">
-                      <AnimatedNumber 
-                        value={asset.apy_12m} 
-                        format="percentage" 
-                        duration={1200}
-                        className="text-[#00D4AA]"
-                      />
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="text-white/60">{t("assets.invest.tokenPrice")}</span>
-                    <span className="text-[#00D4AA] font-semibold">
-                      <AnimatedNumber 
-                        value={asset.current_price} 
-                        format="usd" 
-                        duration={1200}
-                        className="text-[#00D4AA]"
-                      />
-                    </span>
-                  </div>
-                </div>
-
-                {/* 认购按钮 */}
-                <Button
-                  size="lg"
-                  className="w-full h-[52px] text-base font-semibold rounded-xl"
-                  disabled={!isConnected || !isKycApproved || asset.status !== "active"}
-                  onClick={() => setShowSubscribeModal(true)}
-                >
-                  <Wallet className="h-5 w-5 mr-2" />
-                  {!isConnected 
-                    ? t("assets.invest.connectWallet") 
-                    : !isKycApproved 
-                      ? t("assets.invest.kycRequired")
-                      : t("assets.invest.subscribeNow")
-                  }
-                </Button>
-
-                {!isConnected && (
-                  <p className="text-center mt-3 text-sm text-white/40">
-                    {t("assets.invest.connectWalletHint")}
-                  </p>
-                )}
-                
-                {isConnected && !isKycApproved && (
-                  <p className="text-center mt-3 text-sm text-white/40">
-                    <Button
-                      variant="link"
-                      className="text-[#00D4AA] p-0 h-auto"
-                      onClick={() => router.push("/kyc")}
-                    >
-                      {t("assets.invest.completeKyc")}
-                    </Button>
-                    {" "}{t("assets.invest.toInvest")}
-                  </p>
-                )}
+              <div className="sticky top-[120px]">
+                <InvestPanel
+                  asset={asset}
+                  isConnected={isConnected}
+                  isKycApproved={isKycApproved}
+                  onSubscribe={() => setShowSubscribeModal(true)}
+                  onGoToKyc={() => router.push("/kyc")}
+                />
               </div>
             </div>
           </div>

@@ -168,7 +168,7 @@ const assets = {
     },
     // 投资面板
     invest: {
-      totalInvestment: "总投资额",
+      totalInvestment: "目标募集金额",
       subscribed: "已认购",
       remaining: "剩余",
       funded: "已募集",
@@ -177,10 +177,33 @@ const assets = {
       tokenPrice: "代币价格",
       subscribeNow: "立即认购",
       kycRequired: "需要完成 KYC",
-      connectWallet: "连接钱包后认购",
-      connectWalletHint: "请连接钱包进行投资",
+      connectWallet: "连接钱包",
+      connectWalletHint: "连接钱包后即可查看投资详情",
       completeKyc: "完成身份认证",
       toInvest: "后即可投资",
+      notAvailable: "暂不可认购",
+      notAvailableHint: "该资产当前未开放认购",
+      // 状态徽章
+      statusBadge: {
+        active: "火热认购中",
+        sellingFast: "即将售罄",
+        paused: "暂停认购",
+        soldOut: "已售罄",
+        closed: "已结束",
+        available: "可认购",
+      },
+    },
+    // 倒计时
+    countdown: {
+      startsIn: "距离开始",
+      endsIn: "距离结束",
+      ended: "认购已结束",
+      days: "天",
+      hours: "时",
+      minutes: "分",
+      seconds: "秒",
+      urgent: "剩余时间不足24小时",
+      critical: "剩余时间不足1小时，把握机会！",
     },
     // 旧的扁平结构（保留兼容）
     filterByStatus: "按状态筛选",
