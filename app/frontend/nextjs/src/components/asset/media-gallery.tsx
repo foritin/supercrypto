@@ -238,6 +238,7 @@ export function MediaGallery({
           position: relative;
           border-radius: 12px;
           overflow: hidden;
+          background: #0a0f0d;
         }
         .main-image {
           width: 100%;
@@ -246,6 +247,30 @@ export function MediaGallery({
           background-position: center;
           cursor: pointer;
           position: relative;
+        }
+        /* 暗色渐变遮罩 - 让白色背景图片与深色主题融合 */
+        .main-image::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: 
+            /* 内发光效果 - 从中心向边缘渐变暗 */
+            radial-gradient(ellipse at center, transparent 30%, rgba(10, 15, 13, 0.4) 100%),
+            /* 底部暗色渐变 - 突出图片计数器区域 */
+            linear-gradient(to top, rgba(10, 15, 13, 0.5) 0%, transparent 30%),
+            /* 顶部暗色渐变 - 突出放大按钮 */
+            linear-gradient(to bottom, rgba(10, 15, 13, 0.3) 0%, transparent 20%);
+          pointer-events: none;
+          z-index: 1;
+        }
+        /* 四周边框暗角效果 */
+        .main-image::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          box-shadow: inset 0 0 80px rgba(10, 15, 13, 0.3);
+          pointer-events: none;
+          z-index: 1;
         }
         .nav-btn {
           position: absolute;
@@ -261,10 +286,14 @@ export function MediaGallery({
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: background 0.2s;
+          transition: all 0.2s ease;
+          z-index: 2;
+          backdrop-filter: blur(4px);
         }
         .nav-btn:hover {
-          background: rgba(0, 0, 0, 0.7);
+          background: rgba(0, 212, 170, 0.9);
+          color: #0a0f0d;
+          transform: translateY(-50%) scale(1.05);
         }
         .nav-prev {
           left: 16px;
@@ -286,19 +315,28 @@ export function MediaGallery({
           display: flex;
           align-items: center;
           justify-content: center;
+          z-index: 2;
+          backdrop-filter: blur(4px);
+          transition: all 0.2s ease;
         }
         .expand-btn:hover {
-          background: rgba(0, 0, 0, 0.7);
+          background: rgba(0, 212, 170, 0.9);
+          color: #0a0f0d;
+          transform: scale(1.05);
         }
         .image-counter {
           position: absolute;
           bottom: 16px;
           right: 16px;
-          padding: 4px 12px;
-          background: rgba(0, 0, 0, 0.6);
-          border-radius: 4px;
+          padding: 6px 12px;
+          background: rgba(0, 0, 0, 0.7);
+          border-radius: 6px;
           color: #fff;
           font-size: 12px;
+          font-weight: 500;
+          z-index: 2;
+          backdrop-filter: blur(4px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .thumbnail-strip {
           display: flex;
@@ -316,15 +354,30 @@ export function MediaGallery({
           background-position: center;
           cursor: pointer;
           border: 2px solid transparent;
-          transition: border-color 0.2s, opacity 0.2s;
-          opacity: 0.7;
+          transition: all 0.2s ease;
+          opacity: 0.6;
+          position: relative;
+          overflow: hidden;
+        }
+        /* 缩略图暗色遮罩 */
+        .thumbnail::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(ellipse at center, transparent 40%, rgba(10, 15, 13, 0.3) 100%);
+          pointer-events: none;
         }
         .thumbnail:hover {
-          opacity: 1;
+          opacity: 0.9;
+          transform: translateY(-2px);
         }
         .thumbnail.active {
           border-color: #00d4aa;
           opacity: 1;
+          box-shadow: 0 4px 12px rgba(0, 212, 170, 0.2);
+        }
+        .thumbnail.active::after {
+          background: none;
         }
         .thumbnail.more {
           background: rgba(255, 255, 255, 0.1);

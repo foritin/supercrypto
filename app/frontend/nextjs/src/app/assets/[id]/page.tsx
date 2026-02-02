@@ -31,6 +31,7 @@ import { useKycStatus } from "@/hooks";
 import { SubscriptionModal } from "@/components/subscription/subscription-modal";
 import { MediaGallery } from "@/components/asset/media-gallery";
 import { PropertyHighlights } from "@/components/asset/property-highlights";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -438,7 +439,14 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 {/* 投资头部 */}
                 <div className="text-center mb-4">
                   <span className="text-white/50 text-xs tracking-wider uppercase">{t("assets.invest.totalInvestment")}</span>
-                  <h2 className="text-3xl font-bold text-white mt-2">{formatAmount(asset.total_supply)}</h2>
+                  <h2 className="text-3xl font-bold text-white mt-2">
+                    <AnimatedNumber 
+                      value={asset.total_supply} 
+                      format="usd-short" 
+                      duration={1500}
+                      className="font-bold"
+                    />
+                  </h2>
                 </div>
 
                 {/* 状态标签 */}
@@ -450,11 +458,24 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="flex justify-around mb-4">
                   <div className="text-center">
                     <span className="block text-white/50 text-[11px] mb-1 uppercase">{t("assets.invest.subscribed")}</span>
-                    <span className="block text-white text-lg font-semibold">{formatAmount(asset.subscribed_amount)}</span>
+                    <span className="block text-white text-lg font-semibold">
+                      <AnimatedNumber 
+                        value={asset.subscribed_amount} 
+                        format="usd-short" 
+                        duration={1500}
+                      />
+                    </span>
                   </div>
                   <div className="text-center">
                     <span className="block text-white/50 text-[11px] mb-1 uppercase">{t("assets.invest.remaining")}</span>
-                    <span className="block text-[#00D4AA] text-lg font-semibold">{formatAmount(asset.remaining_amount)}</span>
+                    <span className="block text-[#00D4AA] text-lg font-semibold">
+                      <AnimatedNumber 
+                        value={asset.remaining_amount} 
+                        format="usd-short" 
+                        duration={1500}
+                        className="text-[#00D4AA]"
+                      />
+                    </span>
                   </div>
                 </div>
 
@@ -474,11 +495,25 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="mb-5">
                   <div className="flex justify-between py-2 border-b border-white/[0.06]">
                     <span className="text-white/60">{t("assets.invest.expectedReturn")}</span>
-                    <span className="text-[#00D4AA] font-semibold">{asset.apy_12m.toFixed(1)}%</span>
+                    <span className="text-[#00D4AA] font-semibold">
+                      <AnimatedNumber 
+                        value={asset.apy_12m} 
+                        format="percentage" 
+                        duration={1200}
+                        className="text-[#00D4AA]"
+                      />
+                    </span>
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-white/60">{t("assets.invest.tokenPrice")}</span>
-                    <span className="text-[#00D4AA] font-semibold">${asset.current_price.toFixed(2)}</span>
+                    <span className="text-[#00D4AA] font-semibold">
+                      <AnimatedNumber 
+                        value={asset.current_price} 
+                        format="usd" 
+                        duration={1200}
+                        className="text-[#00D4AA]"
+                      />
+                    </span>
                   </div>
                 </div>
 

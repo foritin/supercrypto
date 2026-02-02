@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 
 interface AnimatedNumberProps {
   value: number | string;
-  format?: 'currency' | 'percentage' | 'number';
+  format?: 'currency' | 'percentage' | 'number' | 'usd' | 'usd-short';
   duration?: number;
   className?: string;
   prefix?: string;
@@ -68,10 +68,25 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = React.memo(function
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         }).format(val);
+      case 'usd':
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(val);
+      case 'usd-short':
+        // 缩写格式: $10.00M, $500K
+        if (val >= 1000000) {
+          return `$${(val / 1000000).toFixed(2)}M`;
+        } else if (val >= 1000) {
+          return `$${(val / 1000).toFixed(0)}K`;
+        }
+        return `$${val.toFixed(2)}`;
       case 'percentage':
         return `${val.toFixed(1)}%`;
       case 'number':
-        return val.toLocaleString('zh-CN', {
+        return val.toLocaleString('en-US', {
           minimumFractionDigits: 0,
           maximumFractionDigits: val < 1 ? 4 : 2
         });
