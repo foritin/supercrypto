@@ -215,6 +215,13 @@ const assets = {
       verified: "Verified",
       insured: "Insured",
     },
+    // Investor stats
+    investorStats: {
+      participants: "Investors",
+      recent: "Recent",
+      more: "+{{count}} more",
+      joinOthers: "Join {{count}} other investors",
+    },
     // Countdown timer
     countdown: {
       startsIn: "Starts In",

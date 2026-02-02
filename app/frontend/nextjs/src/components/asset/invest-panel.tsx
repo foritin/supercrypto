@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ProgressEnhanced } from "@/components/ui/progress-enhanced";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { CountdownTimer } from "./countdown-timer";
+import { InvestorStats } from "./investor-stats";
 import type { AssetDetail, AssetStatus } from "@/services/asset";
 
 interface InvestPanelProps {
@@ -238,6 +239,16 @@ export function InvestPanel({
           </div>
         </div>
       </div>
+
+      {/* 投资者统计 - 社交证明 */}
+      {asset.investor_count > 0 && (
+        <div className="mb-5">
+          <InvestorStats 
+            investorCount={asset.investor_count}
+            recentInvestors={asset.recent_investors}
+          />
+        </div>
+      )}
 
       {/* 关键数据网格 */}
       <div className="grid grid-cols-2 gap-3 mb-6">

@@ -215,6 +215,13 @@ const assets = {
       verified: "已验证",
       insured: "已投保",
     },
+    // 投资者统计
+    investorStats: {
+      participants: "位投资者",
+      recent: "最近",
+      more: "+{{count}} 位",
+      joinOthers: "已有 {{count}} 位投资者参与",
+    },
     // 倒计时
     countdown: {
       startsIn: "距离开始",
