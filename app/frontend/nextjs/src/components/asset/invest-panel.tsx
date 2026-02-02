@@ -3,7 +3,7 @@
 import { useTranslation } from "react-i18next";
 import { Wallet, TrendingUp, Clock, CheckCircle, PauseCircle, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { ProgressEnhanced } from "@/components/ui/progress-enhanced";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { CountdownTimer } from "./countdown-timer";
 import type { AssetDetail, AssetStatus } from "@/services/asset";
@@ -221,9 +221,15 @@ export function InvestPanel({
           </div>
         </div>
         
-        {/* 进度条 */}
+        {/* 进度条 - 带动态效果 */}
         <div className="relative">
-          <Progress value={progress} indicatorColor="#00D4AA" className="h-3 bg-white/5" />
+          <ProgressEnhanced 
+            value={progress} 
+            indicatorColor="#00D4AA" 
+            className="h-3 bg-white/5"
+            animated={true}
+            pulse={progress >= 90 && progress < 100}
+          />
           {/* 进度百分比标签 */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
             <span className="text-[10px] font-bold text-white/80 bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm">

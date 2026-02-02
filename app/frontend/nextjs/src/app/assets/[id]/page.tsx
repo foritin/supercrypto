@@ -31,6 +31,7 @@ import { SubscriptionModal } from "@/components/subscription/subscription-modal"
 import { MediaGallery } from "@/components/asset/media-gallery";
 import { PropertyHighlights } from "@/components/asset/property-highlights";
 import { InvestPanel } from "@/components/asset/invest-panel";
+import { RiskAndComplianceSection, type RiskLevel } from "@/components/asset/risk-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -152,7 +153,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* 标题栏 */}
-          <div className="flex justify-between items-start mb-6 flex-wrap gap-4">
+          <div className="flex justify-between items-start mb-4 flex-wrap gap-4">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">{asset.location || asset.name}</h1>
               <div className="flex items-center gap-4">
@@ -160,6 +161,11 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                   {ASSET_TYPE_ICONS[asset.asset_type as AssetType]}
                   {t(`assets.type.${asset.asset_type}`)}
                 </span>
+                {/* 风险评级标识 */}
+                <RiskAndComplianceSection 
+                  riskLevel={(asset.risk_level as RiskLevel) || "medium"}
+                  complianceItems={["audited", "legal", "verified"]}
+                />
               </div>
             </div>
             <div
@@ -207,12 +213,12 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="highlights" className="mt-4">
+                <TabsContent value="highlights" className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 uppercase">{t("assets.highlights.title")}</div>
                   <PropertyHighlights asset={asset} />
                 </TabsContent>
 
-                <TabsContent value="investment" className="mt-4">
+                <TabsContent value="investment" className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   {/* 财务数据 */}
                   <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 uppercase">{t("assets.financials.title")}</div>
                   <Card className="bg-white/[0.02] border-white/[0.06]">
@@ -357,7 +363,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                   })()}
                 </TabsContent>
 
-                <TabsContent value="details" className="mt-4">
+                <TabsContent value="details" className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 uppercase">{t("assets.about.title")}</div>
                   <Card className="bg-white/[0.02] border-white/[0.06]">
                     <CardContent className="p-6">
@@ -382,7 +388,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                   )}
                 </TabsContent>
 
-                <TabsContent value="blockchain" className="mt-4">
+                <TabsContent value="blockchain" className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="text-xs font-semibold text-white/50 tracking-wider mb-4 uppercase">{t("assets.blockchain.title")}</div>
                   <Card className="bg-white/[0.02] border-white/[0.06]">
                     <CardContent className="p-6">

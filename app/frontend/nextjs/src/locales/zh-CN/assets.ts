@@ -193,6 +193,28 @@ const assets = {
         available: "可认购",
       },
     },
+    // 风险评级
+    risk: {
+      title: "风险",
+      prefix: "风险",
+      low: "低",
+      lowShort: "低",
+      lowDesc: "收益稳定，波动性较小",
+      medium: "中",
+      mediumShort: "中",
+      mediumDesc: "风险与收益相对平衡",
+      high: "高",
+      highShort: "高",
+      highDesc: "潜在收益较高，但波动性较大",
+    },
+    // 合规认证
+    compliance: {
+      title: "合规认证",
+      audited: "已审计",
+      legal: "法律合规",
+      verified: "已验证",
+      insured: "已投保",
+    },
     // 倒计时
     countdown: {
       startsIn: "距离开始",

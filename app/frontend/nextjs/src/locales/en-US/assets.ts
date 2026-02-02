@@ -193,6 +193,28 @@ const assets = {
         available: "Available",
       },
     },
+    // Risk rating
+    risk: {
+      title: "Risk",
+      prefix: "Risk",
+      low: "Low",
+      lowShort: "Low",
+      lowDesc: "Stable returns with minimal volatility",
+      medium: "Medium",
+      mediumShort: "Medium",
+      mediumDesc: "Balanced risk-return profile",
+      high: "High",
+      highShort: "High",
+      highDesc: "Higher potential returns with increased volatility",
+    },
+    // Compliance
+    compliance: {
+      title: "Compliance",
+      audited: "Audited",
+      legal: "Legal",
+      verified: "Verified",
+      insured: "Insured",
+    },
     // Countdown timer
     countdown: {
       startsIn: "Starts In",
