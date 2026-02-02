@@ -217,10 +217,7 @@ const assets = {
     },
     // Investor stats
     investorStats: {
-      participants: "Investors",
-      recent: "Recent",
-      more: "+{{count}} more",
-      joinOthers: "Join {{count}} other investors",
+      investors: "investors",
     },
     // Countdown timer
     countdown: {

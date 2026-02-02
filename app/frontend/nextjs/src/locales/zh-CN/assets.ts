@@ -217,10 +217,7 @@ const assets = {
     },
     // 投资者统计
     investorStats: {
-      participants: "位投资者",
-      recent: "最近",
-      more: "+{{count}} 位",
-      joinOthers: "已有 {{count}} 位投资者参与",
+      investors: "位投资者",
     },
     // 倒计时
     countdown: {
