@@ -67,8 +67,8 @@ class MinIOService:
     """MinIO 对象存储服务"""
 
     def __init__(self):
-        self._client = None
-        self._bucket = None
+        self._client: "Minio | None" = None  # type: ignore
+        self._bucket: str | None = None
 
     @property
     def bucket(self) -> str:
@@ -238,6 +238,58 @@ class MinIOService:
             return True
         except Exception:
             return False
+
+    async def delete_by_prefix(
+        self,
+        prefix: str,
+        bucket: Optional[str] = None,
+    ) -> int:
+        """
+        按前缀删除文件 (用于覆盖上传时清理旧文件)
+
+        Args:
+            prefix: 对象名称前缀，如 "kyc/0x123.../id_card_front_"
+            bucket: 可选的 bucket 名称
+
+        Returns:
+            int: 删除的文件数量
+        """
+        from minio.deleteobjects import DeleteObject
+
+        target_bucket = bucket or self.bucket
+        deleted_count = 0
+
+        try:
+            # 列出匹配前缀的所有对象
+            objects = self.client.list_objects(
+                bucket_name=target_bucket,
+                prefix=prefix,
+                recursive=False,
+            )
+
+            # 收集要删除的对象
+            delete_objects = [DeleteObject(obj.object_name) for obj in objects]
+
+            if delete_objects:
+                # 批量删除
+                errors = list(
+                    self.client.remove_objects(target_bucket, delete_objects)
+                )
+                deleted_count = len(delete_objects) - len(errors)
+
+                if errors:
+                    for error in errors:
+                        logger.warning(f"Failed to delete {error.name}: {error.message}")
+
+                logger.info(
+                    f"Deleted {deleted_count} files with prefix '{prefix}' from {target_bucket}"
+                )
+
+            return deleted_count
+        except Exception as e:
+            logger.error(f"Failed to delete files by prefix '{prefix}': {e}")
+            # 不抛出异常，允许上传继续
+            return 0
 
 
 # 单例实例

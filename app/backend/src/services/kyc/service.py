@@ -9,11 +9,12 @@ from typing import List, Optional, Tuple
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
 
-from src.models.kyc import AccountKyc
+from src.models.kyc import AccountKyc, AccountKycDocument
 from src.services.kyc.schemas import (
     ContractKycStatus,
     KycApplyRequest,
     KycContractComparisonResponse,
+    KycDocumentResponse,
     KycFullResponse,
     KycReviewRequest,
     KycStatusResponse,
@@ -131,10 +132,10 @@ class KycService:
 
     async def apply(self, data: KycApplyRequest) -> KycFullResponse:
         """
-        发起 KYC 申请 (Story 2.7 增强版)
+        发起 KYC 申请 (多证件版本)
 
         Args:
-            data: 申请数据 (包含身份信息)
+            data: 申请数据 (包含多个证件信息)
 
         Returns:
             KYC 完整响应
@@ -143,10 +144,6 @@ class KycService:
             BusinessException: 如果已经申请过
         """
         address = data.wallet_address.lower()
-
-        # Story 2.7: 证件号哈希处理 (ADR-1)
-        id_number_hash = hashlib.sha256(data.id_number.encode()).hexdigest()
-        id_number_last4 = data.id_number[-4:]
 
         # 检查是否已存在申请
         existing = await AccountKyc.filter(address=address).first()
@@ -159,21 +156,15 @@ class KycService:
             elif existing.status == KycStatus.APPROVED:
                 raise BusinessException(code=400, message="KYC already approved")
             elif existing.status == KycStatus.REJECTED:
-                # 允许重新申请 - 更新所有字段
+                # 允许重新申请 - 更新基本信息
                 existing.status = KycStatus.PENDING
                 existing.submitted_at = datetime.now(timezone.utc)
                 existing.reject_reason = None
                 existing.reviewed_at = None
                 existing.reviewer_address = None
                 existing.country_code = data.country_code
-                # Story 2.7: 更新身份信息
-                existing.id_type = data.id_type
-                existing.id_number_hash = id_number_hash
-                existing.id_number_last4 = id_number_last4
                 existing.full_name = data.full_name
                 existing.date_of_birth = data.date_of_birth
-                existing.id_front_url = data.id_front_url
-                existing.id_back_url = data.id_back_url
                 existing.selfie_url = data.selfie_url
                 # 重置链上同步状态
                 existing.on_chain_sync_status = OnChainSyncStatus.PENDING
@@ -181,7 +172,12 @@ class KycService:
                 existing.on_chain_synced_at = None
                 existing.on_chain_error = None
                 await existing.save()
-                return self._to_full_response(existing)
+
+                # 删除旧的证件记录，创建新的
+                await AccountKycDocument.filter(kyc_id=existing.id).delete()
+                await self._create_documents(existing, data.documents)
+
+                return await self._to_full_response(existing)
 
         # 创建新申请
         kyc = await AccountKyc.create(
@@ -189,19 +185,48 @@ class KycService:
             status=KycStatus.PENDING,
             submitted_at=datetime.now(timezone.utc),
             country_code=data.country_code,
-            # Story 2.7: 新增身份信息字段
-            id_type=data.id_type,
-            id_number_hash=id_number_hash,
-            id_number_last4=id_number_last4,
             full_name=data.full_name,
             date_of_birth=data.date_of_birth,
-            id_front_url=data.id_front_url,
-            id_back_url=data.id_back_url,
             selfie_url=data.selfie_url,
             on_chain_sync_status=OnChainSyncStatus.PENDING,
         )
 
-        return self._to_full_response(kyc)
+        # 创建证件记录
+        await self._create_documents(kyc, data.documents)
+
+        return await self._to_full_response(kyc)
+
+    async def _create_documents(
+        self, kyc: AccountKyc, documents: List
+    ) -> List[AccountKycDocument]:
+        """创建证件记录"""
+        created_docs = []
+        for doc in documents:
+            # 证件号哈希处理 (ADR-1)
+            id_number_hash = hashlib.sha256(doc.id_number.encode()).hexdigest()
+            id_number_last4 = doc.id_number[-4:]
+
+            kyc_doc = await AccountKycDocument.create(
+                kyc=kyc,
+                id_type=doc.id_type,
+                id_number_hash=id_number_hash,
+                id_number_last4=id_number_last4,
+                document_expiry=doc.document_expiry,
+                id_front_url=doc.id_front_url,
+                id_back_url=doc.id_back_url,
+            )
+            created_docs.append(kyc_doc)
+
+            # 向后兼容：将第一个证件信息写入主表
+            if len(created_docs) == 1:
+                kyc.id_type = doc.id_type
+                kyc.id_number_hash = id_number_hash
+                kyc.id_number_last4 = id_number_last4
+                kyc.id_front_url = doc.id_front_url
+                kyc.id_back_url = doc.id_back_url
+                await kyc.save()
+
+        return created_docs
 
     async def get_by_id(self, kyc_id: int) -> Optional[KycFullResponse]:
         """
@@ -218,7 +243,7 @@ class KycService:
         if not kyc:
             return None
 
-        return self._to_full_response(kyc)
+        return await self._to_full_response(kyc)
 
     async def list_kyc(
         self, status: Optional[KycStatus] = None, page: int = 1, page_size: int = 10
@@ -245,7 +270,11 @@ class KycService:
         offset = (page - 1) * page_size
         kycs = await query.order_by("-submitted_at").offset(offset).limit(page_size)
 
-        return ([self._to_full_response(k) for k in kycs], total, total_pages)
+        # 异步获取每个 KYC 的完整响应
+        responses = []
+        for k in kycs:
+            responses.append(await self._to_full_response(k))
+        return (responses, total, total_pages)
 
     async def review(
         self, kyc_id: int, data: KycReviewRequest, reviewer_address: str
@@ -310,7 +339,7 @@ class KycService:
             kyc.on_chain_sync_status = OnChainSyncStatus.NOT_REQUIRED
 
         await kyc.save()
-        return self._to_full_response(kyc)
+        return await self._to_full_response(kyc)
 
     async def retry_sync(self, kyc_id: int) -> KycFullResponse:
         """
@@ -367,7 +396,7 @@ class KycService:
             kyc.on_chain_error = f"Retry failed: {str(e)}"
 
         await kyc.save()
-        return self._to_full_response(kyc)
+        return await self._to_full_response(kyc)
 
     async def quick_approve(self, wallet_address: str) -> KycFullResponse:
         """
@@ -409,7 +438,7 @@ class KycService:
                 on_chain_sync_status=OnChainSyncStatus.SYNCED,
             )
 
-        return self._to_full_response(kyc)
+        return await self._to_full_response(kyc)
 
     async def reset_kyc(self, wallet_address: str) -> bool:
         """
@@ -435,12 +464,26 @@ class KycService:
 
         return deleted > 0
 
-    def _to_full_response(self, kyc: AccountKyc) -> KycFullResponse:
-        """转换为完整响应"""
+    async def _to_full_response(self, kyc: AccountKyc) -> KycFullResponse:
+        """转换为完整响应 (包含多证件信息)"""
+        # 获取关联的证件记录
+        documents = await AccountKycDocument.filter(kyc_id=kyc.id).all()
+        
+        doc_responses = [
+            KycDocumentResponse(
+                id_type=doc.id_type.value if doc.id_type else None,
+                id_number_last4=doc.id_number_last4,
+                document_expiry=doc.document_expiry,
+                has_front=bool(doc.id_front_url),
+                has_back=bool(doc.id_back_url),
+            )
+            for doc in documents
+        ]
+
         return KycFullResponse(
             id=kyc.id,
             wallet_address=kyc.address,
-            environment=self.environment,  # 使用当前环境
+            environment=self.environment,
             status=kyc.status,
             submitted_at=kyc.submitted_at,
             reviewed_at=kyc.reviewed_at,
@@ -451,15 +494,17 @@ class KycService:
             is_accredited=kyc.is_accredited,
             created_at=kyc.created_at,
             updated_at=kyc.updated_at,
-            # Story 2.7: 新增身份信息字段
-            id_type=kyc.id_type.value if kyc.id_type else None,
-            id_number_last4=kyc.id_number_last4,
+            # 基本信息
             full_name=kyc.full_name,
             date_of_birth=kyc.date_of_birth,
-            # 不直接返回 MinIO 路径，只返回是否上传
+            # 多证件信息
+            documents=doc_responses,
+            has_selfie=bool(kyc.selfie_url),
+            # 向后兼容字段 (使用主表中的旧字段)
+            id_type=kyc.id_type.value if kyc.id_type else None,
+            id_number_last4=kyc.id_number_last4,
             has_id_front=bool(kyc.id_front_url),
             has_id_back=bool(kyc.id_back_url),
-            has_selfie=bool(kyc.selfie_url),
             # 链上同步状态
             on_chain_sync_status=kyc.on_chain_sync_status,
             on_chain_tx_hash=kyc.on_chain_tx_hash,

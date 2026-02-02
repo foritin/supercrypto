@@ -29,8 +29,16 @@ export const kycSchema = z.object({
   documentNumber: z.string({ message: 'Document number is required' }).min(5, 'Document number must be at least 5 characters'),
   documentExpiry: z.string({ message: 'Document expiry date is required' }).regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date'),
   
+  // Document Upload Paths (存储到 MinIO 的文件路径，用于持久化)
+  passportFrontPath: z.string().optional(),
+  idCardFrontPath: z.string().optional(),
+  idCardBackPath: z.string().optional(),
+  driversLicenseFrontPath: z.string().optional(),
+  driversLicenseBackPath: z.string().optional(),
+  
   // Liveness Check
   faceImage: z.string().optional(), // base64 image
+  livenessVerified: z.boolean().optional(), // 活体检测是否通过
   
   // Terms
   agreeToTerms: z.boolean({ message: 'You must agree to the terms' }).refine((val) => val === true, 'You must agree to the terms'),

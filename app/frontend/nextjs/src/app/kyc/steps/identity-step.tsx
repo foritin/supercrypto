@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useKycContext } from '@/contexts/kyc-context';
+import { useKycContext, type KycFormData } from '@/contexts/kyc-context';
 import { DocumentUpload } from '../components/document-upload';
 import { CountrySelect } from '../components/country-select';
 import { FormField, FormInput } from '../components/form-field';
@@ -16,6 +16,13 @@ const documentTypes = [
   { value: 'national_id', label: 'National ID', icon: '🆔' },
   { value: 'drivers_license', label: "Driver's License", icon: '🚗' },
 ];
+
+// 文档类型到 formData 字段的映射
+const docPathFields: Record<string, { front: keyof KycFormData; back?: keyof KycFormData }> = {
+  passport: { front: 'passportFrontPath' },
+  national_id: { front: 'idCardFrontPath', back: 'idCardBackPath' },
+  drivers_license: { front: 'driversLicenseFrontPath', back: 'driversLicenseBackPath' },
+};
 
 export function IdentityStep() {
   const { t } = useTranslation();
@@ -31,10 +38,19 @@ export function IdentityStep() {
     lastSaved,
   } = useKycContext();
 
-  const [uploadedFiles, setUploadedFiles] = React.useState<{
-    front?: File;
-    back?: File;
-  }>({});
+  // 本地存储 File 对象（用于预览，不持久化）
+  const [localFiles, setLocalFiles] = React.useState<{
+    passport: { front?: File };
+    national_id: { front?: File; back?: File };
+    drivers_license: { front?: File; back?: File };
+  }>({
+    passport: {},
+    national_id: {},
+    drivers_license: {},
+  });
+
+  // 当前选中的证件类型
+  const currentDocType = formData.documentType;
 
   const handleInputChange = (field: keyof typeof formData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -46,14 +62,154 @@ export function IdentityStep() {
     validateField(field);
   };
 
-  const handleFileUpload = (side: 'front' | 'back', file: File) => {
-    setUploadedFiles((prev) => ({ ...prev, [side]: file }));
+  const handleFileUpload = (side: 'front' | 'back', file: File, filePath: string) => {
+    if (!currentDocType) return;
+    
+    // 存储 File 对象到本地状态（用于预览）
+    setLocalFiles((prev) => ({
+      ...prev,
+      [currentDocType]: {
+        ...prev[currentDocType],
+        [side]: file,
+      },
+    }));
+    
+    // 存储 filePath 到 formData（会持久化到 localStorage）
+    const pathField = side === 'front' 
+      ? docPathFields[currentDocType]?.front 
+      : docPathFields[currentDocType]?.back;
+    
+    if (pathField) {
+      updateFormData({ [pathField]: filePath });
+    }
+  };
+
+  const handleFileRemove = (side: 'front' | 'back') => {
+    if (!currentDocType) return;
+    
+    // 清除本地 File 对象
+    setLocalFiles((prev) => {
+      const updated = { ...prev[currentDocType] };
+      delete (updated as Record<string, unknown>)[side];
+      return {
+        ...prev,
+        [currentDocType]: updated,
+      };
+    });
+    
+    // 清除 formData 中的 filePath
+    const pathField = side === 'front' 
+      ? docPathFields[currentDocType]?.front 
+      : docPathFields[currentDocType]?.back;
+    
+    if (pathField) {
+      updateFormData({ [pathField]: undefined });
+    }
   };
 
   const handleContinue = () => {
     saveDraft();
     nextStep();
   };
+
+  // 检查某种证件类型是否上传完整（基于 formData 中的 path）
+  const isDocTypeComplete = (docType: 'passport' | 'national_id' | 'drivers_license'): boolean => {
+    const fields = docPathFields[docType];
+    if (!fields) return false;
+    
+    const frontPath = formData[fields.front] as string | undefined;
+    if (docType === 'passport') {
+      return !!frontPath;
+    }
+    const backPath = fields.back ? formData[fields.back] as string | undefined : undefined;
+    return !!(frontPath && backPath);
+  };
+
+  // 获取某个证件类型某一面的上传路径
+  const getUploadedPath = (docType: string, side: 'front' | 'back'): string | undefined => {
+    const fields = docPathFields[docType];
+    if (!fields) return undefined;
+    const pathField = side === 'front' ? fields.front : fields.back;
+    return pathField ? formData[pathField] as string | undefined : undefined;
+  };
+
+  // 检查是否有任意一种证件类型上传完整（三选一）
+  const hasAnyCompleteDocument = React.useMemo(() => {
+    return isDocTypeComplete('passport') || 
+           isDocTypeComplete('national_id') || 
+           isDocTypeComplete('drivers_license');
+  }, [formData]);
+
+  // 统计已完成的证件类型数量
+  const completedDocCount = React.useMemo(() => {
+    let count = 0;
+    if (isDocTypeComplete('passport')) count++;
+    if (isDocTypeComplete('national_id')) count++;
+    if (isDocTypeComplete('drivers_license')) count++;
+    return count;
+  }, [formData]);
+
+  // 当前选中证件类型的上传状态提示
+  const currentDocUploadHint = React.useMemo(() => {
+    if (!currentDocType) return null;
+    
+    const isComplete = isDocTypeComplete(currentDocType);
+    
+    if (isComplete) {
+      return {
+        type: 'success' as const,
+        message: t('kyc.identity.uploadComplete', 'Document upload complete'),
+      };
+    }
+    
+    const frontPath = getUploadedPath(currentDocType, 'front');
+    const backPath = getUploadedPath(currentDocType, 'back');
+    
+    if (currentDocType === 'passport') {
+      if (!frontPath) {
+        return {
+          type: 'warning' as const,
+          message: t('kyc.identity.errors.passportRequired', 'Please upload your passport data page'),
+        };
+      }
+    } else {
+      if (!frontPath && !backPath) {
+        return {
+          type: 'warning' as const,
+          message: t('kyc.identity.errors.bothSidesRequired', 'Please upload both front and back of your document'),
+        };
+      }
+      if (!frontPath) {
+        return {
+          type: 'warning' as const,
+          message: t('kyc.identity.errors.frontRequired', 'Please upload the front of your document'),
+        };
+      }
+      if (!backPath) {
+        return {
+          type: 'warning' as const,
+          message: t('kyc.identity.errors.backRequired', 'Please upload the back of your document'),
+        };
+      }
+    }
+    return null;
+  }, [currentDocType, formData, t]);
+
+  // Continue 按钮是否禁用
+  const isContinueDisabled = React.useMemo(() => {
+    // 有表单验证错误
+    if (Object.keys(errors).length > 0) return true;
+    
+    // 必须至少有一种证件类型上传完整
+    if (!hasAnyCompleteDocument) return true;
+    
+    return false;
+  }, [errors, hasAnyCompleteDocument]);
+
+  // 获取当前证件类型的本地 File 对象和已上传路径
+  const currentLocalFiles = currentDocType ? localFiles[currentDocType] : {};
+  const currentFrontPath = currentDocType ? getUploadedPath(currentDocType, 'front') : undefined;
+  const currentBackPath = currentDocType ? getUploadedPath(currentDocType, 'back') : undefined;
 
   return (
     <div className="space-y-6">
@@ -262,23 +418,80 @@ export function IdentityStep() {
 
             {/* Document Upload */}
             {formData.documentType && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DocumentUpload
-                  side="front"
-                  documentType={formData.documentType}
-                  onUpload={(file) => handleFileUpload('front', file)}
-                  uploadedFile={uploadedFiles.front}
-                />
-                {formData.documentType !== 'passport' && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <DocumentUpload
-                    side="back"
+                    side="front"
                     documentType={formData.documentType}
-                    onUpload={(file) => handleFileUpload('back', file)}
-                    uploadedFile={uploadedFiles.back}
+                    onUpload={(file, filePath) => handleFileUpload('front', file, filePath)}
+                    onRemove={() => handleFileRemove('front')}
+                    uploadedFile={(currentLocalFiles as { front?: File }).front}
+                    uploadedPath={currentFrontPath}
                   />
+                  {formData.documentType !== 'passport' && (
+                    <DocumentUpload
+                      side="back"
+                      documentType={formData.documentType}
+                      onUpload={(file, filePath) => handleFileUpload('back', file, filePath)}
+                      onRemove={() => handleFileRemove('back')}
+                      uploadedFile={(currentLocalFiles as { front?: File; back?: File }).back}
+                      uploadedPath={currentBackPath}
+                    />
+                  )}
+                </div>
+                
+                {/* 当前证件类型上传状态提示 */}
+                {currentDocUploadHint && (
+                  <p className={`text-sm flex items-center gap-1.5 ${
+                    currentDocUploadHint.type === 'success' ? 'text-[#00D4AA]' : 'text-amber-400'
+                  }`}>
+                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                      currentDocUploadHint.type === 'success' ? 'bg-[#00D4AA]' : 'bg-amber-400'
+                    }`} />
+                    {currentDocUploadHint.message}
+                  </p>
                 )}
               </div>
             )}
+
+            {/* 多证件上传提示 */}
+            <div className="mt-4 p-4 rounded-lg bg-white/5 border border-white/10">
+              <p className="text-sm text-white/60">
+                <span className="text-[#00D4AA] font-medium">💡 {t('kyc.identity.uploadTip.title', 'Tip')}:</span>{' '}
+                {t('kyc.identity.uploadTip.description', 'You only need to upload one type of document to continue. However, uploading multiple document types can speed up the verification process.')}
+              </p>
+              
+              {/* 已完成的证件类型统计 */}
+              {completedDocCount > 0 && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-xs text-white/40">
+                    {t('kyc.identity.uploadStatus', 'Upload status')}:
+                  </span>
+                  <div className="flex gap-2">
+                    {(['passport', 'national_id', 'drivers_license'] as const).map((docType) => {
+                      const isComplete = isDocTypeComplete(docType);
+                      const labels = {
+                        passport: t('kyc.idTypes.passport', 'Passport'),
+                        national_id: t('kyc.idTypes.idCard', 'ID Card'),
+                        drivers_license: t('kyc.idTypes.driverLicense', 'Driver License'),
+                      };
+                      return (
+                        <span
+                          key={docType}
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            isComplete 
+                              ? 'bg-[#00D4AA]/20 text-[#00D4AA]' 
+                              : 'bg-white/5 text-white/30'
+                          }`}
+                        >
+                          {isComplete ? '✓ ' : ''}{labels[docType]}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </Card>
@@ -299,6 +512,7 @@ export function IdentityStep() {
           variant="primary"
           size="lg"
           onClick={handleContinue}
+          disabled={isContinueDisabled}
           className="gap-2"
         >
           {t('common.continue', 'Continue')}

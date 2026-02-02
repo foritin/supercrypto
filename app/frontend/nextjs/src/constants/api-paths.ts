@@ -77,6 +77,7 @@ export const USER_PATHS = {
 
   // KYC
   KYC_UPLOAD: '/user/kyc/upload-document',
+  KYC_DOCUMENT_URL: '/user/kyc/document-url',
   KYC_APPLY: '/user/kyc/apply',
 } as const
 

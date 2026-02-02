@@ -1,104 +1,236 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   DollarSign,
-  Clock,
-  CheckCircle,
   TrendingUp,
+  Clock,
   History,
   Download,
   ExternalLink,
   Info,
   Copy,
-} from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { useAccount } from "wagmi";
-import {
-  subscriptionService,
-  type SubscriptionItem,
-  type UserStats,
-} from "@/services/subscription";
-import {
-  transactionService,
-  type TransactionRecord,
-  TRANSACTION_TYPE_NAMES,
-  TRANSACTION_TYPE_COLORS,
-  TRANSACTION_STATUS_COLORS,
-  getExplorerUrl,
-} from "@/services/transaction";
-import { RequireWallet } from "@/components/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+  Wallet,
+  PieChart,
+  ArrowUpRight,
+  ChevronRight,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useAccount } from 'wagmi';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  DataTable,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/data-table";
-import { ColumnDef } from "@tanstack/react-table";
-import { notification } from "@/lib/notification";
-import { getErrorMessage } from "@/utils/error-handler";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/tooltip';
+import { DataTable } from '@/components/ui/data-table';
+import { ColumnDef } from '@tanstack/react-table';
+import { cn } from '@/lib/utils';
+import { RequireWallet } from '@/components/auth';
 
-// 统计卡片组件
+// Mock data - in production, this comes from API
+interface SubscriptionItem {
+  id: string;
+  asset_name: string;
+  asset_symbol: string;
+  amount: number;
+  apy: number;
+  lock_period: number;
+  days_remaining: number;
+  status: 'active' | 'matured' | 'redeemed';
+  is_matured: boolean;
+  expected_interest: number;
+  total_return: number;
+  start_date?: string;
+  end_date?: string;
+  token_type: string;
+}
+
+interface UserStats {
+  total_invested: number;
+  total_value: number;
+  total_earnings: number;
+  active_subscriptions: number;
+}
+
+interface TransactionRecord {
+  id: string;
+  created_at: string;
+  tx_type: string;
+  amount: string;
+  status: string;
+  tx_hash: string;
+  network?: string;
+}
+
+const TRANSACTION_TYPE_NAMES: Record<string, string> = {
+  subscribe: 'Subscribe',
+  redeem: 'Redeem',
+  stake: 'Stake',
+  unstake: 'Unstake',
+  claim: 'Claim',
+};
+
+// Mock data
+const mockSubscriptions: SubscriptionItem[] = [
+  {
+    id: '1',
+    asset_name: 'Premium Real Estate Fund I',
+    asset_symbol: 'PREFI',
+    amount: 50000,
+    apy: 12.5,
+    lock_period: 12,
+    days_remaining: 180,
+    status: 'active',
+    is_matured: false,
+    expected_interest: 6250,
+    total_return: 56250,
+    start_date: '2024-01-15',
+    end_date: '2025-01-15',
+    token_type: 'SuperRWA',
+  },
+  {
+    id: '2',
+    asset_name: 'Gold Reserve Token',
+    asset_symbol: 'GRT',
+    amount: 25000,
+    apy: 8.2,
+    lock_period: 6,
+    days_remaining: 0,
+    status: 'matured',
+    is_matured: true,
+    expected_interest: 1025,
+    total_return: 26025,
+    start_date: '2023-09-01',
+    end_date: '2024-03-01',
+    token_type: 'SuperRWA',
+  },
+];
+
+const mockUserStats: UserStats = {
+  total_invested: 75000,
+  total_value: 82275,
+  total_earnings: 7275,
+  active_subscriptions: 1,
+};
+
+const mockTransactions: TransactionRecord[] = [
+  {
+    id: '1',
+    created_at: '2024-01-15T10:30:00Z',
+    tx_type: 'subscribe',
+    amount: '50000',
+    status: 'confirmed',
+    tx_hash: '0x1234567890abcdef1234567890abcdef12345678',
+    network: 'ethereum',
+  },
+  {
+    id: '2',
+    created_at: '2023-09-01T14:20:00Z',
+    tx_type: 'subscribe',
+    amount: '25000',
+    status: 'confirmed',
+    tx_hash: '0xabcdef1234567890abcdef1234567890abcdef12',
+    network: 'ethereum',
+  },
+];
+
+// Stat Card Component with Glassmorphism
 interface StatCardProps {
   title: string;
   value: number;
   precision?: number;
   prefix?: React.ReactNode;
-  valueClassName?: string;
+  icon: React.ReactNode;
+  trend?: number;
+  color: 'primary' | 'success' | 'warning' | 'info';
 }
 
-function StatCard({ title, value, precision = 2, prefix, valueClassName }: StatCardProps) {
+const colorMap = {
+  primary: 'from-[#00D4AA]/20 to-[#00D4AA]/5 border-[#00D4AA]/30',
+  success: 'from-green-500/20 to-green-500/5 border-green-500/30',
+  warning: 'from-yellow-500/20 to-yellow-500/5 border-yellow-500/30',
+  info: 'from-blue-500/20 to-blue-500/5 border-blue-500/30',
+};
+
+const iconColorMap = {
+  primary: 'text-[#00D4AA]',
+  success: 'text-green-400',
+  warning: 'text-yellow-400',
+  info: 'text-blue-400',
+};
+
+function StatCard({ title, value, precision = 2, prefix, icon, trend, color }: StatCardProps) {
   return (
-    <Card>
-      <CardContent className="p-6">
-        <p className="text-sm text-muted-foreground mb-2">{title}</p>
-        <div className={cn("text-2xl font-bold flex items-center gap-2", valueClassName)}>
-          {prefix}
-          <span>
-            {typeof value === 'number' 
-              ? value.toLocaleString(undefined, { minimumFractionDigits: precision, maximumFractionDigits: precision })
-              : value}
+    <Card className={cn(
+      'glass border overflow-hidden relative group',
+      colorMap[color]
+    )}>
+      <div className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className={cn('p-3 rounded-xl bg-white/5', iconColorMap[color])}>
+            {icon}
+          </div>
+          {trend !== undefined && (
+            <div className={cn(
+              'flex items-center gap-1 text-sm font-medium',
+              trend >= 0 ? 'text-green-400' : 'text-red-400'
+            )}>
+              <ArrowUpRight className={cn('h-4 w-4', trend < 0 && 'rotate-90')} />
+              {Math.abs(trend)}%
+            </div>
+          )}
+        </div>
+        
+        <p className="text-white/60 text-sm mb-1">{title}</p>
+        <div className="flex items-baseline gap-1">
+          {prefix && <span className={cn('text-lg font-medium', iconColorMap[color])}>{prefix}</span>}
+          <span className="text-2xl font-bold text-white">
+            {value.toLocaleString(undefined, { 
+              minimumFractionDigits: precision, 
+              maximumFractionDigits: precision 
+            })}
           </span>
         </div>
-      </CardContent>
+      </div>
+      
+      {/* Gradient overlay */}
+      <div className={cn(
+        'absolute inset-0 bg-gradient-to-br opacity-50 -z-10',
+        colorMap[color].split(' ')[0],
+        colorMap[color].split(' ')[1]
+      )} />
     </Card>
   );
 }
 
-// 空状态组件
-function EmptyState({ message }: { message: string }) {
+// Empty State Component
+function EmptyState({ message, icon }: { message: string; icon?: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+    <div className="flex flex-col items-center justify-center py-16 text-white/40">
+      <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+        {icon || <PieChart className="h-8 w-8" />}
+      </div>
       <span>{message}</span>
     </div>
   );
@@ -107,337 +239,206 @@ function EmptyState({ message }: { message: string }) {
 export default function PortfolioPage() {
   const { t } = useTranslation();
   const { address, isConnected } = useAccount();
-
-  // 客户端挂载状态 - 用于避免 hydration 不匹配
   const [mounted, setMounted] = useState(false);
 
-  // 认购数据
-  const [subscriptions, setSubscriptions] = useState<SubscriptionItem[]>([]);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [isLoadingSubscriptions, setIsLoadingSubscriptions] = useState(false);
-
-  // 交易历史数据
-  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
-  const [txPagination, setTxPagination] = useState({
-    total: 0,
-    page: 1,
-    pageSize: 10,
-  });
-  const [isLoadingTx, setIsLoadingTx] = useState(false);
-  const [txTypeFilter, setTxTypeFilter] = useState<string | undefined>();
-
-  // 详情弹窗
-  const [selectedSubscription, setSelectedSubscription] =
-    useState<SubscriptionItem | null>(null);
+  // Data states
+  const [subscriptions] = useState<SubscriptionItem[]>(mockSubscriptions);
+  const [userStats] = useState<UserStats>(mockUserStats);
+  const [transactions] = useState<TransactionRecord[]>(mockTransactions);
+  const [isLoading] = useState(false);
+  
+  // Modal states
+  const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionItem | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
-  // 赎回状态
-  const [isRedeeming, setIsRedeeming] = useState(false);
-
-  // 确保客户端挂载后再渲染依赖浏览器状态的内容
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 获取用户订阅记录
-  const fetchSubscriptions = useCallback(async () => {
-    if (!isConnected || !address) return;
-
-    setIsLoadingSubscriptions(true);
-    try {
-      const [result, stats] = await Promise.all([
-        subscriptionService.getSubscriptions({ page: 1, page_size: 50 }),
-        subscriptionService.getUserStats(),
-      ]);
-      // 添加空值检查
-      if (result && result.items) {
-        setSubscriptions(result.items);
-      } else {
-        setSubscriptions([]);
-      }
-      setUserStats(stats || null);
-    } catch (err) {
-      console.error("Failed to fetch subscriptions:", err);
-      setSubscriptions([]);
-      setUserStats(null);
-    } finally {
-      setIsLoadingSubscriptions(false);
-    }
-  }, [isConnected, address]);
-
-  // 获取交易历史
-  const fetchTransactions = useCallback(
-    async (page: number = 1) => {
-      if (!isConnected || !address) return;
-
-      setIsLoadingTx(true);
-      try {
-        const result = await transactionService.getUserTransactions(
-          page,
-          txPagination.pageSize
-        );
-        // 添加空值检查，防止 API 返回 undefined 或结构不符
-        if (result && result.items) {
-          setTransactions(result.items);
-          setTxPagination((prev) => ({
-            ...prev,
-            total: result.total || 0,
-            page: result.page || 1,
-          }));
-        } else {
-          // API 未返回预期数据，设置空数组
-          setTransactions([]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch transactions:", err);
-        // 发生错误时设置空数组，避免 UI 崩溃
-        setTransactions([]);
-      } finally {
-        setIsLoadingTx(false);
-      }
-    },
-    [isConnected, address, txPagination.pageSize]
-  );
-
-  useEffect(() => {
-    fetchSubscriptions();
-    fetchTransactions();
-  }, [fetchSubscriptions, fetchTransactions]);
-
-  // 查看认购详情
   const handleViewDetail = useCallback((subscription: SubscriptionItem) => {
     setSelectedSubscription(subscription);
     setDetailModalOpen(true);
   }, []);
 
-  // 赎回认购
-  const handleRedeem = useCallback(async () => {
-    if (!selectedSubscription) return;
-
-    setIsRedeeming(true);
-    try {
-      // TODO: 实际的链上赎回交易
-      const mockTxHash = `0x${Date.now().toString(16)}...`;
-      await subscriptionService.redeemSubscription(
-        selectedSubscription.id,
-        mockTxHash
-      );
-      notification.success(t("portfolio.redeemSuccess"));
-      setDetailModalOpen(false);
-      fetchSubscriptions();
-    } catch (err) {
-      notification.error(getErrorMessage(err));
-    } finally {
-      setIsRedeeming(false);
-    }
-  }, [selectedSubscription, t, fetchSubscriptions]);
-
-  // 导出交易记录
-  const handleExport = useCallback(async () => {
-    try {
-      notification.loading(t("portfolio.exporting"));
-      // TODO: 实现导出功能
-      notification.success(t("portfolio.exportSuccess"));
-    } catch {
-      notification.error(t("portfolio.exportFailed"));
-    }
-  }, [t]);
-
-  // 复制文本到剪贴板
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
-    notification.success("已复制到剪贴板");
+    // Could add toast notification here
   }, []);
 
-  // 认购表格列定义
+  // Subscription table columns
   const subscriptionColumns: ColumnDef<SubscriptionItem>[] = useMemo(
     () => [
       {
-        accessorKey: "asset_name",
-        header: t("portfolio.table.asset"),
+        accessorKey: 'asset_name',
+        header: t('portfolio.table.asset'),
         cell: ({ row }) => (
-          <div className="flex flex-col gap-0.5">
-            <span className="font-semibold">{row.original.asset_name}</span>
-            <span className="text-xs text-muted-foreground">
-              {row.original.asset_symbol}
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#00D4AA]/20 to-[#00D4AA]/5 flex items-center justify-center">
+              <span className="text-[#00D4AA] font-bold text-sm">
+                {row.original.asset_symbol.slice(0, 2)}
+              </span>
+            </div>
+            <div>
+              <span className="font-semibold text-white block">{row.original.asset_name}</span>
+              <span className="text-xs text-white/50">{row.original.asset_symbol}</span>
+            </div>
           </div>
         ),
       },
       {
-        accessorKey: "amount",
-        header: t("portfolio.table.amount"),
+        accessorKey: 'amount',
+        header: t('portfolio.table.amount'),
         cell: ({ row }) => (
-          <span className="font-semibold text-primary">
+          <span className="font-semibold text-[#00D4AA]">
             ${row.original.amount.toLocaleString()}
           </span>
         ),
       },
       {
-        accessorKey: "apy",
-        header: t("portfolio.table.apy"),
+        accessorKey: 'apy',
+        header: t('portfolio.table.apy'),
         cell: ({ row }) => (
-          <Badge variant="secondary" className="bg-green-500/20 text-green-400">
+          <Badge className="bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30">
             {row.original.apy}% APY
           </Badge>
         ),
       },
       {
-        accessorKey: "lock_period",
-        header: t("portfolio.table.period"),
+        accessorKey: 'lock_period',
+        header: t('portfolio.table.period'),
         cell: ({ row }) => {
           const period = row.original.lock_period;
           const daysRemaining = row.original.days_remaining;
-          const progressPercent = Math.max(
-            0,
-            100 - (daysRemaining / (period * 30)) * 100
-          );
+          const progressPercent = Math.max(0, 100 - (daysRemaining / (period * 30)) * 100);
           return (
             <div className="flex flex-col gap-1 min-w-[120px]">
-              <span>
-                {period} {t("common.months")}
-              </span>
-              <Progress value={progressPercent} indicatorColor="#00D4AA" className="h-1.5" />
-              <span className="text-xs text-muted-foreground">
-                {daysRemaining > 0
-                  ? `${daysRemaining} ${t("common.daysLeft")}`
-                  : t("portfolio.matured")}
+              <span className="text-white/70">{period} months</span>
+              <Progress value={progressPercent} className="h-1" />
+              <span className="text-xs text-white/50">
+                {daysRemaining > 0 ? `${daysRemaining} days left` : 'Matured'}
               </span>
             </div>
           );
         },
       },
       {
-        accessorKey: "status",
-        header: t("portfolio.table.status"),
+        accessorKey: 'status',
+        header: t('portfolio.table.status'),
         cell: ({ row }) => {
           const status = row.original.status;
-          const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-            active: "secondary",
-            matured: "default",
-            redeemed: "outline",
+          const variants: Record<string, string> = {
+            active: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+            matured: 'bg-green-500/20 text-green-400 border-green-500/30',
+            redeemed: 'bg-white/10 text-white/50 border-white/20',
           };
           return (
-            <Badge variant={variants[status] || "outline"}>
-              {t(`portfolio.status.${status}`)}
+            <Badge variant="outline" className={variants[status] || variants.redeemed}>
+              {status.charAt(0).toUpperCase() + status.slice(1)}
             </Badge>
           );
         },
       },
       {
-        id: "actions",
-        header: t("portfolio.table.actions"),
+        id: 'actions',
+        header: '',
         cell: ({ row }) => (
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleViewDetail(row.original)}
-            >
-              {t("common.details")}
-            </Button>
-            {row.original.is_matured && row.original.status !== "redeemed" && (
-              <Button
-                size="sm"
-                onClick={() => handleViewDetail(row.original)}
-              >
-                {t("portfolio.redeem")}
-              </Button>
-            )}
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleViewDetail(row.original)}
+            className="text-white/60 hover:text-[#00D4AA] hover:bg-[#00D4AA]/10"
+          >
+            Details
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
         ),
       },
     ],
     [t, handleViewDetail]
   );
 
-  // 交易历史表格列定义
+  // Transaction table columns
   const transactionColumns: ColumnDef<TransactionRecord>[] = useMemo(
     () => [
       {
-        accessorKey: "created_at",
-        header: t("portfolio.txTable.time"),
-        cell: ({ row }) => new Date(row.original.created_at).toLocaleString(),
+        accessorKey: 'created_at',
+        header: t('portfolio.txTable.time'),
+        cell: ({ row }) => (
+          <span className="text-white/70">
+            {new Date(row.original.created_at).toLocaleDateString()}
+          </span>
+        ),
       },
       {
-        accessorKey: "tx_type",
-        header: t("portfolio.txTable.type"),
+        accessorKey: 'tx_type',
+        header: t('portfolio.txTable.type'),
         cell: ({ row }) => {
           const type = row.original.tx_type;
           const colorMap: Record<string, string> = {
-            subscribe: "bg-blue-500/20 text-blue-400",
-            redeem: "bg-green-500/20 text-green-400",
-            stake: "bg-purple-500/20 text-purple-400",
-            unstake: "bg-orange-500/20 text-orange-400",
-            claim: "bg-yellow-500/20 text-yellow-400",
+            subscribe: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+            redeem: 'bg-green-500/20 text-green-400 border-green-500/30',
+            stake: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+            unstake: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+            claim: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
           };
           return (
-            <Badge className={colorMap[type] || "bg-gray-500/20 text-gray-400"}>
-              {TRANSACTION_TYPE_NAMES[type as keyof typeof TRANSACTION_TYPE_NAMES] || type}
+            <Badge variant="outline" className={colorMap[type] || colorMap.subscribe}>
+              {TRANSACTION_TYPE_NAMES[type] || type}
             </Badge>
           );
         },
       },
       {
-        accessorKey: "amount",
-        header: t("portfolio.txTable.amount"),
-        cell: ({ row }) => `${parseFloat(row.original.amount).toLocaleString()}`,
+        accessorKey: 'amount',
+        header: t('portfolio.txTable.amount'),
+        cell: ({ row }) => (
+          <span className="text-white font-medium">
+            ${parseFloat(row.original.amount).toLocaleString()}
+          </span>
+        ),
       },
       {
-        accessorKey: "status",
-        header: t("portfolio.txTable.status"),
+        accessorKey: 'status',
+        header: t('portfolio.txTable.status'),
         cell: ({ row }) => {
           const status = row.original.status;
           const colorMap: Record<string, string> = {
-            pending: "bg-yellow-500/20 text-yellow-400",
-            confirmed: "bg-green-500/20 text-green-400",
-            failed: "bg-red-500/20 text-red-400",
+            pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+            confirmed: 'bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30',
+            failed: 'bg-red-500/20 text-red-400 border-red-500/30',
           };
           return (
-            <Badge className={colorMap[status] || "bg-gray-500/20 text-gray-400"}>
+            <Badge variant="outline" className={colorMap[status] || colorMap.pending}>
               {status}
             </Badge>
           );
         },
       },
       {
-        accessorKey: "tx_hash",
-        header: t("portfolio.txTable.txHash"),
+        accessorKey: 'tx_hash',
+        header: t('portfolio.txTable.txHash'),
         cell: ({ row }) => {
           const hash = row.original.tx_hash;
-          const explorerUrl = getExplorerUrl(hash, row.original.network);
           return (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs">
-                      {hash.slice(0, 10)}...{hash.slice(-6)}
+                    <span className="font-mono text-xs text-white/50">
+                      {hash.slice(0, 6)}...{hash.slice(-4)}
                     </span>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="h-6 w-6 text-white/40 hover:text-[#00D4AA]"
                       onClick={() => copyToClipboard(hash)}
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
-                    {explorerUrl && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        asChild
-                      >
-                        <a href={explorerUrl} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </Button>
-                    )}
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>{hash}</p>
+                <TooltipContent className="glass border-white/10">
+                  <p className="font-mono text-xs">{hash}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -448,13 +449,17 @@ export default function PortfolioPage() {
     [t, copyToClipboard]
   );
 
-  // 服务端渲染或客户端未挂载时显示加载状态，避免 hydration 不匹配
   if (!mounted) {
     return (
-      <div className="max-w-[1200px] mx-auto px-6 py-16 flex justify-center items-center min-h-[calc(100vh-200px)]">
-        <div className="flex flex-col items-center gap-4">
-          <Skeleton className="h-8 w-8 rounded-full" />
-          <Skeleton className="h-4 w-24" />
+      <div className="min-h-screen bg-[#0A0F0D] pt-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <Skeleton className="h-8 w-48 mb-8" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full" />
+            ))}
+          </div>
+          <Skeleton className="h-96 w-full" />
         </div>
       </div>
     );
@@ -462,61 +467,82 @@ export default function PortfolioPage() {
 
   return (
     <RequireWallet>
-      <div className="portfolio-page max-w-[1200px] mx-auto px-6 py-6 relative min-h-[calc(100vh-200px)]">
-        {/* Page Header */}
-        <div className="flex flex-col gap-2 mb-8 fade-in-stagger">
-          <span className="text-primary text-sm font-semibold uppercase tracking-widest">
-            My Investments
-          </span>
-          <h1 className="text-3xl font-bold m-0">{t("portfolio.title")}</h1>
-          <p className="text-muted-foreground">{t("portfolio.subtitle")}</p>
-        </div>
+      <div className="min-h-screen bg-[#0A0F0D] pt-24 pb-16 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Page Header */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00D4AA]/20 to-[#00D4AA]/5 flex items-center justify-center border border-[#00D4AA]/30">
+                <Wallet className="h-5 w-5 text-[#00D4AA]" />
+              </div>
+              <span className="text-[#00D4AA] text-sm font-semibold uppercase tracking-wider">
+                My Portfolio
+              </span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
+              {t('portfolio.title', 'Investment Portfolio')}
+            </h1>
+            <p className="text-white/60 max-w-xl">
+              {t('portfolio.subtitle', 'Track your RWA investments, monitor yields, and manage your assets')}
+            </p>
+          </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title={t("portfolio.stats.totalInvested")}
-            value={userStats?.total_invested || 0}
-            prefix={<DollarSign className="h-5 w-5" />}
-            valueClassName="text-primary"
-          />
-          <StatCard
-            title={t("portfolio.stats.totalValue")}
-            value={userStats?.total_value || 0}
-            prefix={<DollarSign className="h-5 w-5" />}
-            valueClassName="text-yellow-400"
-          />
-          <StatCard
-            title={t("portfolio.stats.totalEarnings")}
-            value={userStats?.total_earnings || 0}
-            prefix={<TrendingUp className="h-5 w-5" />}
-            valueClassName="text-green-400"
-          />
-          <StatCard
-            title={t("portfolio.stats.activeInvestments")}
-            value={userStats?.active_subscriptions || 0}
-            precision={0}
-            prefix={<Clock className="h-5 w-5" />}
-          />
-        </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            <StatCard
+              title="Total Invested"
+              value={userStats?.total_invested || 0}
+              prefix="$"
+              icon={<DollarSign className="h-5 w-5" />}
+              color="primary"
+            />
+            <StatCard
+              title="Current Value"
+              value={userStats?.total_value || 0}
+              prefix="$"
+              icon={<TrendingUp className="h-5 w-5" />}
+              trend={9.7}
+              color="success"
+            />
+            <StatCard
+              title="Total Earnings"
+              value={userStats?.total_earnings || 0}
+              prefix="$"
+              icon={<TrendingUp className="h-5 w-5" />}
+              trend={12.5}
+              color="info"
+            />
+            <StatCard
+              title="Active Investments"
+              value={userStats?.active_subscriptions || 0}
+              precision={0}
+              icon={<Clock className="h-5 w-5" />}
+              color="warning"
+            />
+          </div>
 
-        {/* Main Content Tabs */}
-        <Card>
-          <CardContent className="p-6">
-            <Tabs defaultValue="investments">
-              <TabsList className="mb-4">
-                <TabsTrigger value="investments" className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  {t("portfolio.tabs.investments")}
+          {/* Main Content Tabs */}
+          <Card className="glass border-[#00D4AA]/10">
+            <Tabs defaultValue="investments" className="p-6">
+              <TabsList className="mb-6 bg-white/5 border border-white/10 p-1">
+                <TabsTrigger 
+                  value="investments" 
+                  className="flex items-center gap-2 data-[state=active]:bg-[#00D4AA]/20 data-[state=active]:text-[#00D4AA]"
+                >
+                  <PieChart className="h-4 w-4" />
+                  My Investments
                 </TabsTrigger>
-                <TabsTrigger value="history" className="flex items-center gap-2">
+                <TabsTrigger 
+                  value="history"
+                  className="flex items-center gap-2 data-[state=active]:bg-[#00D4AA]/20 data-[state=active]:text-[#00D4AA]"
+                >
                   <History className="h-4 w-4" />
-                  {t("portfolio.tabs.history")}
+                  Transaction History
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="investments">
-                {isLoadingSubscriptions ? (
+                {isLoading ? (
                   <div className="space-y-4">
                     {[...Array(3)].map((_, i) => (
                       <Skeleton key={i} className="h-16 w-full" />
@@ -526,39 +552,39 @@ export default function PortfolioPage() {
                   <DataTable
                     columns={subscriptionColumns}
                     data={subscriptions}
-                    emptyMessage={t("portfolio.noInvestments")}
                   />
                 ) : (
-                  <EmptyState message={t("portfolio.noInvestments")} />
+                  <EmptyState 
+                    message="No investments yet. Start exploring RWA assets!" 
+                    icon={<PieChart className="h-8 w-8" />}
+                  />
                 )}
               </TabsContent>
 
               <TabsContent value="history">
                 <div className="flex flex-col gap-4">
-                  <div className="flex justify-between items-center">
-                    <Select
-                      value={txTypeFilter}
-                      onValueChange={(value) => setTxTypeFilter(value === "all" ? undefined : value)}
-                    >
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder={t("portfolio.filterByType")} />
+                  <div className="flex justify-between items-center mb-4">
+                    <Select defaultValue="all">
+                      <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-white">
+                        <SelectValue placeholder="Filter by type" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">全部类型</SelectItem>
-                        {Object.entries(TRANSACTION_TYPE_NAMES).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
+                      <SelectContent className="glass border-white/10">
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="subscribe">Subscribe</SelectItem>
+                        <SelectItem value="redeem">Redeem</SelectItem>
+                        <SelectItem value="claim">Claim Rewards</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button variant="outline" onClick={handleExport}>
+                    <Button 
+                      variant="outline" 
+                      className="border-white/10 text-white/70 hover:text-white hover:bg-white/5"
+                    >
                       <Download className="h-4 w-4 mr-2" />
-                      {t("portfolio.export")}
+                      Export
                     </Button>
                   </div>
 
-                  {isLoadingTx ? (
+                  {isLoading ? (
                     <div className="space-y-4">
                       {[...Array(5)].map((_, i) => (
                         <Skeleton key={i} className="h-12 w-full" />
@@ -568,209 +594,115 @@ export default function PortfolioPage() {
                     <DataTable
                       columns={transactionColumns}
                       data={transactions}
-                      pagination={{
-                        pageIndex: txPagination.page - 1,
-                        pageSize: txPagination.pageSize,
-                        pageCount: Math.ceil(txPagination.total / txPagination.pageSize),
-                        onPageChange: (page) => fetchTransactions(page + 1),
-                        onPageSizeChange: (size) => {
-                          setTxPagination((prev) => ({ ...prev, pageSize: size }));
-                        },
-                      }}
-                      emptyMessage={t("portfolio.noTransactions")}
                     />
                   ) : (
-                    <EmptyState message={t("portfolio.noTransactions")} />
+                    <EmptyState 
+                      message="No transactions yet" 
+                      icon={<History className="h-8 w-8" />}
+                    />
                   )}
                 </div>
               </TabsContent>
             </Tabs>
-          </CardContent>
-        </Card>
+          </Card>
+        </div>
 
         {/* Subscription Detail Modal */}
         <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-          <DialogContent className="max-w-[600px]">
+          <DialogContent className="glass border-[#00D4AA]/20 max-w-[500px]">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Info className="h-5 w-5" />
-                {t("portfolio.subscriptionDetail")}
+              <DialogTitle className="flex items-center gap-2 text-white">
+                <Info className="h-5 w-5 text-[#00D4AA]" />
+                Investment Details
               </DialogTitle>
             </DialogHeader>
 
             {selectedSubscription && (
-              <div className="flex flex-col gap-6">
-                {/* 资产信息 */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">{t("portfolio.detail.assetInfo")}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("portfolio.detail.assetName")}
-                      </span>
-                      <span className="font-semibold">{selectedSubscription.asset_name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("portfolio.detail.symbol")}
-                      </span>
-                      <span>{selectedSubscription.asset_symbol}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 投资信息 */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">{t("portfolio.detail.investmentInfo")}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("portfolio.detail.amount")}
-                      </span>
-                      <span className="font-semibold text-primary">
-                        ${selectedSubscription.amount.toLocaleString()}
+              <div className="space-y-4">
+                {/* Asset Info */}
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#00D4AA]/20 to-[#00D4AA]/5 flex items-center justify-center">
+                      <span className="text-[#00D4AA] font-bold">
+                        {selectedSubscription.asset_symbol.slice(0, 2)}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("portfolio.detail.tokenType")}
-                      </span>
-                      <Badge variant="outline">{selectedSubscription.token_type}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("portfolio.detail.lockPeriod")}
-                      </span>
-                      <span>
-                        {selectedSubscription.lock_period} {t("common.months")}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("portfolio.detail.apy")}
-                      </span>
-                      <Badge variant="secondary" className="bg-green-500/20 text-green-400">
-                        {selectedSubscription.apy}%
+                    <div>
+                      <h3 className="font-semibold text-white">{selectedSubscription.asset_name}</h3>
+                      <Badge className="bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30">
+                        {selectedSubscription.apy}% APY
                       </Badge>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
 
-                {/* 收益信息 */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">{t("portfolio.detail.earningsInfo")}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("portfolio.detail.expectedInterest")}
-                      </span>
-                      <span className="text-green-400">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-white/50 mb-1">Invested Amount</p>
+                      <p className="text-[#00D4AA] font-semibold text-lg">
+                        ${selectedSubscription.amount.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-white/50 mb-1">Expected Return</p>
+                      <p className="text-green-400 font-semibold text-lg">
                         +${selectedSubscription.expected_interest.toLocaleString()}
-                      </span>
+                      </p>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("portfolio.detail.totalReturn")}
-                      </span>
-                      <span className="font-semibold text-yellow-400">
-                        ${selectedSubscription.total_return.toLocaleString()}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                {/* 时间信息 */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">{t("portfolio.detail.timeInfo")}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("portfolio.detail.startDate")}
-                      </span>
-                      <span>
-                        {selectedSubscription.start_date
-                          ? new Date(selectedSubscription.start_date).toLocaleDateString()
-                          : "-"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("portfolio.detail.endDate")}
-                      </span>
-                      <span>
-                        {selectedSubscription.end_date
-                          ? new Date(selectedSubscription.end_date).toLocaleDateString()
-                          : "-"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {t("portfolio.detail.daysRemaining")}
-                      </span>
-                      <span>
-                        {selectedSubscription.days_remaining > 0
-                          ? selectedSubscription.days_remaining
-                          : t("portfolio.matured")}
-                      </span>
-                    </div>
-                    <Progress
-                      value={Math.max(
-                        0,
-                        100 -
-                          (selectedSubscription.days_remaining /
-                            (selectedSubscription.lock_period * 30)) *
-                            100
-                      )}
-                      indicatorColor="#00D4AA"
-                      showInfo
-                      format={(percent) =>
-                        selectedSubscription.is_matured ? (
-                          <CheckCircle className="h-4 w-4 text-green-400" />
-                        ) : (
-                          `${Math.round(percent)}%`
-                        )
-                      }
-                    />
-                  </CardContent>
-                </Card>
+                {/* Lock Progress */}
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-white/50">Lock Progress</span>
+                    <span className="text-white">
+                      {selectedSubscription.days_remaining > 0 
+                        ? `${selectedSubscription.days_remaining} days remaining`
+                        : 'Matured'}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={Math.max(0, 100 - (selectedSubscription.days_remaining / (selectedSubscription.lock_period * 30)) * 100)} 
+                    className="h-2"
+                  />
+                  <div className="flex justify-between text-xs text-white/40 mt-2">
+                    <span>{selectedSubscription.start_date}</span>
+                    <span>{selectedSubscription.end_date}</span>
+                  </div>
+                </div>
 
-                {/* 状态 */}
+                {/* Status */}
                 <div className="flex justify-center">
                   <Badge
                     className={cn(
-                      "text-sm px-4 py-1",
-                      selectedSubscription.status === "redeemed"
-                        ? "bg-gray-500/20 text-gray-400"
-                        : selectedSubscription.is_matured
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-blue-500/20 text-blue-400"
+                      'text-sm px-4 py-1',
+                      selectedSubscription.status === 'active'
+                        ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                        : selectedSubscription.status === 'matured'
+                        ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                        : 'bg-white/10 text-white/50 border-white/20'
                     )}
                   >
-                    {t(`portfolio.status.${selectedSubscription.status}`)}
+                    {selectedSubscription.status.charAt(0).toUpperCase() + selectedSubscription.status.slice(1)}
                   </Badge>
                 </div>
               </div>
             )}
 
-            {selectedSubscription?.is_matured &&
-              selectedSubscription?.status !== "redeemed" && (
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setDetailModalOpen(false)}>
-                    {t("common.cancel")}
-                  </Button>
-                  <Button onClick={handleRedeem} disabled={isRedeeming}>
-                    {isRedeeming ? "处理中..." : t("portfolio.redeem")}
-                  </Button>
-                </DialogFooter>
+            <DialogFooter className="gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setDetailModalOpen(false)}
+                className="border-white/10 text-white/70 hover:text-white hover:bg-white/5"
+              >
+                Close
+              </Button>
+              {selectedSubscription?.is_matured && selectedSubscription?.status !== 'redeemed' && (
+                <Button className="bg-[#00D4AA] hover:bg-[#00B896] text-[#0A0F0D]">
+                  Redeem Now
+                </Button>
               )}
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

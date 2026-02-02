@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 interface FormFieldProps {
   label: string;
   required?: boolean;
-  error?: string;
+  error?: string | undefined;
   children: React.ReactNode;
   helperText?: string;
 }
@@ -29,7 +29,7 @@ export function FormField({ label, required, error, children, helperText }: Form
 }
 
 interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  error?: string;
+  error?: string | undefined;
   icon?: React.ReactNode;
 }
 
@@ -86,7 +86,7 @@ export function FormInput({ error, icon, className, type, ...props }: FormInputP
 }
 
 interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  error?: string;
+  error?: string | undefined;
   icon?: React.ReactNode;
   options: { value: string; label: string }[];
 }

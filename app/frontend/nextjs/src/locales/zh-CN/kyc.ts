@@ -43,6 +43,33 @@ const kyc = {
         TW: "台湾",
       },
     },
+    // 身份证件步骤
+    identity: {
+      title: "地址与身份",
+      address: "居住地址",
+      addressLine1: "地址行 1",
+      addressLine2: "地址行 2（可选）",
+      city: "城市",
+      state: "省/州",
+      postalCode: "邮政编码",
+      country: "国家",
+      document: "身份证件",
+      documentType: "证件类型",
+      documentNumber: "证件号码",
+      documentExpiry: "有效期至",
+      uploadComplete: "证件上传完成",
+      uploadStatus: "上传状态",
+      uploadTip: {
+        title: "提示",
+        description: "您只需上传一种证件即可继续。但上传多种证件可以加快审核速度。",
+      },
+      errors: {
+        passportRequired: "请上传护照信息页",
+        bothSidesRequired: "请上传证件正面和背面",
+        frontRequired: "请上传证件正面",
+        backRequired: "请上传证件背面",
+      },
+    },
     wizard: {
       title: "KYC 认证申请",
       description: "请按步骤完成身份认证",
@@ -172,10 +199,22 @@ const kyc = {
       uploading: "上传中...",
       uploadSuccess: "上传成功",
       uploadFailed: "上传失败",
+      error: "上传失败，请重试",
+      fileTooLarge: "文件大小超过 10MB 限制",
+      invalidFormat: "不支持的文件格式，请上传 JPG、PNG 或 PDF",
       remove: "删除",
       preview: "预览",
       retake: "重新拍摄",
       notUploaded: "未上传",
+      supportedFormats: "支持 JPG、PNG、PDF 格式（最大 10MB）",
+      // 证件类型特定标签
+      passportDataPage: "护照信息页",
+      idFront: "证件正面",
+      idBack: "证件背面",
+      licenseFront: "驾照正面",
+      licenseBack: "驾照背面",
+      frontSide: "正面",
+      backSide: "背面",
       // 证件类型特定上传区域
       passport: {
         front: {
@@ -226,7 +265,7 @@ const kyc = {
     photoTips: {
       lighting: "确保光线充足",
       focus: "保持证件清晰对焦",
-      complete: "确保四角完整可见",
+      complete: "确保面部完全可见",
     },
     // 验证错误消息
     errors: {
@@ -247,6 +286,11 @@ const kyc = {
       fileTooLarge: "文件大小超过限制，最大 5MB",
       privacyRequired: "请阅读并同意隐私政策",
       confirmRequired: "请确认信息真实准确",
+      // 文档上传验证
+      passportRequired: "请上传护照信息页",
+      bothSidesRequired: "请上传证件正面和背面",
+      frontRequired: "请上传证件正面",
+      backRequired: "请上传证件背面",
     },
     // 确认页面
     confirmation: {
@@ -271,6 +315,28 @@ const kyc = {
     liveness: {
       title: "自拍验证",
       description: "完成活体检测以验证您的身份",
+      // 两步验证
+      step1Title: "拍照",
+      step2Title: "活体检测",
+      photoTitle: "拍摄照片",
+      photoDesc: "请将脸部置于框内，拍摄清晰的正面照片",
+      livenessTitle: "活体检测",
+      livenessDesc: "请按提示完成以下动作以验证身份",
+      completeTitle: "验证完成",
+      completeDesc: "您已完成所有验证步骤",
+      photoComplete: "照片已拍摄",
+      preparing: "准备中...",
+      someFailed: "部分动作未完成，请重试",
+      allComplete: "验证已完成",
+      allCompleteDesc: "您已成功完成照片拍摄和活体检测",
+      // 动作名称
+      actions: {
+        blink: "请眨眼",
+        openMouth: "请张嘴",
+        turnLeft: "请向左转头",
+        turnRight: "请向右转头",
+        nod: "请点头",
+      },
       startDetection: "开始检测",
       detecting: "检测中...",
       blinkPrompt: "请眨眼",
@@ -285,11 +351,28 @@ const kyc = {
       manualUploadLink: "无法使用摄像头？手动上传",
       cameraPermissionDenied: "摄像头权限被拒绝，请在浏览器设置中允许访问摄像头，或使用手动上传",
       cameraNotSupported: "您的浏览器不支持摄像头功能，请使用手动上传",
+      centerFace: "将脸部置于框内",
+      captured: "照片拍摄成功",
+      cameraDenied: "需要摄像头权限才能进行人脸验证",
+      // 人脸检测状态
+      faceDetection: {
+        loading: "正在加载人脸检测...",
+        noFace: "未检测到人脸",
+        tooFar: "请靠近一些",
+        tooClose: "请后退一些",
+        notInFrame: "请将脸部置于框内",
+        ready: "准备就绪！点击拍照",
+        autoCapture: "{{seconds}} 秒后自动拍照...",
+        capture: "拍照",
+        positionFace: "请将脸部置于框内",
+      },
       tips: {
         title: "拍照提示",
         lighting: "确保光线充足，避免逆光",
         face: "正面面对镜头，保持面部清晰",
         noObstruction: "摘下眼镜、帽子等遮挡物",
+        neutral: "保持自然表情",
+        visible: "确保面部完全可见",
       },
       selfieUploaded: "自拍照已上传",
       // 活体检测组件专用

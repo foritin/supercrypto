@@ -297,7 +297,9 @@ export function Header() {
   // 检查当前路径是否匹配
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
-    if (href.startsWith("/#")) return pathname === "/";
+    // 锚点链接不触发高亮
+    if (href.startsWith("/#")) return false;
+    if (href === "#") return false;
     return pathname.startsWith(href);
   };
 
@@ -339,8 +341,9 @@ export function Header() {
                   <NavigationMenuTrigger
                     className={cn(
                       "flex items-center gap-1",
-                      item.children.some((child) => isActive(child.href)) &&
-                        "text-[#00D4AA]"
+                      item.children.some((child) => 
+                        child.href !== "#" && isActive(child.href)
+                      ) && "text-[#00D4AA]"
                     )}
                   >
                     {item.icon && <item.icon className="w-4 h-4" />}

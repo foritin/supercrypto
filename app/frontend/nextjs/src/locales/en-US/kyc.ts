@@ -43,6 +43,33 @@ const kyc = {
         TW: "Taiwan",
       },
     },
+    // Identity document step
+    identity: {
+      title: "Address & Identity",
+      address: "Residential Address",
+      addressLine1: "Address Line 1",
+      addressLine2: "Address Line 2 (Optional)",
+      city: "City",
+      state: "State/Province",
+      postalCode: "Postal Code",
+      country: "Country",
+      document: "Identity Document",
+      documentType: "Document Type",
+      documentNumber: "Document Number",
+      documentExpiry: "Expiry Date",
+      uploadComplete: "Document upload complete",
+      uploadStatus: "Upload status",
+      uploadTip: {
+        title: "Tip",
+        description: "You only need to upload one type of document to continue. However, uploading multiple document types can speed up the verification process.",
+      },
+      errors: {
+        passportRequired: "Please upload your passport data page",
+        bothSidesRequired: "Please upload both front and back of your document",
+        frontRequired: "Please upload the front of your document",
+        backRequired: "Please upload the back of your document",
+      },
+    },
     wizard: {
       title: "KYC Application",
       description: "Please complete the verification steps",
@@ -172,10 +199,22 @@ const kyc = {
       uploading: "Uploading...",
       uploadSuccess: "Upload successful",
       uploadFailed: "Upload failed",
+      error: "Upload failed, please try again",
+      fileTooLarge: "File size exceeds 10MB limit",
+      invalidFormat: "Invalid file format. Supports: JPG, PNG, PDF",
       remove: "Remove",
       preview: "Preview",
       retake: "Retake",
       notUploaded: "Not uploaded",
+      supportedFormats: "Supports JPG, PNG, PDF (max 10MB)",
+      // Document type specific labels
+      passportDataPage: "Passport Data Page",
+      idFront: "ID Front Side",
+      idBack: "ID Back Side",
+      licenseFront: "License Front",
+      licenseBack: "License Back",
+      frontSide: "Front Side",
+      backSide: "Back Side",
       // ID type specific upload sections
       passport: {
         front: {
@@ -226,7 +265,7 @@ const kyc = {
     photoTips: {
       lighting: "Ensure good lighting",
       focus: "Keep the document in focus",
-      complete: "Ensure all four corners are visible",
+      complete: "Make sure your face is fully visible",
     },
     // Validation error messages
     errors: {
@@ -247,6 +286,11 @@ const kyc = {
       fileTooLarge: "File size exceeds limit, max 5MB",
       privacyRequired: "Please read and agree to the privacy policy",
       confirmRequired: "Please confirm the information is accurate",
+      // Document upload validation
+      passportRequired: "Please upload your passport data page",
+      bothSidesRequired: "Please upload both front and back of your document",
+      frontRequired: "Please upload the front of your document",
+      backRequired: "Please upload the back of your document",
     },
     // Confirmation page
     confirmation: {
@@ -271,6 +315,28 @@ const kyc = {
     liveness: {
       title: "Selfie Verification",
       description: "Complete liveness detection to verify your identity",
+      // Two-step verification
+      step1Title: "Photo",
+      step2Title: "Liveness",
+      photoTitle: "Take Photo",
+      photoDesc: "Position your face in the frame and take a clear front-facing photo",
+      livenessTitle: "Liveness Detection",
+      livenessDesc: "Please complete the following actions to verify your identity",
+      completeTitle: "Verification Complete",
+      completeDesc: "You have completed all verification steps",
+      photoComplete: "Photo captured",
+      preparing: "Preparing...",
+      someFailed: "Some actions were not completed, please retry",
+      allComplete: "Verification Complete",
+      allCompleteDesc: "You have successfully completed photo capture and liveness detection",
+      // Action names
+      actions: {
+        blink: "Please blink",
+        openMouth: "Please open your mouth",
+        turnLeft: "Please turn your head left",
+        turnRight: "Please turn your head right",
+        nod: "Please nod",
+      },
       startDetection: "Start Detection",
       detecting: "Detecting...",
       blinkPrompt: "Please blink",
@@ -285,11 +351,28 @@ const kyc = {
       manualUploadLink: "Can't use camera? Upload manually",
       cameraPermissionDenied: "Camera permission denied. Please allow camera access in browser settings, or upload manually",
       cameraNotSupported: "Your browser does not support camera functionality. Please upload manually",
+      centerFace: "Center your face",
+      captured: "Photo captured successfully",
+      cameraDenied: "Camera access is required for face verification",
+      // Face detection states
+      faceDetection: {
+        loading: "Loading face detection...",
+        noFace: "No face detected",
+        tooFar: "Move closer",
+        tooClose: "Move back",
+        notInFrame: "Center your face in the frame",
+        ready: "Ready! Click to capture",
+        autoCapture: "Auto capture in {{seconds}}s...",
+        capture: "Capture photo",
+        positionFace: "Please position your face in the frame",
+      },
       tips: {
         title: "Photo Tips",
         lighting: "Ensure good lighting, avoid backlighting",
         face: "Face the camera directly, keep your face clear",
         noObstruction: "Remove glasses, hats, or other obstructions",
+        neutral: "Keep a neutral expression",
+        visible: "Make sure your face is fully visible",
       },
       selfieUploaded: "Selfie uploaded",
       // Liveness detector component specific

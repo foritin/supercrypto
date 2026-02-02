@@ -16,12 +16,24 @@ import { PUBLIC_PATHS, USER_PATHS, ADMIN_PATHS, DEV_PATHS } from '@/constants/ap
 // ============================================================================
 
 /**
- * KYC 文档类型
- * - id_front: 证件正面
- * - id_back: 证件背面
- * - selfie: 自拍照
+ * KYC 证件类型
+ * - passport: 护照
+ * - id_card: 身份证
+ * - drivers_license: 驾照
  */
-export type KycDocumentType = 'id_front' | 'id_back' | 'selfie'
+export type KycIdType = 'passport' | 'id_card' | 'drivers_license'
+
+/**
+ * KYC 文档类型 (用于上传)
+ * 格式: {证件类型}_{正面/背面} 或 selfie
+ */
+export type KycDocumentType =
+  | 'passport_front'
+  | 'id_card_front'
+  | 'id_card_back'
+  | 'drivers_license_front'
+  | 'drivers_license_back'
+  | 'selfie'
 
 /**
  * KYC 文件上传响应
@@ -62,25 +74,58 @@ export interface KycStatusResponse {
 export interface KycFullResponse extends KycStatusResponse {
   id: number
   environment: string
-  reviewer_id: number | null
+  reviewer_address: string | null
   external_kyc_id: string | null
   created_at: string
   updated_at: string
+  // 基本信息
+  full_name: string | null
+  date_of_birth: string | null
+  // 多证件信息
+  documents: KycDocumentResponse[]
+  has_selfie: boolean
+  // 向后兼容字段 (已废弃)
+  id_type: string | null
+  id_number_last4: string | null
+  has_id_front: boolean
+  has_id_back: boolean
+  // 链上同步状态
+  on_chain_sync_status: string | null
+  on_chain_tx_hash: string | null
 }
 
 /**
- * KYC Apply Request
+ * KYC 单个证件信息
+ */
+export interface KycDocumentInfo {
+  id_type: KycIdType
+  id_number: string
+  document_expiry: string // YYYY-MM-DD
+  id_front_url: string
+  id_back_url?: string // 护照可为空
+}
+
+/**
+ * KYC Apply Request (多证件版本)
  */
 export interface KycApplyRequest {
   wallet_address?: string // 将由后端从 JWT 中获取
   country_code?: string
-  id_type?: string
-  id_number?: string
-  full_name?: string
-  date_of_birth?: string
-  id_front_url?: string
-  id_back_url?: string
+  full_name: string
+  date_of_birth: string // YYYY-MM-DD
+  documents: KycDocumentInfo[] // 1-3 种证件
   selfie_url?: string
+}
+
+/**
+ * KYC 证件响应信息
+ */
+export interface KycDocumentResponse {
+  id_type: string
+  id_number_last4: string | null
+  document_expiry: string | null
+  has_front: boolean
+  has_back: boolean
 }
 
 /**
@@ -157,6 +202,27 @@ export async function uploadKycDocument(
 export async function applyKyc(data: KycApplyRequest): Promise<KycFullResponse> {
   const response = await api.post<API.ResponseData<KycFullResponse>>(USER_PATHS.KYC_APPLY, data)
   return response.object_data as KycFullResponse
+}
+
+/**
+ * 获取已上传 KYC 文档的预签名 URL (用于预览)
+ *
+ * @param filePath - 文件路径 (上传时返回的 file_path)
+ * @returns 预签名 URL，有效期 1 小时
+ *
+ * @example
+ * ```typescript
+ * const result = await getKycDocumentUrl('kyc/0x742d35.../id_front_abc123.jpg')
+ * console.log(result.url) // https://minio.example.com/...
+ * ```
+ */
+export async function getKycDocumentUrl(
+  filePath: string
+): Promise<{ url: string; file_path: string }> {
+  const response = await api.get<API.ResponseData<{ url: string; file_path: string }>>(
+    `${USER_PATHS.KYC_DOCUMENT_URL}?file_path=${encodeURIComponent(filePath)}`
+  )
+  return response.object_data as { url: string; file_path: string }
 }
 
 // ============================================================================
@@ -253,6 +319,7 @@ export const kycService = {
 
   // 用户
   uploadDocument: uploadKycDocument,
+  getDocumentUrl: getKycDocumentUrl,
   apply: applyKyc,
 
   // 管理员
