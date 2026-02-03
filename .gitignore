@@ -43,3 +43,5 @@ stories
 
 config.dev.yaml
 config.prod.yaml
+
+logs/
