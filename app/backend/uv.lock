@@ -1494,14 +1494,14 @@ wheels = [
 
 [[package]]
 name = "evmchains"
-version = "0.1.6"
+version = "0.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9b/2c/44822f49f408ec9fbfb7811c2794af8270e58698da167782b531eb2028f0/evmchains-0.1.6.tar.gz", hash = "sha256:fea1b8b3d141eb450b6ee4447476bdab5f3eaa47ffa22648a745e737e650a3ad", size = 25511, upload-time = "2025-12-06T01:14:40.927Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3c/23/a817ae1fb0c5f4899a2980b1c3ba336daf24f402b8b7136cae38443500d2/evmchains-0.1.7.tar.gz", hash = "sha256:9ca62901498acd6a1fa9b6eb0ebe808add5ca87ea44c4ca23745e9edb9fbc84a", size = 25490, upload-time = "2026-02-02T19:09:40.778Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ba/7c/d7bda85aea5371ccf06831225594192128dabf8b550bb85100dcd1cb2d2c/evmchains-0.1.6-py3-none-any.whl", hash = "sha256:9240f76238599a897b3f7d8a006ae33ab5d84d6eee3824bd71b4ca229274e679", size = 18936, upload-time = "2025-12-06T01:14:39.511Z" },
+    { url = "https://files.pythonhosted.org/packages/63/a1/c4d4f18958e0fc838837aec8758042ae10750f55b8ad8f2bcd9522e21083/evmchains-0.1.7-py3-none-any.whl", hash = "sha256:815b1a7aa0e3ff9074294911225dfd58d504bbaa9bad3cd7c507cd50bb30fec5", size = 18917, upload-time = "2026-02-02T19:09:39.611Z" },
 ]
 
 [[package]]
@@ -3493,7 +3493,7 @@ wheels = [
 
 [[package]]
 name = "tortoise-orm"
-version = "0.25.3"
+version = "0.25.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiosqlite" },
@@ -3502,9 +3502,9 @@ dependencies = [
     { name = "pypika-tortoise" },
     { name = "pytz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dd/be/0fdfcd8295f4f02a280f33bdda99c3edba450f9a212149232f2fbb6afa96/tortoise_orm-0.25.3.tar.gz", hash = "sha256:b6dedd388393624628ec46228c93df361533ceb3925986fa2d1d22debc838a7d", size = 250872, upload-time = "2025-12-24T01:14:30.502Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/44/8a75e91a5d0e2e2545485de3e084fac1f4ff2ba4859e39240fa204c748d5/tortoise_orm-0.25.4.tar.gz", hash = "sha256:88c231ebe158f1287fc9c9497313f9a46cfb70b66c458ba39900921a4e52d01b", size = 232871, upload-time = "2026-02-02T17:57:10.825Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/30/76b564cf89a1d01d4c281f7006e9c72c8eb68acae4325ce6ff5780e4e7e9/tortoise_orm-0.25.3-py3-none-any.whl", hash = "sha256:3c52a53c41f4137aee9ffb3f3de01f30b52ad7767157f9bd9586a910fe839ca3", size = 206897, upload-time = "2025-12-24T01:14:29.221Z" },
+    { url = "https://files.pythonhosted.org/packages/af/8c/c5825518f67fb9042c4020c272f4c872e10ea5358424e087eb943cef6561/tortoise_orm-0.25.4-py3-none-any.whl", hash = "sha256:a699e629632abf760d14794e8afd3579a9c844623d50a58a6fbdcd6f52b5a37d", size = 168512, upload-time = "2026-02-02T17:57:08.776Z" },
 ]
 
 [[package]]

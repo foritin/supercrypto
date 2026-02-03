@@ -89,9 +89,7 @@ class KycService:
         address = wallet_address.lower()
 
         # 获取数据库状态
-        kyc = await AccountKyc.filter(
-            address=address, network=self.environment
-        ).first()
+        kyc = await AccountKyc.filter(address=address, network=self.environment).first()
 
         if not kyc:
             return None
@@ -200,11 +198,16 @@ class KycService:
         self, kyc: AccountKyc, documents: List
     ) -> List[AccountKycDocument]:
         """创建证件记录"""
+        logger.info(f"Creating {len(documents)} document(s) for KYC {kyc.id}")
         created_docs = []
         for doc in documents:
             # 证件号哈希处理 (ADR-1)
             id_number_hash = hashlib.sha256(doc.id_number.encode()).hexdigest()
             id_number_last4 = doc.id_number[-4:]
+
+            logger.info(
+                f"Creating document: type={doc.id_type}, expiry={doc.document_expiry}, front={doc.id_front_url[:50] if doc.id_front_url else None}..."
+            )
 
             kyc_doc = await AccountKycDocument.create(
                 kyc=kyc,
@@ -216,15 +219,7 @@ class KycService:
                 id_back_url=doc.id_back_url,
             )
             created_docs.append(kyc_doc)
-
-            # 向后兼容：将第一个证件信息写入主表
-            if len(created_docs) == 1:
-                kyc.id_type = doc.id_type
-                kyc.id_number_hash = id_number_hash
-                kyc.id_number_last4 = id_number_last4
-                kyc.id_front_url = doc.id_front_url
-                kyc.id_back_url = doc.id_back_url
-                await kyc.save()
+            logger.info(f"Created document ID: {kyc_doc.id}")
 
         return created_docs
 
@@ -468,7 +463,8 @@ class KycService:
         """转换为完整响应 (包含多证件信息)"""
         # 获取关联的证件记录
         documents = await AccountKycDocument.filter(kyc_id=kyc.id).all()
-        
+        logger.info(f"Found {len(documents)} document(s) for KYC {kyc.id}")
+
         doc_responses = [
             KycDocumentResponse(
                 id_type=doc.id_type.value if doc.id_type else None,
@@ -479,6 +475,7 @@ class KycService:
             )
             for doc in documents
         ]
+        logger.info(f"Document responses: {[d.id_type for d in doc_responses]}")
 
         return KycFullResponse(
             id=kyc.id,
@@ -500,11 +497,6 @@ class KycService:
             # 多证件信息
             documents=doc_responses,
             has_selfie=bool(kyc.selfie_url),
-            # 向后兼容字段 (使用主表中的旧字段)
-            id_type=kyc.id_type.value if kyc.id_type else None,
-            id_number_last4=kyc.id_number_last4,
-            has_id_front=bool(kyc.id_front_url),
-            has_id_back=bool(kyc.id_back_url),
             # 链上同步状态
             on_chain_sync_status=kyc.on_chain_sync_status,
             on_chain_tx_hash=kyc.on_chain_tx_hash,

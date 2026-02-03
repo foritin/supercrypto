@@ -6,12 +6,11 @@ KYC 开发工具路由
 """
 
 from falib.utils.config import SETTINGS
+from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends
 
-from src.services.kyc.schemas import KycFullResponse
 from src.services.kyc.service import KycService
 from src.shared.common.exceptions import ForbiddenException
-from src.shared.schemas.base import ApiResponse
 
 router = APIRouter()
 
@@ -36,7 +35,6 @@ async def require_dev_environment():
 
 @router.post(
     "/quick-approve/{wallet_address}",
-    response_model=ApiResponse[KycFullResponse],
     summary="Quick KYC Approval (Dev Only)",
     description="Instantly approve KYC for development/testing (not available in production)",
     dependencies=[Depends(require_dev_environment)],
@@ -53,12 +51,14 @@ async def quick_approve_kyc(
     Will return 403 in production.
     """
     result = await service.quick_approve(wallet_address)
-    return ApiResponse(data=result, message="KYC approved successfully (dev mode)")
+    return create_success_response(
+        object_data=result.model_dump(mode="json"),
+        msg="KYC approved successfully (dev mode)",
+    )
 
 
 @router.delete(
     "/reset/{wallet_address}",
-    response_model=ApiResponse[dict],
     summary="Reset KYC (Dev Only)",
     description="Reset KYC status for development/testing (not available in production)",
     dependencies=[Depends(require_dev_environment)],
@@ -75,7 +75,7 @@ async def reset_kyc(
     Will return 403 in production.
     """
     success = await service.reset_kyc(wallet_address)
-    return ApiResponse(
-        data={"wallet_address": wallet_address, "reset": success},
-        message="KYC reset successfully" if success else "No KYC record found",
+    return create_success_response(
+        object_data={"wallet_address": wallet_address, "reset": success},
+        msg="KYC reset successfully" if success else "No KYC record found",
     )

@@ -157,6 +157,8 @@ export interface PaginatedResponse<T> {
  * Get KYC status for a wallet address (公开接口)
  */
 export async function getKycStatus(walletAddress: string): Promise<KycStatusResponse> {
+  // falib 返回格式: { code, data: { object_data, list_data, msg, pagination } }
+  // api interceptor 已解包到 data 层
   const response = await api.get<API.ResponseData<KycStatusResponse>>(
     PUBLIC_PATHS.KYC_STATUS(walletAddress)
   )

@@ -348,6 +348,7 @@ const admin = {
     },
     kyc: {
       title: "KYC Management",
+      description: "Identity verification & risk assessment",
       walletAddress: "Wallet Address",
       status: "Status",
       country: "Country",

@@ -4,11 +4,10 @@
 路由前缀: /api/v1/public/kyc
 """
 
+from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends
 
-from src.services.kyc.schemas import KycStatusResponse
 from src.services.kyc.service import KycService
-from src.shared.schemas.base import ApiResponse
 
 router = APIRouter()
 
@@ -20,7 +19,6 @@ def get_kyc_service() -> KycService:
 
 @router.get(
     "/status/{wallet_address}",
-    response_model=ApiResponse[KycStatusResponse],
     summary="Get KYC Status",
     description="Get the KYC status for a wallet address",
 )
@@ -36,5 +34,4 @@ async def get_kyc_status(
     If no KYC record exists, returns status 'not_started'.
     """
     result = await service.get_status(wallet_address)
-    return ApiResponse(data=result)
-
+    return create_success_response(object_data=result.model_dump(mode="json"))

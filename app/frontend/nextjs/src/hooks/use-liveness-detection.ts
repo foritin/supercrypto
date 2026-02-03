@@ -42,39 +42,43 @@ export interface LivenessState {
   error: string | null;
 }
 
-// 动作配置 - 极低阈值，确保容易通过
+// 动作配置 - 合理阈值，确保安全性和用户体验的平衡
+// 注意：阈值需要配合持续检测使用，防止误检测
 const ACTION_CONFIGS: Record<ActionType, Omit<ActionConfig, 'type'>> = {
   blink: {
     nameKey: 'kyc.liveness.actions.blink',
     icon: '👁️',
-    threshold: 0.08, // 极低阈值，轻微眨眼即可
-    duration: 20000, // 20秒超时
+    threshold: 0.35, // 眨眼阈值：需要明显闭眼 (MediaPipe eyeBlink 范围 0-1)
+    duration: 15000, // 15秒超时
   },
   open_mouth: {
     nameKey: 'kyc.liveness.actions.openMouth',
     icon: '👄',
-    threshold: 0.05, // 极低阈值，微张嘴即可
-    duration: 20000,
+    threshold: 0.25, // 张嘴阈值：需要明显张嘴 (MediaPipe jawOpen 范围 0-1)
+    duration: 15000,
   },
   turn_left: {
     nameKey: 'kyc.liveness.actions.turnLeft',
     icon: '👈',
-    threshold: 0.03,
-    duration: 20000,
+    threshold: 0.08, // 转头阈值：约 15 度
+    duration: 15000,
   },
   turn_right: {
     nameKey: 'kyc.liveness.actions.turnRight',
     icon: '👉',
-    threshold: 0.03,
-    duration: 20000,
+    threshold: 0.08,
+    duration: 15000,
   },
   nod: {
     nameKey: 'kyc.liveness.actions.nod',
     icon: '👇',
-    threshold: 0.03,
-    duration: 20000,
+    threshold: 0.06, // 点头阈值：约 10 度
+    duration: 15000,
   },
 };
+
+// 动作需要持续检测到的帧数才算通过（防止误检测）
+const REQUIRED_CONSECUTIVE_FRAMES = 3;
 
 /**
  * 从 blendshapes 数组中获取指定名称的值
@@ -183,6 +187,7 @@ export function useLivenessDetection(
     actionStartTime: 0,
     actionDetected: false,
     baselinePose: null as { yaw: number; pitch: number } | null,
+    consecutiveDetections: 0, // 连续检测到动作的帧数
   });
 
   // 初始化 Face Landmarker
@@ -406,18 +411,28 @@ export function useLivenessDetection(
           baselinePose
         );
 
-        // 每帧都打印眨眼数值（仅当检测眨眼时）
-        if (currentAction.type === 'blink') {
-          console.log(`[LivenessDetection] 👁️ ${debugInfo}`);
-        } else if (Math.random() < 0.1) {
-          // 其他动作每秒打印一次
-          console.log(`[LivenessDetection] ${debugInfo}`);
+        // 更新连续检测计数
+        if (detected) {
+          currentStateRef.current.consecutiveDetections++;
+        } else {
+          currentStateRef.current.consecutiveDetections = 0;
         }
 
-        // 动作检测成功
-        if (detected && !actionDetected) {
-          console.log(`[LivenessDetection] ✅ Action ${currentAction.type} DETECTED!`);
+        const consecutiveCount = currentStateRef.current.consecutiveDetections;
+
+        // 打印调试信息（降低频率）
+        if (currentAction.type === 'blink' && consecutiveCount > 0) {
+          console.log(`[LivenessDetection] 👁️ ${debugInfo} | consecutive: ${consecutiveCount}/${REQUIRED_CONSECUTIVE_FRAMES}`);
+        } else if (Math.random() < 0.05) {
+          // 其他情况每秒约打印 1-2 次
+          console.log(`[LivenessDetection] ${debugInfo} | consecutive: ${consecutiveCount}/${REQUIRED_CONSECUTIVE_FRAMES}`);
+        }
+
+        // 动作检测成功：需要连续检测到指定帧数
+        if (consecutiveCount >= REQUIRED_CONSECUTIVE_FRAMES && !actionDetected) {
+          console.log(`[LivenessDetection] ✅ Action ${currentAction.type} CONFIRMED! (${consecutiveCount} consecutive frames)`);
           currentStateRef.current.actionDetected = true;
+          currentStateRef.current.consecutiveDetections = 0;
 
           const newResults = [...prev.results];
           newResults[actionIndex] = {
@@ -435,6 +450,7 @@ export function useLivenessDetection(
             currentStateRef.current.actionIndex = nextIndex;
             currentStateRef.current.actionStartTime = performance.now();
             currentStateRef.current.actionDetected = false;
+            currentStateRef.current.consecutiveDetections = 0; // 重置连续计数
             console.log(`[LivenessDetection] Moving to action ${nextIndex}: ${prev.actions[nextIndex]?.type}`);
           } else {
             console.log('[LivenessDetection] 🎉 All actions completed! Stopping detection...');
@@ -561,6 +577,7 @@ export function useLivenessDetection(
       actionStartTime: performance.now(),
       actionDetected: false,
       baselinePose: null,
+      consecutiveDetections: 0,
     };
 
     setState({

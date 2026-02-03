@@ -169,6 +169,8 @@ const kyc = {
       idType: "ID Type",
       idNumber: "ID Number",
       idNumberPlaceholder: "Enter your ID number",
+      documentExpiry: "Document Expiry Date",
+      documentExpiryPlaceholder: "Select document expiry date",
       idFront: "ID Front",
       idBack: "ID Back",
       selfie: "Selfie",

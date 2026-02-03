@@ -105,15 +105,32 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
     记录详细日志便于调试
     """
-    logger.warning(
-        f"Validation error: {request.method} {request.url.path} - {exc.errors()}"
-    )
+    # 处理 errors() 中可能包含不可序列化对象的情况
+    errors = []
+    for err in exc.errors():
+        # 复制错误信息，将 ctx 中的不可序列化对象转为字符串
+        safe_err = {
+            "type": err.get("type"),
+            "loc": err.get("loc"),
+            "msg": err.get("msg"),
+        }
+        # ctx 可能包含 ValueError 等不可序列化对象
+        if "ctx" in err:
+            ctx = err["ctx"]
+            safe_err["ctx"] = (
+                {k: str(v) for k, v in ctx.items()}
+                if isinstance(ctx, dict)
+                else str(ctx)
+            )
+        errors.append(safe_err)
+
+    logger.warning(f"Validation error: {request.method} {request.url.path} - {errors}")
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "code": 422,
             "message": "Validation error",
-            "detail": exc.errors(),
+            "detail": errors,
             "path": str(request.url),
         },
     )

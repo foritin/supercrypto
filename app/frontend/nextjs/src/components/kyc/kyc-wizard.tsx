@@ -155,17 +155,23 @@ function clearStorage(): void {
 }
 
 /**
- * 将表单数据转换为 API 请求格式
+ * 将表单数据转换为 API 请求格式 (多证件版本)
  */
 function toApiRequest(data: KycWizardFormData): KycApplyRequest {
   return {
     full_name: data.fullName,
     date_of_birth: data.dateOfBirth,
     country_code: data.nationality,
-    id_type: data.idType,
-    id_number: data.idNumber,
-    id_front_url: data.idFrontUrl,
-    id_back_url: data.idBackUrl,
+    // 多证件格式：将单证件数据包装成数组
+    documents: [
+      {
+        id_type: data.idType,
+        id_number: data.idNumber,
+        document_expiry: data.documentExpiry,
+        id_front_url: data.idFrontUrl,
+        id_back_url: data.idType === 'passport' ? undefined : data.idBackUrl,
+      },
+    ],
     selfie_url: data.selfieUrl,
   }
 }
@@ -541,6 +547,7 @@ export function KycWizard({
             data={{
               idType: formData.idType,
               idNumber: formData.idNumber,
+              documentExpiry: formData.documentExpiry,
               idFrontUrl: formData.idFrontUrl,
               idBackUrl: formData.idBackUrl,
             }}

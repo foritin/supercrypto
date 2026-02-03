@@ -39,7 +39,7 @@ class AccountKycDocument(AbstractModel, TimestampMixin):
         max_length=4, null=True, description="证件号后4位 (明文，便于核对)"
     )
     document_expiry = fields.DateField(null=True, description="证件有效期")
-    
+
     # 证件照片 (MinIO 路径)
     id_front_url = fields.CharField(
         max_length=255, null=True, description="证件正面照片 MinIO 路径"
@@ -60,9 +60,7 @@ class AccountKycDocument(AbstractModel, TimestampMixin):
 class AccountKyc(AbstractModel, TimestampMixin):
     """账户 KYC 认证表"""
 
-    address = fields.CharField(
-        max_length=42, description="钱包地址 (小写)"
-    )
+    address = fields.CharField(max_length=42, description="钱包地址 (小写)")
     network = fields.CharEnumField(
         NetWork, max_length=20, default=NetWork.HARDHAT, description="网络类型"
     )
@@ -87,32 +85,10 @@ class AccountKyc(AbstractModel, TimestampMixin):
     # ========== 基本信息字段 ==========
     full_name = fields.CharField(max_length=100, null=True, description="证件姓名")
     date_of_birth = fields.DateField(null=True, description="出生日期")
-    
+
     # 自拍照片 (所有证件共用)
     selfie_url = fields.CharField(
         max_length=255, null=True, description="手持证件自拍 MinIO 路径"
-    )
-
-    # ========== 旧字段 (已废弃，保留向后兼容) ==========
-    # 注意: 新的多证件数据存储在 AccountKycDocument 表中
-    # 这些字段将在未来版本移除
-    id_type = fields.CharEnumField(
-        IdType,
-        max_length=20,
-        null=True,
-        description="[已废弃] 证件类型，请使用 documents 关系",
-    )
-    id_number_hash = fields.CharField(
-        max_length=64, null=True, description="[已废弃] 证件号哈希，请使用 documents 关系"
-    )
-    id_number_last4 = fields.CharField(
-        max_length=4, null=True, description="[已废弃] 证件号后4位，请使用 documents 关系"
-    )
-    id_front_url = fields.CharField(
-        max_length=255, null=True, description="[已废弃] 证件正面，请使用 documents 关系"
-    )
-    id_back_url = fields.CharField(
-        max_length=255, null=True, description="[已废弃] 证件背面，请使用 documents 关系"
     )
 
     # ========== 链上同步状态 (ADR-3) ==========

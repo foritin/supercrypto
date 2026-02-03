@@ -45,7 +45,7 @@ import {
  */
 export interface Step2DocumentUploadProps {
   /** 当前表单数据 */
-  data: Pick<Step2FormValues, 'idType' | 'idNumber' | 'idFrontUrl' | 'idBackUrl'>
+  data: Pick<Step2FormValues, 'idType' | 'idNumber' | 'documentExpiry' | 'idFrontUrl' | 'idBackUrl'>
   /** 数据变更回调 */
   onChange: (data: Partial<Step2FormValues>) => void
   /** 验证状态变更回调 */
@@ -133,6 +133,7 @@ export function Step2DocumentUpload({
     defaultValues: {
       idType: data.idType || step2DefaultValues.idType,
       idNumber: data.idNumber || step2DefaultValues.idNumber,
+      documentExpiry: data.documentExpiry || step2DefaultValues.documentExpiry,
       idFrontUrl: data.idFrontUrl || step2DefaultValues.idFrontUrl,
       idBackUrl: data.idBackUrl || step2DefaultValues.idBackUrl,
     },
@@ -318,6 +319,32 @@ export function Step2DocumentUpload({
                 />
               </FormControl>
               <FormMessage id="kyc-idnumber-error" />
+            </FormItem>
+          )}
+        />
+
+        {/* 证件有效期输入 */}
+        <FormField
+          control={form.control}
+          name="documentExpiry"
+          render={({ field }) => (
+            <FormItem className="space-y-2">
+              <FormLabel htmlFor="kyc-document-expiry" className="flex items-center text-sm text-white/50 font-normal">
+                {t('kyc.fields.documentExpiry', '证件有效期')}
+                <RequiredMark />
+              </FormLabel>
+              <FormControl>
+                <Input
+                  id="kyc-document-expiry"
+                  type="date"
+                  placeholder={t('kyc.fields.documentExpiryPlaceholder', '请选择证件有效期')}
+                  {...field}
+                  aria-describedby={errors.documentExpiry ? 'kyc-document-expiry-error' : undefined}
+                  aria-invalid={!!errors.documentExpiry}
+                  className="[&::-webkit-calendar-picker-indicator]:invert"
+                />
+              </FormControl>
+              <FormMessage id="kyc-document-expiry-error" />
             </FormItem>
           )}
         />

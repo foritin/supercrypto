@@ -9,12 +9,12 @@ Requirements: 2.1
 
 from typing import Optional
 
-from falib.utils.handlers import success_response, error_response
-from fastapi import APIRouter, Depends, HTTPException
+from falib.utils.handlers import create_error_response, success_response
+from fastapi import APIRouter, Depends
 
 from src.services.contract.service import ContractService, get_contract_service
-from src.shared.security import require_admin
 from src.shared.common.exceptions import BusinessException
+from src.shared.security import require_admin
 
 router = APIRouter()
 
@@ -60,7 +60,7 @@ async def get_dependency_graph(
 
     返回用于前端可视化图的数据结构：
     {
-        "nodes": [{"id": "ContractName", "label": "...", "type": "...", 
+        "nodes": [{"id": "ContractName", "label": "...", "type": "...",
                    "address": "...", "status": "...", "project": "..."}],
         "edges": [{"source": "ContractA", "target": "DependencyKey", "status": "..."}]
     }
@@ -144,7 +144,7 @@ async def set_primary_contract(
 
         return success_response(object_data=contract_data)
     except BusinessException as e:
-        return error_response(
+        return create_error_response(
             msg=e.message,
             code=e.code,
             object_data={
@@ -203,7 +203,7 @@ async def unset_primary_contract(
 
         return success_response(object_data=contract_data)
     except BusinessException as e:
-        return error_response(
+        return create_error_response(
             msg=e.message,
             code=e.code,
             object_data={

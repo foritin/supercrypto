@@ -69,7 +69,7 @@ const statusMessages: Record<KycStatus, { title: string; description: string }> 
 
 function KycContent() {
   const { t } = useTranslation();
-  const { currentStep, status, showLanding, formData, lastSaved, goToStep, reset } = useKycContext();
+  const { currentStep, status, showLanding, formData, lastSaved, goToStep, reset, isLoading } = useKycContext();
 
   const renderStep = () => {
     switch (currentStep) {
@@ -85,6 +85,18 @@ function KycContent() {
         return <BasicInfoStep />;
     }
   };
+
+  // Show loading state while fetching backend status
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0F0D] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-[#00D4AA]/30 border-t-[#00D4AA] animate-spin" />
+          <p className="text-white/60">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show status panel for submitted/approved/rejected states
   if (status === 'submitted' || status === 'pending_review' || status === 'approved' || status === 'rejected') {

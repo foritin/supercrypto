@@ -134,10 +134,10 @@ export const transactionService = {
    * 获取交易详情（管理员接口）
    */
   async getTransaction(txId: number): Promise<TransactionRecord> {
-    const response = await api.get<TransactionRecord>(
+    const response = await api.get<API.ResponseData<TransactionRecord>>(
       API_PATHS.ADMIN.TRANSACTION_DETAIL(txId)
     );
-    return response;
+    return response.object_data as TransactionRecord;
   },
 
   /**
@@ -146,10 +146,10 @@ export const transactionService = {
   async getTransactionByHash(
     txHash: string
   ): Promise<TransactionRecord | null> {
-    const response = await api.get<TransactionRecord | null>(
+    const response = await api.get<API.ResponseData<TransactionRecord>>(
       API_PATHS.ADMIN.TRANSACTION_BY_HASH(txHash)
     );
-    return response;
+    return response.object_data;
   },
 
   /**
@@ -157,10 +157,10 @@ export const transactionService = {
    */
   async getTransactionStats(address?: string): Promise<TransactionStats> {
     const params = address ? `?address=${address}` : "";
-    const response = await api.get<TransactionStats>(
+    const response = await api.get<API.ResponseData<TransactionStats>>(
       `${API_PATHS.ADMIN.TRANSACTION_STATS}${params}`
     );
-    return response;
+    return response.object_data as TransactionStats;
   },
 
   /**

@@ -169,6 +169,8 @@ const kyc = {
       idType: "证件类型",
       idNumber: "证件号码",
       idNumberPlaceholder: "请输入您的证件号码",
+      documentExpiry: "证件有效期",
+      documentExpiryPlaceholder: "请选择证件有效期",
       idFront: "证件正面",
       idBack: "证件背面",
       selfie: "自拍照",

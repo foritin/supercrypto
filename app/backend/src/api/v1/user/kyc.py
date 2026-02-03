@@ -11,7 +11,7 @@
 
 import uuid
 
-from falib.utils.handlers import create_success_response, error_response
+from falib.utils.handlers import create_error_response, create_success_response
 from falib.utils.log import get_logger
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
@@ -79,23 +79,23 @@ async def upload_kyc_document(
     - **file**: 文件 (jpg/jpeg/png/pdf, max 10MB)
 
     上传成功后返回文件路径，用于提交 KYC 申请时传入。
-    
+
     文件路径格式: `kyc/{wallet_address}/{document_type}_{uuid}.{ext}`
     """
     # 验证文档类型
     if document_type not in ALLOWED_DOCUMENT_TYPES:
-        return error_response(
+        return create_error_response(
             msg=f"不支持的文档类型，允许: {', '.join(sorted(ALLOWED_DOCUMENT_TYPES))}",
             code=400,
         )
 
     # 验证文件类型
     if not file.filename:
-        return error_response(msg="文件名不能为空", code=400)
+        return create_error_response(msg="文件名不能为空", code=400)
 
     ext = file.filename.split(".")[-1].lower()
     if ext not in ALLOWED_EXTENSIONS:
-        return error_response(
+        return create_error_response(
             msg=f"不支持的文件格式，允许: {', '.join(ALLOWED_EXTENSIONS)}",
             code=400,
         )
@@ -105,7 +105,7 @@ async def upload_kyc_document(
 
     # 验证文件大小
     if len(content) > MAX_FILE_SIZE:
-        return error_response(
+        return create_error_response(
             msg=f"文件大小超过 {MAX_FILE_SIZE // (1024 * 1024)}MB 限制",
             code=400,
         )
@@ -118,12 +118,12 @@ async def upload_kyc_document(
     # 上传到 MinIO
     try:
         minio_service = get_minio_service()
-        
+
         # 先删除该类型的旧文件 (覆盖上传)
         deleted_count = await minio_service.delete_by_prefix(prefix)
         if deleted_count > 0:
             logger.info(f"Deleted {deleted_count} old file(s) for {document_type}")
-        
+
         # 上传新文件
         await minio_service.upload_file(
             object_name=object_name,
@@ -133,7 +133,7 @@ async def upload_kyc_document(
         logger.info(f"KYC document uploaded: {object_name}")
     except Exception as e:
         logger.error(f"Failed to upload KYC document: {e}")
-        return error_response(msg="文件上传失败，请重试", code=500)
+        return create_error_response(msg="文件上传失败，请重试", code=500)
 
     return create_success_response(
         object_data=KycUploadResponse(
@@ -164,32 +164,32 @@ async def get_document_url(
     # 安全检查：确保只能访问自己的文件
     expected_prefix = f"kyc/{wallet_address}/"
     if not file_path.startswith(expected_prefix):
-        return error_response(
+        return create_error_response(
             msg="无权访问该文件",
             code=403,
         )
 
     try:
         minio_service = get_minio_service()
-        
+
         # 检查文件是否存在
         exists = await minio_service.file_exists(file_path)
         if not exists:
-            return error_response(
+            return create_error_response(
                 msg="文件不存在",
                 code=404,
             )
-        
+
         # 获取预签名 URL (1小时有效)
         url = await minio_service.get_presigned_url(file_path, expires=3600)
-        
+
         return create_success_response(
             object_data={"url": url, "file_path": file_path},
             msg="获取成功",
         )
     except Exception as e:
         logger.error(f"Failed to get presigned URL: {e}")
-        return error_response(msg="获取文件 URL 失败", code=500)
+        return create_error_response(msg="获取文件 URL 失败", code=500)
 
 
 @router.post(
@@ -223,6 +223,9 @@ async def apply_kyc(
     data.wallet_address = wallet_address
     result = await service.apply(data)
     return create_success_response(
-        object_data=result.model_dump() if hasattr(result, "model_dump") else result,
+        # 使用 mode='json' 确保 datetime 等对象被正确序列化为 ISO 字符串
+        object_data=result.model_dump(mode="json")
+        if hasattr(result, "model_dump")
+        else result,
         msg="KYC application submitted successfully",
     )

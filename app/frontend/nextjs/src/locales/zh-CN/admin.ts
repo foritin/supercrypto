@@ -348,6 +348,7 @@ const admin = {
     },
     kyc: {
       title: "KYC 管理",
+      description: "身份认证审核与风险管理",
       walletAddress: "钱包地址",
       status: "状态",
       country: "国家",

@@ -8,18 +8,20 @@ import csv
 import io
 from typing import Optional
 
+from falib.utils.handlers import (
+    PaginationInfo,
+    create_error_response,
+    create_success_response,
+)
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import StreamingResponse
 
 from src.services.transaction.schemas import (
     TransactionCreate,
     TransactionListQuery,
-    TransactionResponse,
-    TransactionStats,
     TransactionUpdate,
 )
 from src.services.transaction.services import TransactionService
-from src.shared.schemas.base import ApiResponse, PaginatedResponse
 
 router = APIRouter()
 
@@ -31,7 +33,6 @@ def get_transaction_service() -> TransactionService:
 
 @router.post(
     "/",
-    response_model=ApiResponse[TransactionResponse],
     status_code=status.HTTP_201_CREATED,
     summary="记录交易",
     description="创建新的交易记录",
@@ -54,12 +55,14 @@ async def record_transaction(
     返回创建的交易记录
     """
     tx = await service.record_transaction(data)
-    return ApiResponse(data=tx, message="Transaction recorded successfully")
+    return create_success_response(
+        object_data=tx.model_dump(mode="json") if hasattr(tx, "model_dump") else tx,
+        msg="Transaction recorded successfully",
+    )
 
 
 @router.get(
     "/{tx_id}",
-    response_model=ApiResponse[TransactionResponse],
     summary="获取交易详情",
     description="根据交易ID获取交易详细信息",
 )
@@ -74,12 +77,13 @@ async def get_transaction(
     返回交易详细信息
     """
     tx = await service.get_transaction(tx_id)
-    return ApiResponse(data=tx)
+    return create_success_response(
+        object_data=tx.model_dump(mode="json") if hasattr(tx, "model_dump") else tx
+    )
 
 
 @router.get(
     "/hash/{tx_hash}",
-    response_model=ApiResponse[TransactionResponse],
     summary="根据哈希查询交易",
     description="根据交易哈希查询交易信息",
 )
@@ -95,13 +99,14 @@ async def get_transaction_by_hash(
     """
     tx = await service.get_transaction_by_hash(tx_hash)
     if not tx:
-        return ApiResponse(code=404, message="Transaction not found", data=None)
-    return ApiResponse(data=tx)
+        return create_error_response(code=404, msg="Transaction not found")
+    return create_success_response(
+        object_data=tx.model_dump(mode="json") if hasattr(tx, "model_dump") else tx
+    )
 
 
 @router.get(
     "/",
-    response_model=ApiResponse[PaginatedResponse[TransactionResponse]],
     summary="查询交易列表",
     description="查询交易列表，支持多种过滤条件",
 )
@@ -147,20 +152,22 @@ async def list_transactions(
 
     transactions, total, total_pages = await service.list_transactions(query)
 
-    paginated = PaginatedResponse(
-        items=transactions,
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=total_pages,
+    return create_success_response(
+        list_data=[
+            tx.model_dump(mode="json") if hasattr(tx, "model_dump") else tx
+            for tx in transactions
+        ],
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        ),
     )
-
-    return ApiResponse(data=paginated)
 
 
 @router.get(
     "/address/{address}/history",
-    response_model=ApiResponse[PaginatedResponse[TransactionResponse]],
     summary="查询地址交易历史",
     description="查询指定地址的所有交易历史",
 )
@@ -183,20 +190,22 @@ async def get_address_transactions(
         address, page, page_size
     )
 
-    paginated = PaginatedResponse(
-        items=transactions,
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=total_pages,
+    return create_success_response(
+        list_data=[
+            tx.model_dump(mode="json") if hasattr(tx, "model_dump") else tx
+            for tx in transactions
+        ],
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        ),
     )
-
-    return ApiResponse(data=paginated)
 
 
 @router.get(
     "/wallet/{wallet_id}/history",
-    response_model=ApiResponse[PaginatedResponse[TransactionResponse]],
     summary="查询钱包交易历史",
     description="查询指定钱包的所有交易历史",
 )
@@ -219,20 +228,22 @@ async def get_wallet_transactions(
         wallet_id, page, page_size
     )
 
-    paginated = PaginatedResponse(
-        items=transactions,
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=total_pages,
+    return create_success_response(
+        list_data=[
+            tx.model_dump(mode="json") if hasattr(tx, "model_dump") else tx
+            for tx in transactions
+        ],
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        ),
     )
-
-    return ApiResponse(data=paginated)
 
 
 @router.get(
     "/stats",
-    response_model=ApiResponse[TransactionStats],
     summary="获取交易统计",
     description="获取交易统计信息",
 )
@@ -250,7 +261,11 @@ async def get_transaction_stats(
     如果不提供参数，返回全部交易统计
     """
     stats = await service.get_transaction_stats(address, wallet_id)
-    return ApiResponse(data=stats)
+    return create_success_response(
+        object_data=stats.model_dump(mode="json")
+        if hasattr(stats, "model_dump")
+        else stats
+    )
 
 
 @router.get(
@@ -333,7 +348,6 @@ async def export_transactions(
 
 @router.put(
     "/{tx_id}",
-    response_model=ApiResponse[TransactionResponse],
     summary="更新交易信息",
     description="更新交易状态、区块信息等",
 )
@@ -355,5 +369,7 @@ async def update_transaction(
     返回更新后的交易信息
     """
     tx = await service.update_transaction(tx_id, data)
-    return ApiResponse(data=tx, message="Transaction updated successfully")
-
+    return create_success_response(
+        msg="Transaction updated successfully",
+        object_data=tx.model_dump(mode="json") if hasattr(tx, "model_dump") else tx,
+    )

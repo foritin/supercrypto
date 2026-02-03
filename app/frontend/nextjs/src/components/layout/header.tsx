@@ -266,6 +266,13 @@ export function Header() {
           icon: Lock,
         },
         {
+          key: "admin-kyc",
+          label: t("admin.kyc.title", "KYC Management"),
+          href: "/admin/kyc",
+          icon: Shield,
+          description: t("admin.kyc.description", "Identity verification & risk assessment"),
+        },
+        {
           key: "admin-contracts",
           label: t("admin.contracts.title", "Contracts"),
           href: "/admin/contracts",

@@ -85,7 +85,10 @@ class KycDocumentInfo(BaseModel):
 class KycApplyRequest(BaseModel):
     """KYC 申请请求 (多证件版本)"""
 
-    wallet_address: str = Field(..., max_length=42, description="钱包地址")
+    # wallet_address 由路由层从 JWT 注入，前端无需传递
+    wallet_address: Optional[str] = Field(
+        None, max_length=42, description="钱包地址 (由后端从JWT获取)"
+    )
     country_code: Optional[str] = Field(None, max_length=2, description="国家代码")
 
     # 基本信息
@@ -104,8 +107,10 @@ class KycApplyRequest(BaseModel):
 
     @field_validator("wallet_address")
     @classmethod
-    def validate_address(cls, v: str) -> str:
-        """验证并规范化钱包地址"""
+    def validate_address(cls, v: Optional[str]) -> Optional[str]:
+        """验证并规范化钱包地址 (可选，由路由层注入)"""
+        if v is None:
+            return v
         if not v.startswith("0x") or len(v) != 42:
             raise ValueError("Invalid wallet address format")
         return v.lower()
@@ -148,7 +153,6 @@ class KycApplyRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
                 "country_code": "CN",
                 "full_name": "张三",
                 "date_of_birth": "1990-01-01",
@@ -206,12 +210,6 @@ class KycFullResponse(KycStatusResponse, IDMixin, TimestampMixin):
 
     # 自拍照片
     has_selfie: bool = Field(False, description="是否上传手持自拍")
-
-    # 旧字段 (向后兼容)
-    id_type: Optional[str] = Field(None, description="[已废弃] 主证件类型")
-    id_number_last4: Optional[str] = Field(None, description="[已废弃] 主证件号后4位")
-    has_id_front: bool = Field(False, description="[已废弃] 是否上传证件正面")
-    has_id_back: bool = Field(False, description="[已废弃] 是否上传证件背面")
 
     # 链上同步状态
     on_chain_sync_status: Optional[OnChainSyncStatus] = Field(

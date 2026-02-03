@@ -16,7 +16,11 @@ from src.models.chain import Chain
 from src.models.contracts.contract_config import ContractConfig
 from src.models.contracts.contract_deployment import ContractDeployment
 from src.models.contracts.provider_registry import ProviderRegistry
-from src.models.kyc import AccountKyc, UserKyc  # UserKyc is deprecated alias
+from src.models.kyc import (  # UserKyc is deprecated alias
+    AccountKyc,
+    AccountKycDocument,
+    UserKyc,
+)
 from src.models.staking import (
     BASE_DAILY_RATE,
     STAKING_MULTIPLIERS,
@@ -68,6 +72,7 @@ __all__ = [
     "Chain",
     # KYC
     "AccountKyc",
+    "AccountKycDocument",
     "UserKyc",  # deprecated alias
     # Asset
     "Asset",

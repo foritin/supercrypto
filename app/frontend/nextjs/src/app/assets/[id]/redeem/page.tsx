@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StepIndicator } from '@/components/invest/step-indicator';
+import { StepIndicator } from '@/components/ui/step-indicator';
 import { cn } from '@/lib/utils';
 import { 
   ArrowLeft, 

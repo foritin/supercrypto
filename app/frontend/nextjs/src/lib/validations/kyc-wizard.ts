@@ -109,6 +109,7 @@ export const step1DefaultValues: Step1FormValues = {
  * 验证规则:
  * - idType: 枚举值，必填
  * - idNumber: 必填
+ * - documentExpiry: 证件有效期，必填，必须是未来日期
  * - idFrontUrl: 有效 URL，必填
  * - idBackUrl: 有效 URL，必填
  *
@@ -118,6 +119,17 @@ export const step2Schema = z.object({
   idType: kycIdTypeEnum,
 
   idNumber: z.string().min(1, '请输入证件号码'),
+
+  documentExpiry: z.string().refine(
+    (val) => {
+      if (!val) return false
+      const expiryDate = new Date(val)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      return expiryDate > today
+    },
+    { message: '证件有效期必须是未来日期' }
+  ),
 
   idFrontUrl: z.string().url('请上传证件正面'),
 
@@ -132,6 +144,7 @@ export type Step2FormValues = z.infer<typeof step2Schema>
 export const step2DefaultValues: Step2FormValues = {
   idType: 'passport',
   idNumber: '',
+  documentExpiry: '',
   idFrontUrl: '',
   idBackUrl: '',
 }

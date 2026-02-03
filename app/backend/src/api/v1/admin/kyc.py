@@ -6,16 +6,18 @@
 
 from typing import Optional
 
+from falib.utils.handlers import (
+    PaginationInfo,
+    create_error_response,
+    create_success_response,
+)
 from falib.utils.log import get_logger
 from fastapi import APIRouter, Depends
 
 from src.services.kyc.schemas import (
-    KycContractComparisonResponse,
-    KycFullResponse,
     KycReviewRequest,
 )
 from src.services.kyc.service import KycService
-from src.shared.schemas.base import ApiResponse, PaginatedResponse
 from src.shared.schemas.enums import KycStatus
 from src.shared.security import require_admin
 
@@ -31,7 +33,6 @@ def get_kyc_service() -> KycService:
 
 @router.get(
     "/{kyc_id}",
-    response_model=ApiResponse[KycFullResponse],
     summary="Get KYC by ID",
     description="Get KYC record by ID (admin only)",
 )
@@ -44,13 +45,12 @@ async def get_kyc_by_id(kyc_id: int, service: KycService = Depends(get_kyc_servi
     """
     result = await service.get_by_id(kyc_id)
     if not result:
-        return ApiResponse(code=404, message="KYC record not found", data=None)
-    return ApiResponse(data=result)
+        return create_error_response(code=404, msg="KYC record not found")
+    return create_success_response(object_data=result.model_dump(mode="json"))
 
 
 @router.get(
     "/",
-    response_model=ApiResponse[PaginatedResponse[KycFullResponse]],
     summary="List KYC Records",
     description="List KYC records with pagination (admin only)",
 )
@@ -72,20 +72,19 @@ async def list_kyc(
         status=kyc_status, page=page, page_size=page_size
     )
 
-    paginated = PaginatedResponse(
-        items=items,
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=total_pages,
+    return create_success_response(
+        list_data=[item.model_dump(mode="json") for item in items],
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        ),
     )
-
-    return ApiResponse(data=paginated)
 
 
 @router.post(
     "/{kyc_id}/review",
-    response_model=ApiResponse[KycFullResponse],
     summary="Review KYC",
     description="Approve or reject a KYC application (admin only)",
 )
@@ -136,12 +135,14 @@ async def review_kyc(
         },
     )
 
-    return ApiResponse(data=result, message=f"KYC application {action} successfully")
+    return create_success_response(
+        object_data=result.model_dump(mode="json"),
+        msg=f"KYC application {action} successfully",
+    )
 
 
 @router.post(
     "/{kyc_id}/retry-sync",
-    response_model=ApiResponse[KycFullResponse],
     summary="Retry On-chain Sync",
     description="Retry syncing KYC to blockchain (admin only)",
 )
@@ -158,12 +159,14 @@ async def retry_kyc_sync(
     当 on_chain_sync_status = FAILED 时，管理员可以手动重试同步。
     """
     result = await service.retry_sync(kyc_id)
-    return ApiResponse(data=result, message="Retry sync completed")
+    return create_success_response(
+        object_data=result.model_dump(mode="json"),
+        msg="Retry sync completed",
+    )
 
 
 @router.get(
     "/contract-status/{wallet_address}",
-    response_model=ApiResponse[KycContractComparisonResponse],
     summary="Get Contract KYC Status",
     description="Compare database and on-chain KYC status (admin only)",
 )
@@ -182,10 +185,6 @@ async def get_contract_kyc_status(
     result = await service.get_contract_comparison(wallet_address)
 
     if not result:
-        return ApiResponse(
-            code=404,
-            message="KYC record not found in database",
-            data=None,
-        )
+        return create_error_response(code=404, msg="KYC record not found in database")
 
-    return ApiResponse(data=result)
+    return create_success_response(object_data=result.model_dump(mode="json"))

@@ -1,68 +1,47 @@
 "use client";
 
 /**
- * Admin KYC 审核页面 (Story 2.9)
- *
- * 功能：
- * - 查看待审核/全部 KYC 列表
- * - 查看 KYC 详情和证件照片
- * - 审核通过/拒绝操作
- * - 查看链上同步状态
- * - 重试同步失败的 KYC
- * - 批量重试同步失败 (Code Review C3)
- *
- * 已迁移到 shadcn/ui 组件:
- * - Table -> DataTable
- * - Card, Row, Col, Statistic -> shadcn/ui Card + Tailwind grid
- * - Button -> shadcn/ui Button
- * - Tag -> Badge
- * - Drawer -> Sheet
- * - Modal -> Dialog
- * - Select -> shadcn/ui Select
- * - Input, TextArea -> shadcn/ui Input, Textarea
- * - Tabs -> shadcn/ui Tabs
- * - Alert -> shadcn/ui Alert
- * - Spin -> Skeleton
- * - Image -> next/image
- * - message -> notification (sonner)
- * - @ant-design/icons -> lucide-react
+ * Admin KYC Management - Enhanced Version
+ * KYC 管理页面 - 增强版
+ * 
+ * Features:
+ * - Enhanced statistics dashboard
+ * - Advanced filtering and search
+ * - Batch operations
+ * - Document viewer with zoom/pan
+ * - Risk assessment display
+ * - Audit timeline
+ * - Real-time updates
  */
 
-import { useState, useEffect, useCallback, Component, ReactNode } from "react";
-import { ColumnDef } from "@tanstack/react-table";
-import Image from "next/image";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import {
-  CheckCircle,
-  XCircle,
+  Search,
+  Filter,
   RefreshCw,
-  Eye,
+  Shield,
   AlertTriangle,
+  Eye,
+  CheckCircle2,
+  XCircle,
+  Download,
+  MoreHorizontal,
+  Calendar,
+  Globe,
+  Clock,
+  AlertOctagon,
   Loader2,
 } from "lucide-react";
+import { ColumnDef } from "@tanstack/react-table";
 
-import { notification } from "@/lib/notification";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -70,169 +49,101 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { notification } from "@/lib/notification";
+import { RequireAuth } from "@/components/auth";
+import { V6Background } from "@/components/layout/V6Background";
+
+import { KycStatsPanel } from "@/components/admin-kyc/kyc-stats-panel";
+import { ReviewPanel } from "@/components/admin-kyc/review-panel";
+import { BatchToolbar } from "@/components/admin-kyc/batch-toolbar";
 
 import {
-  adminService,
-  type AdminKycItem,
-  type AdminKycDetail,
-  type KycStats,
-  type RejectReasonOption,
-  type KycStatusType,
-} from "@/services/admin";
+  adminKycService,
+  type EnhancedKycStats,
+  type EnhancedKycItem,
+  type EnhancedKycDetail,
+  type KycFilterParams,
+  type RiskLevel,
+  type ReviewPriority,
+} from "@/services/admin-kyc";
 import { kycService } from "@/services/kyc";
+import { adminService } from "@/services/admin";
+import type { KycStatusType } from "@/services/admin";
 
-// Code Review M5: ErrorBoundary 组件
-interface ErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("KYC Page Error:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        this.props.fallback || (
-          <div className="p-6">
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>页面加载失败</AlertTitle>
-              <AlertDescription>
-                <p>{this.state.error?.message || "未知错误"}</p>
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    this.setState({ hasError: false, error: null })
-                  }
-                  className="mt-4"
-                >
-                  重试
-                </Button>
-              </AlertDescription>
-            </Alert>
-          </div>
-        )
-      );
-    }
-    return this.props.children;
-  }
-}
-
-
-// 状态 Badge 变体映射
-const STATUS_BADGE_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  not_started: "secondary",
-  pending: "outline",
-  approved: "default",
-  rejected: "destructive",
+// 状态配置
+const STATUS_CONFIG: Record<KycStatusType, { color: string; bgColor: string; label: string }> = {
+  not_started: { color: "text-gray-400", bgColor: "bg-gray-500/20", label: "未开始" },
+  pending: { color: "text-blue-400", bgColor: "bg-blue-500/20", label: "待审核" },
+  approved: { color: "text-emerald-400", bgColor: "bg-emerald-500/20", label: "已通过" },
+  rejected: { color: "text-red-400", bgColor: "bg-red-500/20", label: "已拒绝" },
 };
 
-// 状态显示文本
-const STATUS_LABELS: Record<string, string> = {
-  not_started: "未开始",
-  pending: "待审核",
-  approved: "已通过",
-  rejected: "已拒绝",
+// 风险等级配置
+const RISK_CONFIG: Record<RiskLevel, { color: string; bgColor: string; label: string; icon: typeof Shield }> = {
+  low: { color: "text-emerald-400", bgColor: "bg-emerald-500/20", label: "低", icon: Shield },
+  medium: { color: "text-yellow-400", bgColor: "bg-yellow-500/20", label: "中", icon: AlertTriangle },
+  high: { color: "text-orange-400", bgColor: "bg-orange-500/20", label: "高", icon: AlertOctagon },
+  critical: { color: "text-red-400", bgColor: "bg-red-500/20", label: "极高", icon: AlertOctagon },
 };
 
-// 链上同步状态配置
-const SYNC_STATUS_CONFIG: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; text: string }> = {
-  not_required: { variant: "secondary", text: "无需同步" },
-  pending: { variant: "outline", text: "待同步" },
-  synced: { variant: "default", text: "已同步" },
-  failed: { variant: "destructive", text: "同步失败" },
+// 优先级配置
+const PRIORITY_CONFIG: Record<ReviewPriority, { color: string; label: string }> = {
+  low: { color: "text-gray-400", label: "低" },
+  normal: { color: "text-blue-400", label: "普通" },
+  high: { color: "text-orange-400", label: "高" },
+  urgent: { color: "text-red-400", label: "紧急" },
 };
 
-// 证件类型映射
-const ID_TYPE_LABELS: Record<string, string> = {
-  id_card: "身份证",
-  passport: "护照",
-  driver_license: "驾照",
-};
+export default function AdminKycPage() {
+  const { t } = useTranslation();
 
-// 统计卡片组件
-interface StatCardProps {
-  title: string;
-  value: number;
-  icon: ReactNode;
-  colorClass: string;
-}
-
-function StatCard({ title, value, icon, colorClass }: StatCardProps) {
-  return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className={`text-3xl font-bold mt-1 ${colorClass}`}>{value}</p>
-          </div>
-          <div className={`${colorClass}`}>{icon}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-
-function AdminKycPageContent() {
-  // 状态
-  const [stats, setStats] = useState<KycStats | null>(null);
-  const [kycList, setKycList] = useState<AdminKycItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  // State
+  const [stats, setStats] = useState<EnhancedKycStats | null>(null);
+  const [kycList, setKycList] = useState<EnhancedKycItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
-    current: 1,
+    page: 1,
     pageSize: 10,
     total: 0,
   });
+
+  // Filters
   const [activeTab, setActiveTab] = useState<string>("pending");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [riskFilter, setRiskFilter] = useState<RiskLevel | "all">("all");
+  const [priorityFilter, setPriorityFilter] = useState<ReviewPriority | "all">("all");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
 
-  // 详情抽屉
-  const [detailVisible, setDetailVisible] = useState(false);
-  const [selectedKyc, setSelectedKyc] = useState<AdminKycDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-
-  // 审核弹窗
-  const [reviewModalVisible, setReviewModalVisible] = useState(false);
-  const [reviewAction, setReviewAction] = useState<"approve" | "reject">("approve");
-  const [rejectReasons, setRejectReasons] = useState<RejectReasonOption[]>([]);
-  const [selectedRejectCode, setSelectedRejectCode] = useState<string>("");
-  const [customRejectReason, setCustomRejectReason] = useState("");
+  // Review Panel
+  const [reviewPanelOpen, setReviewPanelOpen] = useState(false);
+  const [selectedKyc, setSelectedKyc] = useState<EnhancedKycDetail | null>(null);
+  const [selectedKycId, setSelectedKycId] = useState<number | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
 
-  // Code Review C3: 批量选择状态
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [batchRetryLoading, setBatchRetryLoading] = useState(false);
+  // Batch Selection
+  const [selectedRows, setSelectedRows] = useState<EnhancedKycItem[]>([]);
+  const [rejectReasons, setRejectReasons] = useState<Array<{ code: string; label: string }>>([]);
 
-  // 加载统计
+  // Load stats
   const loadStats = useCallback(async () => {
     try {
-      const data = await adminService.getKycStats();
+      const data = await adminKycService.getEnhancedKycStats();
       setStats(data);
     } catch (error) {
       console.error("Failed to load KYC stats:", error);
     }
   }, []);
 
-  // 加载列表
-  const loadList = useCallback(async () => {
+  // Load KYC list
+  const loadKycList = useCallback(async () => {
     setLoading(true);
     try {
       const statusMap: Record<string, KycStatusType | undefined> = {
@@ -242,28 +153,30 @@ function AdminKycPageContent() {
         all: undefined,
       };
 
-      const params = {
+      const params: KycFilterParams = {
         status: statusMap[activeTab],
-        page: pagination.current,
+        search_query: searchQuery || undefined,
+        risk_level: riskFilter !== "all" ? riskFilter : undefined,
+        priority: priorityFilter !== "all" ? priorityFilter : undefined,
+        country_code: countryFilter !== "all" ? countryFilter : undefined,
+        page: pagination.page,
         page_size: pagination.pageSize,
+        sort_by: "submitted_at",
+        sort_order: "desc",
       };
 
-      const response = await adminService.getKycList(params);
+      const response = await adminKycService.getEnhancedKycList(params);
       setKycList(response.list_data);
-      setPagination((prev) => ({
-        ...prev,
-        total: response.pagination.total,
-      }));
+      setPagination((prev) => ({ ...prev, total: response.pagination.total }));
     } catch (error) {
       console.error("Failed to load KYC list:", error);
       notification.error("加载 KYC 列表失败");
     } finally {
       setLoading(false);
     }
-  }, [activeTab, pagination.current, pagination.pageSize]);
+  }, [activeTab, searchQuery, riskFilter, priorityFilter, countryFilter, pagination.page, pagination.pageSize]);
 
-
-  // 加载拒绝原因
+  // Load reject reasons
   const loadRejectReasons = useCallback(async () => {
     try {
       const reasons = await adminService.getRejectReasons();
@@ -273,76 +186,77 @@ function AdminKycPageContent() {
     }
   }, []);
 
-  // 初始加载
+  // Initial load
   useEffect(() => {
     loadStats();
     loadRejectReasons();
   }, [loadStats, loadRejectReasons]);
 
   useEffect(() => {
-    loadList();
-  }, [loadList]);
+    loadKycList();
+  }, [loadKycList]);
 
-  // 打开详情
-  const openDetail = async (kycId: number) => {
-    setDetailLoading(true);
-    setDetailVisible(true);
+  // Open review panel
+  const handleOpenReview = async (kycId: number) => {
+    setSelectedKycId(kycId);
     try {
-      const detail = await adminService.getKycDetail(kycId);
+      const detail = await adminKycService.getEnhancedKycDetail(kycId);
       setSelectedKyc(detail);
+      setReviewPanelOpen(true);
     } catch (error) {
       console.error("Failed to load KYC detail:", error);
       notification.error("加载详情失败");
-    } finally {
-      setDetailLoading(false);
     }
   };
 
-  // 打开审核弹窗
-  const openReviewModal = (action: "approve" | "reject") => {
-    setReviewAction(action);
-    setSelectedRejectCode("");
-    setCustomRejectReason("");
-    setReviewModalVisible(true);
-  };
-
-  // 执行审核
-  const handleReview = async () => {
-    if (!selectedKyc) return;
-
+  // Handle approve
+  const handleApprove = async (kycId: number, isAccredited: boolean) => {
     setReviewLoading(true);
     try {
-      const data = {
-        approved: reviewAction === "approve",
-        is_accredited: reviewAction === "approve",
-        reject_reason_code: reviewAction === "reject" ? selectedRejectCode : undefined,
-        reject_reason:
-          reviewAction === "reject" && selectedRejectCode === "other"
-            ? customRejectReason
-            : undefined,
-      };
-
-      await kycService.review(selectedKyc.kyc.id, data);
-      notification.success(reviewAction === "approve" ? "审核通过成功" : "审核拒绝成功");
-      setReviewModalVisible(false);
-      setDetailVisible(false);
-      loadList();
+      await kycService.review(kycId, {
+        approved: true,
+        is_accredited: isAccredited,
+      });
+      notification.success("审核通过成功");
+      setReviewPanelOpen(false);
+      loadKycList();
       loadStats();
     } catch (error) {
-      console.error("Failed to review KYC:", error);
+      console.error("Failed to approve KYC:", error);
       notification.error("审核操作失败");
     } finally {
       setReviewLoading(false);
     }
   };
 
+  // Handle reject
+  const handleReject = async (kycId: number, reasonCode: string, customReason?: string) => {
+    setReviewLoading(true);
+    try {
+      await kycService.review(kycId, {
+        approved: false,
+        is_accredited: false,
+        reject_reason_code: reasonCode,
+        reject_reason: customReason,
+      });
+      notification.success("审核拒绝成功");
+      setReviewPanelOpen(false);
+      loadKycList();
+      loadStats();
+    } catch (error) {
+      console.error("Failed to reject KYC:", error);
+      notification.error("审核操作失败");
+    } finally {
+      setReviewLoading(false);
+    }
+  };
 
-  // 重试同步
+  // Handle retry sync
   const handleRetrySync = async (kycId: number) => {
     try {
       await kycService.retrySync(kycId);
       notification.success("重试同步成功");
-      loadList();
+      loadKycList();
       loadStats();
     } catch (error) {
       console.error("Failed to retry sync:", error);
@@ -350,541 +264,383 @@ function AdminKycPageContent() {
     }
   };
 
-  // Code Review C3: 批量重试同步
-  const handleBatchRetrySync = async () => {
-    if (selectedRowKeys.length === 0) {
-      notification.warning("请先选择要重试的记录");
-      return;
-    }
-
-    // 过滤出同步失败的记录
-    const failedItems = kycList.filter(
-      (item) =>
-        selectedRowKeys.includes(item.id) &&
-        item.on_chain_sync_status === "failed"
-    );
-
-    if (failedItems.length === 0) {
-      notification.warning("所选记录中没有同步失败的 KYC");
-      return;
-    }
-
-    setBatchRetryLoading(true);
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const item of failedItems) {
-      try {
-        await kycService.retrySync(item.id);
-        successCount++;
-      } catch (error) {
-        console.error(`Failed to retry sync for ${item.id}:`, error);
-        failCount++;
+  // Batch operations
+  const handleBatchApprove = async (ids: number[]) => {
+    try {
+      // Note: In a real implementation, you'd use adminKycService.batchReviewKyc
+      // For now, we'll process one by one
+      for (const id of ids) {
+        await kycService.review(id, { approved: true, is_accredited: false });
       }
-    }
-
-    setBatchRetryLoading(false);
-    setSelectedRowKeys([]);
-
-    if (successCount > 0) {
-      notification.success(`成功重试 ${successCount} 条，失败 ${failCount} 条`);
-      loadList();
+      notification.success(`批量通过成功: ${ids.length} 个`);
+      setSelectedRows([]);
+      loadKycList();
       loadStats();
-    } else {
-      notification.error("批量重试全部失败");
+    } catch (error) {
+      console.error("Batch approve failed:", error);
+      notification.error("批量通过失败");
     }
   };
 
-  // 处理行选择
-  const handleRowSelectionChange = (selectedRows: AdminKycItem[]) => {
-    setSelectedRowKeys(selectedRows.map((row) => row.id));
+  const handleBatchReject = async (ids: number[], reasonCode: string, customReason?: string) => {
+    try {
+      for (const id of ids) {
+        await kycService.review(id, {
+          approved: false,
+          is_accredited: false,
+          reject_reason_code: reasonCode,
+          reject_reason: customReason,
+        });
+      }
+      notification.success(`批量拒绝成功: ${ids.length} 个`);
+      setSelectedRows([]);
+      loadKycList();
+      loadStats();
+    } catch (error) {
+      console.error("Batch reject failed:", error);
+      notification.error("批量拒绝失败");
+    }
   };
 
+  const handleBatchRetrySync = async (ids: number[]) => {
+    try {
+      let success = 0;
+      let failed = 0;
+      for (const id of ids) {
+        try {
+          await kycService.retrySync(id);
+          success++;
+        } catch {
+          failed++;
+        }
+      }
+      notification.success(`重试完成: 成功 ${success}, 失败 ${failed}`);
+      loadKycList();
+      loadStats();
+    } catch (error) {
+      console.error("Batch retry failed:", error);
+      notification.error("批量重试失败");
+    }
+  };
 
-  // 表格列定义
-  const columns: ColumnDef<AdminKycItem>[] = [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="全选"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          disabled={row.original.on_chain_sync_status !== "failed"}
-          aria-label="选择行"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "id",
-      header: "ID",
-      size: 60,
-    },
-    {
-      accessorKey: "wallet_address",
-      header: "钱包地址",
-      size: 180,
-      cell: ({ row }) => {
-        const addr = row.original.wallet_address;
-        return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  // Table columns
+  const columns: ColumnDef<EnhancedKycItem>[] = useMemo(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
       },
-    },
-    {
-      accessorKey: "full_name",
-      header: "姓名",
-      size: 100,
-      cell: ({ row }) => row.original.full_name || "-",
-    },
-    {
-      accessorKey: "id_type",
-      header: "证件类型",
-      size: 80,
-      cell: ({ row }) => {
-        const type = row.original.id_type;
-        return type ? ID_TYPE_LABELS[type] || type : "-";
+      {
+        accessorKey: "id",
+        header: "ID",
+        size: 60,
       },
-    },
-    {
-      accessorKey: "status",
-      header: "状态",
-      size: 100,
-      cell: ({ row }) => {
-        const status = row.original.status;
-        return (
-          <Badge variant={STATUS_BADGE_VARIANTS[status] || "secondary"}>
-            {STATUS_LABELS[status] || status}
-          </Badge>
-        );
+      {
+        accessorKey: "full_name",
+        header: "姓名",
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium text-white">{row.original.full_name || "-"}</div>
+            <div className="text-xs text-white/50 font-mono">
+              {row.original.wallet_address.slice(0, 6)}...{row.original.wallet_address.slice(-4)}
+            </div>
+          </div>
+        ),
       },
-    },
-    {
-      accessorKey: "on_chain_sync_status",
-      header: "链上同步",
-      size: 140,
-      cell: ({ row }) => {
-        const status = row.original.on_chain_sync_status;
-        if (!status) return "-";
-        const config = SYNC_STATUS_CONFIG[status];
-        return (
-          <div className="flex items-center gap-2">
-            <Badge variant={config?.variant || "secondary"}>
-              {config?.text || status}
+      {
+        accessorKey: "status",
+        header: "状态",
+        cell: ({ row }) => {
+          const config = STATUS_CONFIG[row.original.status];
+          return (
+            <Badge className={`${config.bgColor} ${config.color} border-0`}>
+              {config.label}
             </Badge>
-            {status === "failed" && (
+          );
+        },
+      },
+      {
+        accessorKey: "risk_level",
+        header: "风险",
+        cell: ({ row }) => {
+          const config = RISK_CONFIG[row.original.risk_level];
+          const Icon = config.icon;
+          return (
+            <div className="flex items-center gap-1">
+              <Icon className={`w-3.5 h-3.5 ${config.color}`} />
+              <Badge className={`${config.bgColor} ${config.color} border-0 text-xs`}>
+                {config.label}
+              </Badge>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "priority",
+        header: "优先级",
+        cell: ({ row }) => {
+          const config = PRIORITY_CONFIG[row.original.priority];
+          return <span className={`text-xs ${config.color}`}>{config.label}</span>;
+        },
+      },
+      {
+        accessorKey: "country_code",
+        header: "国家",
+        cell: ({ row }) => row.original.country_code || "-",
+      },
+      {
+        accessorKey: "submitted_at",
+        header: "提交时间",
+        cell: ({ row }) => {
+          const time = row.original.submitted_at;
+          if (!time) return "-";
+          const date = new Date(time);
+          return (
+            <div className="text-sm">
+              <div>{date.toLocaleDateString("zh-CN")}</div>
+              <div className="text-xs text-white/50">{date.toLocaleTimeString("zh-CN")}</div>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "processing_time_minutes",
+        header: "处理时间",
+        cell: ({ row }) => {
+          const minutes = row.original.processing_time_minutes;
+          if (!minutes) return "-";
+          if (minutes < 60) return `${Math.round(minutes)}m`;
+          const hours = Math.floor(minutes / 60);
+          const mins = Math.round(minutes % 60);
+          return `${hours}h ${mins}m`;
+        },
+      },
+      {
+        id: "actions",
+        header: "操作",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenReview(row.original.id)}
+            >
+              <Eye className="w-4 h-4 mr-1" />
+              审核
+            </Button>
+            {row.original.on_chain_sync_status === "failed" && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRetrySync(row.original.id)}
-                className="h-6 px-2 text-xs"
               >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                重试
+                <RefreshCw className="w-4 h-4" />
               </Button>
             )}
           </div>
-        );
+        ),
       },
-    },
-    {
-      accessorKey: "submitted_at",
-      header: "提交时间",
-      size: 160,
-      cell: ({ row }) => {
-        const time = row.original.submitted_at;
-        return time ? new Date(time).toLocaleString("zh-CN") : "-";
-      },
-    },
-    {
-      id: "action",
-      header: "操作",
-      size: 100,
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => openDetail(row.original.id)}
-        >
-          <Eye className="h-4 w-4 mr-1" />
-          详情
-        </Button>
-      ),
-    },
-  ];
-
-  // 计算分页
-  const pageCount = Math.ceil(pagination.total / pagination.pageSize);
-
+    ],
+    []
+  );
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">KYC 审核管理</h1>
+    <RequireAuth admin>
+      <V6Background />
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          title="待审核"
-          value={stats?.pending || 0}
-          icon={<RefreshCw className={`h-8 w-8 ${stats?.pending ? "animate-spin" : ""}`} />}
-          colorClass="text-blue-400"
-        />
-        <StatCard
-          title="已通过"
-          value={stats?.approved || 0}
-          icon={<CheckCircle className="h-8 w-8" />}
-          colorClass="text-[#00D4AA]"
-        />
-        <StatCard
-          title="已拒绝"
-          value={stats?.rejected || 0}
-          icon={<XCircle className="h-8 w-8" />}
-          colorClass="text-red-400"
-        />
-        <StatCard
-          title="同步失败"
-          value={stats?.failed_sync || 0}
-          icon={<AlertTriangle className="h-8 w-8" />}
-          colorClass="text-yellow-400"
-        />
-      </div>
-
-      {/* 列表 */}
-      <Card>
-        <CardHeader className="pb-0">
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => {
-              setActiveTab(value);
-              setSelectedRowKeys([]);
-              setPagination((prev) => ({ ...prev, current: 1 }));
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <TabsList>
-                <TabsTrigger value="pending">
-                  待审核 ({stats?.pending || 0})
-                </TabsTrigger>
-                <TabsTrigger value="approved">已通过</TabsTrigger>
-                <TabsTrigger value="rejected">已拒绝</TabsTrigger>
-                <TabsTrigger value="all">全部</TabsTrigger>
-              </TabsList>
-
-              {/* 批量重试按钮 */}
-              {selectedRowKeys.length > 0 && (
-                <Button
-                  onClick={handleBatchRetrySync}
-                  disabled={batchRetryLoading}
-                >
-                  {batchRetryLoading && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  批量重试 ({selectedRowKeys.length})
-                </Button>
-              )}
-            </div>
-          </Tabs>
-        </CardHeader>
-
-        <CardContent className="pt-4">
-          <DataTable
-            columns={columns}
-            data={kycList}
-            loading={loading}
-            emptyMessage="暂无数据"
-            enableRowSelection
-            onRowSelectionChange={handleRowSelectionChange}
-            pagination={{
-              pageIndex: pagination.current - 1,
-              pageSize: pagination.pageSize,
-              pageCount: pageCount,
-              onPageChange: (page) => {
-                setPagination((prev) => ({ ...prev, current: page + 1 }));
-                setSelectedRowKeys([]);
-              },
-              onPageSizeChange: (size) => {
-                setPagination((prev) => ({ ...prev, pageSize: size, current: 1 }));
-                setSelectedRowKeys([]);
-              },
-            }}
-          />
-        </CardContent>
-      </Card>
-
-      {/* 详情抽屉 */}
-      <Sheet open={detailVisible} onOpenChange={setDetailVisible}>
-        <SheetContent className="w-[640px] sm:max-w-[640px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center justify-between">
-              <span>KYC 详情</span>
-              {selectedKyc?.kyc.status === "pending" && (
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => openReviewModal("approve")}>
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    通过
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => openReviewModal("reject")}
-                  >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    拒绝
-                  </Button>
-                </div>
-              )}
-            </SheetTitle>
-          </SheetHeader>
-
-          <div className="mt-6">
-            {detailLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-32 w-full" />
-              </div>
-            ) : selectedKyc ? (
-              <div className="space-y-6">
-                {/* 基本信息 */}
-                <div>
-                  <h4 className="font-semibold mb-4">基本信息</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="col-span-2">
-                      <span className="text-muted-foreground">钱包地址：</span>
-                      <span className="font-mono break-all">
-                        {selectedKyc.kyc.wallet_address}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">姓名：</span>
-                      <span>{selectedKyc.kyc.full_name || "-"}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">证件类型：</span>
-                      <span>
-                        {selectedKyc.kyc.id_type
-                          ? ID_TYPE_LABELS[selectedKyc.kyc.id_type] ||
-                            selectedKyc.kyc.id_type
-                          : "-"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">证件号后4位：</span>
-                      <span>{selectedKyc.kyc.id_number_last4 || "-"}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">出生日期：</span>
-                      <span>{selectedKyc.kyc.date_of_birth || "-"}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">国家代码：</span>
-                      <span>{selectedKyc.kyc.country_code || "-"}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">合格投资者：</span>
-                      <span>{selectedKyc.kyc.is_accredited ? "是" : "否"}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">状态：</span>
-                      <Badge
-                        variant={
-                          STATUS_BADGE_VARIANTS[selectedKyc.kyc.status] ||
-                          "secondary"
-                        }
-                      >
-                        {STATUS_LABELS[selectedKyc.kyc.status] ||
-                          selectedKyc.kyc.status}
-                      </Badge>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">链上同步：</span>
-                      {selectedKyc.kyc.on_chain_sync_status ? (
-                        <Badge
-                          variant={
-                            SYNC_STATUS_CONFIG[selectedKyc.kyc.on_chain_sync_status]
-                              ?.variant || "secondary"
-                          }
-                        >
-                          {SYNC_STATUS_CONFIG[selectedKyc.kyc.on_chain_sync_status]
-                            ?.text || selectedKyc.kyc.on_chain_sync_status}
-                        </Badge>
-                      ) : (
-                        "-"
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-
-                {/* 同步错误信息 */}
-                {selectedKyc.kyc.on_chain_error && (
-                  <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>链上同步失败</AlertTitle>
-                    <AlertDescription className="flex items-center justify-between">
-                      <span>{selectedKyc.kyc.on_chain_error}</span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleRetrySync(selectedKyc.kyc.id)}
-                      >
-                        重试
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* 拒绝原因 */}
-                {selectedKyc.kyc.reject_reason && (
-                  <Alert variant="warning">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>拒绝原因</AlertTitle>
-                    <AlertDescription>
-                      {selectedKyc.kyc.reject_reason}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* 证件照片 */}
-                <div>
-                  <h4 className="font-semibold mb-4">证件照片</h4>
-                  <div className="flex gap-6 flex-wrap">
-                    {selectedKyc.documents.id_front && (
-                      <div className="text-center">
-                        <div className="relative w-[150px] h-[100px] rounded-lg overflow-hidden border border-white/10">
-                          <Image
-                            src={selectedKyc.documents.id_front}
-                            alt="证件正面"
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <p className="text-muted-foreground text-sm mt-2">
-                          证件正面
-                        </p>
-                      </div>
-                    )}
-                    {selectedKyc.documents.id_back && (
-                      <div className="text-center">
-                        <div className="relative w-[150px] h-[100px] rounded-lg overflow-hidden border border-white/10">
-                          <Image
-                            src={selectedKyc.documents.id_back}
-                            alt="证件背面"
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <p className="text-muted-foreground text-sm mt-2">
-                          证件背面
-                        </p>
-                      </div>
-                    )}
-                    {selectedKyc.documents.selfie && (
-                      <div className="text-center">
-                        <div className="relative w-[150px] h-[100px] rounded-lg overflow-hidden border border-white/10">
-                          <Image
-                            src={selectedKyc.documents.selfie}
-                            alt="手持自拍"
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <p className="text-muted-foreground text-sm mt-2">
-                          手持自拍
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </SheetContent>
-      </Sheet>
-
-
-      {/* 审核弹窗 */}
-      <Dialog open={reviewModalVisible} onOpenChange={setReviewModalVisible}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {reviewAction === "approve" ? "确认通过" : "确认拒绝"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="py-4">
-            {reviewAction === "approve" ? (
-              <p>确定通过此 KYC 申请？审核通过后将自动同步到链上。</p>
-            ) : (
-              <div className="space-y-4">
-                <p>请选择拒绝原因：</p>
-                <Select
-                  value={selectedRejectCode}
-                  onValueChange={setSelectedRejectCode}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择拒绝原因" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rejectReasons.map((r) => (
-                      <SelectItem key={r.code} value={r.code}>
-                        {r.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedRejectCode === "other" && (
-                  <Textarea
-                    placeholder="请输入具体拒绝原因"
-                    rows={3}
-                    value={customRejectReason}
-                    onChange={(e) => setCustomRejectReason(e.target.value)}
-                  />
-                )}
-              </div>
-            )}
+      <div className="min-h-screen relative px-6 py-8 max-w-[1600px] mx-auto">
+        {/* Header */}
+        <motion.div
+          className="mb-8 flex items-center justify-between"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-1">KYC 管理</h1>
+            <p className="text-white/50">身份认证审核与风险管理</p>
           </div>
 
-          <DialogFooter>
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              onClick={() => setReviewModalVisible(false)}
+              onClick={() => {
+                loadStats();
+                loadKycList();
+              }}
+              disabled={loading}
             >
-              取消
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              刷新
             </Button>
-            <Button
-              variant={reviewAction === "reject" ? "destructive" : "default"}
-              onClick={handleReview}
-              disabled={reviewLoading}
-            >
-              {reviewLoading && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              )}
-              {reviewAction === "approve" ? "确认通过" : "确认拒绝"}
+            <Button variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              导出
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+          </div>
+        </motion.div>
 
-// Code Review M5: 默认导出包装 ErrorBoundary
-export default function AdminKycPage() {
-  return (
-    <ErrorBoundary>
-      <AdminKycPageContent />
-    </ErrorBoundary>
+        {/* Stats Panel */}
+        <motion.div
+          className="mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <KycStatsPanel stats={stats} isLoading={!stats && loading} />
+        </motion.div>
+
+        {/* Filters & Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card className="bg-[#0d1117]/80 border-white/10 backdrop-blur-sm">
+            <CardHeader className="pb-0">
+              {/* Tabs & Search */}
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="bg-white/5">
+                    <TabsTrigger value="pending" className="data-[state=active]:bg-white/10">
+                      待审核 {stats?.pending ? `(${stats.pending})` : ""}
+                    </TabsTrigger>
+                    <TabsTrigger value="approved" className="data-[state=active]:bg-white/10">
+                      已通过
+                    </TabsTrigger>
+                    <TabsTrigger value="rejected" className="data-[state=active]:bg-white/10">
+                      已拒绝
+                    </TabsTrigger>
+                    <TabsTrigger value="all" className="data-[state=active]:bg-white/10">
+                      全部
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Input
+                      placeholder="搜索姓名或钱包地址..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 w-64 bg-white/5 border-white/10"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Advanced Filters */}
+              <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/10">
+                <Filter className="w-4 h-4 text-white/40" />
+                
+                <Select value={riskFilter} onValueChange={(v) => setRiskFilter(v as RiskLevel | "all")}>
+                  <SelectTrigger className="w-32 bg-white/5 border-white/10">
+                    <SelectValue placeholder="风险等级" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部风险</SelectItem>
+                    <SelectItem value="low">低风险</SelectItem>
+                    <SelectItem value="medium">中风险</SelectItem>
+                    <SelectItem value="high">高风险</SelectItem>
+                    <SelectItem value="critical">极高风险</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as ReviewPriority | "all")}>
+                  <SelectTrigger className="w-32 bg-white/5 border-white/10">
+                    <SelectValue placeholder="优先级" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部</SelectItem>
+                    <SelectItem value="low">低</SelectItem>
+                    <SelectItem value="normal">普通</SelectItem>
+                    <SelectItem value="high">高</SelectItem>
+                    <SelectItem value="urgent">紧急</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={countryFilter} onValueChange={setCountryFilter}>
+                  <SelectTrigger className="w-40 bg-white/5 border-white/10">
+                    <Globe className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="国家/地区" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部国家</SelectItem>
+                    <SelectItem value="CN">中国</SelectItem>
+                    <SelectItem value="US">美国</SelectItem>
+                    <SelectItem value="SG">新加坡</SelectItem>
+                    <SelectItem value="JP">日本</SelectItem>
+                    <SelectItem value="KR">韩国</SelectItem>
+                    <SelectItem value="GB">英国</SelectItem>
+                    <SelectItem value="DE">德国</SelectItem>
+                    <SelectItem value="other">其他</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-6">
+              <DataTable
+                columns={columns}
+                data={kycList}
+                loading={loading}
+                emptyMessage="暂无数据"
+                enableRowSelection
+                onRowSelectionChange={setSelectedRows}
+                pagination={{
+                  pageIndex: pagination.page - 1,
+                  pageSize: pagination.pageSize,
+                  pageCount: Math.ceil(pagination.total / pagination.pageSize),
+                  onPageChange: (page) => setPagination((prev) => ({ ...prev, page: page + 1 })),
+                  onPageSizeChange: (size) => setPagination((prev) => ({ ...prev, pageSize: size, page: 1 })),
+                }}
+              />
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Review Panel */}
+        <ReviewPanel
+          kycDetail={selectedKyc}
+          isOpen={reviewPanelOpen}
+          onClose={() => {
+            setReviewPanelOpen(false);
+            setSelectedKyc(null);
+          }}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          onRetrySync={handleRetrySync}
+          rejectReasons={rejectReasons}
+          isProcessing={reviewLoading}
+        />
+
+        {/* Batch Toolbar */}
+        <BatchToolbar
+          selectedItems={selectedRows}
+          onClearSelection={() => setSelectedRows([])}
+          onBatchApprove={handleBatchApprove}
+          onBatchReject={handleBatchReject}
+          onBatchRetrySync={handleBatchRetrySync}
+          rejectReasons={rejectReasons}
+        />
+      </div>
+    </RequireAuth>
   );
 }

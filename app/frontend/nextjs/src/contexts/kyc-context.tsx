@@ -3,13 +3,33 @@
 import * as React from 'react';
 import { z } from 'zod';
 import { useAccount } from 'wagmi';
+import { applyKyc, kycService, KycStatus as ApiKycStatus, type KycApplyRequest, type KycDocumentInfo, type KycIdType } from '@/services/kyc';
+
+// 计算年龄的辅助函数
+function calculateAge(dateOfBirth: string): number {
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  if (isNaN(birthDate.getTime())) return -1;
+  
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 // KYC Form Validation Schema (Zod 4 使用 message 参数)
 export const kycSchema = z.object({
   // Basic Info
   firstName: z.string({ message: 'First name is required' }).min(2, 'First name must be at least 2 characters'),
   lastName: z.string({ message: 'Last name is required' }).min(2, 'Last name must be at least 2 characters'),
-  dateOfBirth: z.string({ message: 'Date of birth is required' }).regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date'),
+  dateOfBirth: z.string({ message: 'Date of birth is required' })
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date')
+    .refine((val) => {
+      const age = calculateAge(val);
+      return age >= 18 && age <= 120;
+    }, 'You must be at least 18 years old'),
   nationality: z.string({ message: 'Nationality is required' }).min(2, 'Please select nationality'),
   
   // Contact Info
@@ -64,6 +84,9 @@ export interface KycState {
   // Show landing page
   showLanding: boolean;
   
+  // Loading state (正在从后端获取状态)
+  isLoading: boolean;
+  
   // Submission status
   status: KycStatus;
   submissionId: string | null;
@@ -117,6 +140,7 @@ const initialState: KycState = {
   formData: initialFormData,
   currentStep: 0,
   showLanding: true,
+  isLoading: true, // 初始为 loading，等后端返回后再决定显示什么
   status: 'not_started',
   submissionId: null,
   submittedAt: null,
@@ -145,7 +169,7 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
     formDataRef.current = state.formData;
   }, [state.formData]);
 
-  // 当钱包地址变化时，重新加载对应的草稿
+  // 当钱包地址变化时，先从后端获取 KYC 状态，再加载草稿
   React.useEffect(() => {
     // 如果地址没有变化，跳过
     if (currentAddressRef.current === address) return;
@@ -162,44 +186,93 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
       console.log('[KYC] No wallet address, skipping draft load');
       return;
     }
-    
-    const storageKey = getStorageKey(address);
-    if (!storageKey) return;
-    
-    const saved = localStorage.getItem(storageKey);
-    console.log('[KYC] Loading draft for address:', address, 'key:', storageKey, 'data:', saved);
-    
-    if (saved) {
+
+    // 1. 先从后端获取 KYC 状态
+    const fetchBackendStatus = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        console.log('[KYC] Parsed draft:', parsed);
+        console.log('[KYC] Fetching backend status for address:', address);
+        const response = await kycService.getStatus(address);
+        console.log('[KYC] Backend status response:', response);
         
-        // 过滤掉空字符串和 undefined 值，只保留有效数据
-        const cleanedFormData: Partial<KycFormData> = {};
-        if (parsed.formData) {
-          for (const [key, value] of Object.entries(parsed.formData)) {
-            // 只保留非空值（但保留 false 布尔值）
-            if (value !== '' && value !== undefined && value !== null) {
-              cleanedFormData[key as keyof KycFormData] = value as KycFormData[keyof KycFormData];
+        // 映射后端状态到前端状态（使用字符串值避免枚举比较问题）
+        const statusMap: Record<string, KycStatus> = {
+          'not_started': 'not_started',
+          'pending': 'pending_review',
+          'approved': 'approved',
+          'rejected': 'rejected',
+        };
+        
+        const mappedStatus = statusMap[response.status] || 'not_started';
+        console.log('[KYC] Mapped status:', response.status, '->', mappedStatus);
+        
+        // 如果已提交/审核中/已通过/已拒绝，直接设置状态，跳过草稿加载
+        if (mappedStatus !== 'not_started') {
+          console.log('[KYC] Backend has KYC record, setting status:', mappedStatus);
+          setState((prev) => ({
+            ...prev,
+            status: mappedStatus,
+            showLanding: false, // 已提交的不显示 landing
+            isLoading: false, // 加载完成
+            submittedAt: response.submitted_at ? new Date(response.submitted_at).getTime() : null,
+            reviewedAt: response.reviewed_at ? new Date(response.reviewed_at).getTime() : null,
+            rejectionReason: response.reject_reason,
+          }));
+          return; // 不加载本地草稿
+        }
+      } catch (error) {
+        // 404 或其他错误表示没有 KYC 记录，继续加载草稿
+        console.log('[KYC] No backend KYC record, will load draft if exists');
+      }
+      
+      // 2. 如果后端没有记录，加载本地草稿
+      const storageKey = getStorageKey(address);
+      if (!storageKey) {
+        setState((prev) => ({ ...prev, isLoading: false }));
+        return;
+      }
+      
+      const saved = localStorage.getItem(storageKey);
+      console.log('[KYC] Loading draft for address:', address, 'key:', storageKey, 'data:', saved);
+      
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          console.log('[KYC] Parsed draft:', parsed);
+          
+          // 过滤掉空字符串和 undefined 值，只保留有效数据
+          const cleanedFormData: Partial<KycFormData> = {};
+          if (parsed.formData) {
+            for (const [key, value] of Object.entries(parsed.formData)) {
+              // 只保留非空值（但保留 false 布尔值）
+              if (value !== '' && value !== undefined && value !== null) {
+                cleanedFormData[key as keyof KycFormData] = value as KycFormData[keyof KycFormData];
+              }
             }
           }
+          
+          const loadedFormData = { ...initialFormData, ...cleanedFormData };
+          console.log('[KYC] Cleaned and loaded formData:', loadedFormData);
+          
+          // 同时更新 ref 和 state，确保数据同步
+          formDataRef.current = loadedFormData;
+          setState((prev) => ({
+            ...prev,
+            formData: loadedFormData,
+            status: parsed.status || 'draft',
+            lastSaved: parsed.lastSaved,
+            isLoading: false, // 加载完成
+          }));
+        } catch (e) {
+          console.error('[KYC] Failed to parse draft:', e);
+          setState((prev) => ({ ...prev, isLoading: false }));
         }
-        
-        const loadedFormData = { ...initialFormData, ...cleanedFormData };
-        console.log('[KYC] Cleaned and loaded formData:', loadedFormData);
-        
-        // 同时更新 ref 和 state，确保数据同步
-        formDataRef.current = loadedFormData;
-        setState((prev) => ({
-          ...prev,
-          formData: loadedFormData,
-          status: parsed.status || 'draft',
-          lastSaved: parsed.lastSaved,
-        }));
-      } catch (e) {
-        console.error('[KYC] Failed to parse draft:', e);
+      } else {
+        // 没有草稿，也要设置 isLoading: false
+        setState((prev) => ({ ...prev, isLoading: false }));
       }
-    }
+    };
+
+    fetchBackendStatus();
   }, [address]);
 
   // Auto-save draft when form data changes
@@ -498,10 +571,71 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
 
   const submitKyc = React.useCallback(async (): Promise<boolean> => {
     if (!validateStep(3)) return false;
+    if (!address) {
+      console.error('[KYC] Cannot submit: no wallet address');
+      return false;
+    }
 
     try {
-      // In production, this would call the backend API
-      const submissionId = `KYC-${Date.now()}`;
+      const data = formDataRef.current;
+      
+      // 构建多证件格式的请求数据
+      const documents: KycDocumentInfo[] = [];
+      
+      // 根据 documentType 构建证件信息
+      const docType = data.documentType;
+      if (docType) {
+        // 映射前端文档类型到后端 id_type
+        const idTypeMap: Record<string, KycIdType> = {
+          'passport': 'passport',
+          'national_id': 'id_card',
+          'drivers_license': 'driver_license',
+        };
+        
+        // 获取上传的文件路径
+        let frontUrl = '';
+        let backUrl: string | undefined;
+        
+        if (docType === 'passport') {
+          frontUrl = data.passportFrontPath || '';
+        } else if (docType === 'national_id') {
+          frontUrl = data.idCardFrontPath || '';
+          backUrl = data.idCardBackPath;
+        } else if (docType === 'drivers_license') {
+          frontUrl = data.driversLicenseFrontPath || '';
+          backUrl = data.driversLicenseBackPath;
+        }
+        
+        if (frontUrl) {
+          documents.push({
+            id_type: idTypeMap[docType] || 'passport',
+            id_number: data.documentNumber || '',
+            document_expiry: data.documentExpiry || '',
+            id_front_url: frontUrl,
+            id_back_url: backUrl,
+          });
+        }
+      }
+      
+      // 构建 API 请求
+      // 注意: selfie_url 应该是 MinIO 文件路径，不是 base64
+      // faceImage 是 base64 数据，需要先上传到 MinIO 获取路径
+      // TODO: 实现活体检测图片上传逻辑
+      const request: KycApplyRequest = {
+        full_name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+        date_of_birth: data.dateOfBirth || '',
+        country_code: data.nationality?.toUpperCase().slice(0, 2),
+        documents,
+        selfie_url: undefined, // 暂不提交 selfie，需要先实现上传逻辑
+      };
+      
+      console.log('[KYC] Submitting request:', request);
+      
+      // 调用后端 API
+      const response = await applyKyc(request);
+      console.log('[KYC] Submit response:', response);
+      
+      const submissionId = `KYC-${response.id}`;
       
       setState((prev) => ({
         ...prev,
@@ -512,12 +646,10 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
       }));
 
       // Clear draft after successful submission
-      if (address) {
-        const storageKey = getStorageKey(address);
-        if (storageKey) {
-          localStorage.removeItem(storageKey);
-          console.log('[KYC] Cleared draft after submission for address:', address);
-        }
+      const storageKey = getStorageKey(address);
+      if (storageKey) {
+        localStorage.removeItem(storageKey);
+        console.log('[KYC] Cleared draft after submission for address:', address);
       }
       
       return true;
