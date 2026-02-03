@@ -169,6 +169,19 @@ class KycService:
                 existing.on_chain_tx_hash = None
                 existing.on_chain_synced_at = None
                 existing.on_chain_error = None
+                # 更新联系信息字段 (Requirements 1.3)
+                existing.email = data.email
+                existing.phone = data.phone
+                # 更新居住地址字段 (Requirements 2.7)
+                existing.address_line1 = data.address_line1
+                existing.address_line2 = data.address_line2
+                existing.city = data.city
+                existing.state = data.state
+                existing.postal_code = data.postal_code
+                existing.residence_country = data.residence_country
+                # 更新活体检测字段 (Requirements 3.3)
+                existing.liveness_verified = data.liveness_verified or False
+                existing.face_image_url = data.face_image_url
                 await existing.save()
 
                 # 删除旧的证件记录，创建新的
@@ -187,6 +200,19 @@ class KycService:
             date_of_birth=data.date_of_birth,
             selfie_url=data.selfie_url,
             on_chain_sync_status=OnChainSyncStatus.PENDING,
+            # 联系信息字段 (Requirements 1.3)
+            email=data.email,
+            phone=data.phone,
+            # 居住地址字段 (Requirements 2.7)
+            address_line1=data.address_line1,
+            address_line2=data.address_line2,
+            city=data.city,
+            state=data.state,
+            postal_code=data.postal_code,
+            residence_country=data.residence_country,
+            # 活体检测字段 (Requirements 3.3)
+            liveness_verified=data.liveness_verified or False,
+            face_image_url=data.face_image_url,
         )
 
         # 创建证件记录
@@ -460,7 +486,13 @@ class KycService:
         return deleted > 0
 
     async def _to_full_response(self, kyc: AccountKyc) -> KycFullResponse:
-        """转换为完整响应 (包含多证件信息)"""
+        """转换为完整响应 (包含多证件信息和扩展字段)
+        
+        Requirements 6.5: 映射所有新字段到响应
+        - 联系信息: email, phone
+        - 居住地址: address_line1, address_line2, city, state, postal_code, residence_country
+        - 活体检测: liveness_verified, has_face_image (基于 face_image_url 是否存在)
+        """
         # 获取关联的证件记录
         documents = await AccountKycDocument.filter(kyc_id=kyc.id).all()
         logger.info(f"Found {len(documents)} document(s) for KYC {kyc.id}")
@@ -497,6 +529,19 @@ class KycService:
             # 多证件信息
             documents=doc_responses,
             has_selfie=bool(kyc.selfie_url),
+            # 联系信息字段 (Requirements 6.1)
+            email=kyc.email,
+            phone=kyc.phone,
+            # 居住地址字段 (Requirements 6.2)
+            address_line1=kyc.address_line1,
+            address_line2=kyc.address_line2,
+            city=kyc.city,
+            state=kyc.state,
+            postal_code=kyc.postal_code,
+            residence_country=kyc.residence_country,
+            # 活体检测字段 (Requirements 6.3, 6.4)
+            liveness_verified=kyc.liveness_verified or False,
+            has_face_image=bool(kyc.face_image_url),
             # 链上同步状态
             on_chain_sync_status=kyc.on_chain_sync_status,
             on_chain_tx_hash=kyc.on_chain_tx_hash,

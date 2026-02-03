@@ -7,8 +7,13 @@
 - 支持三种证件类型: passport, id_card, drivers_license
 - 每种证件类型有独立的上传路径
 - 护照只需正面，其他证件需要正面+背面
+
+Base64 图片上传支持 (KYC Backend Enhancement):
+- 支持活体检测人脸图片上传
+- 支持 data URI 格式和纯 base64 字符串
 """
 
+import base64
 import uuid
 
 from falib.utils.handlers import create_error_response, create_success_response
@@ -16,6 +21,7 @@ from falib.utils.log import get_logger
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
 from src.services.kyc.schemas import (
+    Base64UploadRequest,
     KycApplyRequest,
     KycUploadResponse,
 )
@@ -140,6 +146,183 @@ async def upload_kyc_document(
             file_path=object_name, document_type=document_type
         ).model_dump(),
         msg="文件上传成功",
+    )
+
+
+# ========== Base64 图片上传支持 (KYC Backend Enhancement) ==========
+
+# 支持的图片类型及其 MIME 类型映射
+BASE64_ALLOWED_IMAGE_TYPES = {"jpg", "jpeg", "png"}
+MIME_TO_EXT = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+}
+# 图片魔数 (Magic Bytes) 用于检测图片类型
+IMAGE_MAGIC_BYTES = {
+    b"\xff\xd8\xff": "jpg",  # JPEG
+    b"\x89PNG\r\n\x1a\n": "png",  # PNG
+}
+
+
+def detect_image_type(data: bytes) -> str | None:
+    """
+    通过魔数检测图片类型
+    
+    Args:
+        data: 图片二进制数据
+        
+    Returns:
+        图片类型 (jpg/png) 或 None
+    """
+    for magic, ext in IMAGE_MAGIC_BYTES.items():
+        if data.startswith(magic):
+            return ext
+    return None
+
+
+def extract_base64_data(image_data: str) -> tuple[str, str | None]:
+    """
+    从 base64 字符串中提取纯 base64 数据和 MIME 类型
+    
+    支持两种格式:
+    1. Data URI: data:image/jpeg;base64,/9j/4AAQSkZJRg...
+    2. 纯 Base64: /9j/4AAQSkZJRg...
+    
+    Args:
+        image_data: base64 编码的图片数据
+        
+    Returns:
+        (纯 base64 数据, MIME 类型或 None)
+    """
+    mime_type = None
+    base64_data = image_data.strip()
+    
+    if base64_data.startswith("data:"):
+        # 解析 data URI 格式
+        try:
+            # 格式: data:image/jpeg;base64,xxxxx
+            if ";base64," in base64_data:
+                header, base64_data = base64_data.split(";base64,", 1)
+                # 提取 MIME 类型: data:image/jpeg -> image/jpeg
+                mime_type = header.replace("data:", "")
+            elif "," in base64_data:
+                # 简化格式: data:image/jpeg,xxxxx
+                header, base64_data = base64_data.split(",", 1)
+                mime_type = header.replace("data:", "")
+        except (ValueError, IndexError):
+            pass
+    
+    return base64_data, mime_type
+
+
+@router.post(
+    "/upload-base64",
+    summary="Upload Base64 Image",
+    description="Upload a base64 encoded image for liveness detection or selfie",
+)
+async def upload_base64_image(
+    request: Base64UploadRequest,
+    wallet_address: str = Depends(require_user),
+):
+    """
+    上传 Base64 编码的图片 (Requirements 4.1-4.7)
+    
+    用于活体检测等场景，前端直接提交 base64 编码的图片数据。
+    
+    - 需要 JWT 认证
+    - **image_data**: Base64 编码的图片数据 (支持 data URI 格式或纯 base64)
+    - **document_type**: 文档类型
+      - `face_image`: 活体检测人脸图片
+      - `selfie`: 手持证件自拍
+    
+    验证规则:
+    - 支持图片类型: jpg, jpeg, png
+    - 最大图片大小: 10MB
+    
+    上传成功后返回文件路径，用于提交 KYC 申请时传入。
+    
+    文件路径格式: `kyc/{wallet_address}/{document_type}_{uuid}.{ext}`
+    """
+    image_data = request.image_data
+    document_type = request.document_type
+    
+    # 1. 提取纯 base64 数据和 MIME 类型
+    base64_data, mime_type = extract_base64_data(image_data)
+    
+    # 2. 解码 base64 数据
+    try:
+        # 添加必要的 padding
+        padding = 4 - len(base64_data) % 4
+        if padding != 4:
+            base64_data += "=" * padding
+        
+        decoded_data = base64.b64decode(base64_data, validate=True)
+    except Exception as e:
+        logger.warning(f"Base64 decode failed: {e}")
+        return create_error_response(
+            msg="Invalid base64 image data",
+            code=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    # 3. 验证图片大小 (≤ 10MB)
+    if len(decoded_data) > MAX_FILE_SIZE:
+        return create_error_response(
+            msg="Image size exceeds 10MB limit",
+            code=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    # 4. 检测图片类型 (通过魔数)
+    detected_ext = detect_image_type(decoded_data)
+    
+    # 如果魔数检测失败，尝试从 MIME 类型推断
+    if detected_ext is None and mime_type:
+        detected_ext = MIME_TO_EXT.get(mime_type.lower())
+    
+    # 5. 验证图片类型
+    if detected_ext is None or detected_ext not in BASE64_ALLOWED_IMAGE_TYPES:
+        return create_error_response(
+            msg="Unsupported image type, allowed: jpg, jpeg, png",
+            code=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    # 6. 生成文件路径: kyc/{wallet_address}/{document_type}_{uuid}.{ext}
+    prefix = f"kyc/{wallet_address}/{document_type}_"
+    object_name = f"{prefix}{uuid.uuid4()}.{detected_ext}"
+    
+    # 确定 content_type
+    content_type = f"image/{detected_ext}"
+    if detected_ext == "jpg":
+        content_type = "image/jpeg"
+    
+    # 7. 上传到 MinIO
+    try:
+        minio_service = get_minio_service()
+        
+        # 先删除该类型的旧文件 (覆盖上传)
+        deleted_count = await minio_service.delete_by_prefix(prefix)
+        if deleted_count > 0:
+            logger.info(f"Deleted {deleted_count} old file(s) for {document_type}")
+        
+        # 上传新文件
+        await minio_service.upload_file(
+            object_name=object_name,
+            file_data=decoded_data,
+            content_type=content_type,
+        )
+        logger.info(f"Base64 image uploaded: {object_name}")
+    except Exception as e:
+        logger.error(f"Failed to upload base64 image: {e}")
+        return create_error_response(
+            msg="File upload failed, please retry",
+            code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    
+    return create_success_response(
+        object_data=KycUploadResponse(
+            file_path=object_name, document_type=document_type
+        ).model_dump(),
+        msg="Image uploaded successfully",
     )
 
 

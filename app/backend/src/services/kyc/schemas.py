@@ -2,14 +2,23 @@
 KYC Domain - Schema 定义
 """
 
+import base64
+import re
 from datetime import date, datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from src.shared.schemas.enums import IdType, KycStatus, OnChainSyncStatus
 from src.shared.schemas.mixins import IDMixin, TimestampMixin
+
+
+# ========== Email 验证正则表达式 ==========
+# 简化的 RFC 5322 兼容邮箱验证
+EMAIL_REGEX = re.compile(
+    r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+)
 
 
 class KycStatusResponse(BaseModel):
@@ -83,13 +92,13 @@ class KycDocumentInfo(BaseModel):
 
 
 class KycApplyRequest(BaseModel):
-    """KYC 申请请求 (多证件版本)"""
+    """KYC 申请请求 (多证件版本) - 扩展版"""
 
     # wallet_address 由路由层从 JWT 注入，前端无需传递
     wallet_address: Optional[str] = Field(
         None, max_length=42, description="钱包地址 (由后端从JWT获取)"
     )
-    country_code: Optional[str] = Field(None, max_length=2, description="国家代码")
+    country_code: Optional[str] = Field(None, max_length=2, description="国家代码 (国籍)")
 
     # 基本信息
     full_name: str = Field(..., min_length=2, max_length=100, description="证件姓名")
@@ -105,6 +114,42 @@ class KycApplyRequest(BaseModel):
         None, max_length=255, description="手持证件自拍路径"
     )
 
+    # ========== 新增: 联系信息字段 (Requirements 5.1, 5.2) ==========
+    email: Optional[str] = Field(
+        None, max_length=255, description="邮箱地址"
+    )
+    phone: Optional[str] = Field(
+        None, max_length=20, description="电话号码 (E.164 格式, 如 +1234567890)"
+    )
+
+    # ========== 新增: 居住地址字段 (Requirements 5.3) ==========
+    address_line1: Optional[str] = Field(
+        None, max_length=255, description="地址行1"
+    )
+    address_line2: Optional[str] = Field(
+        None, max_length=255, description="地址行2 (可选)"
+    )
+    city: Optional[str] = Field(
+        None, max_length=100, description="城市"
+    )
+    state: Optional[str] = Field(
+        None, max_length=100, description="州/省"
+    )
+    postal_code: Optional[str] = Field(
+        None, max_length=20, description="邮政编码"
+    )
+    residence_country: Optional[str] = Field(
+        None, max_length=2, description="居住国家代码 (ISO 3166-1 alpha-2)"
+    )
+
+    # ========== 新增: 活体检测字段 (Requirements 5.4, 5.5) ==========
+    liveness_verified: Optional[bool] = Field(
+        None, description="活体检测是否通过"
+    )
+    face_image_url: Optional[str] = Field(
+        None, max_length=255, description="人脸图片 MinIO 路径"
+    )
+
     @field_validator("wallet_address")
     @classmethod
     def validate_address(cls, v: Optional[str]) -> Optional[str]:
@@ -115,16 +160,73 @@ class KycApplyRequest(BaseModel):
             raise ValueError("Invalid wallet address format")
         return v.lower()
 
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        """验证邮箱格式 (Requirements 5.1)
+        
+        使用简化的 RFC 5322 兼容正则表达式验证邮箱格式。
+        """
+        if v is None:
+            return v
+        
+        v = v.strip()
+        if not v:
+            return None
+        
+        if not EMAIL_REGEX.match(v):
+            raise ValueError("Invalid email format")
+        
+        return v.lower()
+
     @field_validator("country_code")
     @classmethod
     def validate_country_code(cls, v: Optional[str]) -> Optional[str]:
-        """验证国家代码格式"""
+        """验证国家代码格式 (国籍)"""
         if v is not None:
             if len(v) != 2:
                 raise ValueError(
                     "Country code must be 2 characters (ISO 3166-1 alpha-2)"
                 )
             return v.upper()
+        return v
+
+    @field_validator("residence_country")
+    @classmethod
+    def validate_residence_country(cls, v: Optional[str]) -> Optional[str]:
+        """验证居住国家代码格式"""
+        if v is not None:
+            if len(v) != 2:
+                raise ValueError(
+                    "Residence country code must be 2 characters (ISO 3166-1 alpha-2)"
+                )
+            return v.upper()
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        """验证电话号码格式 (E.164: +[country_code][number])
+        
+        E.164 格式规范:
+        - 必须以 + 开头
+        - 后跟 1-15 位数字
+        - 第一位数字不能为 0
+        - 示例: +1234567890, +861381234567
+        """
+        if v is None:
+            return v
+        
+        v = v.strip()
+        if not v:
+            return None
+        
+        # E.164 格式: +[1-9][0-9]{1,14}
+        e164_pattern = r'^\+[1-9][0-9]{1,14}$'
+        if not re.match(e164_pattern, v):
+            raise ValueError(
+                "Invalid phone format, must be E.164 (e.g., +1234567890)"
+            )
         return v
 
     @field_validator("date_of_birth")
@@ -156,6 +258,14 @@ class KycApplyRequest(BaseModel):
                 "country_code": "CN",
                 "full_name": "张三",
                 "date_of_birth": "1990-01-01",
+                "email": "zhangsan@example.com",
+                "phone": "+8613812345678",
+                "address_line1": "北京市朝阳区建国路88号",
+                "address_line2": "SOHO现代城A座1001室",
+                "city": "北京",
+                "state": "北京市",
+                "postal_code": "100022",
+                "residence_country": "CN",
                 "documents": [
                     {
                         "id_type": "passport",
@@ -172,6 +282,8 @@ class KycApplyRequest(BaseModel):
                     },
                 ],
                 "selfie_url": "kyc/0x742d35.../selfie_xyz123.jpg",
+                "liveness_verified": True,
+                "face_image_url": "kyc/0x742d35.../face_abc123.jpg",
             }
         }
 
@@ -193,7 +305,7 @@ class KycDocumentResponse(BaseModel):
 
 
 class KycFullResponse(KycStatusResponse, IDMixin, TimestampMixin):
-    """KYC 完整响应 (包含 ID 和时间戳)"""
+    """KYC 完整响应 (包含 ID 和时间戳) - 扩展版"""
 
     environment: str = Field(..., description="环境")
     reviewer_address: Optional[str] = Field(None, description="审核人钱包地址")
@@ -210,6 +322,22 @@ class KycFullResponse(KycStatusResponse, IDMixin, TimestampMixin):
 
     # 自拍照片
     has_selfie: bool = Field(False, description="是否上传手持自拍")
+
+    # ========== 新增: 联系信息字段 (Requirements 6.1) ==========
+    email: Optional[str] = Field(None, description="邮箱地址")
+    phone: Optional[str] = Field(None, description="电话号码 (E.164 格式)")
+
+    # ========== 新增: 居住地址字段 (Requirements 6.2) ==========
+    address_line1: Optional[str] = Field(None, description="地址行1")
+    address_line2: Optional[str] = Field(None, description="地址行2")
+    city: Optional[str] = Field(None, description="城市")
+    state: Optional[str] = Field(None, description="州/省")
+    postal_code: Optional[str] = Field(None, description="邮政编码")
+    residence_country: Optional[str] = Field(None, description="居住国家代码")
+
+    # ========== 新增: 活体检测字段 (Requirements 6.3, 6.4) ==========
+    liveness_verified: bool = Field(False, description="活体检测是否通过")
+    has_face_image: bool = Field(False, description="是否上传人脸图片")
 
     # 链上同步状态
     on_chain_sync_status: Optional[OnChainSyncStatus] = Field(
@@ -307,6 +435,87 @@ class KycUploadResponse(BaseModel):
             "example": {
                 "file_path": "kyc/0x742d35.../passport_front_abc123.jpg",
                 "document_type": "passport_front",
+            }
+        }
+
+
+class Base64UploadRequest(BaseModel):
+    """Base64 图片上传请求 (Requirements 4.1)
+    
+    用于活体检测等场景，前端直接提交 base64 编码的图片数据。
+    支持 data URI 格式和纯 base64 字符串。
+    """
+
+    image_data: str = Field(
+        ..., 
+        description="Base64 编码的图片数据 (支持 data URI 格式或纯 base64)"
+    )
+    document_type: Literal["face_image", "selfie"] = Field(
+        ..., 
+        description="文档类型: face_image (活体检测人脸) 或 selfie (手持证件自拍)"
+    )
+
+    @field_validator("image_data")
+    @classmethod
+    def validate_base64(cls, v: str) -> str:
+        """验证 base64 格式
+        
+        支持两种格式:
+        1. Data URI: data:image/jpeg;base64,/9j/4AAQSkZJRg...
+        2. 纯 Base64: /9j/4AAQSkZJRg...
+        
+        验证规则:
+        - 必须是有效的 base64 编码
+        - 解码后必须是有效的图片数据
+        """
+        if not v or not v.strip():
+            raise ValueError("Invalid base64 image data: empty string")
+        
+        v = v.strip()
+        
+        # 提取纯 base64 数据 (去除 data URI 前缀)
+        base64_data = v
+        if v.startswith("data:"):
+            # 格式: data:image/jpeg;base64,xxxxx
+            try:
+                # 查找 base64, 标记
+                if ";base64," in v:
+                    base64_data = v.split(";base64,", 1)[1]
+                elif ",base64," in v:
+                    base64_data = v.split(",base64,", 1)[1]
+                elif "," in v:
+                    # 简化格式: data:image/jpeg,xxxxx
+                    base64_data = v.split(",", 1)[1]
+                else:
+                    raise ValueError("Invalid data URI format")
+            except IndexError:
+                raise ValueError("Invalid data URI format")
+        
+        # 验证 base64 编码是否有效
+        try:
+            # 添加必要的 padding
+            padding = 4 - len(base64_data) % 4
+            if padding != 4:
+                base64_data += "=" * padding
+            
+            # 尝试解码
+            decoded = base64.b64decode(base64_data, validate=True)
+            
+            if len(decoded) == 0:
+                raise ValueError("Invalid base64 image data: decoded to empty bytes")
+                
+        except Exception as e:
+            if "Invalid base64" in str(e):
+                raise
+            raise ValueError(f"Invalid base64 image data: {str(e)}")
+        
+        return v
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "image_data": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
+                "document_type": "face_image",
             }
         }
 

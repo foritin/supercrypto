@@ -91,6 +91,26 @@ class AccountKyc(AbstractModel, TimestampMixin):
         max_length=255, null=True, description="手持证件自拍 MinIO 路径"
     )
 
+    # ========== 联系信息字段 ==========
+    email = fields.CharField(max_length=255, null=True, description="邮箱地址")
+    phone = fields.CharField(max_length=20, null=True, description="电话号码 (E.164 格式)")
+
+    # ========== 居住地址字段 ==========
+    address_line1 = fields.CharField(max_length=255, null=True, description="地址行1")
+    address_line2 = fields.CharField(max_length=255, null=True, description="地址行2")
+    city = fields.CharField(max_length=100, null=True, description="城市")
+    state = fields.CharField(max_length=100, null=True, description="州/省")
+    postal_code = fields.CharField(max_length=20, null=True, description="邮政编码")
+    residence_country = fields.CharField(
+        max_length=2, null=True, description="居住国家代码 (ISO 3166-1 alpha-2)"
+    )
+
+    # ========== 活体检测字段 ==========
+    liveness_verified = fields.BooleanField(default=False, description="活体检测是否通过")
+    face_image_url = fields.CharField(
+        max_length=255, null=True, description="人脸图片 MinIO 路径"
+    )
+
     # ========== 链上同步状态 (ADR-3) ==========
     on_chain_sync_status = fields.CharEnumField(
         OnChainSyncStatus,
