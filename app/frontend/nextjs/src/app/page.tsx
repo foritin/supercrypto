@@ -56,22 +56,26 @@ export default function HomePage() {
       <section className="hero-section">
         {/* 背景 - 移动端使用静态图片，桌面端使用视频 */}
         <div className="hero-video-container">
-          {/* 移动端: 静态图片 (MOBILE-1) */}
+          {/* 背景: 深色渐变，移除图片避免闪烁 */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f0d] via-[#0d1512] to-[#0a0f0d]" />
+          
+          {/* 装饰性网格背景 */}
           <div 
-            className="absolute inset-0 md:hidden bg-cover bg-center"
+            className="absolute inset-0 opacity-[0.02]"
             style={{
-              backgroundImage: 'url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070")',
+              backgroundImage: `linear-gradient(rgba(0, 212, 170, 0.5) 1px, transparent 1px),
+                               linear-gradient(90deg, rgba(0, 212, 170, 0.5) 1px, transparent 1px)`,
+              backgroundSize: '50px 50px',
             }}
           />
           
-          {/* 桌面端: 视频背景 */}
+          {/* 桌面端: 视频背景 (无 poster 避免闪烁) */}
           <video
-            className="hero-video hidden md:block"
+            className="hero-video hidden md:block opacity-30"
             autoPlay
             muted
             loop
             playsInline
-            poster="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070"
           >
             <source src="/1826904-hd_1920_1080_24fps.mp4" type="video/mp4" />
           </video>
