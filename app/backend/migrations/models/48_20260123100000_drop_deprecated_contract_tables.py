@@ -6,7 +6,7 @@ RUN_IN_TRANSACTION = True
 async def upgrade(db: BaseDBAsyncClient) -> str:
     return """
         DROP TABLE IF EXISTS "contract_meta";
-        DROP TABLE IF EXISTS "contract_dependency";"""
+        DROP TABLE IF EXISTS "contractdependency";"""
 
 
 async def downgrade(db: BaseDBAsyncClient) -> str:
@@ -29,7 +29,7 @@ async def downgrade(db: BaseDBAsyncClient) -> str:
 CREATE INDEX IF NOT EXISTS "idx_contract_me_project_9f1a1a" ON "contract_meta" ("project_name");
 CREATE INDEX IF NOT EXISTS "idx_contract_me_provide_4c738e" ON "contract_meta" ("provider_key");
 COMMENT ON TABLE "contract_meta" IS '合约元数据表 (已废弃)';
-        CREATE TABLE IF NOT EXISTS "contract_dependency" (
+        CREATE TABLE IF NOT EXISTS "contractdependency" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "created_at" TIMESTAMPTZ,
     "updated_at" TIMESTAMPTZ,
@@ -41,7 +41,7 @@ COMMENT ON TABLE "contract_meta" IS '合约元数据表 (已废弃)';
     "dependency_id" BIGINT,
     "is_binded" BOOL NOT NULL DEFAULT False
 );
-COMMENT ON TABLE "contract_dependency" IS '合约依赖关系表 (已废弃)';"""
+COMMENT ON TABLE "contractdependency" IS '合约依赖关系表 (已废弃)';"""
 
 
 MODELS_STATE = (

@@ -5,11 +5,11 @@ RUN_IN_TRANSACTION = True
 
 async def upgrade(db: BaseDBAsyncClient) -> str:
     return """
-        DROP TABLE IF EXISTS "contract_dependency";
-        DROP TABLE IF EXISTS "contract";
-        DROP TABLE IF EXISTS "project_contract_configs";
-        DROP TABLE IF EXISTS "contract_deployment_status";
-        DROP TABLE IF EXISTS "contract_meta";"""
+        DROP TABLE IF EXISTS "contractdependency" CASCADE;
+        DROP TABLE IF EXISTS "contract" CASCADE;
+        DROP TABLE IF EXISTS "contract_deployment_status" CASCADE;
+        DROP TABLE IF EXISTS "project_contract_configs" CASCADE;
+        DROP TABLE IF EXISTS "contract_meta" CASCADE;"""
 
 
 async def downgrade(db: BaseDBAsyncClient) -> str:

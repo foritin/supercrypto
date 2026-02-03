@@ -32,33 +32,32 @@ COMMENT ON COLUMN "provider_registry"."contract_name" IS '合约名称，如 Van
 COMMENT ON COLUMN "provider_registry"."is_registered" IS '是否已注册 (地址非零)';
 COMMENT ON COLUMN "provider_registry"."last_synced_at" IS '最后同步链上状态的时间';
 COMMENT ON TABLE "provider_registry" IS 'Provider 注册记录表';
-        ALTER TABLE "contract_dependency" ADD COLUMN IF NOT EXISTS "provider_key" VARCHAR(100);
-        ALTER TABLE "contract_dependency" DROP COLUMN IF EXISTS "set_function";
-        ALTER TABLE "contract_dependency" DROP COLUMN IF EXISTS "source";
-        ALTER TABLE "contract_dependency" DROP COLUMN IF EXISTS "constraint";
-        ALTER TABLE "contract_dependency" DROP COLUMN IF EXISTS "bound_at";
-        ALTER TABLE "contract_dependency" DROP COLUMN IF EXISTS "is_binded";
-        COMMENT ON COLUMN "contract_dependency"."is_deployed" IS '依赖合约是否已部署';
-        COMMENT ON COLUMN "contract_dependency"."provider_key" IS 'Provider Key，如 VANKE_RWA_TOKEN';
-        CREATE UNIQUE INDEX IF NOT EXISTS "uid_contract_de_contrac_d5db33" ON "contract_dependency" ("contract_id", "dependency_id");"""
+        ALTER TABLE "contractdependency" ADD COLUMN IF NOT EXISTS "provider_key" VARCHAR(100);
+        ALTER TABLE "contractdependency" DROP COLUMN IF EXISTS "set_function";
+        ALTER TABLE "contractdependency" DROP COLUMN IF EXISTS "source";
+        ALTER TABLE "contractdependency" DROP COLUMN IF EXISTS "constraint";
+        ALTER TABLE "contractdependency" DROP COLUMN IF EXISTS "bound_at";
+        ALTER TABLE "contractdependency" DROP COLUMN IF EXISTS "is_binded";
+        COMMENT ON COLUMN "contractdependency"."is_deployed" IS '依赖合约是否已部署';
+        COMMENT ON COLUMN "contractdependency"."provider_key" IS 'Provider Key，如 VANKE_RWA_TOKEN';
+        CREATE UNIQUE INDEX IF NOT EXISTS "uid_contract_de_contrac_d5db33" ON "contractdependency" ("contract_id", "dependency_id");"""
 
 
 async def downgrade(db: BaseDBAsyncClient) -> str:
     return """
         DROP INDEX IF EXISTS "uid_contract_de_contrac_d5db33";
-        ALTER TABLE "contract_dependency" RENAME TO "contractdependency";
-        ALTER TABLE "contract_dependency" ADD "set_function" VARCHAR(100);
-        ALTER TABLE "contract_dependency" ADD "source" VARCHAR(8) NOT NULL DEFAULT 'setter';
-        ALTER TABLE "contract_dependency" ADD "constraint" VARCHAR(16) NOT NULL DEFAULT 'rebindable';
-        ALTER TABLE "contract_dependency" ADD "bound_at" TIMESTAMPTZ;
-        ALTER TABLE "contract_dependency" ADD "is_binded" BOOL NOT NULL DEFAULT False;
-        ALTER TABLE "contract_dependency" DROP COLUMN "provider_key";
-        COMMENT ON COLUMN "contract_dependency"."is_deployed" IS '是否已部署';
-        COMMENT ON COLUMN "contract_dependency"."set_function" IS 'Setter函数名 (仅source=setter时有效)';
-COMMENT ON COLUMN "contract_dependency"."source" IS '依赖来源: provider=从AddressProvider获取, setter=通过Setter设置';
-COMMENT ON COLUMN "contract_dependency"."constraint" IS '绑定约束: rebindable=可重复绑定, once_per_project=项目内一次性, immutable=不可更改';
-COMMENT ON COLUMN "contract_dependency"."bound_at" IS '绑定时间';
-COMMENT ON COLUMN "contract_dependency"."is_binded" IS '是否已绑定';
+        ALTER TABLE "contractdependency" ADD "set_function" VARCHAR(100);
+        ALTER TABLE "contractdependency" ADD "source" VARCHAR(8) NOT NULL DEFAULT 'setter';
+        ALTER TABLE "contractdependency" ADD "constraint" VARCHAR(16) NOT NULL DEFAULT 'rebindable';
+        ALTER TABLE "contractdependency" ADD "bound_at" TIMESTAMPTZ;
+        ALTER TABLE "contractdependency" ADD "is_binded" BOOL NOT NULL DEFAULT False;
+        ALTER TABLE "contractdependency" DROP COLUMN "provider_key";
+        COMMENT ON COLUMN "contractdependency"."is_deployed" IS '是否已部署';
+        COMMENT ON COLUMN "contractdependency"."set_function" IS 'Setter函数名 (仅source=setter时有效)';
+COMMENT ON COLUMN "contractdependency"."source" IS '依赖来源: provider=从AddressProvider获取, setter=通过Setter设置';
+COMMENT ON COLUMN "contractdependency"."constraint" IS '绑定约束: rebindable=可重复绑定, once_per_project=项目内一次性, immutable=不可更改';
+COMMENT ON COLUMN "contractdependency"."bound_at" IS '绑定时间';
+COMMENT ON COLUMN "contractdependency"."is_binded" IS '是否已绑定';
         DROP TABLE IF EXISTS "provider_registry";"""
 
 

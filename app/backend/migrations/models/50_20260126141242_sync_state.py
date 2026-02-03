@@ -18,7 +18,8 @@ async def upgrade(db: BaseDBAsyncClient) -> str:
         ALTER TABLE "subscription" ALTER COLUMN "environment" SET DEFAULT 'hardhat';
         ALTER TABLE "transaction_audit" ALTER COLUMN "environment" SET DEFAULT 'hardhat';
         COMMENT ON COLUMN "transaction_audit"."environment" IS '环境: hardhat/sepolia/mainnet';
-        -- user_kyc.network 已通过 RENAME 存在，仅更新注释
+        -- 将 user_kyc.wallet 重命名为 network
+        ALTER TABLE "user_kyc" RENAME COLUMN "wallet" TO "network";
         COMMENT ON COLUMN "user_kyc"."network" IS '网络类型';
         DROP TABLE IF EXISTS "wallet";"""
 
