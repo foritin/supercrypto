@@ -56,12 +56,12 @@ export default function HomePage() {
       <section className="hero-section">
         {/* 背景 - 移动端使用静态图片，桌面端使用视频 */}
         <div className="hero-video-container">
-          {/* 背景: 深色渐变，移除图片避免闪烁 */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f0d] via-[#0d1512] to-[#0a0f0d]" />
+          {/* 背景: 稍亮的深色渐变 */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0d1a15] via-[#0f1f18] to-[#0d1a15]" />
           
           {/* 装饰性网格背景 */}
           <div 
-            className="absolute inset-0 opacity-[0.02]"
+            className="absolute inset-0 opacity-[0.03]"
             style={{
               backgroundImage: `linear-gradient(rgba(0, 212, 170, 0.5) 1px, transparent 1px),
                                linear-gradient(90deg, rgba(0, 212, 170, 0.5) 1px, transparent 1px)`,
@@ -69,9 +69,9 @@ export default function HomePage() {
             }}
           />
           
-          {/* 桌面端: 视频背景 (无 poster 避免闪烁) */}
+          {/* 桌面端: 视频背景，提高透明度 */}
           <video
-            className="hero-video hidden md:block opacity-30"
+            className="hero-video hidden md:block opacity-50"
             autoPlay
             muted
             loop
