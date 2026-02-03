@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Maximize2, X, ZoomIn, ZoomOut, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { cn } from "@/lib/utils";
 import type { AssetMediaItem } from "@/services/asset";
 
 interface MediaGalleryProps {
@@ -16,7 +17,7 @@ interface MediaGalleryProps {
   assetType?: string;
 }
 
-// Unsplash 占位图片
+// 占位图片
 const PLACEHOLDER_IMAGES = [
   "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80",
   "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
@@ -32,8 +33,11 @@ export function MediaGallery({
 }: MediaGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  // 构建图片列表：优先使用真实数据，否则用占位图
   const images =
     media && media.length > 0
       ? media
@@ -45,10 +49,14 @@ export function MediaGallery({
 
   const handlePrev = useCallback(() => {
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    setZoomLevel(1);
+    setPosition({ x: 0, y: 0 });
   }, [images.length]);
 
   const handleNext = useCallback(() => {
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    setZoomLevel(1);
+    setPosition({ x: 0, y: 0 });
   }, [images.length]);
 
   // 键盘导航支持
@@ -62,12 +70,68 @@ export function MediaGallery({
         handleNext();
       } else if (e.key === "Escape") {
         setPreviewVisible(false);
+      } else if (e.key === "+" || e.key === "=") {
+        setZoomLevel((z) => Math.min(z + 0.5, 3));
+      } else if (e.key === "-" || e.key === "_") {
+        setZoomLevel((z) => Math.max(z - 0.5, 1));
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [previewVisible, handlePrev, handleNext]);
+
+  // 缩放处理
+  const handleZoomIn = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setZoomLevel((z) => Math.min(z + 0.5, 3));
+  };
+
+  const handleZoomOut = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setZoomLevel((z) => Math.max(z - 0.5, 1));
+    if (zoomLevel <= 1.5) {
+      setPosition({ x: 0, y: 0 });
+    }
+  };
+
+  // 拖拽处理
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoomLevel > 1) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && zoomLevel > 1) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y,
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // 双击缩放
+  const handleDoubleClick = () => {
+    if (zoomLevel > 1) {
+      setZoomLevel(1);
+      setPosition({ x: 0, y: 0 });
+    } else {
+      setZoomLevel(2);
+    }
+  };
+
+  // 关闭预览时重置
+  const handleClose = () => {
+    setPreviewVisible(false);
+    setZoomLevel(1);
+    setPosition({ x: 0, y: 0 });
+  };
 
   return (
     <div className="media-gallery">
@@ -155,78 +219,131 @@ export function MediaGallery({
         )}
       </div>
 
-      {/* shadcn/ui Dialog 图片预览 */}
-      <Dialog open={previewVisible} onOpenChange={setPreviewVisible}>
+      {/* 增强版全屏预览 */}
+      <Dialog open={previewVisible} onOpenChange={handleClose}>
         <DialogContent 
-          className="max-w-[90vw] max-h-[90vh] p-0 bg-black/95 border-white/10 overflow-hidden"
+          className="max-w-[100vw] max-h-[100vh] w-full h-full p-0 bg-black/98 border-0 overflow-hidden"
           hideCloseButton
         >
           <VisuallyHidden>
             <DialogTitle>图片预览</DialogTitle>
           </VisuallyHidden>
-          <div className="relative flex items-center justify-center min-h-[60vh]">
-            {/* 关闭按钮 */}
-            <button
-              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
-              onClick={() => setPreviewVisible(false)}
-              aria-label="关闭预览"
-            >
-              <X className="w-5 h-5" />
-            </button>
 
-            {/* 预览图片 */}
-            <img
-              src={images[currentIndex]}
-              alt={`图片 ${currentIndex + 1}`}
-              className="max-w-full max-h-[80vh] object-contain"
-            />
-
-            {/* 导航按钮 - 左 */}
-            {images.length > 1 && (
-              <button
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
-                onClick={handlePrev}
-                aria-label="上一张图片"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-            )}
-
-            {/* 导航按钮 - 右 */}
-            {images.length > 1 && (
-              <button
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
-                onClick={handleNext}
-                aria-label="下一张图片"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
-            )}
-
-            {/* 图片计数器 */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 rounded-full text-white text-sm">
+          {/* 顶部工具栏 */}
+          <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-gradient-to-b from-black/60 to-transparent">
+            <div className="text-white/80 text-sm">
               {currentIndex + 1} / {images.length}
+            </div>
+            <div className="flex items-center gap-2">
+              {/* 缩放控制 */}
+              <button
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+                onClick={handleZoomOut}
+                disabled={zoomLevel <= 1}
+              >
+                <ZoomOut className="w-5 h-5" />
+              </button>
+              <span className="text-white/60 text-sm w-16 text-center">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+              <button
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+                onClick={handleZoomIn}
+                disabled={zoomLevel >= 3}
+              >
+                <ZoomIn className="w-5 h-5" />
+              </button>
+              
+              {/* 下载按钮 */}
+              <a
+                href={images[currentIndex]}
+                download
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors ml-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Download className="w-5 h-5" />
+              </a>
+
+              {/* 关闭按钮 */}
+              <button
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors ml-4"
+                onClick={handleClose}
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
-          {/* 缩略图导航 */}
+          {/* 图片显示区域 */}
+          <div 
+            className="relative w-full h-full flex items-center justify-center overflow-hidden"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
+            <img
+              src={images[currentIndex]}
+              alt={`图片 ${currentIndex + 1}`}
+              className={cn(
+                "max-w-full max-h-full object-contain transition-transform duration-200",
+                isDragging ? "cursor-grabbing" : zoomLevel > 1 ? "cursor-grab" : "cursor-zoom-in"
+              )}
+              style={{
+                transform: `scale(${zoomLevel}) translate(${position.x / zoomLevel}px, ${position.y / zoomLevel}px)`,
+              }}
+              onDoubleClick={handleDoubleClick}
+              draggable={false}
+            />
+          </div>
+
+          {/* 左右导航 - 大按钮 */}
           {images.length > 1 && (
-            <div className="flex justify-center gap-2 p-4 bg-black/80 overflow-x-auto">
-              {images.map((img, idx) => (
-                <button
-                  key={idx}
-                  className={`flex-shrink-0 w-16 h-12 rounded-md bg-cover bg-center border-2 transition-all ${
-                    idx === currentIndex
-                      ? "border-[#00d4aa] opacity-100"
-                      : "border-transparent opacity-60 hover:opacity-100"
-                  }`}
-                  style={{ backgroundImage: `url(${img})` }}
-                  onClick={() => setCurrentIndex(idx)}
-                  aria-label={`查看第 ${idx + 1} 张图片`}
-                />
-              ))}
+            <>
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-110 z-40"
+                onClick={handlePrev}
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all hover:scale-110 z-40"
+                onClick={handleNext}
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+            </>
+          )}
+
+          {/* 底部缩略图导航 */}
+          {images.length > 1 && (
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+              <div className="flex justify-center gap-2 overflow-x-auto pb-2">
+                {images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    className={cn(
+                      "flex-shrink-0 w-20 h-14 rounded-lg bg-cover bg-center border-2 transition-all",
+                      idx === currentIndex
+                        ? "border-[#00d4aa] opacity-100 ring-2 ring-[#00d4aa]/30"
+                        : "border-transparent opacity-50 hover:opacity-80"
+                    )}
+                    style={{ backgroundImage: `url(${img})` }}
+                    onClick={() => {
+                      setCurrentIndex(idx);
+                      setZoomLevel(1);
+                      setPosition({ x: 0, y: 0 });
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           )}
+
+          {/* 操作提示 */}
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-white/40 text-xs bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
+            双击缩放 · 滚轮缩放 · 拖拽移动
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -248,22 +365,17 @@ export function MediaGallery({
           cursor: pointer;
           position: relative;
         }
-        /* 暗色渐变遮罩 - 让白色背景图片与深色主题融合 */
         .main-image::before {
           content: '';
           position: absolute;
           inset: 0;
           background: 
-            /* 内发光效果 - 从中心向边缘渐变暗 */
             radial-gradient(ellipse at center, transparent 30%, rgba(10, 15, 13, 0.4) 100%),
-            /* 底部暗色渐变 - 突出图片计数器区域 */
             linear-gradient(to top, rgba(10, 15, 13, 0.5) 0%, transparent 30%),
-            /* 顶部暗色渐变 - 突出放大按钮 */
             linear-gradient(to bottom, rgba(10, 15, 13, 0.3) 0%, transparent 20%);
           pointer-events: none;
           z-index: 1;
         }
-        /* 四周边框暗角效果 */
         .main-image::after {
           content: '';
           position: absolute;
@@ -359,7 +471,6 @@ export function MediaGallery({
           position: relative;
           overflow: hidden;
         }
-        /* 缩略图暗色遮罩 */
         .thumbnail::after {
           content: '';
           position: absolute;

@@ -34,9 +34,9 @@ import { MediaGallery } from "@/components/asset/media-gallery";
 import { PropertyHighlights } from "@/components/asset/property-highlights";
 import { InvestPanel } from "@/components/asset/invest-panel";
 import { RiskAndComplianceSection, type RiskLevel } from "@/components/asset/risk-badge";
+import { AssetDetailSkeleton } from "@/components/asset/asset-detail-skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -109,19 +109,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   if (isLoading) {
-    return (
-      <div className="max-w-[1200px] mx-auto px-6 py-6">
-        <Skeleton className="w-24 h-8 mb-6" />
-        <Skeleton className="w-full h-[400px] rounded-xl mb-6" />
-        <div className="space-y-4">
-          <Skeleton className="w-3/4 h-6" />
-          <Skeleton className="w-1/2 h-4" />
-          <Skeleton className="w-full h-4" />
-          <Skeleton className="w-full h-4" />
-          <Skeleton className="w-2/3 h-4" />
-        </div>
-      </div>
-    );
+    return <AssetDetailSkeleton />;
   }
 
   if (error || !asset) {
