@@ -29,7 +29,7 @@ package-lock.json
 bmad-custom-src
 bmad-custom-modules-src
 
-.kiro
+# .kiro
 .github
 _bmad
 _bmad-output
@@ -40,3 +40,6 @@ _bmad-output
 .kilocodemodes
 docs
 stories
+
+config.dev.yaml
+config.prod.yaml
