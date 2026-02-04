@@ -19,7 +19,7 @@ import ReactFlow, {
   NodeMouseHandler,
   Panel,
 } from 'reactflow';
-import 'reactflow/dist/style.css';
+import '@xyflow/react/dist/style.css';
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
