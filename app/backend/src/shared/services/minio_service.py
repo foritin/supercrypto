@@ -82,6 +82,14 @@ class MinIOService:
         return self._bucket
 
     @property
+    def redirect_base(self) -> str | None:
+        """获取 redirect 配置，用于替换预签名 URL 的 host"""
+        minio_config = getattr(SETTINGS, "minio", {})
+        if isinstance(minio_config, dict):
+            return minio_config.get("redirect")
+        return None
+
+    @property
     def client(self):
         """懒加载 MinIO 客户端"""
         if self._client is None:
@@ -175,6 +183,7 @@ class MinIOService:
             str: 预签名 URL
         """
         from datetime import timedelta
+        from urllib.parse import urlparse, urlunparse
 
         target_bucket = bucket or self.bucket
 
@@ -183,6 +192,21 @@ class MinIOService:
             object_name=object_name,
             expires=timedelta(seconds=expires),
         )
+
+        # 如果配置了 redirect，替换 URL 的 host 部分
+        if self.redirect_base and url:
+            parsed_url = urlparse(url)
+            redirect_parsed = urlparse(self.redirect_base)
+            # 替换 scheme 和 netloc
+            url = urlunparse((
+                redirect_parsed.scheme or parsed_url.scheme,
+                redirect_parsed.netloc,
+                parsed_url.path,
+                parsed_url.params,
+                parsed_url.query,
+                parsed_url.fragment,
+            ))
+
         return url
 
     async def delete_file(

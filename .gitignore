@@ -41,7 +41,4 @@ _bmad-output
 docs
 stories
 
-config.dev.yaml
-config.prod.yaml
-
 logs/

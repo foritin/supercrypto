@@ -107,6 +107,7 @@ class StorageService:
         secret_key: str,
         bucket: str,
         secure: bool = False,
+        redirect: Optional[str] = None,
     ):
         """
         初始化 MinIO 存储
@@ -117,12 +118,14 @@ class StorageService:
             secret_key: 私密密钥
             bucket: 存储桶名称
             secure: 是否使用 HTTPS
+            redirect: 预签名 URL 的重定向地址（用于替换 host）
         """
         self.endpoint = endpoint
         self.access_key = access_key
         self.secret_key = secret_key
         self.bucket = bucket
         self.secure = secure
+        self.redirect = redirect
 
         logger.info(f"StorageService initialized: {endpoint}/{bucket}")
 
@@ -347,6 +350,34 @@ class StorageService:
             return file_path
         return f"/{file_path}"
 
+    def _apply_redirect(self, url: str) -> str:
+        """
+        应用 redirect 配置，替换 URL 的 host 部分
+        
+        Args:
+            url: 原始预签名 URL
+            
+        Returns:
+            处理后的 URL
+        """
+        if not self.redirect or not url:
+            return url
+            
+        from urllib.parse import urlparse, urlunparse
+        
+        parsed_url = urlparse(url)
+        redirect_parsed = urlparse(self.redirect)
+        
+        # 替换 scheme 和 netloc
+        return urlunparse((
+            redirect_parsed.scheme or parsed_url.scheme,
+            redirect_parsed.netloc,
+            parsed_url.path,
+            parsed_url.params,
+            parsed_url.query,
+            parsed_url.fragment,
+        ))
+
     async def get_presigned_url(self, file_path: str, expires: int = 3600) -> str:
         """
         获取预签名临时访问 URL
@@ -364,7 +395,8 @@ class StorageService:
             
         async with self._get_adapter() as minio:
             url = await minio.presigned_get_object(self.bucket, file_path, expires)
-        return url or ""
+        
+        return self._apply_redirect(url or "")
 
     async def get_presigned_urls_batch(
         self, file_paths: list[str], expires: int = 3600
@@ -390,7 +422,7 @@ class StorageService:
                 if file_path.startswith("/"):
                     file_path = file_path[1:]
                 url = await minio.presigned_get_object(self.bucket, file_path, expires)
-                results[original_path] = url or ""
+                results[original_path] = self._apply_redirect(url or "")
         
         return results
 
@@ -422,6 +454,7 @@ def get_storage_service() -> StorageService:
         secret_key=minio_config.SECRET_KEY,
         bucket=minio_config.BUCKET,
         secure=getattr(minio_config, "SECURE", False),
+        redirect=getattr(minio_config, "REDIRECT", None),
     )
     logger.info("Using MinIO storage service")
     return _storage_service
