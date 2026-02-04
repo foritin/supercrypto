@@ -448,16 +448,18 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
           </div>
           {!selectionMode && (
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                asChild
-              >
-                <a href={media.url} target="_blank" rel="noopener noreferrer">
-                  <Download className="h-4 w-4 mr-1" />
-                  {t('admin.media.actions.download')}
-                </a>
-              </Button>
+              {media.url && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                >
+                  <a href={media.url} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-4 w-4 mr-1" />
+                    {t('admin.media.actions.download')}
+                  </a>
+                </Button>
+              )}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button

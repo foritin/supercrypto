@@ -83,6 +83,22 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const Comp = asChild ? Slot : 'button';
     
+    // 当 asChild 为 true 时，Slot 只接受单个子元素，不渲染额外内容
+    if (asChild) {
+      return (
+        <Comp
+          className={cn(
+            buttonVariants({ variant, size, isLoading, isFullWidth, className })
+          )}
+          ref={ref}
+          disabled={disabled || isLoading}
+          {...props}
+        >
+          {children}
+        </Comp>
+      );
+    }
+    
     return (
       <Comp
         className={cn(
