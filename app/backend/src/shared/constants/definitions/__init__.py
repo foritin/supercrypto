@@ -14,6 +14,10 @@
 - lock_period: 锁定期
 - token_type: 代币类型
 - price_source: 价格来源
+- kyc_reject_reason: KYC 拒绝原因
+- kyc_status: KYC 状态
+- kyc_risk_level: KYC 风险等级
+- kyc_priority: KYC 审核优先级
 
 注意: 区块链网络配置已迁移到数据库表 (chains)，通过 API 获取
 """
@@ -28,6 +32,14 @@ from .business import (
     STAKING_STATUS_CONSTANTS,
     SUBSCRIPTION_STATUS_CONSTANTS,
     TRANSACTION_TYPE_CONSTANTS,
+)
+
+# 导入 KYC 相关常量
+from .kyc import (
+    KYC_PRIORITY_CONSTANTS,
+    KYC_REJECT_REASON_CONSTANTS,
+    KYC_RISK_LEVEL_CONSTANTS,
+    KYC_STATUS_CONSTANTS,
 )
 
 # 导入用户相关常量
@@ -52,6 +64,11 @@ __all__ = [
     "LOCK_PERIOD_CONSTANTS",
     "TOKEN_TYPE_CONSTANTS",
     "PRICE_SOURCE_CONSTANTS",
+    # KYC 相关
+    "KYC_REJECT_REASON_CONSTANTS",
+    "KYC_STATUS_CONSTANTS",
+    "KYC_RISK_LEVEL_CONSTANTS",
+    "KYC_PRIORITY_CONSTANTS",
 ]
 
 
@@ -80,7 +97,12 @@ def register_all_constants() -> None:
     registry.register("token_type", TOKEN_TYPE_CONSTANTS)
     registry.register("price_source", PRICE_SOURCE_CONSTANTS)
 
+    # 注册 KYC 相关常量
+    registry.register("kyc_reject_reason", KYC_REJECT_REASON_CONSTANTS)
+    registry.register("kyc_status", KYC_STATUS_CONSTANTS)
+    registry.register("kyc_risk_level", KYC_RISK_LEVEL_CONSTANTS)
+    registry.register("kyc_priority", KYC_PRIORITY_CONSTANTS)
+
 
 # 模块导入时自动注册所有常量
-register_all_constants()  # 模块导入时自动注册所有常量
 register_all_constants()

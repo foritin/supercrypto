@@ -56,7 +56,7 @@ class LocalTestKycStrategy(KycReviewStrategy):
     Local/Test 环境策略
 
     - 管理员手动审核
-    - 审核通过后同步到 KYCManager 合约
+    - 审核通过后同步到 KYC 合约
     """
 
     async def submit_for_review(self, kyc: "AccountKyc") -> str:
@@ -68,23 +68,16 @@ class LocalTestKycStrategy(KycReviewStrategy):
         self, kyc: "AccountKyc", reviewer_address: str
     ) -> Tuple[str, bool]:
         """
-        审核通过后同步到合约
+        审核通过，链上准入等待管理员手动操作
 
-        调用 KYCManager.addInvestor(address, countryCode, isAccredited)
+        不再自动调用 KycContractService.add_investor()，
+        管理员需通过浏览器钱包手动发起链上交易。
         """
-        from src.services.kyc.contract_service import KycContractService
-
         logger.info(
-            f"Processing KYC approval for {kyc.address}, "
-            f"syncing to KYCManager contract..."
+            f"KYC approved for {kyc.address}, "
+            f"on-chain admission pending manual action"
         )
-
-        contract_service = KycContractService()
-        return await contract_service.add_investor(
-            investor_address=kyc.address,
-            country_code=kyc.country_code or "XX",
-            is_accredited=kyc.is_accredited,
-        )
+        return ("", True)  # No auto-sync
 
 
 class MainnetKycStrategy(KycReviewStrategy):

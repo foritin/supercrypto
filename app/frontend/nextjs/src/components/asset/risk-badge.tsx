@@ -65,22 +65,22 @@ function ExpandableBadge({ type, isExpanded, onHover, onLeave }: ExpandableBadge
 
   const config = {
     audited: {
-      icon: <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" />,
+      icon: <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 cursor-pointer" />,
       label: t("assets.compliance.audited"),
       className: "bg-blue-500/10 border-blue-500/30 text-blue-400",
     },
     legal: {
-      icon: <Shield className="h-3.5 w-3.5 flex-shrink-0" />,
+      icon: <Shield className="h-3.5 w-3.5 flex-shrink-0 cursor-pointer" />,
       label: t("assets.compliance.legal"),
       className: "bg-purple-500/10 border-purple-500/30 text-purple-400",
     },
     verified: {
-      icon: <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" />,
+      icon: <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 cursor-pointer" />,
       label: t("assets.compliance.verified"),
       className: "bg-[#00D4AA]/10 border-[#00D4AA]/30 text-[#00D4AA]",
     },
     insured: {
-      icon: <Shield className="h-3.5 w-3.5 flex-shrink-0" />,
+      icon: <Shield className="h-3.5 w-3.5 flex-shrink-0 cursor-pointer" />,
       label: t("assets.compliance.insured"),
       className: "bg-orange-500/10 border-orange-500/30 text-orange-400",
     },
@@ -91,16 +91,20 @@ function ExpandableBadge({ type, isExpanded, onHover, onLeave }: ExpandableBadge
   return (
     <div
       className={cn(
-        "relative flex items-center h-7 rounded-md border overflow-hidden cursor-pointer",
+        "relative flex items-center h-7 rounded-md border overflow-hidden",
         "transition-all duration-200 ease-out",
         c.className,
         isExpanded ? "w-auto pl-1.5 pr-2 shadow-sm" : "w-7 justify-center"
       )}
-      onMouseEnter={onHover}
-      onMouseLeave={onLeave}
     >
-      {/* 图标 */}
-      <span className="flex-shrink-0">{c.icon}</span>
+      {/* 图标 - hover 仅触发在图标本身 */}
+      <span
+        className="flex-shrink-0 flex items-center justify-center"
+        onMouseEnter={onHover}
+        onMouseLeave={onLeave}
+      >
+        {c.icon}
+      </span>
 
       {/* 展开的文字 - 向右展开 */}
       <span

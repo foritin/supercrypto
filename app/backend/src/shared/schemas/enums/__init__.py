@@ -34,7 +34,7 @@ from .contract import (
 
 # 错误码
 from .error_codes import ErrorCode
-from .kyc import IdType, KycStatus, OnChainSyncStatus
+from .kyc import IdType, KycAuditAction, KycStatus, OnChainSyncStatus, ReviewPriority, RiskLevel
 
 # 质押相关
 from .staking import StakingPeriod, StakingStatus
@@ -50,6 +50,9 @@ __all__ = [
     "KycStatus",
     "OnChainSyncStatus",
     "IdType",
+    "RiskLevel",
+    "ReviewPriority",
+    "KycAuditAction",
     # Asset
     "AssetStatus",
     "AssetType",

@@ -21,6 +21,7 @@ from src.models.kyc import (  # UserKyc is deprecated alias
     AccountKycDocument,
     UserKyc,
 )
+from src.models.kyc_audit_log import KycAuditLog
 from src.models.staking import (
     BASE_DAILY_RATE,
     STAKING_MULTIPLIERS,
@@ -47,11 +48,14 @@ from src.shared.schemas.enums import (
     AuditStatus,
     ChainID,
     IdType,
+    KycAuditAction,
     KycStatus,
     LockPeriod,
     MediaType,
     NetWork,
     OnChainSyncStatus,
+    ReviewPriority,
+    RiskLevel,
     StakingPeriod,
     StakingStatus,
     SubscriptionStatus,
@@ -74,6 +78,7 @@ __all__ = [
     "AccountKyc",
     "AccountKycDocument",
     "UserKyc",  # deprecated alias
+    "KycAuditLog",
     # Asset
     "Asset",
     "AssetPriceHistory",
@@ -108,6 +113,9 @@ __all__ = [
     "KycStatus",
     "OnChainSyncStatus",
     "IdType",
+    "RiskLevel",
+    "ReviewPriority",
+    "KycAuditAction",
     # Asset
     "AssetStatus",
     "AssetType",

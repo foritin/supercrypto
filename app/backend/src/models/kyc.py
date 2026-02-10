@@ -14,7 +14,14 @@ KYC 认证模型
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-from src.shared.schemas.enums import IdType, KycStatus, NetWork, OnChainSyncStatus
+from src.shared.schemas.enums import (
+    IdType,
+    KycStatus,
+    NetWork,
+    OnChainSyncStatus,
+    ReviewPriority,
+    RiskLevel,
+)
 
 
 class AccountKycDocument(AbstractModel, TimestampMixin):
@@ -93,7 +100,9 @@ class AccountKyc(AbstractModel, TimestampMixin):
 
     # ========== 联系信息字段 ==========
     email = fields.CharField(max_length=255, null=True, description="邮箱地址")
-    phone = fields.CharField(max_length=20, null=True, description="电话号码 (E.164 格式)")
+    phone = fields.CharField(
+        max_length=20, null=True, description="电话号码 (E.164 格式)"
+    )
 
     # ========== 居住地址字段 ==========
     address_line1 = fields.CharField(max_length=255, null=True, description="地址行1")
@@ -106,9 +115,14 @@ class AccountKyc(AbstractModel, TimestampMixin):
     )
 
     # ========== 活体检测字段 ==========
-    liveness_verified = fields.BooleanField(default=False, description="活体检测是否通过")
+    liveness_verified = fields.BooleanField(
+        default=False, description="活体检测是否通过"
+    )
     face_image_url = fields.CharField(
         max_length=255, null=True, description="人脸图片 MinIO 路径"
+    )
+    liveness_video_url = fields.CharField(
+        max_length=255, null=True, description="活体检测视频 MinIO 路径"
     )
 
     # ========== 链上同步状态 (ADR-3) ==========
@@ -123,6 +137,52 @@ class AccountKyc(AbstractModel, TimestampMixin):
     )
     on_chain_synced_at = fields.DatetimeField(null=True, description="链上同步成功时间")
     on_chain_error = fields.TextField(null=True, description="链上同步失败原因")
+
+    # ========== 风险评估字段 (KYC Admin Enhancement) ==========
+    risk_level = fields.CharEnumField(
+        RiskLevel,
+        max_length=20,
+        default=RiskLevel.LOW,
+        description="风险等级",
+    )
+    risk_score = fields.IntField(
+        default=0,
+        description="风险评分 (0-100)",
+    )
+    priority = fields.CharEnumField(
+        ReviewPriority,
+        max_length=20,
+        default=ReviewPriority.NORMAL,
+        description="审核优先级",
+    )
+
+    # ========== 审核步骤进度 (Stepper Modal) ==========
+    review_progress = fields.JSONField(
+        null=True,
+        description="审核步骤进度 (JSON)",
+    )
+
+    # ========== 合规检查字段 (预留) ==========
+    is_pep = fields.BooleanField(
+        default=False,
+        description="是否为政治敏感人物 (PEP)",
+    )
+    is_sanctioned = fields.BooleanField(
+        default=False,
+        description="是否在制裁名单",
+    )
+
+    # ========== 来源追踪字段 ==========
+    source_ip = fields.CharField(
+        max_length=45,
+        null=True,
+        description="提交来源 IP",
+    )
+    device_fingerprint = fields.CharField(
+        max_length=64,
+        null=True,
+        description="设备指纹",
+    )
 
     # documents: ReverseRelation["AccountKycDocument"]  # 由 ForeignKeyField 自动创建
 

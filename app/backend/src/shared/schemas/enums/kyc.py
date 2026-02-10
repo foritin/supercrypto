@@ -21,6 +21,7 @@ class OnChainSyncStatus(str, Enum):
     PENDING = "pending"  # 待同步
     SYNCED = "synced"  # 已同步
     FAILED = "failed"  # 同步失败，需重试
+    REVOKED = "revoked"  # 链上准入已解除
 
 
 class IdType(str, Enum):
@@ -29,3 +30,35 @@ class IdType(str, Enum):
     ID_CARD = "id_card"  # 身份证
     PASSPORT = "passport"  # 护照
     DRIVER_LICENSE = "driver_license"  # 驾照
+
+
+class RiskLevel(str, Enum):
+    """风险等级枚举"""
+
+    LOW = "low"  # 低风险
+    MEDIUM = "medium"  # 中风险
+    HIGH = "high"  # 高风险
+    CRITICAL = "critical"  # 极高风险
+
+
+class ReviewPriority(str, Enum):
+    """审核优先级枚举"""
+
+    LOW = "low"  # 低优先级
+    NORMAL = "normal"  # 普通优先级
+    HIGH = "high"  # 高优先级
+    URGENT = "urgent"  # 紧急
+
+
+class KycAuditAction(str, Enum):
+    """KYC 审核日志操作类型"""
+
+    SUBMIT = "submit"  # 提交申请
+    REVIEW = "review"  # 审核中
+    APPROVE = "approve"  # 审核通过
+    REJECT = "reject"  # 审核拒绝
+    RESUBMIT = "resubmit"  # 重新提交
+    SYNC = "sync"  # 链上同步
+    RESET = "reset"  # 重置状态
+    ADMIT = "admit"  # 链上准入
+    REVOKE = "revoke"  # 解除准入

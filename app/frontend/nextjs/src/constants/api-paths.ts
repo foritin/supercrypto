@@ -77,8 +77,11 @@ export const USER_PATHS = {
 
   // KYC
   KYC_UPLOAD: '/user/kyc/upload-document',
+  KYC_UPLOAD_BASE64: '/user/kyc/upload-base64',
+  KYC_UPLOAD_VIDEO: '/user/kyc/upload-video',
   KYC_DOCUMENT_URL: '/user/kyc/document-url',
   KYC_APPLY: '/user/kyc/apply',
+  KYC_STATUS_UPDATE: '/user/kyc/status',
 } as const
 
 // ============================================================================
@@ -123,20 +126,27 @@ export const ADMIN_PATHS = {
   STATS_TVL: '/admin/stats/tvl',
   STATS_USERS: '/admin/stats/users',
   STATS_STAKING: '/admin/stats/staking',
-  AUDIT_LOGS: '/admin/stats/audit-logs',
-  AUDIT_LOG_DETAIL: (id: number) => `/admin/stats/audit-logs/${id}`,
+  
+  // 审计日志 (独立路由)
+  AUDIT_LOGS: '/admin/audit-logs',
+  AUDIT_LOG_DETAIL: (id: number) => `/admin/audit-logs/${id}`,
 
-  // KYC 管理
+  // KYC 管理 (静态路由在前，动态路由在后)
   KYC_LIST: '/admin/kyc/',
-  KYC_DETAIL: (id: number) => `/admin/kyc/${id}`,
-  KYC_REVIEW: (id: number) => `/admin/kyc/${id}/review`,
-  KYC_RETRY_SYNC: (id: number) => `/admin/kyc/${id}/retry-sync`,
-  KYC_CONTRACT_STATUS: (address: string) => `/admin/kyc/contract-status/${address}`,
   KYC_STATS: '/admin/kyc/stats',
+  KYC_REJECT_REASONS: '/admin/kyc/reject-reasons',
+  KYC_BATCH_REVIEW: '/admin/kyc/batch-review',
   KYC_PENDING: '/admin/kyc/pending',
   KYC_FAILED_SYNC: '/admin/kyc/failed-sync',
-  KYC_REJECT_REASONS: '/admin/kyc/reject-reasons',
+  KYC_CONTRACT_STATUS: (address: string) => `/admin/kyc/contract-status/${address}`,
+  KYC_CONTRACT_INFO: '/admin/kyc/contract-info',
+  // 动态路由 (/{id} 相关)
+  KYC_DETAIL: (id: number) => `/admin/kyc/${id}`,
+  KYC_REVIEW: (id: number) => `/admin/kyc/${id}/review`,
+  KYC_AUDIT_LOGS: (id: number) => `/admin/kyc/${id}/audit-logs`,
   KYC_CONTRACT_COMPARISON: (id: number) => `/admin/kyc/${id}/contract-comparison`,
+  KYC_RECORD_ADMISSION: (kycId: number) => `/admin/kyc/${kycId}/record-admission`,
+  KYC_RECORD_REVOCATION: (kycId: number) => `/admin/kyc/${kycId}/record-revocation`,
 
   // 会话管理
   AUTH_SESSIONS: '/admin/auth/sessions',

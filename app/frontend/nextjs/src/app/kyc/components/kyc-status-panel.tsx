@@ -13,11 +13,22 @@ import {
   RotateCcw,
   ExternalLink,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 
 export function KycStatusPanel() {
   const { t } = useTranslation();
   const { status, submissionId, submittedAt, reviewedAt, rejectionReason, reset } = useKycContext();
+  const [isResetting, setIsResetting] = React.useState(false);
+
+  const handleResubmit = async () => {
+    setIsResetting(true);
+    try {
+      await reset();
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const renderStatusContent = () => {
     switch (status) {
@@ -124,9 +135,13 @@ export function KycStatusPanel() {
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Contact Support
               </Button>
-              <Button variant="primary" onClick={reset}>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Resubmit
+              <Button variant="primary" onClick={handleResubmit} disabled={isResetting}>
+                {isResetting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                )}
+                {isResetting ? 'Processing...' : 'Resubmit'}
               </Button>
             </div>
           </div>

@@ -197,8 +197,10 @@ Authorization: Bearer <access_token>
 | GET | `/admin/kyc/` | 获取 KYC 列表 |
 | GET | `/admin/kyc/{id}` | 获取 KYC 详情 |
 | POST | `/admin/kyc/{id}/review` | 审核 KYC |
-| POST | `/admin/kyc/{id}/retry-sync` | 重试链上同步 |
 | GET | `/admin/kyc/contract-status/{address}` | 获取合约状态对比 |
+| GET | `/admin/kyc/contract-info` | 获取 KYCManager 合约地址和部署者地址 |
+| POST | `/admin/kyc/{id}/record-admission` | 记录链上准入交易结果 |
+| POST | `/admin/kyc/{id}/record-revocation` | 记录链上解除准入交易结果 |
 
 ### 会话管理
 

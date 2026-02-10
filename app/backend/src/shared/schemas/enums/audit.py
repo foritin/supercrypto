@@ -54,6 +54,8 @@ class AuditAction(str, Enum):
     KYC_RESET = "kyc_reset"
     KYC_REVIEW = "kyc_review"
     KYC_SYNC_RETRY = "kyc_sync_retry"
+    KYC_ADMIT = "kyc_admit"        # 链上准入
+    KYC_REVOKE = "kyc_revoke"      # 解除准入
 
     # ========== 资产操作 ==========
     ASSET_CREATE = "asset_create"

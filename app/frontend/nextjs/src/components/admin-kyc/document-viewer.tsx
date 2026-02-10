@@ -34,7 +34,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 
 interface Document {
-  type: "id_front" | "id_back" | "selfie" | "proof_of_address";
+  type: "id_front" | "id_back" | "selfie" | "proof_of_address" | "face_image";
   label: string;
   url: string;
 }

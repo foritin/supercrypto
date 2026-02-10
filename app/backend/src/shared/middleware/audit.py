@@ -35,8 +35,9 @@ class AuditMiddleware(BaseHTTPMiddleware):
 
         # KYC 管理 - 使用 /review 端点
         ("POST", r"/api/v1/admin/kyc/\d+/review"): (AuditCategory.KYC, AuditAction.KYC_REVIEW),
-        ("POST", r"/api/v1/admin/kyc/\d+/retry-sync"): (AuditCategory.KYC, AuditAction.KYC_SYNC_RETRY),
-
+        # KYC 链上准入/解除准入
+        ("POST", r"/api/v1/admin/kyc/\d+/record-admission"): (AuditCategory.KYC, AuditAction.KYC_ADMIT),
+        ("POST", r"/api/v1/admin/kyc/\d+/record-revocation"): (AuditCategory.KYC, AuditAction.KYC_REVOKE),
         # 账户管理
         ("POST", r"/api/v1/admin/accounts/\d+/block"): (AuditCategory.ACCOUNT, AuditAction.ACCOUNT_BLOCK),
         ("POST", r"/api/v1/admin/accounts/\d+/unblock"): (AuditCategory.ACCOUNT, AuditAction.ACCOUNT_UNBLOCK),
@@ -264,7 +265,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
             AuditAction.USER_SESSION_REVOKE: f"Session revoked for {target_address}" if target_address else "Session revoked",
             AuditAction.USER_BLACKLIST_REMOVE: f"Removed {target_address} from blacklist" if target_address else "Removed from blacklist",
             AuditAction.KYC_REVIEW: f"KYC #{target_id} reviewed" if target_id else "KYC reviewed",
-            AuditAction.KYC_SYNC_RETRY: f"KYC #{target_id} sync retried" if target_id else "KYC sync retried",
+            AuditAction.KYC_ADMIT: f"KYC #{target_id} admitted on-chain" if target_id else "KYC admitted on-chain",
+            AuditAction.KYC_REVOKE: f"KYC #{target_id} revoked on-chain" if target_id else "KYC revoked on-chain",
             AuditAction.CONTRACT_REGISTER: "Contract registered to provider",
             AuditAction.CONTRACT_UNREGISTER: "Contract unregistered from provider",
             AuditAction.CONTRACT_SYNC: "Provider status synced from chain",

@@ -8,15 +8,15 @@
 from fastapi import APIRouter
 
 from src.api.v1.admin import (
-                              accounts,
-                              assets,
-                              audit,
-                              auth,
-                              contracts,
-                              kyc,
-                              stats,
-                              transactions,
-                              transactions_audit,
+    accounts,
+    assets,
+    audit,
+    auth,
+    contracts,
+    kyc,
+    stats,
+    transactions,
+    transactions_audit,
 )
 
 router = APIRouter()
@@ -47,5 +47,5 @@ router.include_router(transactions.router, prefix="/transactions", tags=["交易
 # 审计日志
 router.include_router(audit.router, prefix="/audit-logs", tags=["审计-管理员"])
 
-# 统计报表 (stats 路由内部已定义 /stats, /audit-logs, /kyc 等路径)
-router.include_router(stats.router, tags=["统计-管理员"])
+# 统计报表 (平台统计、用户统计、TVL 等)
+router.include_router(stats.router, prefix="/stats", tags=["统计-管理员"])

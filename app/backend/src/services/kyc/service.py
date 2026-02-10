@@ -10,6 +10,7 @@ from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
 
 from src.models.kyc import AccountKyc, AccountKycDocument
+from src.models.kyc_audit_log import KycAuditLog
 from src.services.kyc.schemas import (
     ContractKycStatus,
     KycApplyRequest,
@@ -19,10 +20,12 @@ from src.services.kyc.schemas import (
     KycReviewRequest,
     KycStatusResponse,
 )
+from src.shared.common.chain_logger import ChainLogger
 from src.shared.common.exceptions import BusinessException
-from src.shared.schemas.enums import KycStatus, OnChainSyncStatus
+from src.shared.schemas.enums import KycAuditAction, KycStatus, OnChainSyncStatus
 
 logger = get_logger("kyc.service")
+chain_log = ChainLogger("kyc.service")
 
 
 class KycService:
@@ -30,8 +33,8 @@ class KycService:
 
     @property
     def environment(self) -> str:
-        """获取当前环境"""
-        return SETTINGS.environment
+        """获取当前网络（用于 DB 查询和环境判断）"""
+        return SETTINGS.network
 
     async def get_status(self, wallet_address: str) -> KycStatusResponse:
         """
@@ -45,7 +48,7 @@ class KycService:
         """
         address = wallet_address.lower()
 
-        kyc = await AccountKyc.filter(address=address).first()
+        kyc = await AccountKyc.filter(address=address, network=self.environment).first()
 
         if not kyc:
             # 返回默认状态 (not_started)
@@ -57,6 +60,7 @@ class KycService:
                 reject_reason=None,
                 country_code=None,
                 is_accredited=False,
+                on_chain_sync_status=None,
             )
 
         return KycStatusResponse(
@@ -67,6 +71,7 @@ class KycService:
             reject_reason=kyc.reject_reason,
             country_code=kyc.country_code,
             is_accredited=kyc.is_accredited,
+            on_chain_sync_status=kyc.on_chain_sync_status,
         )
 
     async def get_contract_comparison(
@@ -164,8 +169,8 @@ class KycService:
                 existing.full_name = data.full_name
                 existing.date_of_birth = data.date_of_birth
                 existing.selfie_url = data.selfie_url
-                # 重置链上同步状态
-                existing.on_chain_sync_status = OnChainSyncStatus.PENDING
+                # 重置链上同步状态 - 提交时不需要同步，审核通过后才设 PENDING
+                existing.on_chain_sync_status = OnChainSyncStatus.NOT_REQUIRED
                 existing.on_chain_tx_hash = None
                 existing.on_chain_synced_at = None
                 existing.on_chain_error = None
@@ -182,6 +187,7 @@ class KycService:
                 # 更新活体检测字段 (Requirements 3.3)
                 existing.liveness_verified = data.liveness_verified or False
                 existing.face_image_url = data.face_image_url
+                existing.liveness_video_url = data.liveness_video_url
                 await existing.save()
 
                 # 删除旧的证件记录，创建新的
@@ -199,7 +205,7 @@ class KycService:
             full_name=data.full_name,
             date_of_birth=data.date_of_birth,
             selfie_url=data.selfie_url,
-            on_chain_sync_status=OnChainSyncStatus.PENDING,
+            on_chain_sync_status=OnChainSyncStatus.NOT_REQUIRED,
             # 联系信息字段 (Requirements 1.3)
             email=data.email,
             phone=data.phone,
@@ -213,6 +219,7 @@ class KycService:
             # 活体检测字段 (Requirements 3.3)
             liveness_verified=data.liveness_verified or False,
             face_image_url=data.face_image_url,
+            liveness_video_url=data.liveness_video_url,
         )
 
         # 创建证件记录
@@ -297,13 +304,254 @@ class KycService:
             responses.append(await self._to_full_response(k))
         return (responses, total, total_pages)
 
+    async def update_review_progress(
+        self,
+        kyc_id: int,
+        current_step: int,
+        confirmed_steps: list,
+        reviewer_address: str,
+    ) -> None:
+        """
+        更新审核步骤进度 (Stepper Modal)
+
+        将审核员的当前步骤进度持久化到 AccountKyc.review_progress JSON 字段，
+        确保审核员关闭浏览器后重新打开仍能恢复进度。
+
+        Args:
+            kyc_id: KYC 记录 ID
+            current_step: 当前步骤索引 (0-3)
+            confirmed_steps: 各步骤确认状态 (长度为4的布尔数组)
+            reviewer_address: 审核员钱包地址
+
+        Raises:
+            BusinessException: 如果 KYC 不存在或状态不是 pending
+
+        Requirements Reference: 8.2, 8.5
+        """
+        kyc = await AccountKyc.filter(id=kyc_id).first()
+
+        if not kyc:
+            raise BusinessException(code=404, message="KYC record not found")
+
+        if kyc.status != KycStatus.PENDING:
+            raise BusinessException(
+                code=400,
+                message=f"Cannot update review progress for KYC in status: {kyc.status}",
+            )
+
+        kyc.review_progress = {
+            "current_step": current_step,
+            "confirmed_steps": confirmed_steps,
+            "reviewer_address": reviewer_address.lower(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await kyc.save()
+
+        logger.info(
+            f"Updated review progress: kyc_id={kyc_id}, step={current_step}, "
+            f"reviewer={reviewer_address[:10]}..."
+        )
+
+    async def record_admission(
+        self, kyc_id: int, tx_hash: str, admin_address: str
+    ) -> KycFullResponse:
+        """
+        记录链上准入结果 - 前端钱包交易确认后调用
+
+        管理员通过浏览器钱包发起 addInvestor() 交易成功后，
+        前端调用此方法记录交易哈希并更新链上同步状态。
+
+        Args:
+            kyc_id: KYC 记录 ID
+            tx_hash: 链上交易哈希
+            admin_address: 管理员钱包地址
+
+        Returns:
+            更新后的 KYC 完整响应
+
+        Raises:
+            BusinessException: KYC 不存在、状态不是 APPROVED、或已经 SYNCED
+
+        Requirements: 2.5, 2.7, 6.2, 6.5
+        """
+        kyc = await AccountKyc.filter(id=kyc_id).first()
+        if not kyc:
+            raise BusinessException(code=404, message="KYC record not found")
+        if kyc.status != KycStatus.APPROVED:
+            raise BusinessException(
+                code=400, message="KYC must be approved before admission"
+            )
+        # B-03: 幂等性检查 — 同一 tx_hash 重复提交时直接返回，不重复处理
+        if (
+            kyc.on_chain_sync_status == OnChainSyncStatus.SYNCED
+            and kyc.on_chain_tx_hash == tx_hash
+        ):
+            logger.info(
+                f"Idempotent admission: kyc_id={kyc_id} already SYNCED with same tx_hash"
+            )
+            return await self._to_full_response(kyc)
+        if kyc.on_chain_sync_status == OnChainSyncStatus.SYNCED:
+            raise BusinessException(code=400, message="KYC already admitted on-chain")
+
+        # 验证链上状态 — 确认 addInvestor() 交易确实生效
+        try:
+            from src.services.kyc.contract_service import KycContractService
+
+            contract_service = KycContractService()
+            is_verified = await contract_service.is_verified(kyc.address)
+            if not is_verified:
+                kyc.on_chain_sync_status = OnChainSyncStatus.FAILED
+                kyc.on_chain_tx_hash = tx_hash
+                kyc.on_chain_error = (
+                    "Chain verification failed: investor not verified on-chain after tx"
+                )
+                await kyc.save()
+                raise BusinessException(
+                    code=400,
+                    message="On-chain verification failed: investor not yet verified. The transaction may still be pending.",
+                )
+        except BusinessException:
+            raise
+        except Exception as e:
+            logger.warning(f"Chain verification skipped for kyc_id={kyc_id}: {e}")
+            # 链上验证异常时仍允许记录（降级处理），但记录警告
+
+        kyc.on_chain_sync_status = OnChainSyncStatus.SYNCED
+        kyc.on_chain_tx_hash = tx_hash
+        kyc.on_chain_synced_at = datetime.now(timezone.utc)
+        kyc.on_chain_error = None
+        await kyc.save()
+
+        await KycAuditLog.create(
+            kyc_id=kyc_id,
+            action=KycAuditAction.ADMIT,
+            actor_address=admin_address.lower(),
+            actor_role="admin",
+            details={"tx_hash": tx_hash},
+        )
+
+        chain_log.chain_op(
+            "record_admission",
+            "On-chain admission recorded",
+            kyc_id=kyc_id,
+            investor_address=kyc.address,
+            tx_hash=tx_hash,
+            admin=admin_address[:10] + "...",
+        )
+
+        return await self._to_full_response(kyc)
+
+    async def record_revocation(
+        self, kyc_id: int, tx_hash: str, admin_address: str, reason: str
+    ) -> KycFullResponse:
+        """
+        记录链上解除准入结果 - 前端钱包交易确认后调用
+
+        管理员通过浏览器钱包发起 removeInvestor() 交易成功后，
+        前端调用此方法记录交易哈希并更新链上同步状态。
+
+        Args:
+            kyc_id: KYC 记录 ID
+            tx_hash: 链上交易哈希
+            admin_address: 管理员钱包地址
+            reason: 解除准入原因
+
+        Returns:
+            更新后的 KYC 完整响应
+
+        Raises:
+            BusinessException: KYC 不存在、或链上状态不是 SYNCED
+
+        Requirements: 4.5, 6.3, 6.5
+        """
+        kyc = await AccountKyc.filter(id=kyc_id).first()
+        if not kyc:
+            raise BusinessException(code=404, message="KYC record not found")
+        # B-03: 幂等性检查 — 同一 tx_hash 重复提交时直接返回
+        if (
+            kyc.on_chain_sync_status == OnChainSyncStatus.REVOKED
+            and kyc.on_chain_tx_hash == tx_hash
+        ):
+            logger.info(
+                f"Idempotent revocation: kyc_id={kyc_id} already REVOKED with same tx_hash"
+            )
+            return await self._to_full_response(kyc)
+        if kyc.on_chain_sync_status != OnChainSyncStatus.SYNCED:
+            raise BusinessException(
+                code=400, message="KYC is not currently admitted on-chain"
+            )
+
+        kyc.on_chain_sync_status = OnChainSyncStatus.REVOKED
+        kyc.on_chain_tx_hash = tx_hash
+        kyc.on_chain_synced_at = None
+        kyc.on_chain_error = None
+        await kyc.save()
+
+        await KycAuditLog.create(
+            kyc_id=kyc_id,
+            action=KycAuditAction.REVOKE,
+            actor_address=admin_address.lower(),
+            actor_role="admin",
+            details={"tx_hash": tx_hash, "reason": reason},
+        )
+
+        chain_log.chain_op(
+            "record_revocation",
+            "On-chain revocation recorded",
+            kyc_id=kyc_id,
+            investor_address=kyc.address,
+            tx_hash=tx_hash,
+            admin=admin_address[:10] + "...",
+            reason=reason[:50],
+        )
+
+        return await self._to_full_response(kyc)
+
+    async def get_contract_info(self) -> dict:
+        """
+        获取 KYC 合约部署信息
+
+        通过 scope=global + contract_type=kyc 唯一标识查找，
+        用于前端验证管理员钱包是否为合约部署者。
+
+        Returns:
+            dict: {"contract_address": str, "deployer_address": str}
+
+        Raises:
+            BusinessException: 合约未部署
+
+        Requirements: 6.1
+        """
+        from src.models.contracts.contract_deployment import ContractDeployment
+        from src.shared.schemas.enums import ContractStatus
+        from src.shared.schemas.enums.contract import ContractScope, ContractType
+
+        contract = await ContractDeployment.filter(
+            scope=ContractScope.GLOBAL,
+            contract_type=ContractType.KYC,
+            network=SETTINGS.NETWORK,
+            status=ContractStatus.ACTIVE,
+        ).first()
+
+        if not contract:
+            raise BusinessException(
+                code=404,
+                message="KYC 合约未部署 (scope=global, contract_type=kyc)",
+            )
+
+        return {
+            "contract_address": contract.address,
+            "deployer_address": contract.deployer_address,
+        }
+
     async def review(
         self, kyc_id: int, data: KycReviewRequest, reviewer_address: str
     ) -> KycFullResponse:
         """
-        审核 KYC 申请 (管理员用) - Story 2.8 增强版
+        审核 KYC 申请 (管理员用)
 
-        集成审核策略，审核通过后自动同步到 KYCManager 合约。
+        审核通过后设置 on_chain_sync_status = PENDING，
+        等待管理员通过浏览器钱包手动发起链上准入交易。
 
         Args:
             kyc_id: KYC ID
@@ -316,8 +564,6 @@ class KycService:
         Raises:
             BusinessException: 如果 KYC 不存在或状态不是 pending
         """
-        from src.services.kyc.strategies import get_kyc_strategy
-
         kyc = await AccountKyc.filter(id=kyc_id).first()
 
         if not kyc:
@@ -335,88 +581,47 @@ class KycService:
             kyc.status = KycStatus.APPROVED
             kyc.is_accredited = data.is_accredited
 
-            # Story 2.8: 获取策略并处理审核通过
-            strategy = get_kyc_strategy()
-            try:
-                tx_hash, success = await strategy.process_approval(
-                    kyc, reviewer_address
-                )
-                kyc.on_chain_tx_hash = tx_hash if tx_hash else None
-
-                if success:
-                    kyc.on_chain_sync_status = OnChainSyncStatus.SYNCED
-                    kyc.on_chain_synced_at = datetime.now(timezone.utc)
-                    kyc.on_chain_error = None
-                else:
-                    kyc.on_chain_sync_status = OnChainSyncStatus.FAILED
-                    kyc.on_chain_error = "Transaction failed or not confirmed"
-            except Exception as e:
-                kyc.on_chain_sync_status = OnChainSyncStatus.FAILED
-                kyc.on_chain_error = str(e)
+            # 审核通过后不再自动调用合约，设置 PENDING 等待管理员手动准入
+            kyc.on_chain_sync_status = OnChainSyncStatus.PENDING
+            kyc.on_chain_tx_hash = None
+            kyc.on_chain_synced_at = None
+            kyc.on_chain_error = None
         else:
             kyc.status = KycStatus.REJECTED
             kyc.reject_reason = data.reject_reason
             kyc.is_accredited = False
             kyc.on_chain_sync_status = OnChainSyncStatus.NOT_REQUIRED
 
-        await kyc.save()
-        return await self._to_full_response(kyc)
-
-    async def retry_sync(self, kyc_id: int) -> KycFullResponse:
-        """
-        重试链上同步 (Story 2.8)
-
-        当 on_chain_sync_status = FAILED 时，管理员可以手动重试同步。
-
-        Args:
-            kyc_id: KYC ID
-
-        Returns:
-            更新后的 KYC 响应
-
-        Raises:
-            BusinessException: 如果 KYC 不存在或状态不允许重试
-        """
-        from src.services.kyc.strategies import get_kyc_strategy
-
-        kyc = await AccountKyc.filter(id=kyc_id).first()
-
-        if not kyc:
-            raise BusinessException(code=404, message="KYC record not found")
-
-        if kyc.status != KycStatus.APPROVED:
-            raise BusinessException(
-                code=400, message="Only approved KYC can retry sync"
-            )
-
-        if kyc.on_chain_sync_status == OnChainSyncStatus.SYNCED:
-            raise BusinessException(code=400, message="KYC already synced to chain")
-
-        if kyc.on_chain_sync_status == OnChainSyncStatus.NOT_REQUIRED:
-            raise BusinessException(
-                code=400, message="On-chain sync not required for this environment"
-            )
-
-        # 重试同步
-        strategy = get_kyc_strategy()
-        try:
-            tx_hash, success = await strategy.process_approval(
-                kyc, kyc.reviewer_address or ""
-            )
-            kyc.on_chain_tx_hash = tx_hash if tx_hash else None
-
-            if success:
-                kyc.on_chain_sync_status = OnChainSyncStatus.SYNCED
-                kyc.on_chain_synced_at = datetime.now(timezone.utc)
-                kyc.on_chain_error = None
-            else:
-                kyc.on_chain_sync_status = OnChainSyncStatus.FAILED
-                kyc.on_chain_error = "Transaction failed or not confirmed (retry)"
-        except Exception as e:
-            kyc.on_chain_sync_status = OnChainSyncStatus.FAILED
-            kyc.on_chain_error = f"Retry failed: {str(e)}"
+        # Stepper Modal: 清除审核步骤进度 (Requirements 8.5)
+        kyc.review_progress = None
 
         await kyc.save()
+
+        # Stepper Modal: 将审核步骤确认轨迹写入 KycAuditLog.details (Requirements 8.5, 8.6)
+        audit_action = (
+            KycAuditAction.APPROVE if data.approved else KycAuditAction.REJECT
+        )
+        audit_details = {
+            "approved": data.approved,
+            "is_accredited": data.is_accredited,
+        }
+        if not data.approved:
+            audit_details["reject_reason"] = data.reject_reason
+        if data.review_steps:
+            audit_details["review_steps"] = data.review_steps.model_dump()
+
+        await KycAuditLog.create(
+            kyc_id=kyc_id,
+            action=audit_action,
+            actor_address=reviewer_address.lower(),
+            actor_role="admin",
+            details=audit_details,
+        )
+        logger.info(
+            f"Created KYC audit log: kyc_id={kyc_id}, action={audit_action.value}, "
+            f"reviewer={reviewer_address[:10]}..., has_review_steps={data.review_steps is not None}"
+        )
+
         return await self._to_full_response(kyc)
 
     async def quick_approve(self, wallet_address: str) -> KycFullResponse:
@@ -481,13 +686,63 @@ class KycService:
 
         address = wallet_address.lower()
 
-        deleted = await AccountKyc.filter(address=address).delete()
+        deleted = await AccountKyc.filter(
+            address=address, network=self.environment
+        ).delete()
 
         return deleted > 0
 
+    async def update_status(self, wallet_address: str, target_status: str) -> str:
+        """
+        更新 KYC 状态
+
+        用户只能在以下情况下更新状态：
+        - 当前状态为 rejected 时，可以设置为 not_started（重新提交）
+
+        Args:
+            wallet_address: 钱包地址
+            target_status: 目标状态
+
+        Returns:
+            更新后的状态
+
+        Raises:
+            BusinessException: 如果状态转换不允许
+        """
+        address = wallet_address.lower()
+
+        # 验证目标状态
+        if target_status != "not_started":
+            raise BusinessException(
+                code=400,
+                message=f"不支持的目标状态: {target_status}",
+            )
+
+        kyc = await AccountKyc.filter(address=address, network=self.environment).first()
+
+        if not kyc:
+            # 没有记录，直接返回 not_started
+            return "not_started"
+
+        # 只有 rejected 状态可以转换为 not_started
+        if kyc.status != KycStatus.REJECTED:
+            raise BusinessException(
+                code=400,
+                message=f"当前状态 {kyc.status.value} 不允许转换为 {target_status}",
+            )
+
+        # 删除关联的证件记录
+        await AccountKycDocument.filter(kyc_id=kyc.id).delete()
+
+        # 删除 KYC 记录，让用户可以重新填写
+        await kyc.delete()
+
+        logger.info(f"KYC status updated to {target_status} for address {address}")
+        return target_status
+
     async def _to_full_response(self, kyc: AccountKyc) -> KycFullResponse:
         """转换为完整响应 (包含多证件信息和扩展字段)
-        
+
         Requirements 6.5: 映射所有新字段到响应
         - 联系信息: email, phone
         - 居住地址: address_line1, address_line2, city, state, postal_code, residence_country
@@ -542,6 +797,7 @@ class KycService:
             # 活体检测字段 (Requirements 6.3, 6.4)
             liveness_verified=kyc.liveness_verified or False,
             has_face_image=bool(kyc.face_image_url),
+            has_liveness_video=bool(kyc.liveness_video_url),
             # 链上同步状态
             on_chain_sync_status=kyc.on_chain_sync_status,
             on_chain_tx_hash=kyc.on_chain_tx_hash,

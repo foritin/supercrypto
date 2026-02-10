@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { z } from 'zod';
 import { useAccount } from 'wagmi';
-import { applyKyc, kycService, KycStatus as ApiKycStatus, type KycApplyRequest, type KycDocumentInfo, type KycIdType } from '@/services/kyc';
+import { applyKyc, kycService, type KycApplyRequest, type KycDocumentInfo, type KycIdType } from '@/services/kyc';
 
 // 计算年龄的辅助函数
 function calculateAge(dateOfBirth: string): number {
@@ -47,7 +47,15 @@ export const kycSchema = z.object({
   // Identity Document
   documentType: z.enum(['passport', 'national_id', 'drivers_license'], { message: 'Please select document type' }),
   documentNumber: z.string({ message: 'Document number is required' }).min(5, 'Document number must be at least 5 characters'),
-  documentExpiry: z.string({ message: 'Document expiry date is required' }).regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date'),
+  documentExpiry: z.string({ message: 'Document expiry date is required' })
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date')
+    .refine((val) => {
+      // 验证证件是否已过期
+      const expiryDate = new Date(val);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // 只比较日期部分
+      return expiryDate >= today;
+    }, 'Document has expired'),
   
   // Document Upload Paths (存储到 MinIO 的文件路径，用于持久化)
   passportFrontPath: z.string().optional(),
@@ -57,8 +65,14 @@ export const kycSchema = z.object({
   driversLicenseBackPath: z.string().optional(),
   
   // Liveness Check
-  faceImage: z.string().optional(), // base64 image
+  faceImage: z.string().optional(), // base64 image for preview
+  faceImagePath: z.string().optional(), // MinIO path for face image (for submission)
   livenessVerified: z.boolean().optional(), // 活体检测是否通过
+  livenessVideoPath: z.string().optional(), // MinIO path for liveness video (optional)
+  
+  // Selfie (手持证照)
+  selfie: z.string().optional(), // base64 image for preview
+  selfiePath: z.string().optional(), // MinIO path for selfie (for submission)
   
   // Terms
   agreeToTerms: z.boolean({ message: 'You must agree to the terms' }).refine((val) => val === true, 'You must agree to the terms'),
@@ -126,8 +140,8 @@ interface KycContextType extends KycState {
   // Submission
   submitKyc: () => Promise<boolean>;
   
-  // Reset
-  reset: () => void;
+  // Reset (async - calls backend API)
+  reset: () => Promise<void>;
 }
 
 const KycContext = React.createContext<KycContextType | undefined>(undefined);
@@ -161,7 +175,6 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
   const { address } = useAccount();
   const [state, setState] = React.useState<KycState>(initialState);
   const formDataRef = React.useRef<Partial<KycFormData>>(initialState.formData);
-  const isInitializedRef = React.useRef(false);
   const currentAddressRef = React.useRef<string | undefined>(undefined);
   
   // Keep ref in sync with state
@@ -205,8 +218,8 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
         const mappedStatus = statusMap[response.status] || 'not_started';
         console.log('[KYC] Mapped status:', response.status, '->', mappedStatus);
         
-        // 如果已提交/审核中/已通过/已拒绝，直接设置状态，跳过草稿加载
         if (mappedStatus !== 'not_started') {
+          // 如果已提交/审核中/已通过/已拒绝，直接设置状态，跳过草稿加载
           console.log('[KYC] Backend has KYC record, setting status:', mappedStatus);
           setState((prev) => ({
             ...prev,
@@ -619,14 +632,20 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
       
       // 构建 API 请求
       // 注意: selfie_url 应该是 MinIO 文件路径，不是 base64
-      // faceImage 是 base64 数据，需要先上传到 MinIO 获取路径
-      // TODO: 实现活体检测图片上传逻辑
+      // faceImage 是 base64 数据，用于预览
+      // faceImagePath 是 MinIO 路径，用于提交
       const request: KycApplyRequest = {
         full_name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
         date_of_birth: data.dateOfBirth || '',
         country_code: data.nationality?.toUpperCase().slice(0, 2),
         documents,
-        selfie_url: undefined, // 暂不提交 selfie，需要先实现上传逻辑
+        // 映射 selfiePath 到 selfie_url (Requirements 6.3)
+        // selfiePath 是手持证照上传后的 MinIO 路径
+        selfie_url: data.selfiePath || undefined,
+        // 映射 faceImagePath 到 face_image_url (Requirements 6.3)
+        face_image_url: data.faceImagePath || undefined,
+        // 映射 livenessVideoPath 到 liveness_video_url (Requirements 6.4)
+        liveness_video_url: data.livenessVideoPath || undefined,
       };
       
       console.log('[KYC] Submitting request:', request);
@@ -659,15 +678,49 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
     }
   }, [validateStep, address]);
 
-  const reset = React.useCallback(() => {
+  const reset = React.useCallback(async () => {
+    console.log('[KYC] Reset called, updating backend status and clearing local state');
+    
+    // 1. 先调用后端 API 更新状态
+    try {
+      await kycService.updateStatus('not_started');
+      console.log('[KYC] Backend status updated to not_started');
+    } catch (error) {
+      console.error('[KYC] Failed to update backend status:', error);
+      // 即使后端更新失败，也继续重置本地状态
+      // 用户可以重新尝试
+    }
+    
+    // 2. 清除本地草稿
     if (address) {
       const storageKey = getStorageKey(address);
       if (storageKey) {
         localStorage.removeItem(storageKey);
+        console.log('[KYC] Cleared draft from localStorage');
       }
     }
-    setState(initialState);
+    
+    // 3. 重置 formDataRef
     formDataRef.current = initialFormData;
+    
+    // 4. 重置本地状态，允许用户重新填写表单
+    setState({
+      ...initialState,
+      formData: initialFormData,
+      currentStep: 0,
+      showLanding: false, // 直接显示表单，不显示 landing 页面
+      isLoading: false,
+      status: 'not_started',
+      submissionId: null,
+      submittedAt: null,
+      reviewedAt: null,
+      rejectionReason: null,
+      lastSaved: null,
+      isDirty: false,
+      errors: {},
+    });
+    
+    console.log('[KYC] State reset complete, form should now be visible');
   }, [address]);
 
   const value: KycContextType = {

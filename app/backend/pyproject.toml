@@ -39,6 +39,16 @@ location = "./migrations"
 src_folder = "./app/backend"
 
 
+[tool.ruff]
+target-version = "py313"
+exclude = [
+    ".venv",
+    ".build",
+    "migrations",
+    "__pycache__",
+    "*.pyc",
+]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
@@ -58,13 +68,12 @@ select = [
     "W",      # pycodestyle 警告
     "F",      # pyflakes 检查
     "I",      # isort 导入排序
-    "PL",     # pylint 规则
-    "PLC",    # pylint convention 代码规范
-    "PLE",    # pylint error 错误
-    "PLR",    # pylint refactor 重构建议
-    "PLW",    # pylint warning 警告
+    "PL",     # pylint 规则 (包含 PLC, PLE, PLR, PLW)
     "D100",   # 公共模块缺少 docstring
     "D101",   # 公共类缺少 docstring
     "D102",   # 公共方法缺少 docstring
     "D103",   # 公共函数缺少 docstring
 ]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

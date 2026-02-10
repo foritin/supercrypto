@@ -2,6 +2,7 @@
 SuperCrypto API - FastAPI应用主入口
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from falib.adapter.scheduler import SchedulerService
@@ -18,8 +19,10 @@ from src.models import Account
 from src.shared.aerich_redirect import TORTOISE_ORM
 from src.shared.common.adapters import close_async_redis_adapter
 from src.shared.common.exceptions import BusinessException
+from src.shared.common.metrics import chain_metrics
 from src.shared.middleware import AuditMiddleware, AuthStateMiddleware
 from src.tasks.contract_task import async_sync_provider_registry
+from src.tasks.kyc_sync_task import reconcile_chain_events, retry_failed_kyc_syncs
 
 settings = SETTINGS
 logger = get_logger("api.main")
@@ -49,6 +52,14 @@ async def lifespan(app: FastAPI):
     )
     print("✅ Provider sync task scheduled (interval=120s)")
 
+    # B-06: 每 5 分钟重试失败的 KYC 链上同步
+    await SchedulerService.schedule_task(retry_failed_kyc_syncs, "cyclic", interval=300)
+    print("✅ KYC failed sync retry task scheduled (interval=300s)")
+
+    # C-04: 每 5 分钟扫描合约事件对账
+    await SchedulerService.schedule_task(reconcile_chain_events, "cyclic", interval=300)
+    print("✅ KYC chain event reconciliation task scheduled (interval=300s)")
+
     # 生成数据库表（开发环境）
     if settings.debug:
         await Tortoise.generate_schemas()
@@ -56,15 +67,16 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # 关闭时执行
+    # 关闭时执行 (顺序: 先停调度器 → 等待执行中任务完成 → 再关连接池)
     print("🛑 Shutting down SuperCrypto API...")
+    await SchedulerService.stop()
+    print("✅ Scheduler stopped")
+    # 等待正在执行的定时任务完成，避免 "pool is closing"
+    await asyncio.sleep(2)
     await Tortoise.close_connections()
     print("✅ Database connections closed")
     await close_async_redis_adapter()
     print("✅ Redis connection closed")
-    print("🛑 Scheduler stopped")
-    await SchedulerService.stop()
-    print("✅ Scheduler stopped")
 
 
 # 创建FastAPI应用
@@ -216,6 +228,16 @@ async def health():
         "database": db_status,
         "environment": settings.environment,
     }
+
+
+@app.get("/metrics/chain", tags=["系统"])
+async def chain_operation_metrics():
+    """
+    链上操作指标
+
+    返回 chain operation 计数、耗时、错误信息。
+    """
+    return chain_metrics.snapshot()
 
 
 if __name__ == "__main__":

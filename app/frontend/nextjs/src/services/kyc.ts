@@ -36,6 +36,21 @@ export type KycDocumentType =
   | 'selfie'
 
 /**
+ * Base64 图片文档类型 (用于人脸图片和自拍上传)
+ */
+export type Base64DocumentType = 'face_image' | 'selfie'
+
+/**
+ * Base64 图片上传请求
+ */
+export interface Base64UploadRequest {
+  /** Base64 编码的图片数据 (支持 data URI 或纯 base64) */
+  image_data: string
+  /** 文档类型: face_image 或 selfie */
+  document_type: Base64DocumentType
+}
+
+/**
  * KYC 文件上传响应
  */
 export interface KycUploadResponse {
@@ -66,6 +81,7 @@ export interface KycStatusResponse {
   reject_reason: string | null
   country_code: string | null
   is_accredited: boolean
+  on_chain_sync_status?: string | null
 }
 
 /**
@@ -115,6 +131,8 @@ export interface KycApplyRequest {
   date_of_birth: string // YYYY-MM-DD
   documents: KycDocumentInfo[] // 1-3 种证件
   selfie_url?: string
+  face_image_url?: string // MinIO path for face image from liveness detection
+  liveness_video_url?: string // MinIO path for liveness video (optional)
 }
 
 /**
@@ -136,6 +154,12 @@ export interface KycReviewRequest {
   reject_reason_code?: string
   reject_reason?: string
   is_accredited?: boolean
+  review_steps?: {
+    basic_info_confirmed: boolean
+    documents_confirmed: boolean
+    risk_assessment_confirmed: boolean
+    confirmed_at: string
+  }
 }
 
 /**
@@ -199,11 +223,89 @@ export async function uploadKycDocument(
 }
 
 /**
+ * 上传 Base64 编码的图片到 MinIO
+ * 用于人脸图片和自拍照上传
+ *
+ * @param imageData - Base64 编码的图片数据 (支持 data URI 格式 `data:image/jpeg;base64,...` 或纯 base64 字符串)
+ * @param documentType - 文档类型: face_image (人脸图片) 或 selfie (自拍照)
+ * @returns 上传响应，包含 MinIO 文件路径
+ *
+ * @example
+ * ```typescript
+ * // 使用 data URI 格式
+ * const result = await uploadBase64Image('data:image/jpeg;base64,/9j/4AAQ...', 'face_image')
+ * console.log(result.file_path) // kyc/0x742d35.../face_image_abc123.jpg
+ *
+ * // 使用纯 base64 字符串
+ * const result = await uploadBase64Image('/9j/4AAQ...', 'face_image')
+ * ```
+ */
+export async function uploadBase64Image(
+  imageData: string,
+  documentType: Base64DocumentType
+): Promise<KycUploadResponse> {
+  const requestBody: Base64UploadRequest = {
+    image_data: imageData,
+    document_type: documentType,
+  }
+
+  const response = await api.post<API.ResponseData<KycUploadResponse>>(
+    USER_PATHS.KYC_UPLOAD_BASE64,
+    requestBody
+  )
+  return response.object_data as KycUploadResponse
+}
+
+/**
+ * 上传活体检测视频到 MinIO
+ * 用于记录活体检测过程
+ *
+ * @param videoBlob - 视频 Blob (WebM 格式, 最大 50MB)
+ * @returns 上传响应，包含 MinIO 文件路径
+ *
+ * @example
+ * ```typescript
+ * // 从 MediaRecorder 获取视频 Blob
+ * const videoBlob = new Blob(chunks, { type: 'video/webm' })
+ * const result = await uploadLivenessVideo(videoBlob)
+ * console.log(result.file_path) // kyc/0x742d35.../liveness_video_abc123.webm
+ * ```
+ */
+export async function uploadLivenessVideo(videoBlob: Blob): Promise<KycUploadResponse> {
+  const formData = new FormData()
+  formData.append('file', videoBlob, 'liveness_video.webm')
+
+  const response = await api.post<API.ResponseData<KycUploadResponse>>(
+    USER_PATHS.KYC_UPLOAD_VIDEO,
+    formData
+  )
+  return response.object_data as KycUploadResponse
+}
+
+/**
  * Apply for KYC (需要 JWT 认证)
  */
 export async function applyKyc(data: KycApplyRequest): Promise<KycFullResponse> {
   const response = await api.post<API.ResponseData<KycFullResponse>>(USER_PATHS.KYC_APPLY, data)
   return response.object_data as KycFullResponse
+}
+
+/**
+ * 更新 KYC 状态
+ * 用户只能在 rejected 状态时设置为 not_started（重新提交）
+ *
+ * @param targetStatus - 目标状态 (目前只支持 'not_started')
+ * @returns 更新后的状态
+ */
+export async function updateKycStatus(targetStatus: string): Promise<{ status: string }> {
+  const formData = new FormData()
+  formData.append('target_status', targetStatus)
+
+  const response = await api.post<API.ResponseData<{ status: string }>>(
+    USER_PATHS.KYC_STATUS_UPDATE,
+    formData
+  )
+  return response.object_data as { status: string }
 }
 
 /**
@@ -277,14 +379,6 @@ export async function reviewKyc(id: number, data: KycReviewRequest): Promise<Kyc
   return response.object_data as KycFullResponse
 }
 
-/**
- * Retry on-chain sync (admin) - Story 2.8
- */
-export async function retrySyncKyc(id: number): Promise<KycFullResponse> {
-  const response = await api.post<API.ResponseData<KycFullResponse>>(ADMIN_PATHS.KYC_RETRY_SYNC(id))
-  return response.object_data as KycFullResponse
-}
-
 // ============================================================================
 // 开发工具
 // ============================================================================
@@ -321,14 +415,16 @@ export const kycService = {
 
   // 用户
   uploadDocument: uploadKycDocument,
+  uploadBase64Image: uploadBase64Image,
+  uploadLivenessVideo: uploadLivenessVideo,
   getDocumentUrl: getKycDocumentUrl,
   apply: applyKyc,
+  updateStatus: updateKycStatus,
 
   // 管理员
   list: listKyc,
   getById: getKycById,
   review: reviewKyc,
-  retrySync: retrySyncKyc,
 
   // 开发工具
   quickApprove: quickApproveKyc,

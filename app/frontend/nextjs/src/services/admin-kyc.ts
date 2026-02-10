@@ -1,8 +1,8 @@
 /**
- * Admin KYC Service - Enhanced Version
- * 增强版 KYC 管理服务
+ * Admin KYC Service
+ * KYC 管理服务
  * 
- * 功能扩展:
+ * 功能:
  * - 风险评级 (Risk Scoring)
  * - 审核时间统计
  * - 批量操作
@@ -10,10 +10,11 @@
  * - 审核日志
  */
 
-import { get, post } from "./api";
+import { get, post, put } from "./api";
 import type { KycStatusType, OnChainSyncStatus } from "./admin";
+import type { ReviewStepsData } from "@/components/admin-kyc/stepper-reducer";
 
-// ============ 增强版 Types ============
+// ============ Types ============
 
 /** 风险等级 */
 export type RiskLevel = "low" | "medium" | "high" | "critical";
@@ -21,8 +22,8 @@ export type RiskLevel = "low" | "medium" | "high" | "critical";
 /** 审核优先级 */
 export type ReviewPriority = "low" | "normal" | "high" | "urgent";
 
-/** 增强版 KYC 列表项 */
-export interface EnhancedKycItem {
+/** KYC 列表项 */
+export interface KycItem {
   id: number;
   wallet_address: string;
   environment: string;
@@ -45,7 +46,7 @@ export interface EnhancedKycItem {
   on_chain_error: string | null;
   created_at: string | null;
   updated_at: string | null;
-  // 增强字段
+  // 风险评估字段
   risk_level: RiskLevel;
   risk_score: number; // 0-100
   priority: ReviewPriority;
@@ -60,20 +61,22 @@ export interface EnhancedKycItem {
 export interface KycAuditLogEntry {
   id: number;
   kyc_id: number;
-  action: "submit" | "review" | "approve" | "reject" | "resubmit" | "sync" | "reset";
+  action: "submit" | "review" | "approve" | "reject" | "resubmit" | "sync" | "reset" | "admit" | "revoke";
   actor_address: string;
   actor_role: "user" | "admin" | "system";
   details: Record<string, unknown>;
   created_at: string;
 }
 
-/** 增强版 KYC 详情 */
-export interface EnhancedKycDetail {
-  kyc: EnhancedKycItem;
+/** KYC 详情 */
+export interface KycDetail {
+  kyc: KycItem;
   documents: {
     id_front?: string;
     id_back?: string;
     selfie?: string;
+    face_image?: string;      // 活体检测人脸照片
+    liveness_video?: string;  // 活体检测视频
   };
   audit_logs: KycAuditLogEntry[];
   ocr_data: {
@@ -109,8 +112,8 @@ export interface EnhancedKycDetail {
   } | null;
 }
 
-/** 增强版 KYC 统计 */
-export interface EnhancedKycStats {
+/** KYC 统计 */
+export interface KycStats {
   // 基础统计
   pending: number;
   approved: number;
@@ -156,6 +159,16 @@ export interface BatchReviewRequest {
   is_accredited?: boolean;
 }
 
+/** 单条 KYC 审核请求（含审核步骤轨迹） */
+export interface KycReviewRequest {
+  approved: boolean;
+  reject_reason_code?: string;
+  reject_reason?: string;
+  is_accredited?: boolean;
+  /** 审核步骤确认轨迹 */
+  review_steps?: ReviewStepsData;
+}
+
 /** 批量审核响应 */
 export interface BatchReviewResponse {
   total: number;
@@ -188,31 +201,31 @@ export interface KycFilterParams {
 // ============ API Functions ============
 
 /**
- * 获取增强版 KYC 统计
+ * 获取 KYC 统计
  */
-export async function getEnhancedKycStats(): Promise<EnhancedKycStats> {
-  const data = await get<{ object_data: EnhancedKycStats }>("/admin/kyc/stats/enhanced");
+export async function getKycStats(): Promise<KycStats> {
+  const data = await get<{ object_data: KycStats }>("/admin/kyc/stats");
   return data.object_data;
 }
 
 /**
- * 获取增强版 KYC 列表
+ * 获取 KYC 列表
  */
-export async function getEnhancedKycList(
+export async function getKycList(
   params: KycFilterParams
-): Promise<{ list_data: EnhancedKycItem[]; pagination: { total: number; page: number; page_size: number } }> {
+): Promise<{ list_data: KycItem[]; pagination: { total: number; page: number; page_size: number } }> {
   const data = await get<{
-    list_data: EnhancedKycItem[];
+    list_data: KycItem[];
     pagination: { total: number; page: number; page_size: number };
-  }>("/admin/kyc/list/enhanced", params);
+  }>("/admin/kyc/", params as Record<string, unknown>);
   return data;
 }
 
 /**
- * 获取增强版 KYC 详情
+ * 获取 KYC 详情
  */
-export async function getEnhancedKycDetail(kycId: number): Promise<EnhancedKycDetail> {
-  const data = await get<{ object_data: EnhancedKycDetail }>(`/admin/kyc/${kycId}/enhanced`);
+export async function getKycDetail(kycId: number): Promise<KycDetail> {
+  const data = await get<{ object_data: KycDetail }>(`/admin/kyc/${kycId}`);
   return data.object_data;
 }
 
@@ -247,16 +260,76 @@ export async function recalculateRiskScore(kycId: number): Promise<{ risk_level:
  * 导出 KYC 数据
  */
 export async function exportKycData(params: KycFilterParams): Promise<{ download_url: string }> {
-  const data = await get<{ object_data: { download_url: string } }>("/admin/kyc/export", params);
+  const data = await get<{ object_data: { download_url: string } }>("/admin/kyc/export", params as Record<string, unknown>);
   return data.object_data;
 }
 
+/**
+ * 更新审核步骤进度
+ * 将当前步骤和确认状态持久化到后端，以便审核员关闭浏览器后恢复进度
+ */
+export async function updateReviewProgress(
+  kycId: number,
+  currentStep: number,
+  confirmedSteps: boolean[]
+): Promise<void> {
+  await put(`/admin/kyc/${kycId}/review-progress`, {
+    current_step: currentStep,
+    confirmed_steps: confirmedSteps,
+  });
+}
+
+/**
+ * 记录链上准入结果
+ * 前端完成 addInvestor 交易后调用，更新 on_chain_sync_status 为 SYNCED
+ */
+export async function recordAdmission(kycId: number, txHash: string): Promise<KycDetail> {
+  const data = await post<{ object_data: KycDetail }>(
+    `/admin/kyc/${kycId}/record-admission`,
+    { tx_hash: txHash }
+  );
+  return data.object_data;
+}
+
+/**
+ * 记录链上解除准入结果
+ * 前端完成 removeInvestor 交易后调用，更新 on_chain_sync_status 为 PENDING
+ */
+export async function recordRevocation(kycId: number, txHash: string, reason: string): Promise<KycDetail> {
+  const data = await post<{ object_data: KycDetail }>(
+    `/admin/kyc/${kycId}/record-revocation`,
+    { tx_hash: txHash, reason }
+  );
+  return data.object_data;
+}
+
+/**
+ * 获取 KYCManager 合约信息
+ * 返回合约地址和部署者地址，用于前端验证钱包权限
+ */
+export async function getKycContractInfo(): Promise<{ contract_address: string; deployer_address: string }> {
+  const data = await get<{ object_data: { contract_address: string; deployer_address: string } }>(
+    '/admin/kyc/contract-info'
+  );
+  return data.object_data;
+}
+
+// ============ Service Object ============
+
 export const adminKycService = {
-  getEnhancedKycStats,
-  getEnhancedKycList,
-  getEnhancedKycDetail,
+  // New names (preferred)
+  getKycStats,
+  getKycList,
+  getKycDetail,
   batchReviewKyc,
   getKycAuditLogs,
   recalculateRiskScore,
   exportKycData,
+  updateReviewProgress,
+  recordAdmission,
+  recordRevocation,
+  getKycContractInfo,
 };
+
+// Re-export ReviewStepsData from stepper-reducer for service-layer consumers
+export type { ReviewStepsData } from "@/components/admin-kyc/stepper-reducer";

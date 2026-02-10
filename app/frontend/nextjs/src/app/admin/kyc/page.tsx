@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * Admin KYC Management - Enhanced Version
- * KYC 管理页面 - 增强版
+ * Admin KYC Management
+ * KYC 管理页面
  * 
  * Features:
- * - Enhanced statistics dashboard
+ * - Statistics dashboard
  * - Advanced filtering and search
  * - Batch operations
  * - Document viewer with zoom/pan
@@ -62,52 +62,55 @@ import { RequireAuth } from "@/components/auth";
 import { V6Background } from "@/components/layout/V6Background";
 
 import { KycStatsPanel } from "@/components/admin-kyc/kyc-stats-panel";
-import { ReviewPanel } from "@/components/admin-kyc/review-panel";
+import { ReviewStepperModal } from "@/components/admin-kyc/review-stepper-modal";
 import { BatchToolbar } from "@/components/admin-kyc/batch-toolbar";
+import { AdmissionButton, shouldShowAdmissionButton } from "@/components/admin-kyc/admission-button";
+import type { ReviewStepsData } from "@/components/admin-kyc/stepper-reducer";
 
 import {
   adminKycService,
-  type EnhancedKycStats,
-  type EnhancedKycItem,
-  type EnhancedKycDetail,
+  type KycStats,
+  type KycItem,
+  type KycDetail,
   type KycFilterParams,
   type RiskLevel,
   type ReviewPriority,
+  getKycContractInfo,
 } from "@/services/admin-kyc";
 import { kycService } from "@/services/kyc";
 import { adminService } from "@/services/admin";
 import type { KycStatusType } from "@/services/admin";
 
 // 状态配置
-const STATUS_CONFIG: Record<KycStatusType, { color: string; bgColor: string; label: string }> = {
-  not_started: { color: "text-gray-400", bgColor: "bg-gray-500/20", label: "未开始" },
-  pending: { color: "text-blue-400", bgColor: "bg-blue-500/20", label: "待审核" },
-  approved: { color: "text-emerald-400", bgColor: "bg-emerald-500/20", label: "已通过" },
-  rejected: { color: "text-red-400", bgColor: "bg-red-500/20", label: "已拒绝" },
+const STATUS_CONFIG: Record<KycStatusType, { color: string; bgColor: string; labelKey: string }> = {
+  not_started: { color: "text-gray-400", bgColor: "bg-gray-500/20", labelKey: "admin.kyc.page.statusNotStarted" },
+  pending: { color: "text-blue-400", bgColor: "bg-blue-500/20", labelKey: "admin.kyc.page.statusPending" },
+  approved: { color: "text-emerald-400", bgColor: "bg-emerald-500/20", labelKey: "admin.kyc.page.statusApproved" },
+  rejected: { color: "text-red-400", bgColor: "bg-red-500/20", labelKey: "admin.kyc.page.statusRejected" },
 };
 
 // 风险等级配置
-const RISK_CONFIG: Record<RiskLevel, { color: string; bgColor: string; label: string; icon: typeof Shield }> = {
-  low: { color: "text-emerald-400", bgColor: "bg-emerald-500/20", label: "低", icon: Shield },
-  medium: { color: "text-yellow-400", bgColor: "bg-yellow-500/20", label: "中", icon: AlertTriangle },
-  high: { color: "text-orange-400", bgColor: "bg-orange-500/20", label: "高", icon: AlertOctagon },
-  critical: { color: "text-red-400", bgColor: "bg-red-500/20", label: "极高", icon: AlertOctagon },
+const RISK_CONFIG: Record<RiskLevel, { color: string; bgColor: string; labelKey: string; icon: typeof Shield }> = {
+  low: { color: "text-emerald-400", bgColor: "bg-emerald-500/20", labelKey: "admin.kyc.page.riskLow", icon: Shield },
+  medium: { color: "text-yellow-400", bgColor: "bg-yellow-500/20", labelKey: "admin.kyc.page.riskMedium", icon: AlertTriangle },
+  high: { color: "text-orange-400", bgColor: "bg-orange-500/20", labelKey: "admin.kyc.page.riskHigh", icon: AlertOctagon },
+  critical: { color: "text-red-400", bgColor: "bg-red-500/20", labelKey: "admin.kyc.page.riskCritical", icon: AlertOctagon },
 };
 
 // 优先级配置
-const PRIORITY_CONFIG: Record<ReviewPriority, { color: string; label: string }> = {
-  low: { color: "text-gray-400", label: "低" },
-  normal: { color: "text-blue-400", label: "普通" },
-  high: { color: "text-orange-400", label: "高" },
-  urgent: { color: "text-red-400", label: "紧急" },
+const PRIORITY_CONFIG: Record<ReviewPriority, { color: string; labelKey: string }> = {
+  low: { color: "text-gray-400", labelKey: "admin.kyc.page.priorityLow" },
+  normal: { color: "text-blue-400", labelKey: "admin.kyc.page.priorityNormal" },
+  high: { color: "text-orange-400", labelKey: "admin.kyc.page.priorityHigh" },
+  urgent: { color: "text-red-400", labelKey: "admin.kyc.page.priorityUrgent" },
 };
 
 export default function AdminKycPage() {
   const { t } = useTranslation();
 
   // State
-  const [stats, setStats] = useState<EnhancedKycStats | null>(null);
-  const [kycList, setKycList] = useState<EnhancedKycItem[]>([]);
+  const [stats, setStats] = useState<KycStats | null>(null);
+  const [kycList, setKycList] = useState<KycItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -124,18 +127,21 @@ export default function AdminKycPage() {
 
   // Review Panel
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false);
-  const [selectedKyc, setSelectedKyc] = useState<EnhancedKycDetail | null>(null);
+  const [selectedKyc, setSelectedKyc] = useState<KycDetail | null>(null);
   const [selectedKycId, setSelectedKycId] = useState<number | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
 
   // Batch Selection
-  const [selectedRows, setSelectedRows] = useState<EnhancedKycItem[]>([]);
-  const [rejectReasons, setRejectReasons] = useState<Array<{ code: string; label: string }>>([]);
+  const [selectedRows, setSelectedRows] = useState<KycItem[]>([]);
+  const [rejectReasons, setRejectReasons] = useState<Array<{ code: string; labels: { zh: string; en: string } }>>([]);
+
+  // Contract Info (for admission/revocation)
+  const [contractInfo, setContractInfo] = useState<{ contract_address: string; deployer_address: string } | null>(null);
 
   // Load stats
   const loadStats = useCallback(async () => {
     try {
-      const data = await adminKycService.getEnhancedKycStats();
+      const data = await adminKycService.getKycStats();
       setStats(data);
     } catch (error) {
       console.error("Failed to load KYC stats:", error);
@@ -165,12 +171,12 @@ export default function AdminKycPage() {
         sort_order: "desc",
       };
 
-      const response = await adminKycService.getEnhancedKycList(params);
+      const response = await adminKycService.getKycList(params);
       setKycList(response.list_data);
       setPagination((prev) => ({ ...prev, total: response.pagination.total }));
     } catch (error) {
       console.error("Failed to load KYC list:", error);
-      notification.error("加载 KYC 列表失败");
+      notification.error(t("admin.kyc.page.loadListFailed"));
     } finally {
       setLoading(false);
     }
@@ -186,11 +192,23 @@ export default function AdminKycPage() {
     }
   }, []);
 
+  // Load contract info (for admission/revocation)
+  const loadContractInfo = useCallback(async () => {
+    try {
+      const info = await getKycContractInfo();
+      setContractInfo(info);
+    } catch (error) {
+      console.error("Failed to load contract info:", error);
+      // Non-critical: admission features will be disabled
+    }
+  }, []);
+
   // Initial load
   useEffect(() => {
     loadStats();
     loadRejectReasons();
-  }, [loadStats, loadRejectReasons]);
+    loadContractInfo();
+  }, [loadStats, loadRejectReasons, loadContractInfo]);
 
   useEffect(() => {
     loadKycList();
@@ -200,37 +218,38 @@ export default function AdminKycPage() {
   const handleOpenReview = async (kycId: number) => {
     setSelectedKycId(kycId);
     try {
-      const detail = await adminKycService.getEnhancedKycDetail(kycId);
+      const detail = await adminKycService.getKycDetail(kycId);
       setSelectedKyc(detail);
       setReviewPanelOpen(true);
     } catch (error) {
       console.error("Failed to load KYC detail:", error);
-      notification.error("加载详情失败");
+      notification.error(t("admin.kyc.page.loadDetailFailed"));
     }
   };
 
   // Handle approve
-  const handleApprove = async (kycId: number, isAccredited: boolean) => {
+  const handleApprove = async (kycId: number, isAccredited: boolean, reviewSteps?: ReviewStepsData) => {
     setReviewLoading(true);
     try {
       await kycService.review(kycId, {
         approved: true,
         is_accredited: isAccredited,
+        review_steps: reviewSteps,
       });
-      notification.success("审核通过成功");
+      notification.success(t("admin.kyc.page.approveSuccess"));
       setReviewPanelOpen(false);
       loadKycList();
       loadStats();
     } catch (error) {
       console.error("Failed to approve KYC:", error);
-      notification.error("审核操作失败");
+      notification.error(t("admin.kyc.page.reviewFailed"));
     } finally {
       setReviewLoading(false);
     }
   };
 
   // Handle reject
-  const handleReject = async (kycId: number, reasonCode: string, customReason?: string) => {
+  const handleReject = async (kycId: number, reasonCode: string, customReason?: string, reviewSteps?: ReviewStepsData) => {
     setReviewLoading(true);
     try {
       await kycService.review(kycId, {
@@ -238,31 +257,35 @@ export default function AdminKycPage() {
         is_accredited: false,
         reject_reason_code: reasonCode,
         reject_reason: customReason,
+        review_steps: reviewSteps,
       });
-      notification.success("审核拒绝成功");
+      notification.success(t("admin.kyc.page.rejectSuccess"));
       setReviewPanelOpen(false);
       loadKycList();
       loadStats();
     } catch (error) {
       console.error("Failed to reject KYC:", error);
-      notification.error("审核操作失败");
+      notification.error(t("admin.kyc.page.reviewFailed"));
     } finally {
       setReviewLoading(false);
     }
   };
 
-  // Handle retry sync
-  const handleRetrySync = async (kycId: number) => {
-    try {
-      await kycService.retrySync(kycId);
-      notification.success("重试同步成功");
-      loadKycList();
-      loadStats();
-    } catch (error) {
-      console.error("Failed to retry sync:", error);
-      notification.error("重试同步失败");
+  // Handle admission/revocation success - refresh detail and list
+  const handleAdmissionSuccess = useCallback(async () => {
+    // Refresh the KYC detail if one is currently open
+    if (selectedKyc) {
+      try {
+        const detail = await adminKycService.getKycDetail(selectedKyc.kyc.id);
+        setSelectedKyc(detail);
+      } catch (error) {
+        console.error("Failed to refresh KYC detail:", error);
+      }
     }
-  };
+    // Refresh the list and stats
+    loadKycList();
+    loadStats();
+  }, [selectedKyc, loadKycList, loadStats]);
 
   // Batch operations
   const handleBatchApprove = async (ids: number[]) => {
@@ -272,13 +295,13 @@ export default function AdminKycPage() {
       for (const id of ids) {
         await kycService.review(id, { approved: true, is_accredited: false });
       }
-      notification.success(`批量通过成功: ${ids.length} 个`);
+      notification.success(t("admin.kyc.page.batchApproveSuccess", { count: ids.length }));
       setSelectedRows([]);
       loadKycList();
       loadStats();
     } catch (error) {
       console.error("Batch approve failed:", error);
-      notification.error("批量通过失败");
+      notification.error(t("admin.kyc.page.batchApproveFailed"));
     }
   };
 
@@ -292,39 +315,18 @@ export default function AdminKycPage() {
           reject_reason: customReason,
         });
       }
-      notification.success(`批量拒绝成功: ${ids.length} 个`);
+      notification.success(t("admin.kyc.page.batchRejectSuccess", { count: ids.length }));
       setSelectedRows([]);
       loadKycList();
       loadStats();
     } catch (error) {
       console.error("Batch reject failed:", error);
-      notification.error("批量拒绝失败");
-    }
-  };
-
-  const handleBatchRetrySync = async (ids: number[]) => {
-    try {
-      let success = 0;
-      let failed = 0;
-      for (const id of ids) {
-        try {
-          await kycService.retrySync(id);
-          success++;
-        } catch {
-          failed++;
-        }
-      }
-      notification.success(`重试完成: 成功 ${success}, 失败 ${failed}`);
-      loadKycList();
-      loadStats();
-    } catch (error) {
-      console.error("Batch retry failed:", error);
-      notification.error("批量重试失败");
+      notification.error(t("admin.kyc.page.batchRejectFailed"));
     }
   };
 
   // Table columns
-  const columns: ColumnDef<EnhancedKycItem>[] = useMemo(
+  const columns: ColumnDef<KycItem>[] = useMemo(
     () => [
       {
         id: "select",
@@ -353,7 +355,7 @@ export default function AdminKycPage() {
       },
       {
         accessorKey: "full_name",
-        header: "姓名",
+        header: () => t("admin.kyc.page.colName"),
         cell: ({ row }) => (
           <div>
             <div className="font-medium text-white">{row.original.full_name || "-"}</div>
@@ -365,19 +367,19 @@ export default function AdminKycPage() {
       },
       {
         accessorKey: "status",
-        header: "状态",
+        header: () => t("admin.kyc.page.colStatus"),
         cell: ({ row }) => {
           const config = STATUS_CONFIG[row.original.status];
           return (
             <Badge className={`${config.bgColor} ${config.color} border-0`}>
-              {config.label}
+              {t(config.labelKey)}
             </Badge>
           );
         },
       },
       {
         accessorKey: "risk_level",
-        header: "风险",
+        header: () => t("admin.kyc.page.colRisk"),
         cell: ({ row }) => {
           const config = RISK_CONFIG[row.original.risk_level];
           const Icon = config.icon;
@@ -385,7 +387,7 @@ export default function AdminKycPage() {
             <div className="flex items-center gap-1">
               <Icon className={`w-3.5 h-3.5 ${config.color}`} />
               <Badge className={`${config.bgColor} ${config.color} border-0 text-xs`}>
-                {config.label}
+                {t(config.labelKey)}
               </Badge>
             </div>
           );
@@ -393,35 +395,35 @@ export default function AdminKycPage() {
       },
       {
         accessorKey: "priority",
-        header: "优先级",
+        header: () => t("admin.kyc.page.colPriority"),
         cell: ({ row }) => {
           const config = PRIORITY_CONFIG[row.original.priority];
-          return <span className={`text-xs ${config.color}`}>{config.label}</span>;
+          return <span className={`text-xs ${config.color}`}>{t(config.labelKey)}</span>;
         },
       },
       {
         accessorKey: "country_code",
-        header: "国家",
+        header: () => t("admin.kyc.page.colCountry"),
         cell: ({ row }) => row.original.country_code || "-",
       },
       {
         accessorKey: "submitted_at",
-        header: "提交时间",
+        header: () => t("admin.kyc.page.colSubmittedAt"),
         cell: ({ row }) => {
           const time = row.original.submitted_at;
           if (!time) return "-";
           const date = new Date(time);
           return (
             <div className="text-sm">
-              <div>{date.toLocaleDateString("zh-CN")}</div>
-              <div className="text-xs text-white/50">{date.toLocaleTimeString("zh-CN")}</div>
+              <div>{date.toLocaleDateString()}</div>
+              <div className="text-xs text-white/50">{date.toLocaleTimeString()}</div>
             </div>
           );
         },
       },
       {
         accessorKey: "processing_time_minutes",
-        header: "处理时间",
+        header: () => t("admin.kyc.page.colProcessingTime"),
         cell: ({ row }) => {
           const minutes = row.original.processing_time_minutes;
           if (!minutes) return "-";
@@ -433,7 +435,7 @@ export default function AdminKycPage() {
       },
       {
         id: "actions",
-        header: "操作",
+        header: () => t("admin.kyc.page.colActions"),
         cell: ({ row }) => (
           <div className="flex items-center gap-1">
             <Button
@@ -442,22 +444,41 @@ export default function AdminKycPage() {
               onClick={() => handleOpenReview(row.original.id)}
             >
               <Eye className="w-4 h-4 mr-1" />
-              审核
+              {t("admin.kyc.page.review")}
             </Button>
-            {row.original.on_chain_sync_status === "failed" && (
+            {/* 准入按钮: status=APPROVED && on_chain_sync_status !== SYNCED */}
+            {shouldShowAdmissionButton(row.original.status, row.original.on_chain_sync_status) && contractInfo && (
+              <AdmissionButton
+                kycId={row.original.id}
+                walletAddress={row.original.wallet_address}
+                countryCode={row.original.country_code || ''}
+                isAccredited={row.original.is_accredited ?? false}
+                isReAdmission={row.original.on_chain_sync_status === 'revoked'}
+                contractAddress={contractInfo.contract_address}
+                deployerAddress={contractInfo.deployer_address}
+                onSuccess={() => {
+                  loadKycList();
+                  loadStats();
+                }}
+              />
+            )}
+            {/* 解除准入按钮: status=APPROVED && on_chain_sync_status === SYNCED */}
+            {row.original.status === 'approved' && row.original.on_chain_sync_status === 'synced' && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleRetrySync(row.original.id)}
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                onClick={() => handleOpenReview(row.original.id)}
               >
-                <RefreshCw className="w-4 h-4" />
+                <XCircle className="w-4 h-4 mr-1" />
+                {t("admin.kyc.admission.revoke")}
               </Button>
             )}
           </div>
         ),
       },
     ],
-    []
+    [contractInfo]
   );
 
   return (
@@ -473,8 +494,8 @@ export default function AdminKycPage() {
           transition={{ duration: 0.5 }}
         >
           <div>
-            <h1 className="text-3xl font-bold text-white mb-1">KYC 管理</h1>
-            <p className="text-white/50">身份认证审核与风险管理</p>
+            <h1 className="text-3xl font-bold text-white mb-1">{t("admin.kyc.title")}</h1>
+            <p className="text-white/50">{t("admin.kyc.description")}</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -487,11 +508,11 @@ export default function AdminKycPage() {
               disabled={loading}
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              刷新
+              {t("admin.kyc.page.refresh")}
             </Button>
             <Button variant="outline">
               <Download className="w-4 h-4 mr-2" />
-              导出
+              {t("admin.kyc.page.export")}
             </Button>
           </div>
         </motion.div>
@@ -519,16 +540,16 @@ export default function AdminKycPage() {
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList className="bg-white/5">
                     <TabsTrigger value="pending" className="data-[state=active]:bg-white/10">
-                      待审核 {stats?.pending ? `(${stats.pending})` : ""}
+                      {t("admin.kyc.page.tabPending")} {stats?.pending ? `(${stats.pending})` : ""}
                     </TabsTrigger>
                     <TabsTrigger value="approved" className="data-[state=active]:bg-white/10">
-                      已通过
+                      {t("admin.kyc.page.tabApproved")}
                     </TabsTrigger>
                     <TabsTrigger value="rejected" className="data-[state=active]:bg-white/10">
-                      已拒绝
+                      {t("admin.kyc.page.tabRejected")}
                     </TabsTrigger>
                     <TabsTrigger value="all" className="data-[state=active]:bg-white/10">
-                      全部
+                      {t("admin.kyc.page.tabAll")}
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -537,7 +558,7 @@ export default function AdminKycPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                     <Input
-                      placeholder="搜索姓名或钱包地址..."
+                      placeholder={t("admin.kyc.page.searchPlaceholder")}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-10 w-64 bg-white/5 border-white/10"
@@ -552,45 +573,45 @@ export default function AdminKycPage() {
                 
                 <Select value={riskFilter} onValueChange={(v) => setRiskFilter(v as RiskLevel | "all")}>
                   <SelectTrigger className="w-32 bg-white/5 border-white/10">
-                    <SelectValue placeholder="风险等级" />
+                    <SelectValue placeholder={t("admin.kyc.page.riskPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">全部风险</SelectItem>
-                    <SelectItem value="low">低风险</SelectItem>
-                    <SelectItem value="medium">中风险</SelectItem>
-                    <SelectItem value="high">高风险</SelectItem>
-                    <SelectItem value="critical">极高风险</SelectItem>
+                    <SelectItem value="all">{t("admin.kyc.page.allRisk")}</SelectItem>
+                    <SelectItem value="low">{t("admin.kyc.page.riskLowFilter")}</SelectItem>
+                    <SelectItem value="medium">{t("admin.kyc.page.riskMediumFilter")}</SelectItem>
+                    <SelectItem value="high">{t("admin.kyc.page.riskHighFilter")}</SelectItem>
+                    <SelectItem value="critical">{t("admin.kyc.page.riskCriticalFilter")}</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as ReviewPriority | "all")}>
                   <SelectTrigger className="w-32 bg-white/5 border-white/10">
-                    <SelectValue placeholder="优先级" />
+                    <SelectValue placeholder={t("admin.kyc.page.priorityPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">全部</SelectItem>
-                    <SelectItem value="low">低</SelectItem>
-                    <SelectItem value="normal">普通</SelectItem>
-                    <SelectItem value="high">高</SelectItem>
-                    <SelectItem value="urgent">紧急</SelectItem>
+                    <SelectItem value="all">{t("admin.kyc.page.allPriority")}</SelectItem>
+                    <SelectItem value="low">{t("admin.kyc.page.priorityLow")}</SelectItem>
+                    <SelectItem value="normal">{t("admin.kyc.page.priorityNormal")}</SelectItem>
+                    <SelectItem value="high">{t("admin.kyc.page.priorityHigh")}</SelectItem>
+                    <SelectItem value="urgent">{t("admin.kyc.page.priorityUrgent")}</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={countryFilter} onValueChange={setCountryFilter}>
                   <SelectTrigger className="w-40 bg-white/5 border-white/10">
                     <Globe className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="国家/地区" />
+                    <SelectValue placeholder={t("admin.kyc.page.countryPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">全部国家</SelectItem>
-                    <SelectItem value="CN">中国</SelectItem>
-                    <SelectItem value="US">美国</SelectItem>
-                    <SelectItem value="SG">新加坡</SelectItem>
-                    <SelectItem value="JP">日本</SelectItem>
-                    <SelectItem value="KR">韩国</SelectItem>
-                    <SelectItem value="GB">英国</SelectItem>
-                    <SelectItem value="DE">德国</SelectItem>
-                    <SelectItem value="other">其他</SelectItem>
+                    <SelectItem value="all">{t("admin.kyc.page.allCountry")}</SelectItem>
+                    <SelectItem value="CN">{t("admin.kyc.page.countryCN")}</SelectItem>
+                    <SelectItem value="US">{t("admin.kyc.page.countryUS")}</SelectItem>
+                    <SelectItem value="SG">{t("admin.kyc.page.countrySG")}</SelectItem>
+                    <SelectItem value="JP">{t("admin.kyc.page.countryJP")}</SelectItem>
+                    <SelectItem value="KR">{t("admin.kyc.page.countryKR")}</SelectItem>
+                    <SelectItem value="GB">{t("admin.kyc.page.countryGB")}</SelectItem>
+                    <SelectItem value="DE">{t("admin.kyc.page.countryDE")}</SelectItem>
+                    <SelectItem value="other">{t("admin.kyc.page.countryOther")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -601,7 +622,7 @@ export default function AdminKycPage() {
                 columns={columns}
                 data={kycList}
                 loading={loading}
-                emptyMessage="暂无数据"
+                emptyMessage={t("admin.kyc.page.noData")}
                 enableRowSelection
                 onRowSelectionChange={setSelectedRows}
                 pagination={{
@@ -616,8 +637,8 @@ export default function AdminKycPage() {
           </Card>
         </motion.div>
 
-        {/* Review Panel */}
-        <ReviewPanel
+        {/* Review Stepper Modal */}
+        <ReviewStepperModal
           kycDetail={selectedKyc}
           isOpen={reviewPanelOpen}
           onClose={() => {
@@ -626,9 +647,10 @@ export default function AdminKycPage() {
           }}
           onApprove={handleApprove}
           onReject={handleReject}
-          onRetrySync={handleRetrySync}
           rejectReasons={rejectReasons}
           isProcessing={reviewLoading}
+          contractInfo={contractInfo}
+          onAdmissionSuccess={handleAdmissionSuccess}
         />
 
         {/* Batch Toolbar */}
@@ -637,7 +659,6 @@ export default function AdminKycPage() {
           onClearSelection={() => setSelectedRows([])}
           onBatchApprove={handleBatchApprove}
           onBatchReject={handleBatchReject}
-          onBatchRetrySync={handleBatchRetrySync}
           rejectReasons={rejectReasons}
         />
       </div>

@@ -13,12 +13,9 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from src.shared.schemas.enums import IdType, KycStatus, OnChainSyncStatus
 from src.shared.schemas.mixins import IDMixin, TimestampMixin
 
-
 # ========== Email 验证正则表达式 ==========
 # 简化的 RFC 5322 兼容邮箱验证
-EMAIL_REGEX = re.compile(
-    r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-)
+EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 
 
 class KycStatusResponse(BaseModel):
@@ -31,6 +28,9 @@ class KycStatusResponse(BaseModel):
     reject_reason: Optional[str] = Field(None, description="拒绝原因")
     country_code: Optional[str] = Field(None, description="国家代码")
     is_accredited: bool = Field(False, description="是否为合格投资者")
+    on_chain_sync_status: Optional[OnChainSyncStatus] = Field(
+        None, description="链上同步状态"
+    )
 
     class Config:
         from_attributes = True
@@ -43,6 +43,7 @@ class KycStatusResponse(BaseModel):
                 "reject_reason": None,
                 "country_code": "US",
                 "is_accredited": False,
+                "on_chain_sync_status": "pending",
             }
         }
 
@@ -98,7 +99,9 @@ class KycApplyRequest(BaseModel):
     wallet_address: Optional[str] = Field(
         None, max_length=42, description="钱包地址 (由后端从JWT获取)"
     )
-    country_code: Optional[str] = Field(None, max_length=2, description="国家代码 (国籍)")
+    country_code: Optional[str] = Field(
+        None, max_length=2, description="国家代码 (国籍)"
+    )
 
     # 基本信息
     full_name: str = Field(..., min_length=2, max_length=100, description="证件姓名")
@@ -115,39 +118,30 @@ class KycApplyRequest(BaseModel):
     )
 
     # ========== 新增: 联系信息字段 (Requirements 5.1, 5.2) ==========
-    email: Optional[str] = Field(
-        None, max_length=255, description="邮箱地址"
-    )
+    email: Optional[str] = Field(None, max_length=255, description="邮箱地址")
     phone: Optional[str] = Field(
         None, max_length=20, description="电话号码 (E.164 格式, 如 +1234567890)"
     )
 
     # ========== 新增: 居住地址字段 (Requirements 5.3) ==========
-    address_line1: Optional[str] = Field(
-        None, max_length=255, description="地址行1"
-    )
+    address_line1: Optional[str] = Field(None, max_length=255, description="地址行1")
     address_line2: Optional[str] = Field(
         None, max_length=255, description="地址行2 (可选)"
     )
-    city: Optional[str] = Field(
-        None, max_length=100, description="城市"
-    )
-    state: Optional[str] = Field(
-        None, max_length=100, description="州/省"
-    )
-    postal_code: Optional[str] = Field(
-        None, max_length=20, description="邮政编码"
-    )
+    city: Optional[str] = Field(None, max_length=100, description="城市")
+    state: Optional[str] = Field(None, max_length=100, description="州/省")
+    postal_code: Optional[str] = Field(None, max_length=20, description="邮政编码")
     residence_country: Optional[str] = Field(
         None, max_length=2, description="居住国家代码 (ISO 3166-1 alpha-2)"
     )
 
     # ========== 新增: 活体检测字段 (Requirements 5.4, 5.5) ==========
-    liveness_verified: Optional[bool] = Field(
-        None, description="活体检测是否通过"
-    )
+    liveness_verified: Optional[bool] = Field(None, description="活体检测是否通过")
     face_image_url: Optional[str] = Field(
         None, max_length=255, description="人脸图片 MinIO 路径"
+    )
+    liveness_video_url: Optional[str] = Field(
+        None, max_length=255, description="活体检测视频 MinIO 路径"
     )
 
     @field_validator("wallet_address")
@@ -164,19 +158,19 @@ class KycApplyRequest(BaseModel):
     @classmethod
     def validate_email(cls, v: Optional[str]) -> Optional[str]:
         """验证邮箱格式 (Requirements 5.1)
-        
+
         使用简化的 RFC 5322 兼容正则表达式验证邮箱格式。
         """
         if v is None:
             return v
-        
+
         v = v.strip()
         if not v:
             return None
-        
+
         if not EMAIL_REGEX.match(v):
             raise ValueError("Invalid email format")
-        
+
         return v.lower()
 
     @field_validator("country_code")
@@ -207,7 +201,7 @@ class KycApplyRequest(BaseModel):
     @classmethod
     def validate_phone(cls, v: Optional[str]) -> Optional[str]:
         """验证电话号码格式 (E.164: +[country_code][number])
-        
+
         E.164 格式规范:
         - 必须以 + 开头
         - 后跟 1-15 位数字
@@ -216,17 +210,15 @@ class KycApplyRequest(BaseModel):
         """
         if v is None:
             return v
-        
+
         v = v.strip()
         if not v:
             return None
-        
+
         # E.164 格式: +[1-9][0-9]{1,14}
-        e164_pattern = r'^\+[1-9][0-9]{1,14}$'
+        e164_pattern = r"^\+[1-9][0-9]{1,14}$"
         if not re.match(e164_pattern, v):
-            raise ValueError(
-                "Invalid phone format, must be E.164 (e.g., +1234567890)"
-            )
+            raise ValueError("Invalid phone format, must be E.164 (e.g., +1234567890)")
         return v
 
     @field_validator("date_of_birth")
@@ -284,6 +276,7 @@ class KycApplyRequest(BaseModel):
                 "selfie_url": "kyc/0x742d35.../selfie_xyz123.jpg",
                 "liveness_verified": True,
                 "face_image_url": "kyc/0x742d35.../face_abc123.jpg",
+                "liveness_video_url": "kyc/0x742d35.../liveness_video_abc123.webm",
             }
         }
 
@@ -338,6 +331,7 @@ class KycFullResponse(KycStatusResponse, IDMixin, TimestampMixin):
     # ========== 新增: 活体检测字段 (Requirements 6.3, 6.4) ==========
     liveness_verified: bool = Field(False, description="活体检测是否通过")
     has_face_image: bool = Field(False, description="是否上传人脸图片")
+    has_liveness_video: bool = Field(False, description="是否上传活体检测视频")
 
     # 链上同步状态
     on_chain_sync_status: Optional[OnChainSyncStatus] = Field(
@@ -376,6 +370,32 @@ REJECT_REASON_LABELS = {
 }
 
 
+class ReviewStepsData(BaseModel):
+    """审核步骤确认数据 - 记录审核员在各步骤的确认状态"""
+
+    basic_info_confirmed: bool = Field(..., description="基本信息确认状态")
+    documents_confirmed: bool = Field(..., description="证件审核确认状态")
+    risk_assessment_confirmed: bool = Field(..., description="风险评估确认状态")
+    confirmed_at: str = Field(..., description="确认时间 (ISO 时间戳)")
+
+
+class ReviewProgressRequest(BaseModel):
+    """审核步骤进度请求 - 保存审核员的中间步骤进度"""
+
+    current_step: int = Field(..., ge=0, le=3, description="当前步骤索引 (0-3)")
+    confirmed_steps: List[bool] = Field(
+        ..., description="各步骤确认状态 (长度为4的布尔数组)"
+    )
+
+    @field_validator("confirmed_steps")
+    @classmethod
+    def validate_confirmed_steps(cls, v: List[bool]) -> List[bool]:
+        """确认步骤数组长度必须为 4"""
+        if len(v) != 4:
+            raise ValueError("confirmed_steps 长度必须为 4")
+        return v
+
+
 class KycReviewRequest(BaseModel):
     """KYC 审核请求 (管理员用) - Story 2.9 增强版"""
 
@@ -385,6 +405,9 @@ class KycReviewRequest(BaseModel):
     )
     reject_reason: Optional[str] = Field(None, max_length=500, description="拒绝原因")
     is_accredited: bool = Field(False, description="是否为合格投资者")
+    review_steps: Optional[ReviewStepsData] = Field(
+        None, description="审核步骤确认轨迹"
+    )
 
     @field_validator("reject_reason")
     @classmethod
@@ -441,38 +464,36 @@ class KycUploadResponse(BaseModel):
 
 class Base64UploadRequest(BaseModel):
     """Base64 图片上传请求 (Requirements 4.1)
-    
+
     用于活体检测等场景，前端直接提交 base64 编码的图片数据。
     支持 data URI 格式和纯 base64 字符串。
     """
 
     image_data: str = Field(
-        ..., 
-        description="Base64 编码的图片数据 (支持 data URI 格式或纯 base64)"
+        ..., description="Base64 编码的图片数据 (支持 data URI 格式或纯 base64)"
     )
     document_type: Literal["face_image", "selfie"] = Field(
-        ..., 
-        description="文档类型: face_image (活体检测人脸) 或 selfie (手持证件自拍)"
+        ..., description="文档类型: face_image (活体检测人脸) 或 selfie (手持证件自拍)"
     )
 
     @field_validator("image_data")
     @classmethod
     def validate_base64(cls, v: str) -> str:
         """验证 base64 格式
-        
+
         支持两种格式:
         1. Data URI: data:image/jpeg;base64,/9j/4AAQSkZJRg...
         2. 纯 Base64: /9j/4AAQSkZJRg...
-        
+
         验证规则:
         - 必须是有效的 base64 编码
         - 解码后必须是有效的图片数据
         """
         if not v or not v.strip():
             raise ValueError("Invalid base64 image data: empty string")
-        
+
         v = v.strip()
-        
+
         # 提取纯 base64 数据 (去除 data URI 前缀)
         base64_data = v
         if v.startswith("data:"):
@@ -490,25 +511,25 @@ class Base64UploadRequest(BaseModel):
                     raise ValueError("Invalid data URI format")
             except IndexError:
                 raise ValueError("Invalid data URI format")
-        
+
         # 验证 base64 编码是否有效
         try:
             # 添加必要的 padding
             padding = 4 - len(base64_data) % 4
             if padding != 4:
                 base64_data += "=" * padding
-            
+
             # 尝试解码
             decoded = base64.b64decode(base64_data, validate=True)
-            
+
             if len(decoded) == 0:
                 raise ValueError("Invalid base64 image data: decoded to empty bytes")
-                
+
         except Exception as e:
             if "Invalid base64" in str(e):
                 raise
             raise ValueError(f"Invalid base64 image data: {str(e)}")
-        
+
         return v
 
     class Config:
@@ -552,3 +573,40 @@ class KycContractComparisonResponse(BaseModel):
 
     # 状态一致性
     is_consistent: bool = Field(False, description="数据库与合约状态是否一致")
+
+
+# ========== KYC 链上准入相关 Schema ==========
+
+
+class RecordAdmissionRequest(BaseModel):
+    """链上准入记录请求 - 前端钱包交易确认后调用"""
+
+    tx_hash: str = Field(..., description="链上交易哈希 (0x + 64 hex chars)")
+
+    @field_validator("tx_hash")
+    @classmethod
+    def validate_tx_hash_format(cls, v: str) -> str:
+        from src.shared.common.validators import validate_tx_hash
+
+        return validate_tx_hash(v)
+
+
+class RecordRevocationRequest(BaseModel):
+    """链上解除准入记录请求 - 前端钱包交易确认后调用"""
+
+    tx_hash: str = Field(..., description="链上交易哈希 (0x + 64 hex chars)")
+    reason: str = Field(..., description="解除准入原因")
+
+    @field_validator("tx_hash")
+    @classmethod
+    def validate_tx_hash_format(cls, v: str) -> str:
+        from src.shared.common.validators import validate_tx_hash
+
+        return validate_tx_hash(v)
+
+
+class ContractInfoResponse(BaseModel):
+    """KYC 合约信息响应 - 用于前端验证钱包地址"""
+
+    contract_address: str = Field(..., description="KYC 合约地址")
+    deployer_address: str = Field(..., description="合约部署者地址 (verifier)")

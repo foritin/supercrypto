@@ -174,7 +174,8 @@ export type OnChainSyncStatus =
   | "not_required"
   | "pending"
   | "synced"
-  | "failed";
+  | "failed"
+  | "revoked";
 
 /** KYC 列表项 */
 export interface AdminKycItem {
@@ -221,10 +222,13 @@ export interface KycStats {
   total: number;
 }
 
-/** 拒绝原因选项 */
+/** 拒绝原因选项 (支持多语言) */
 export interface RejectReasonOption {
   code: string;
-  label: string;
+  labels: {
+    zh: string;
+    en: string;
+  };
 }
 
 /** 合约对比响应 */

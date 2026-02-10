@@ -8,6 +8,7 @@
  * - 支持 default/error 两种变体
  */
 import React from 'react';
+import { cn } from '@/lib/utils';
 
 export interface SectionCardProps {
   /** 卡片标题 */
@@ -30,46 +31,30 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   className,
 }) => {
   const isError = variant === 'error';
-  const borderColor = isError ? 'rgba(255, 77, 79, 0.2)' : 'var(--border-color)';
-  const headerBg = isError ? 'rgba(255, 77, 79, 0.05)' : 'rgba(255, 255, 255, 0.02)';
-  const iconColor = isError ? 'var(--color-error)' : 'var(--color-primary)';
-  const titleColor = isError ? 'var(--color-error)' : 'var(--text-primary)';
 
   return (
     <div
-      className={className}
-      style={{
-        background: 'rgba(255, 255, 255, 0.02)',
-        border: `1px solid ${borderColor}`,
-        borderRadius: 'var(--radius-lg)',
-        overflow: 'hidden',
-        marginBottom: 'var(--spacing-lg)',
-      }}
+      className={cn(
+        'rounded-xl overflow-hidden mb-4',
+        'bg-white/[0.02]',
+        isError ? 'border border-red-500/20' : 'border border-white/[0.06]',
+        className
+      )}
     >
       {/* 头部 */}
       <div
-        style={{
-          padding: 'var(--spacing-md) var(--spacing-lg)',
-          background: headerBg,
-          borderBottom: `1px solid ${borderColor}`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--spacing-sm)',
-        }}
+        className={cn(
+          'px-4 py-3 flex items-center gap-2',
+          isError ? 'bg-red-500/5 border-b border-red-500/20' : 'bg-white/[0.03] border-b border-white/[0.06]'
+        )}
       >
-        <span style={{ color: iconColor }}>{icon}</span>
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: titleColor,
-          }}
-        >
+        <span className={isError ? 'text-red-400' : 'text-[#00D4AA]'}>{icon}</span>
+        <span className="text-[13px] font-semibold text-white/90">
           {title}
         </span>
       </div>
       {/* 内容 */}
-      <div style={{ padding: 'var(--spacing-lg)' }}>{children}</div>
+      <div className="p-4">{children}</div>
     </div>
   );
 };

@@ -7,10 +7,10 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import {
   CheckCircle2,
   XCircle,
-  RefreshCw,
   Download,
   Trash2,
   ChevronDown,
@@ -42,16 +42,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { EnhancedKycItem } from "@/services/admin-kyc";
+import type { KycItem } from "@/services/admin-kyc";
 
 interface BatchToolbarProps {
-  selectedItems: EnhancedKycItem[];
+  selectedItems: KycItem[];
   onClearSelection: () => void;
   onBatchApprove: (ids: number[]) => Promise<void>;
   onBatchReject: (ids: number[], reasonCode: string, customReason?: string) => Promise<void>;
-  onBatchRetrySync?: (ids: number[]) => Promise<void>;
   onExport?: () => Promise<void>;
-  rejectReasons: Array<{ code: string; label: string }>;
+  rejectReasons: Array<{ code: string; labels: { zh: string; en: string } }>;
 }
 
 export function BatchToolbar({
@@ -59,7 +58,6 @@ export function BatchToolbar({
   onClearSelection,
   onBatchApprove,
   onBatchReject,
-  onBatchRetrySync,
   onExport,
   rejectReasons,
 }: BatchToolbarProps) {
@@ -69,6 +67,7 @@ export function BatchToolbar({
   const [customRejectReason, setCustomRejectReason] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingAction, setProcessingAction] = useState<string>("");
+  const { t } = useTranslation();
 
   const selectedCount = selectedItems.length;
   const selectedIds = selectedItems.map((item) => item.id);
@@ -77,8 +76,6 @@ export function BatchToolbar({
   const canApprove = selectedItems.filter((item) => item.status === "pending");
   // 可以批量拒绝的项目（状态为 pending）
   const canReject = selectedItems.filter((item) => item.status === "pending");
-  // 可以批量重试同步的项目（状态为 failed）
-  const canRetrySync = selectedItems.filter((item) => item.on_chain_sync_status === "failed");
 
   const handleBatchApprove = async () => {
     if (canApprove.length === 0) return;
@@ -104,18 +101,6 @@ export function BatchToolbar({
         selectedRejectCode === "other" ? customRejectReason : undefined
       );
       setShowRejectDialog(false);
-    } finally {
-      setIsProcessing(false);
-      setProcessingAction("");
-    }
-  };
-
-  const handleBatchRetrySync = async () => {
-    if (!onBatchRetrySync || canRetrySync.length === 0) return;
-    setIsProcessing(true);
-    setProcessingAction("retrying");
-    try {
-      await onBatchRetrySync(canRetrySync.map((item) => item.id));
     } finally {
       setIsProcessing(false);
       setProcessingAction("");
@@ -150,7 +135,7 @@ export function BatchToolbar({
             <div className="flex items-center gap-2 pr-4 border-r border-white/10">
               <Checkbox checked={true} onCheckedChange={onClearSelection} />
               <span className="text-sm text-white">
-                已选择 <span className="font-bold text-teal-400">{selectedCount}</span> 项
+                {t("admin.kyc.batch.selected")} <span className="font-bold text-teal-400">{selectedCount}</span> {t("admin.kyc.batch.items")}
               </span>
             </div>
 
@@ -169,7 +154,7 @@ export function BatchToolbar({
                   ) : (
                     <CheckCircle2 className="w-4 h-4 mr-1" />
                   )}
-                  通过 ({canApprove.length})
+                  {t("admin.kyc.batch.approve")} ({canApprove.length})
                 </Button>
               )}
 
@@ -187,7 +172,7 @@ export function BatchToolbar({
                   ) : (
                     <XCircle className="w-4 h-4 mr-1" />
                   )}
-                  拒绝 ({canReject.length})
+                  {t("admin.kyc.batch.reject")} ({canReject.length})
                 </Button>
               )}
 
@@ -195,24 +180,10 @@ export function BatchToolbar({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="ghost">
-                    更多 <ChevronDown className="w-3 h-3 ml-1" />
+                    {t("admin.kyc.batch.more")} <ChevronDown className="w-3 h-3 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-[#0d1117] border-white/10">
-                  {canRetrySync.length > 0 && onBatchRetrySync && (
-                    <DropdownMenuItem
-                      onClick={handleBatchRetrySync}
-                      disabled={isProcessing}
-                      className="text-white/70 focus:text-white focus:bg-white/10"
-                    >
-                      {isProcessing && processingAction === "retrying" ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                      )}
-                      重试同步 ({canRetrySync.length})
-                    </DropdownMenuItem>
-                  )}
                   {onExport && (
                     <DropdownMenuItem
                       onClick={handleExport}
@@ -224,7 +195,7 @@ export function BatchToolbar({
                       ) : (
                         <Download className="w-4 h-4 mr-2" />
                       )}
-                      导出数据
+                      {t("admin.kyc.batch.exportData")}
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -238,7 +209,7 @@ export function BatchToolbar({
               className="text-white/50 hover:text-white"
               onClick={onClearSelection}
             >
-              清除
+              {t("admin.kyc.batch.clear")}
             </Button>
           </div>
         </motion.div>
@@ -250,10 +221,10 @@ export function BatchToolbar({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-              确认批量通过
+              {t("admin.kyc.batch.confirmApproveTitle")}
             </DialogTitle>
             <DialogDescription className="text-white/60">
-              您即将通过 {canApprove.length} 个 KYC 申请，此操作不可撤销。
+              {t("admin.kyc.batch.confirmApproveDesc", { count: canApprove.length })}
             </DialogDescription>
           </DialogHeader>
 
@@ -261,19 +232,19 @@ export function BatchToolbar({
             <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
               <div className="flex items-center gap-2 text-emerald-400 text-sm mb-2">
                 <AlertTriangle className="w-4 h-4" />
-                操作提示
+                {t("admin.kyc.batch.operationTips")}
               </div>
               <ul className="text-sm text-white/60 space-y-1">
-                <li>• 通过后将自动同步到链上</li>
-                <li>• 用户将收到审核通过通知</li>
-                <li>• 请确保已仔细审核所有证件</li>
+                <li>• {t("admin.kyc.batch.approveTip1")}</li>
+                <li>• {t("admin.kyc.batch.approveTip2")}</li>
+                <li>• {t("admin.kyc.batch.approveTip3")}</li>
               </ul>
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowApproveDialog(false)}>
-              取消
+              {t("admin.kyc.batch.cancel")}
             </Button>
             <Button
               className="bg-emerald-500 hover:bg-emerald-600"
@@ -283,10 +254,10 @@ export function BatchToolbar({
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  处理中...
+                  {t("admin.kyc.batch.processing")}
                 </>
               ) : (
-                <>确认通过 ({canApprove.length})</>
+                <>{t("admin.kyc.batch.confirmApprove")} ({canApprove.length})</>
               )}
             </Button>
           </DialogFooter>
@@ -299,10 +270,10 @@ export function BatchToolbar({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <XCircle className="w-5 h-5 text-red-400" />
-              批量拒绝
+              {t("admin.kyc.batch.batchRejectTitle")}
             </DialogTitle>
             <DialogDescription className="text-white/60">
-              选择拒绝原因，将应用于 {canReject.length} 个选中的申请。
+              {t("admin.kyc.batch.batchRejectDesc", { count: canReject.length })}
             </DialogDescription>
           </DialogHeader>
 
@@ -312,12 +283,12 @@ export function BatchToolbar({
               onValueChange={setSelectedRejectCode}
             >
               <SelectTrigger>
-                <SelectValue placeholder="选择拒绝原因" />
+                <SelectValue placeholder={t("admin.kyc.batch.selectRejectReason")} />
               </SelectTrigger>
               <SelectContent>
                 {rejectReasons.map((reason) => (
                   <SelectItem key={reason.code} value={reason.code}>
-                    {reason.label}
+                    {reason.labels.zh}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -325,7 +296,7 @@ export function BatchToolbar({
 
             {selectedRejectCode === "other" && (
               <Textarea
-                placeholder="请输入具体拒绝原因（将发送给用户）"
+                placeholder={t("admin.kyc.batch.enterRejectReason")}
                 value={customRejectReason}
                 onChange={(e) => setCustomRejectReason(e.target.value)}
                 rows={3}
@@ -335,14 +306,14 @@ export function BatchToolbar({
             <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-lg">
               <div className="flex items-center gap-2 text-red-400 text-sm">
                 <AlertTriangle className="w-4 h-4" />
-                注意: 拒绝操作不可撤销
+                {t("admin.kyc.batch.rejectWarning")}
               </div>
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
-              取消
+              {t("admin.kyc.batch.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -352,10 +323,10 @@ export function BatchToolbar({
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  处理中...
+                  {t("admin.kyc.batch.processing")}
                 </>
               ) : (
-                <>确认拒绝 ({canReject.length})</>
+                <>{t("admin.kyc.batch.confirmReject")} ({canReject.length})</>
               )}
             </Button>
           </DialogFooter>
