@@ -4,7 +4,7 @@
 
 提供合约地址格式验证和链上存在性验证功能。
 
-Usage:
+用法:
     from src.services.asset.validators import ContractValidator
 
     # 格式验证
@@ -22,7 +22,7 @@ import httpx
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
 
-logger = get_logger("asset.validator")
+logger = get_logger("business.asset.validator")
 
 
 class ContractValidatorError(Exception):
@@ -53,10 +53,10 @@ class ContractValidator:
         """
         验证以太坊地址格式
 
-        Args:
+        参数:
             address: 合约地址
 
-        Returns:
+        返回:
             (is_valid, error_message)
         """
         if not address:
@@ -99,11 +99,11 @@ class ContractValidator:
         """
         链上验证合约存在
 
-        Args:
+        参数:
             address: 合约地址
             use_cache: 是否使用缓存
 
-        Returns:
+        返回:
             (exists, message)
         """
         # 先验证格式
@@ -163,10 +163,10 @@ class ContractValidator:
         """
         批量验证合约
 
-        Args:
+        参数:
             addresses: 地址列表
 
-        Returns:
+        返回:
             {address: (exists, message)}
         """
         results = {}
@@ -189,11 +189,11 @@ class ContractValidator:
         """
         验证合约绑定是否包含 RWA Token
 
-        Args:
+        参数:
             contract_addresses: 绑定的合约地址列表
             rwa_token_name: RWA Token 合约名称
 
-        Returns:
+        返回:
             (has_rwa_token, message, rwa_token_address)
         """
         from src.models import Contract

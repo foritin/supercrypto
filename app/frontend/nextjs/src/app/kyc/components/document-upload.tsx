@@ -191,11 +191,11 @@ export function DocumentUpload({
       </label>
 
       {hasUpload ? (
-        <div className="relative rounded-xl overflow-hidden border-2 border-[#00D4AA]">
+        <div className="relative rounded-xl overflow-hidden border-2 border-primary">
           {isLoadingPreview ? (
             // 正在加载预览图
-            <div className="w-full h-48 bg-[#00D4AA]/10 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 text-[#00D4AA] animate-spin" />
+            <div className="w-full h-48 bg-primary/10 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 text-primary animate-spin" />
             </div>
           ) : preview ? (
             // 有预览图时显示图片
@@ -206,12 +206,12 @@ export function DocumentUpload({
             />
           ) : (
             // 没有预览图但有路径时（加载失败），显示占位符
-            <div className="w-full h-48 bg-[#00D4AA]/10 flex items-center justify-center">
-              <CheckCircle className="h-16 w-16 text-[#00D4AA]/50" />
+            <div className="w-full h-48 bg-primary/10 flex items-center justify-center">
+              <CheckCircle className="h-16 w-16 text-primary/50" />
             </div>
           )}
           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
-            <CheckCircle className="h-8 w-8 text-[#00D4AA] mb-2" />
+            <CheckCircle className="h-8 w-8 text-primary mb-2" />
             <p className="text-white text-sm font-medium">
               {uploadedFile?.name || t('kyc.upload.uploadSuccess', 'Upload successful')}
             </p>
@@ -232,9 +232,9 @@ export function DocumentUpload({
           onDrop={handleDrop}
           className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-all ${
             isUploading
-              ? 'border-[#00D4AA]/50 bg-[#00D4AA]/5 cursor-wait'
+              ? 'border-primary/50 bg-primary/5 cursor-wait'
               : isDragging
-                ? 'border-[#00D4AA] bg-[#00D4AA]/10 cursor-pointer'
+                ? 'border-primary bg-primary/10 cursor-pointer'
                 : 'border-white/20 hover:border-white/40 hover:bg-white/5 cursor-pointer'
           }`}
         >
@@ -248,7 +248,7 @@ export function DocumentUpload({
           />
           {isUploading ? (
             <>
-              <Loader2 className="h-10 w-10 text-[#00D4AA] mx-auto mb-3 animate-spin" />
+              <Loader2 className="h-10 w-10 text-primary mx-auto mb-3 animate-spin" />
               <p className="text-white font-medium mb-1">
                 {t('kyc.upload.uploading', 'Uploading...')}
               </p>

@@ -2,17 +2,10 @@
 共享Schema模块
 
 目录结构:
-- base.py      : 基础响应模型 (ApiResponse, PaginatedResponse, ErrorResponse)
-- common.py    : 通用参数模型 (PaginationParams, SortParams)
+- base.py      : 向后兼容导出 (TimestampMixin, IDMixin)
 - mixins.py    : 可复用混入类 (TimestampMixin, IDMixin)
 - enums/       : 所有业务枚举
 """
-
-# 基础响应模型
-from .base import ApiResponse, ErrorResponse, PaginatedResponse
-
-# 通用参数
-from .common import PaginationParams, SortParams
 
 # 枚举 - 统一从 enums 包导入
 from .enums import (  # Asset; Audit; KYC; Subscription; Account; Staking; Transaction
@@ -26,6 +19,7 @@ from .enums import (  # Asset; Audit; KYC; Subscription; Account; Staking; Trans
     LockPeriod,
     MediaType,
     NetType,
+    Network,
     NetworkType,
     OnChainSyncStatus,
     StakingPeriod,
@@ -40,16 +34,9 @@ from .enums import (  # Asset; Audit; KYC; Subscription; Account; Staking; Trans
 from .mixins import IDMixin, TimestampMixin
 
 __all__ = [
-    # Base
-    "ApiResponse",
-    "PaginatedResponse",
-    "ErrorResponse",
     # Mixins
     "TimestampMixin",
     "IDMixin",
-    # Common
-    "PaginationParams",
-    "SortParams",
     # Enums - KYC
     "KycStatus",
     "OnChainSyncStatus",
@@ -69,6 +56,7 @@ __all__ = [
     "TransactionStatus",
     "TransactionType",
     # Enums - Account
+    "Network",
     "NetType",
     "NetworkType",
     # Enums - Audit

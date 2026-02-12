@@ -325,7 +325,7 @@ export function MediaGallery({
                     className={cn(
                       "flex-shrink-0 w-20 h-14 rounded-lg bg-cover bg-center border-2 transition-all",
                       idx === currentIndex
-                        ? "border-[#00d4aa] opacity-100 ring-2 ring-[#00d4aa]/30"
+                        ? "border-primary opacity-100 ring-2 ring-primary/30"
                         : "border-transparent opacity-50 hover:opacity-80"
                     )}
                     style={{ backgroundImage: `url(${img})` }}

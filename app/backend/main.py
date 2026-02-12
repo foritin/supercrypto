@@ -14,6 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from tortoise import Tortoise
 
+from fastapi import Depends
+
 from src.api.v1.router import api_router
 from src.models import Account
 from src.shared.aerich_redirect import TORTOISE_ORM
@@ -21,6 +23,7 @@ from src.shared.common.adapters import close_async_redis_adapter
 from src.shared.common.exceptions import BusinessException
 from src.shared.common.metrics import chain_metrics
 from src.shared.middleware import AuditMiddleware, AuthStateMiddleware
+from src.shared.security import require_admin
 from src.tasks.contract_task import async_sync_provider_registry
 from src.tasks.kyc_sync_task import reconcile_chain_events, retry_failed_kyc_syncs
 
@@ -91,10 +94,22 @@ app = FastAPI(
 )
 
 
+# Production 环境允许的域名列表
+_PRODUCTION_ORIGINS = [
+    "https://supercrypto.io",
+    "https://www.supercrypto.io",
+    "https://app.supercrypto.io",
+]
+
+# 根据环境动态配置 CORS allow_origins
+_cors_origins = (
+    _PRODUCTION_ORIGINS if settings.environment == "production" else ["*"]
+)
+
 # 配置CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境应该限制具体域名
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -138,7 +153,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
     logger.warning(f"Validation error: {request.method} {request.url.path} - {errors}")
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={
             "code": 422,
             "message": "Validation error",
@@ -230,7 +245,7 @@ async def health():
     }
 
 
-@app.get("/metrics/chain", tags=["系统"])
+@app.get("/metrics/chain", tags=["系统"], dependencies=[Depends(require_admin)])
 async def chain_operation_metrics():
     """
     链上操作指标

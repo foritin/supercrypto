@@ -350,7 +350,7 @@ export function Header() {
                       "flex items-center gap-1",
                       item.children.some((child) => 
                         child.href !== "#" && isActive(child.href)
-                      ) && "text-[#00D4AA]"
+                      ) && "text-primary"
                     )}
                   >
                     {item.icon && <item.icon className="w-4 h-4" />}
@@ -365,7 +365,7 @@ export function Header() {
                               href={child.href}
                               className={cn(
                                 "flex items-start gap-3 select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-white/5",
-                                isActive(child.href) && "bg-white/5 text-[#00D4AA]"
+                                isActive(child.href) && "bg-white/5 text-primary"
                               )}
                             >
                               {child.icon && (
@@ -393,7 +393,7 @@ export function Header() {
                   href={item.href}
                   className={cn(
                     navigationMenuTriggerStyle(),
-                    isActive(item.href) && "text-[#00D4AA]"
+                    isActive(item.href) && "text-primary"
                   )}
                 >
                   {item.icon && <item.icon className="w-4 h-4 mr-1" />}
@@ -422,7 +422,7 @@ export function Header() {
               className={cn(
                 "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                 pathname === "/"
-                  ? "text-[#00D4AA] bg-[#00D4AA]/10"
+                  ? "text-primary bg-primary/10"
                   : "text-white/70 hover:text-white hover:bg-white/5"
               )}
             >
@@ -461,7 +461,7 @@ export function Header() {
                             className={cn(
                               "flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
                               isActive(child.href)
-                                ? "text-[#00D4AA] bg-[#00D4AA]/10"
+                                ? "text-primary bg-primary/10"
                                 : "text-white/50 hover:text-white/70 hover:bg-white/5"
                             )}
                           >
@@ -480,7 +480,7 @@ export function Header() {
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                     isActive(item.href)
-                      ? "text-[#00D4AA] bg-[#00D4AA]/10"
+                      ? "text-primary bg-primary/10"
                       : "text-white/70 hover:text-white hover:bg-white/5"
                   )}
                 >
@@ -521,7 +521,7 @@ export function Header() {
         <div className="flex items-center">
           <Link
             href="/"
-            aria-label={`${isHydrated ? t("header.title") : "SlimCrypto"} - 首页`}
+            aria-label={`${isHydrated ? t("header.title") : "SuperCrypto"} - 首页`}
             className="no-underline flex items-center gap-3"
           >
             <div
@@ -560,7 +560,7 @@ export function Header() {
                 fontSize: "var(--logo-title-size)",
               }}
             >
-              {isHydrated ? t("header.title") : "SlimCrypto"}
+              {isHydrated ? t("header.title") : "SuperCrypto"}
             </h1>
           </Link>
         </div>
@@ -582,13 +582,13 @@ export function Header() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden text-white hover:text-[#00D4AA]"
+                className="md:hidden text-white hover:text-primary"
                 aria-label="打开菜单"
               >
                 <MenuIcon className="w-6 h-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] bg-[#0A0F0D] border-white/10">
+            <SheetContent side="right" className="w-[300px] bg-bg-dark border-white/10">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2 text-white">
                   <div
@@ -615,7 +615,7 @@ export function Header() {
                       />
                     </svg>
                   </div>
-                  <span>{isHydrated ? t("header.title") : "SlimCrypto"}</span>
+                  <span>{isHydrated ? t("header.title") : "SuperCrypto"}</span>
                 </SheetTitle>
               </SheetHeader>
               {renderMobileNav()}

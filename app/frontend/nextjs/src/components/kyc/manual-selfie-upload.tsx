@@ -83,15 +83,15 @@ export const ManualSelfieUpload: React.FC<ManualSelfieUploadProps> = ({
   const renderTips = () => (
     <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-white/60">
       <p className="flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
         {t('kyc.liveness.tips.lighting')}
       </p>
       <p className="flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
         {t('kyc.liveness.tips.face')}
       </p>
       <p className="flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
         {t('kyc.liveness.tips.noObstruction')}
       </p>
     </div>
@@ -175,7 +175,7 @@ export const ManualSelfieUpload: React.FC<ManualSelfieUploadProps> = ({
 
       {/* 上传成功提示 - 响应式字体大小 */}
       {hasUploaded && (
-        <div className="flex items-center justify-center gap-2 text-[#00D4AA] mt-3 sm:mt-4">
+        <div className="flex items-center justify-center gap-2 text-primary mt-3 sm:mt-4">
           <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
           <span className="text-xs sm:text-sm font-medium">{t('kyc.manualUpload.uploaded')}</span>
         </div>

@@ -3,6 +3,7 @@
  * 用户相关 API
  */
 import { api } from '@/services/api'
+import { API_BASE_URL } from '@/constants/api'
 // ApiResponseData 类型已在 types/api.d.ts 中全局声明
 
 // 当前用户信息
@@ -28,8 +29,7 @@ export const userService = {
     if (!walletAddress) return null
     
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
-      const url = `${baseUrl}/user/auth/me`
+      const url = `${API_BASE_URL}/user/auth/me`
       
       const token = localStorage.getItem('supercrypto-jwt')
       if (!token) return null

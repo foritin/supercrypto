@@ -9,18 +9,12 @@ dependencies = [
     "ape-vyper>=0.8.9",
     "eth-ape>=0.8.37",
     "loguru>=0.7.3",
-    "playwright>=1.55.0",
-    "tortoise>=0.1.1",
     "tortoise-orm>=0.21.0",
     "aerich>=0.9.2",
     "vyper>=0.4.0",
     "web3>=7.13.0",
-    "jose>=1.0.0",
-    "python-jose>=3.5.0",
-    "passlib>=1.7.4",
     "uvicorn>=0.38.0",
     "pyjwt[crypto]>=2.10.1",
-    "python-jwt>=4.1.0",
     "python-multipart>=0.0.20",
     "ape-hardhat>=0.8.5",
 ]
@@ -32,6 +26,23 @@ mysql = ["aiomysql>=0.2.0", "pymysql>=1.1.0"]
 sqlite = ["aiosqlite>=0.19.0"]
 # 安装所有数据库驱动
 all-db = ["asyncpg>=0.29.0", "psycopg2-binary>=2.9.0", "aiomysql>=0.2.0", "pymysql>=1.1.0", "aiosqlite>=0.19.0"]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    # 第三方库 Pydantic V1 兼容性警告 (falib, schemas 等)
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20",
+    # Tortoise ORM 废弃参数警告 (pk → primary_key, index → db_index)
+    "ignore:`pk` is deprecated:DeprecationWarning",
+    "ignore:`index` is deprecated:DeprecationWarning",
+    # Mock 对象创建时产生的未等待协程警告 (测试 Mock 产物，非真实问题)
+    "ignore:coroutine .* was never awaited:RuntimeWarning",
+    # websockets 库废弃 legacy 模块警告 (第三方依赖，非项目代码)
+    "ignore:websockets.legacy is deprecated:DeprecationWarning",
+    # PyJWT 开发环境密钥长度警告 (dev 配置密钥较短，非生产问题)
+    "ignore:.*HMAC key.*below the minimum recommended length.*:jwt.warnings.InsecureKeyLengthWarning",
+    # Starlette HTTP 状态码废弃警告 (第三方库内部，非项目代码)
+    "ignore:.*HTTP_422_UNPROCESSABLE_ENTITY.*:DeprecationWarning",
+]
 
 [tool.aerich]
 tortoise_orm = "src.shared.aerich_redirect.TORTOISE_ORM"

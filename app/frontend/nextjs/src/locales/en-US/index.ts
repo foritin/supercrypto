@@ -6,6 +6,8 @@ import kyc from './kyc'
 import assets from './assets'
 import portfolio from './portfolio'
 import subscription from './subscription'
+import invest from './invest'
+import redeem from './redeem'
 import staking from './staking'
 import admin from './admin'
 import dev from './dev'
@@ -22,6 +24,8 @@ const valueEN = {
   ...assets,
   ...portfolio,
   ...subscription,
+  ...invest,
+  ...redeem,
   ...staking,
   ...admin,
   ...dev,

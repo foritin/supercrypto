@@ -1,5 +1,5 @@
 """
-Asset Domain - Business Service
+资产领域 - 业务服务层
 """
 
 from datetime import datetime, timezone
@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import List, Optional, Tuple
 
 from falib.utils.config import SETTINGS
+from falib.utils.log import get_logger
 
 from src.models.asset import (
     Asset,
@@ -31,14 +32,16 @@ from src.shared.common.exceptions import BusinessException
 from src.shared.schemas.enums import ContractScope, ContractStatus, ErrorCode
 from src.shared.schemas.enums.subscription import SubscriptionStatus
 
+logger = get_logger("business.asset.service")
+
 
 class AssetService:
     """资产服务"""
 
     @property
-    def environment(self) -> str:
-        """获取当前环境"""
-        return SETTINGS.NETWORK
+    def network(self) -> str:
+        """获取当前网络"""
+        return SETTINGS.network
 
     async def list_assets(
         self,
@@ -51,14 +54,14 @@ class AssetService:
         """
         获取资产列表
 
-        Args:
+        参数:
             status: 状态筛选
             asset_type: 类型筛选
             page: 页码
             page_size: 每页数量
             public_only: 是否只返回可见资产（用于 Public API）
 
-        Returns:
+        返回:
             (列表, 总数, 总页数)
         """
         from decimal import Decimal as D
@@ -69,7 +72,7 @@ class AssetService:
         from src.shared.common.storage import get_storage_service
         from src.shared.schemas.enums import MediaType
 
-        query = Asset.filter(environment=self.environment)
+        query = Asset.filter(environment=self.network)
 
         if status:
             query = query.filter(status=status)
@@ -128,14 +131,14 @@ class AssetService:
         """
         获取资产详情
 
-        Args:
+        参数:
             asset_id: 资产ID
             public_only: 是否只返回可见资产（用于 Public API）
 
-        Returns:
+        返回:
             资产详情或 None
         """
-        asset = await Asset.filter(id=asset_id, environment=self.environment).first()
+        asset = await Asset.filter(id=asset_id, environment=self.network).first()
 
         if not asset:
             return None
@@ -152,15 +155,15 @@ class AssetService:
         """
         根据符号获取资产
 
-        Args:
+        参数:
             symbol: 资产符号
             public_only: 是否只返回可见资产（用于 Public API）
 
-        Returns:
+        返回:
             资产详情或 None
         """
         asset = await Asset.filter(
-            symbol=symbol.upper(), environment=self.environment
+            symbol=symbol.upper(), environment=self.network
         ).first()
 
         if not asset:
@@ -178,16 +181,16 @@ class AssetService:
         """
         创建新资产 (管理员)
 
-        Args:
+        参数:
             data: 创建数据
             created_by: 创建人ID
 
-        Returns:
+        返回:
             创建的资产详情
         """
         # 检查符号是否已存在
         existing = await Asset.filter(
-            symbol=data.symbol.upper(), environment=self.environment
+            symbol=data.symbol.upper(), environment=self.network
         ).first()
 
         if existing:
@@ -211,7 +214,7 @@ class AssetService:
             apy_12m=data.apy_12m,
             project=data.project,
             contract_address=data.contract_address,
-            environment=self.environment,
+            environment=self.network,
             created_by=created_by,
             price_updated_at=datetime.now(timezone.utc)
             if data.current_price > 0
@@ -243,14 +246,14 @@ class AssetService:
         """
         更新资产信息 (管理员)
 
-        Args:
+        参数:
             asset_id: 资产ID
             data: 更新数据
 
-        Returns:
+        返回:
             更新后的资产详情
         """
-        asset = await Asset.filter(id=asset_id, environment=self.environment).first()
+        asset = await Asset.filter(id=asset_id, environment=self.network).first()
 
         if not asset:
             raise BusinessException(code=404, message="Asset not found")
@@ -273,7 +276,7 @@ class AssetService:
             update_data["symbol"] = update_data["symbol"].upper()
             existing = (
                 await Asset.filter(
-                    symbol=update_data["symbol"], environment=self.environment
+                    symbol=update_data["symbol"], environment=self.network
                 )
                 .exclude(id=asset_id)
                 .first()
@@ -313,14 +316,14 @@ class AssetService:
         """
         更新资产状态 (管理员)
 
-        Args:
+        参数:
             asset_id: 资产ID
             status: 新状态
 
-        Returns:
+        返回:
             更新后的资产详情
         """
-        asset = await Asset.filter(id=asset_id, environment=self.environment).first()
+        asset = await Asset.filter(id=asset_id, environment=self.network).first()
 
         if not asset:
             raise BusinessException(code=404, message="Asset not found")
@@ -336,15 +339,15 @@ class AssetService:
         """
         更新资产价格 (预言机/管理员)
 
-        Args:
+        参数:
             asset_id: 资产ID
             price: 新价格
             source: 价格来源
 
-        Returns:
+        返回:
             更新后的资产详情
         """
-        asset = await Asset.filter(id=asset_id, environment=self.environment).first()
+        asset = await Asset.filter(id=asset_id, environment=self.network).first()
 
         if not asset:
             raise BusinessException(code=404, message="Asset not found")
@@ -364,11 +367,11 @@ class AssetService:
         """
         获取资产价格历史
 
-        Args:
+        参数:
             asset_id: 资产ID
             limit: 返回条数
 
-        Returns:
+        返回:
             价格历史列表
         """
         history = (
@@ -390,15 +393,15 @@ class AssetService:
         """
         更新已认购金额 (内部调用)
 
-        Args:
+        参数:
             asset_id: 资产ID
             amount: 金额
             is_add: True=增加, False=减少
 
-        Returns:
+        返回:
             更新后的资产详情
         """
-        asset = await Asset.filter(id=asset_id, environment=self.environment).first()
+        asset = await Asset.filter(id=asset_id, environment=self.network).first()
 
         if not asset:
             raise BusinessException(code=404, message="Asset not found")
@@ -455,7 +458,7 @@ class AssetService:
     ) -> AssetDetailResponse:
         """转换为详情响应
 
-        Args:
+        参数:
             asset: 资产实例
             include_visibility: 是否包含可见性信息（Admin API 使用）
         """
@@ -571,7 +574,7 @@ class AssetService:
         2. 返回 primary_contract_symbol: 主合约 Symbol
         3. 返回 is_ready: 项目是否就绪（有主合约 + 所有合约已部署）
 
-        Returns:
+        返回:
             项目列表，每个项目包含合约数量、详细合约信息、主合约信息和就绪状态
         """
         # 查询所有活跃的合约 (使用 ContractDeployment 模型)
@@ -665,15 +668,15 @@ class AssetService:
         1. 校验项目就绪状态，未就绪则拒绝绑定
         2. 校验项目未被其他 Asset 绑定
 
-        Args:
+        参数:
             asset_id: 资产ID
             project: 项目标识
             contract_names: 要绑定的合约名称列表，为空则绑定该项目下所有可用的 PROJECT scope 合约
 
-        Returns:
+        返回:
             更新后的资产详情
 
-        Raises:
+        异常:
             BusinessException: 资产不存在、项目未就绪、项目已绑定、项目无主合约、合约已被绑定等错误
         """
         from src.services.contract import (
@@ -683,7 +686,7 @@ class AssetService:
 
         # === 校验项目就绪状态 (Requirements 6.1, 6.2) ===
         # 使用 status_service 的逻辑，基于 ProviderRegistry 判断就绪状态
-        status_service = get_contract_status_service(self.environment)
+        status_service = get_contract_status_service(self.network)
         contract_status = await status_service.get_contract_status()
 
         # 查找项目
@@ -728,7 +731,7 @@ class AssetService:
         # === 校验项目未被其他 Asset 绑定 (Requirements 6.3) ===
         await status_service.check_project_can_modify(project)
 
-        asset = await Asset.filter(id=asset_id, environment=self.environment).first()
+        asset = await Asset.filter(id=asset_id, environment=self.network).first()
 
         if not asset:
             raise BusinessException(
@@ -854,16 +857,16 @@ class AssetService:
         """
         解绑合约
 
-        Args:
+        参数:
             asset_id: 资产ID
             contract_names: 要解绑的合约名称列表（可选）
             project: 要解绑的项目标识（可选）
             unbind_all: 是否解绑所有合约
 
-        Returns:
+        返回:
             更新后的资产详情
         """
-        asset = await Asset.filter(id=asset_id, environment=self.environment).first()
+        asset = await Asset.filter(id=asset_id, environment=self.network).first()
 
         if not asset:
             raise BusinessException(code=404, message="Asset not found")

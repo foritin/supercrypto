@@ -256,10 +256,10 @@ export const useUserStore = create<UserState>()(
       name: 'supercrypto-user-storage',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        // Only persist auth and profile, not portfolio (refresh on load)
+        // 仅持久化认证状态和用户资料，不持久化 portfolio（页面加载时刷新）
+        // access token (jwtToken, jwtExpiresAt) 仅在内存中保持，不持久化到 localStorage
+        // 会话持久化通过 httpOnly cookie 中的 refresh token 实现
         isAuthenticated: state.isAuthenticated,
-        jwtToken: state.jwtToken,
-        jwtExpiresAt: state.jwtExpiresAt,
         profile: state.profile,
       }),
     }

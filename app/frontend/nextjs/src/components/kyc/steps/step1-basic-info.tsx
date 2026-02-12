@@ -147,10 +147,10 @@ function SecurityBadge({ className }: SecurityBadgeProps) {
   return (
     <div className={cn(
       "flex items-center gap-2 p-3 rounded-lg",
-      "bg-[#00D4AA]/5 border border-[#00D4AA]/10 mb-6",
+      "bg-primary/5 border border-primary/10 mb-6",
       className
     )}>
-      <Shield className="w-5 h-5 text-[#00D4AA]" />
+      <Shield className="w-5 h-5 text-primary" />
       <span className="text-sm text-white/70">
         {t('kyc.securityNote')}
       </span>
@@ -323,7 +323,7 @@ export function Step1BasicInfo({
                         'w-full justify-start text-left font-normal',
                         'rounded-lg border bg-transparent',
                         'hover:border-white/20',
-                        'focus-visible:ring-0 focus-visible:border-[#00D4AA]/50',
+                        'focus-visible:ring-0 focus-visible:border-primary/50',
                         !field.value && 'text-white/40',
                         errors.dateOfBirth 
                           ? 'border-destructive hover:border-destructive' 

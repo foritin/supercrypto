@@ -11,7 +11,7 @@ Provider 注册记录模型
 from tortoise import fields
 
 from src.models.base import AbstractModel, SoftDeleteMixin, TimestampMixin
-from src.shared.schemas.enums import NetWork
+from src.shared.schemas.enums import Network
 
 
 class ProviderRegistry(AbstractModel, TimestampMixin, SoftDeleteMixin):
@@ -26,7 +26,7 @@ class ProviderRegistry(AbstractModel, TimestampMixin, SoftDeleteMixin):
         max_length=42, description="AddressProvider 合约地址"
     )
     chain_id = fields.IntField(description="链 ID")
-    network = fields.CharEnumField(NetWork, max_length=20, description="网络类型")
+    network = fields.CharEnumField(Network, max_length=20, description="网络类型")
 
     # 注册信息
     key = fields.CharField(
@@ -92,7 +92,7 @@ def compute_key_hash(key: str) -> str:
 
 
 async def sync_provider_registry(
-    provider_address: str, chain_id: int, network: NetWork, web3_provider
+    provider_address: str, chain_id: int, network: Network, web3_provider
 ) -> list[ProviderRegistry]:
     """
     从链上同步 Provider 注册状态

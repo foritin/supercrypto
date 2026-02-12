@@ -3,6 +3,7 @@
  * 审计日志和交易审计相关 API 调用
  */
 import { get } from "./api";
+import { API_BASE_URL } from "@/constants/api";
 
 // ============ 枚举类型 ============
 
@@ -321,7 +322,7 @@ export async function exportAuditLogs(
   // 从 localStorage 获取正确的 token key
   const token = localStorage.getItem("supercrypto-jwt");
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/admin/audit-logs/export?${new URLSearchParams(
+    `${API_BASE_URL}/admin/audit-logs/export?${new URLSearchParams(
       params as Record<string, string>
     )}`,
     {

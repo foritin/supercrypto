@@ -12,9 +12,9 @@ from falib.utils.log import get_logger
 
 from src.models.account import Account
 from src.models.kyc import AccountKyc
-from src.shared.schemas.enums import NetWork
+from src.shared.schemas.enums import Network
 
-logger = get_logger("supercrypto.service.auth")
+logger = get_logger("business.auth.service")
 
 
 class AuthService:
@@ -30,10 +30,10 @@ class AuthService:
         """
         初始化认证服务
 
-        Args:
+        参数:
             network: 网络类型，默认从配置读取
         """
-        self.network = network or SETTINGS.NETWORK
+        self.network = network or SETTINGS.network
 
     async def get_current_user_info(self, wallet_address: str) -> dict:
         """
@@ -42,24 +42,24 @@ class AuthService:
         封装 Account 和 AccountKyc 的数据库查询逻辑，
         供 Router 层调用，避免 Router 直接访问 ORM。
 
-        Args:
+        参数:
             wallet_address: 钱包地址
 
-        Returns:
+        返回:
             包含以下字段的字典:
             - account: Account 模型实例或 None
             - kyc: AccountKyc 模型实例或 None
             - is_admin: 是否为管理员
             - network_type: 网络类型枚举
 
-        Example:
+        示例:
             >>> auth_service = get_auth_service()
             >>> info = await auth_service.get_current_user_info("0x123...")
             >>> print(info["is_admin"])
             False
         """
         # 转换网络类型
-        network_type = NetWork.from_value(self.network)
+        network_type = Network.from_value(self.network)
 
         logger.debug(
             f"查询用户信息: address={wallet_address[:10]}..., "
@@ -103,13 +103,13 @@ def get_auth_service(network: Optional[str] = None) -> AuthService:
     使用工厂函数模式，支持依赖注入和测试。
     默认返回单例实例，传入 network 参数时创建新实例。
 
-    Args:
+    参数:
         network: 网络类型，传入时创建新实例
 
-    Returns:
+    返回:
         AuthService 实例
 
-    Example:
+    示例:
         >>> # 使用默认配置
         >>> auth_service = get_auth_service()
         >>> # 指定网络

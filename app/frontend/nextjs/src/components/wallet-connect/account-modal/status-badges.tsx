@@ -27,7 +27,7 @@ export function StatusBadges({ isAuthenticated, kycStatus, userTag }: StatusBadg
           "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium",
           "transition-colors duration-200",
           isAuthenticated
-            ? "bg-[#00D4AA]/15 text-[#00D4AA] border border-[#00D4AA]/30"
+            ? "bg-primary/15 text-primary border border-primary/30"
             : "bg-amber-500/15 text-amber-400 border border-amber-500/30"
         )}
       >
@@ -46,7 +46,7 @@ export function StatusBadges({ isAuthenticated, kycStatus, userTag }: StatusBadg
           className={cn(
             "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium",
             "transition-colors duration-200",
-            kycStatus === 'verified' && "bg-[#00D4AA]/15 text-[#00D4AA] border border-[#00D4AA]/30",
+            kycStatus === 'verified' && "bg-primary/15 text-primary border border-primary/30",
             kycStatus === 'pending' && "bg-amber-500/15 text-amber-400 border border-amber-500/30",
             kycStatus === 'rejected' && "bg-red-500/15 text-red-400 border border-red-500/30"
           )}

@@ -11,6 +11,7 @@ Sprint 2 后端测试
 """
 
 import asyncio
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -313,29 +314,52 @@ class TestS01RateLimiter:
 class TestB06RetryFailedSyncs:
     """B-06: 失败同步重试逻辑测试"""
 
-    def test_parse_retry_count_zero(self):
-        """无错误信息时返回 0"""
-        from src.tasks.kyc_sync_task import _parse_retry_count
+    def test_parse_retry_info_zero(self):
+        """无错误信息时返回 retry_count=0"""
+        from src.tasks.kyc_sync_task import _parse_retry_info
 
-        assert _parse_retry_count(None) == 0
-        assert _parse_retry_count("") == 0
-        assert _parse_retry_count("Some other error") == 0
+        result = _parse_retry_info(None)
+        assert result["retry_count"] == 0
 
-    def test_parse_retry_count_incremental(self):
-        """能正确解析重试计数"""
-        from src.tasks.kyc_sync_task import _parse_retry_count
+        result = _parse_retry_info("")
+        assert result["retry_count"] == 0
 
-        assert _parse_retry_count("Auto-retry attempt 1/3: investor not verified") == 1
-        assert _parse_retry_count("Auto-retry attempt 2/3: investor not verified") == 2
+    def test_parse_retry_info_json_format(self):
+        """能正确解析 JSON 结构化重试信息"""
+        import json
 
-    def test_parse_retry_count_exhausted(self):
-        """已耗尽重试时返回最大值"""
-        from src.tasks.kyc_sync_task import MAX_RETRY_ATTEMPTS, _parse_retry_count
+        from src.tasks.kyc_sync_task import _parse_retry_info
 
-        assert (
-            _parse_retry_count("Auto-retry exhausted (3/3): Manual intervention")
-            == MAX_RETRY_ATTEMPTS
-        )
+        info_1 = json.dumps({"retry_count": 1, "last_error": "not verified", "last_retry_at": "2025-01-01T00:00:00"})
+        result = _parse_retry_info(info_1)
+        assert result["retry_count"] == 1
+
+        info_2 = json.dumps({"retry_count": 2, "last_error": "not verified", "last_retry_at": "2025-01-02T00:00:00"})
+        result = _parse_retry_info(info_2)
+        assert result["retry_count"] == 2
+
+    def test_parse_retry_info_exhausted(self):
+        """已耗尽重试时正确解析"""
+        import json
+
+        from src.tasks.kyc_sync_task import MAX_RETRY_ATTEMPTS, _parse_retry_info
+
+        info = json.dumps({"retry_count": MAX_RETRY_ATTEMPTS, "last_error": "not verified", "exhausted": True})
+        result = _parse_retry_info(info)
+        assert result["retry_count"] == MAX_RETRY_ATTEMPTS
+
+    def test_parse_retry_info_legacy_format(self):
+        """兼容旧格式字符串"""
+        from src.tasks.kyc_sync_task import MAX_RETRY_ATTEMPTS, _parse_retry_info
+
+        result = _parse_retry_info("Auto-retry attempt 1/3: investor not verified")
+        assert result["retry_count"] == 1
+
+        result = _parse_retry_info("Auto-retry exhausted (3/3): Manual intervention")
+        assert result["retry_count"] == MAX_RETRY_ATTEMPTS
+
+        result = _parse_retry_info("Some other error")
+        assert result["retry_count"] == 0
 
     def test_retry_recovers_verified_record(self):
         """链上已验证的记录应自动恢复为 SYNCED"""
@@ -353,14 +377,24 @@ class TestB06RetryFailedSyncs:
         mock_contract_service = MagicMock()
         mock_contract_service.is_verified = AsyncMock(return_value=True)
 
+        # Mock 分布式锁 — 使用 asynccontextmanager 模拟 lock()
+        mock_lock_service = MagicMock()
+
+        @asynccontextmanager
+        async def mock_lock(*args, **kwargs):
+            yield
+
+        mock_lock_service.lock = mock_lock
+
         with (
             patch(
-                "src.tasks.kyc_sync_task.Tortoise.init",
-                new_callable=AsyncMock,
+                "src.tasks.kyc_sync_task._is_db_available",
+                return_value=True,
             ),
             patch(
-                "src.tasks.kyc_sync_task.Tortoise.close_connections",
+                "src.tasks.kyc_sync_task.DistributedLockService.get_instance",
                 new_callable=AsyncMock,
+                return_value=mock_lock_service,
             ),
             patch(
                 "src.models.kyc.AccountKyc.filter",

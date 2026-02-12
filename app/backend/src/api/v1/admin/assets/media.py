@@ -9,7 +9,7 @@ Requirements: 2.2
 
 from typing import Optional
 
-from falib.utils.handlers import create_success_response
+from falib.utils.handlers import create_error_response, create_success_response
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 
 from src.services.asset.media_schemas import (
@@ -127,7 +127,7 @@ async def upload_media_batch(
             media_type=media_type,
         )
     except MediaServiceError as e:
-        return create_success_response(code=400, msg=str(e))
+        return create_error_response(code=400, msg=str(e))
 
     results: list[MediaBatchUploadResult] = []
     success_count = 0
@@ -322,7 +322,7 @@ async def update_media(
             msg="Media updated successfully",
         )
     except MediaServiceError as e:
-        return create_success_response(code=404, msg=str(e))
+        return create_error_response(code=404, msg=str(e))
 
 
 # ============ 媒体排序 ============
@@ -379,4 +379,4 @@ async def reorder_media(
             msg="Media reordered successfully",
         )
     except MediaServiceError as e:
-        return create_success_response(code=400, msg=str(e))
+        return create_error_response(code=400, msg=str(e))

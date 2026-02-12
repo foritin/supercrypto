@@ -35,7 +35,7 @@ export function BasicInfoStep() {
   const dateInputLang = i18n.language?.startsWith('zh') ? 'zh-CN' : 'en-US';
 
   return (
-    <Card className="p-8 glass border-[#00D4AA]/20">
+    <Card className="p-8 glass border-primary/20">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button
@@ -50,7 +50,7 @@ export function BasicInfoStep() {
           </h3>
         </div>
         {lastSaved && (
-          <span className="flex items-center gap-1 text-xs text-[#00D4AA]">
+          <span className="flex items-center gap-1 text-xs text-primary">
             <Save className="h-3 w-3" />
             {t('kyc.autoSaved', 'Auto-saved')}
           </span>

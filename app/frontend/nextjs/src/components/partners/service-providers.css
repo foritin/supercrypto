@@ -1,0 +1,9 @@
+/**
+ * Service Providers - 仅保留 Tailwind 无法实现的样式
+ * 步进式滚动过渡动画
+ */
+
+/* 步进式滚动过渡 - cubic-bezier 自定义缓动 */
+.sp-row-track {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}

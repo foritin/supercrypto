@@ -12,15 +12,14 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
   Clock,
-  CheckCircle,
+  CheckCircle2,
   XCircle,
-  Warning,
+  AlertTriangle,
   Timer,
-  ChartLineUp,
-  Shield,
-  TrendUp,
-  TrendDown,
-} from "@phosphor-icons/react";
+  TrendingUp,
+  ShieldCheck,
+  TrendingDown,
+} from "lucide-react";
 import type { KycStats, RiskLevel } from "@/services/admin-kyc";
 
 interface KycStatsPanelProps {
@@ -58,9 +57,9 @@ const RISK_CONFIG: Record<RiskLevel, { color: string; labelKey: string; bgColor:
 
 // 状态配置 - 使用 Phosphor Icons Fill 版本
 const STATUS_CONFIG = {
-  approved: { color: "text-emerald-400", bgColor: "bg-emerald-500/10", icon: CheckCircle, labelKey: "admin.kyc.stats.approved" },
+  approved: { color: "text-emerald-400", bgColor: "bg-emerald-500/10", icon: CheckCircle2, labelKey: "admin.kyc.stats.approved" },
   rejected: { color: "text-red-400", bgColor: "bg-red-500/10", icon: XCircle, labelKey: "admin.kyc.stats.rejected" },
-  failed: { color: "text-yellow-400", bgColor: "bg-yellow-500/10", icon: Warning, labelKey: "admin.kyc.stats.syncFailed" },
+  failed: { color: "text-yellow-400", bgColor: "bg-yellow-500/10", icon: AlertTriangle, labelKey: "admin.kyc.stats.syncFailed" },
 };
 
 // 玻璃态卡片基础样式
@@ -137,7 +136,7 @@ function PrimaryStatCard({
         {/* 标题行 */}
         <div className="flex items-center gap-2 mb-4">
           <div className="p-2 rounded-lg bg-blue-500/10">
-            <Clock weight="fill" className="w-5 h-5 text-blue-400" />
+            <Clock className="w-5 h-5 text-blue-400" />
           </div>
           <span className="text-sm font-medium text-white/60">{t("admin.kyc.stats.pendingApplications")}</span>
         </div>
@@ -153,9 +152,9 @@ function PrimaryStatCard({
         {trend && trendValue && (
           <div className="flex items-center gap-1.5 mt-3">
             {trend === "up" ? (
-              <TrendUp weight="bold" className="w-4 h-4 text-emerald-400" />
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
             ) : trend === "down" ? (
-              <TrendDown weight="bold" className="w-4 h-4 text-red-400" />
+              <TrendingDown className="w-4 h-4 text-red-400" />
             ) : null}
             <span className={`text-sm ${trend === "up" ? "text-emerald-400" : trend === "down" ? "text-red-400" : "text-white/40"}`}>
               {trendValue}
@@ -195,7 +194,7 @@ function SecondaryStatCard({
       {/* 顶部：图标 + 标签 */}
       <div className="flex items-start justify-between">
         <div className={`p-2.5 rounded-xl ${config.bgColor} group-hover:scale-110 transition-transform duration-300`}>
-          <Icon weight="fill" className={`w-5 h-5 ${config.color}`} />
+          <Icon className={`w-5 h-5 ${config.color}`} />
         </div>
       </div>
       
@@ -243,7 +242,7 @@ function ProcessingTimeCard({
       {/* Header */}
       <div className="flex items-center gap-2 mb-5">
         <div className="p-1.5 rounded-lg bg-cyan-500/10">
-          <Timer weight="fill" className="w-4 h-4 text-cyan-400" />
+          <Timer className="w-4 h-4 text-cyan-400" />
         </div>
         <span className="text-sm font-medium text-white/70">{t("admin.kyc.stats.avgProcessingTime")}</span>
       </div>
@@ -295,7 +294,7 @@ function ConversionCard({
       {/* Header */}
       <div className="flex items-center gap-2 mb-5">
         <div className="p-1.5 rounded-lg bg-emerald-500/10">
-          <ChartLineUp weight="fill" className="w-4 h-4 text-emerald-400" />
+          <TrendingUp className="w-4 h-4 text-emerald-400" />
         </div>
         <span className="text-sm font-medium text-white/70">{t("admin.kyc.stats.conversionRate")}</span>
       </div>
@@ -363,7 +362,7 @@ function RiskDistributionCard({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-purple-500/10">
-            <Shield weight="fill" className="w-4 h-4 text-purple-400" />
+            <ShieldCheck className="w-4 h-4 text-purple-400" />
           </div>
           <span className="text-sm font-medium text-white/70">{t("admin.kyc.stats.riskDistribution")}</span>
         </div>

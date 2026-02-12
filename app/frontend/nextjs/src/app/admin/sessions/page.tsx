@@ -128,7 +128,7 @@ export default function AdminSessionsPage() {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="font-mono text-[#00D4AA] cursor-default">
+              <span className="font-mono text-primary cursor-default">
                 {truncateAddress(row.original.wallet_address)}
               </span>
             </TooltipTrigger>
@@ -289,7 +289,7 @@ export default function AdminSessionsPage() {
                   <div>
                     <p>
                       确定要强制下线用户{' '}
-                      <strong className="text-[#00D4AA]">
+                      <strong className="text-primary">
                         {sessionToRevoke ? truncateAddress(sessionToRevoke.wallet_address) : ''}
                       </strong>{' '}
                       吗？

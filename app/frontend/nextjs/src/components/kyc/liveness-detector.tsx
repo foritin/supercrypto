@@ -305,15 +305,15 @@ export const LivenessDetector: React.FC<LivenessDetectorProps> = ({
   const renderTips = () => (
     <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-white/60">
       <p className="flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
         {t('kyc.liveness.tips.lighting')}
       </p>
       <p className="flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
         {t('kyc.liveness.tips.face')}
       </p>
       <p className="flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
         {t('kyc.liveness.tips.noObstruction')}
       </p>
     </div>
@@ -321,8 +321,8 @@ export const LivenessDetector: React.FC<LivenessDetectorProps> = ({
 
   const renderInit = () => (
     <div className={cn("flex flex-col items-center gap-4 sm:gap-6", "py-6 px-4", "sm:py-8 sm:px-6")}>
-      <div className={cn("rounded-full bg-[#00D4AA]/10 border border-[#00D4AA]/20", "p-4 sm:p-6")}>
-        <Camera className="w-10 h-10 sm:w-12 sm:h-12 text-[#00D4AA]" />
+      <div className={cn("rounded-full bg-primary/10 border border-primary/20", "p-4 sm:p-6")}>
+        <Camera className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
       </div>
       <div className="text-center">
         <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">{t('kyc.liveness.init.title')}</h3>
@@ -341,7 +341,7 @@ export const LivenessDetector: React.FC<LivenessDetectorProps> = ({
 
   const renderPermission = () => (
     <div className={cn("flex flex-col items-center gap-3 sm:gap-4", "py-6 px-4", "sm:py-8 sm:px-6")}>
-      <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 text-[#00D4AA] animate-spin" />
+      <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 text-primary animate-spin" />
       <p className="text-sm sm:text-base text-white/60">{t('kyc.liveness.permission.requesting')}</p>
       <p className="text-xs sm:text-sm text-white/40 text-center">{t('kyc.liveness.permission.hint')}</p>
     </div>
@@ -352,18 +352,18 @@ export const LivenessDetector: React.FC<LivenessDetectorProps> = ({
       <div className={cn("relative w-full rounded-xl sm:rounded-2xl overflow-hidden bg-black", "max-w-sm sm:max-w-md", "aspect-[4/3]")}>
         <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
         <div className="absolute inset-0 pointer-events-none">
-          <div className={cn("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2", "w-36 h-48 sm:w-48 sm:h-64", "border-2 border-dashed border-[#00D4AA]/50 rounded-[50%]")} />
+          <div className={cn("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2", "w-36 h-48 sm:w-48 sm:h-64", "border-2 border-dashed border-primary/50 rounded-[50%]")} />
         </div>
         {countdown !== null && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <div className="text-5xl sm:text-6xl font-bold text-[#00D4AA] animate-pulse">{countdown}</div>
+            <div className="text-5xl sm:text-6xl font-bold text-primary animate-pulse">{countdown}</div>
           </div>
         )}
         <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex items-center justify-between">
           <div className={cn('px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium',
             phase === 'detecting' && 'bg-yellow-500/20 text-yellow-400',
-            phase === 'capturing' && 'bg-[#00D4AA]/20 text-[#00D4AA]',
-            blinkDetected && 'bg-[#00D4AA]/20 text-[#00D4AA]'
+            phase === 'capturing' && 'bg-primary/20 text-primary',
+            blinkDetected && 'bg-primary/20 text-primary'
           )}>
             {phase === 'preview' && t('kyc.liveness.preview.ready')}
             {phase === 'detecting' && !blinkDetected && t('kyc.liveness.blinkPrompt')}
@@ -402,7 +402,7 @@ export const LivenessDetector: React.FC<LivenessDetectorProps> = ({
 
   const renderUploading = () => (
     <div className={cn("flex flex-col items-center gap-3 sm:gap-4", "py-6 px-4", "sm:py-8 sm:px-6")}>
-      <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 text-[#00D4AA] animate-spin" />
+      <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 text-primary animate-spin" />
       <p className="text-sm sm:text-base text-white/60">{t('kyc.liveness.uploading')}</p>
     </div>
   )
@@ -410,11 +410,11 @@ export const LivenessDetector: React.FC<LivenessDetectorProps> = ({
   const renderSuccess = () => (
     <div className={cn("flex flex-col items-center gap-4 sm:gap-6", "py-6 px-4", "sm:py-8 sm:px-6")}>
       {previewBlob && (
-        <div className={cn("relative rounded-full overflow-hidden border-4 border-[#00D4AA]", "w-28 h-28 sm:w-32 sm:h-32")}>
+        <div className={cn("relative rounded-full overflow-hidden border-4 border-primary", "w-28 h-28 sm:w-32 sm:h-32")}>
           <img src={URL.createObjectURL(previewBlob)} alt={t('kyc.liveness.selfiePreviewAlt')} className="w-full h-full object-cover scale-x-[-1]" />
         </div>
       )}
-      <div className="flex items-center gap-2 text-[#00D4AA]">
+      <div className="flex items-center gap-2 text-primary">
         <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
         <span className="text-base sm:text-lg font-semibold">{t('kyc.liveness.successTitle')}</span>
       </div>
@@ -451,7 +451,7 @@ export const LivenessDetector: React.FC<LivenessDetectorProps> = ({
 
       <div className="flex flex-col gap-3 w-full max-w-xs">
         {error?.canRetry && (
-          <Button onClick={retry} className="w-full min-h-[48px] bg-[#00D4AA] hover:bg-[#00D4AA]/90">
+          <Button onClick={retry} className="w-full min-h-[48px] bg-primary hover:bg-primary/90">
             <RefreshCw className="w-4 h-4 mr-2" />
             {t('kyc.liveness.retry')}
           </Button>

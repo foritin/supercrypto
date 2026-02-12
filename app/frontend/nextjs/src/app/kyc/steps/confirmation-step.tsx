@@ -61,7 +61,7 @@ export function ConfirmationStep() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-8 glass border-[#00D4AA]/20">
+      <Card className="p-8 glass border-primary/20">
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={showLandingPage}
@@ -72,8 +72,8 @@ export function ConfirmationStep() {
           </button>
         </div>
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#00D4AA]/20 flex items-center justify-center">
-            <CheckCircle className="h-8 w-8 text-[#00D4AA]" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+            <CheckCircle className="h-8 w-8 text-primary" />
           </div>
           <h3 className="text-xl font-semibold text-white mb-2">
             {t('kyc.confirmation.title', 'Review Your Information')}
@@ -87,8 +87,8 @@ export function ConfirmationStep() {
           {/* Personal Information */}
           <div className="p-5 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-[#00D4AA]/20 flex items-center justify-center">
-                <User className="h-5 w-5 text-[#00D4AA]" />
+              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
               </div>
               <h4 className="font-semibold text-white">Personal Information</h4>
             </div>
@@ -119,8 +119,8 @@ export function ConfirmationStep() {
           {/* Address */}
           <div className="p-5 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-[#00D4AA]/20 flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-[#00D4AA]" />
+              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                <MapPin className="h-5 w-5 text-primary" />
               </div>
               <h4 className="font-semibold text-white">Residential Address</h4>
             </div>
@@ -137,8 +137,8 @@ export function ConfirmationStep() {
           {/* Identity Document */}
           <div className="p-5 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-[#00D4AA]/20 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-[#00D4AA]" />
+              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-primary" />
               </div>
               <h4 className="font-semibold text-white">Identity Document</h4>
             </div>
@@ -162,8 +162,8 @@ export function ConfirmationStep() {
           {formData.faceImage && (
             <div className="p-5 rounded-xl bg-white/5 border border-white/10">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-[#00D4AA]/20 flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-[#00D4AA]" />
+                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-primary" />
                 </div>
                 <h4 className="font-semibold text-white">Face Verification</h4>
               </div>
@@ -175,7 +175,7 @@ export function ConfirmationStep() {
                 />
                 <div>
                   <p className="text-white font-medium">Photo Captured</p>
-                  <p className="text-sm text-[#00D4AA]">Verified</p>
+                  <p className="text-sm text-primary">Verified</p>
                 </div>
               </div>
             </div>
@@ -191,7 +191,7 @@ export function ConfirmationStep() {
                   setAgreed(e.target.checked);
                   updateFormData({ agreeToTerms: e.target.checked });
                 }}
-                className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5 text-[#00D4AA] focus:ring-[#00D4AA]/50"
+                className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary/50"
               />
               <div className="text-sm text-white/60">
                 <p>
@@ -201,11 +201,11 @@ export function ConfirmationStep() {
                 </p>
                 <p className="mt-2">
                   I agree to the{' '}
-                  <a href="/terms" className="text-[#00D4AA] hover:underline" target="_blank">
+                  <a href="/terms" className="text-primary hover:underline" target="_blank">
                     Terms of Service
                   </a>{' '}
                   and{' '}
-                  <a href="/privacy" className="text-[#00D4AA] hover:underline" target="_blank">
+                  <a href="/privacy" className="text-primary hover:underline" target="_blank">
                     Privacy Policy
                   </a>.
                 </p>
@@ -217,8 +217,8 @@ export function ConfirmationStep() {
           </div>
 
           {/* Security Notice */}
-          <div className="flex items-start gap-3 p-4 rounded-lg bg-[#00D4AA]/5 border border-[#00D4AA]/20">
-            <Shield className="h-5 w-5 text-[#00D4AA] shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+            <Shield className="h-5 w-5 text-primary shrink-0 mt-0.5" />
             <p className="text-sm text-white/60">
               Your information is encrypted and stored securely. We use industry-standard 
               security measures to protect your personal data.

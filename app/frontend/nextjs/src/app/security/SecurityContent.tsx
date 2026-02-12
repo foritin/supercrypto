@@ -13,7 +13,8 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { PageBadge } from "@/components/ui/page-badge";
 
 interface SecurityCardProps {
   icon: React.ReactNode;
@@ -37,13 +38,13 @@ const SecurityCard: React.FC<SecurityCardProps> = ({
         "transition-all duration-300"
       )}
     >
-      <div className="p-3 rounded-xl bg-[#00D4AA]/10 w-fit mb-4">{icon}</div>
+      <div className="p-3 rounded-xl bg-primary/10 w-fit mb-4">{icon}</div>
       <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
       <p className="text-white/60 text-sm mb-4">{description}</p>
       <ul className="space-y-2">
         {features.map((feature, index) => (
           <li key={index} className="flex items-start gap-2 text-sm text-white/70">
-            <CheckCircle className="w-4 h-4 text-[#00D4AA] flex-shrink-0 mt-0.5" />
+            <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
             <span>{feature}</span>
           </li>
         ))}
@@ -58,7 +59,7 @@ export function SecurityContent() {
 
   const securityFeatures = [
     {
-      icon: <Shield className="w-6 h-6 text-[#00D4AA]" />,
+      icon: <Shield className="w-6 h-6 text-primary" />,
       title: t("security.features.audits.title", "Smart Contract Audits"),
       description: t("security.features.audits.desc", "All contracts audited by top firms"),
       features: [
@@ -68,7 +69,7 @@ export function SecurityContent() {
       ],
     },
     {
-      icon: <Wallet className="w-6 h-6 text-[#00D4AA]" />,
+      icon: <Wallet className="w-6 h-6 text-primary" />,
       title: t("security.features.wallets.title", "Multi-Sig Wallets"),
       description: t("security.features.wallets.desc", "Require multiple approvals"),
       features: [
@@ -78,7 +79,7 @@ export function SecurityContent() {
       ],
     },
     {
-      icon: <Server className="w-6 h-6 text-[#00D4AA]" />,
+      icon: <Server className="w-6 h-6 text-primary" />,
       title: t("security.features.infrastructure.title", "Secure Infrastructure"),
       description: t("security.features.infrastructure.desc", "Enterprise-grade security"),
       features: [
@@ -88,7 +89,7 @@ export function SecurityContent() {
       ],
     },
     {
-      icon: <Lock className="w-6 h-6 text-[#00D4AA]" />,
+      icon: <Lock className="w-6 h-6 text-primary" />,
       title: t("security.features.data.title", "Data Protection"),
       description: t("security.features.data.desc", "Your data is encrypted"),
       features: [
@@ -100,9 +101,9 @@ export function SecurityContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0F0D]">
+    <div className="min-h-screen bg-bg-dark">
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-[#00D4AA]/3 rounded-full blur-[150px]" />
+        <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-primary/3 rounded-full blur-[150px]" />
       </div>
 
       <div className="relative z-10 pt-24 pb-20">
@@ -112,12 +113,11 @@ export function SecurityContent() {
             ref={headerRef.ref as React.RefObject<HTMLElement>}
             className="text-center mb-16 scroll-reveal is-visible"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#00D4AA]/10 border border-[#00D4AA]/20 mb-6">
-              <Shield className="w-4 h-4 text-[#00D4AA]" />
-              <span className="text-sm text-[#00D4AA] font-medium">
-                {t("security.badge", "Security First")}
-              </span>
-            </div>
+            <PageBadge
+              icon={<Shield />}
+              text={t("security.badge", "Security First")}
+              className="mb-6"
+            />
 
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
               {t("security.title", "Your Security is Our Priority")}
@@ -139,10 +139,10 @@ export function SecurityContent() {
           </div>
 
           {/* Audit Reports */}
-          <div className="p-8 rounded-2xl bg-gradient-to-br from-[#00D4AA]/10 to-[#00D4AA]/5 border border-[#00D4AA]/20">
+          <div className="p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
             <div className="flex items-start gap-4 mb-6">
-              <div className="p-3 rounded-xl bg-[#00D4AA]/10">
-                <FileCheck className="w-6 h-6 text-[#00D4AA]" />
+              <div className="p-3 rounded-xl bg-primary/10">
+                <FileCheck className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-white mb-2">
@@ -170,8 +170,8 @@ export function SecurityContent() {
                       className={cn(
                         "text-xs px-2 py-0.5 rounded-full",
                         audit.status === "Completed"
-                          ? "bg-[#00D4AA]/20 text-[#00D4AA]"
-                          : "bg-[#FFD700]/20 text-[#FFD700]"
+                          ? "bg-primary/20 text-primary"
+                          : "bg-gold/20 text-gold"
                       )}
                     >
                       {audit.status}
@@ -179,7 +179,7 @@ export function SecurityContent() {
                   </div>
                   <p className="text-sm text-white/50">{audit.date}</p>
                   {audit.status === "Completed" && (
-                    <button className="mt-3 text-sm text-[#00D4AA] hover:underline flex items-center gap-1">
+                    <button className="mt-3 text-sm text-primary hover:underline flex items-center gap-1">
                       {t("security.audits.view", "View Report")}
                       <ExternalLink className="w-3 h-3" />
                     </button>
@@ -190,11 +190,11 @@ export function SecurityContent() {
           </div>
 
           {/* Bug Bounty */}
-          <div className="mt-8 p-6 rounded-xl bg-[#FFD700]/5 border border-[#FFD700]/20">
+          <div className="mt-8 p-6 rounded-xl bg-gold/5 border border-gold/20">
             <div className="flex items-start gap-4">
-              <AlertTriangle className="w-6 h-6 text-[#FFD700] flex-shrink-0" />
+              <AlertTriangle className="w-6 h-6 text-gold flex-shrink-0" />
               <div>
-                <h3 className="font-semibold text-[#FFD700] mb-2">
+                <h3 className="font-semibold text-gold mb-2">
                   {t("security.bugBounty.title", "Bug Bounty Program")}
                 </h3>
                 <p className="text-white/60 text-sm mb-3">
@@ -204,8 +204,8 @@ export function SecurityContent() {
                   )}
                 </p>
                 <a
-                  href="mailto:security@slimcrypto.com"
-                  className="text-sm text-[#00D4AA] hover:underline"
+                  href="mailto:security@supercrypto.com"
+                  className="text-sm text-primary hover:underline"
                 >
                   {t("security.bugBounty.link", "Learn More")} →
                 </a>

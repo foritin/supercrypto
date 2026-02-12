@@ -28,7 +28,7 @@ const home = {
       apy: "最高年化",
     },
     features: {
-      title: "为什么选择 SlimCrypto",
+      title: "为什么选择 SuperCrypto",
       subtitle: "基于区块链技术构建，以安全、透明和高收益为核心",
       security: {
         title: "银行级安全",
@@ -130,7 +130,7 @@ const home = {
     lastUpdated: "最后更新",
     intro: {
       title: "致所有投资者的通知",
-      p1: "SlimCrypto 提供投资代币化真实世界资产（RWA）的平台。虽然我们努力提供安全和透明的投资机会，但所有投资都存在固有风险。",
+      p1: "SuperCrypto 提供投资代币化真实世界资产（RWA）的平台。虽然我们努力提供安全和透明的投资机会，但所有投资都存在固有风险。",
       p2: "使用我们的平台，即表示您确认已阅读、理解并接受本披露中概述的风险。如果您不理解这些风险或不愿接受它们，则不应使用我们的平台。",
     },
     general: {
@@ -194,16 +194,16 @@ const home = {
   terms: {
     badge: "法律文件",
     title: "服务条款",
-    subtitle: "这些条款管辖您对 SlimCrypto 平台的使用。访问或使用我们的服务，即表示您同意受这些条款约束。",
+    subtitle: "这些条款管辖您对 SuperCrypto 平台的使用。访问或使用我们的服务，即表示您同意受这些条款约束。",
     lastUpdated: "最后更新",
     acceptance: {
       title: "接受条款",
-      content: "访问或使用 SlimCrypto 平台，即表示您确认已阅读、理解并同意受这些服务条款和隐私政策的约束。如果您不同意这些条款，则不得使用我们的服务。",
+      content: "访问或使用 SuperCrypto 平台，即表示您确认已阅读、理解并同意受这些服务条款和隐私政策的约束。如果您不同意这些条款，则不得使用我们的服务。",
     },
     definitions: {
       title: "1. 定义",
       p1: "在本条款中：",
-      platform: "指 SlimCrypto 网站、应用程序和所有相关服务。",
+      platform: "指 SuperCrypto 网站、应用程序和所有相关服务。",
       user: "指访问或使用平台的任何个人或实体。",
       assets: "指平台上可用的代币化真实世界资产。",
       wallet: "指您用于与平台交互的数字钱包。",
@@ -219,7 +219,7 @@ const home = {
     },
     services: {
       title: "3. 我们的服务",
-      p1: "SlimCrypto 提供以下平台服务：",
+      p1: "SuperCrypto 提供以下平台服务：",
       item1: "访问有关代币化真实世界资产的信息",
       item2: "通过区块链交易投资 RWA 代币",
       item3: "管理您的投资组合",
@@ -274,11 +274,11 @@ const home = {
   privacy: {
     badge: "您的隐私很重要",
     title: "隐私政策",
-    subtitle: "本隐私政策解释 SlimCrypto 如何收集、使用和保护您在使用我们平台时的个人信息。",
+    subtitle: "本隐私政策解释 SuperCrypto 如何收集、使用和保护您在使用我们平台时的个人信息。",
     lastUpdated: "最后更新",
     intro: {
       title: "我们的承诺",
-      content: "在 SlimCrypto，我们认真对待您的隐私。我们致力于保护您的个人信息，并对如何收集和使用数据保持透明。本政策适用于通过我们的平台收集的所有信息。",
+      content: "在 SuperCrypto，我们认真对待您的隐私。我们致力于保护您的个人信息，并对如何收集和使用数据保持透明。本政策适用于通过我们的平台收集的所有信息。",
     },
     collect: {
       title: "1. 我们收集的信息",

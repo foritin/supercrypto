@@ -8,7 +8,7 @@ Contracts Models Package
 - ProviderRegistry: Provider 注册状态
 """
 
-from src.shared.schemas.enums import ContractStatus, NetWork
+from src.shared.schemas.enums import ContractStatus, NetWork, Network
 from src.models.contracts.contract_config import ContractConfig
 from src.models.contracts.contract_deployment import ContractDeployment
 from src.models.contracts.provider_registry import (
@@ -26,7 +26,8 @@ __all__ = [
     # Provider Registry
     "ProviderRegistry",
     # Enums
-    "NetWork",
+    "Network",
+    "NetWork",  # 向后兼容别名
     "ContractStatus",
     # Constants
     "ZERO_ADDRESS",

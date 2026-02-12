@@ -45,7 +45,7 @@ const common = {
     sessionRevoked: "您已被管理员强制下线",
   },
   footer: {
-    copyright: "© {{year}} SlimCrypto. 保留所有权利。",
+    copyright: "© {{year}} SuperCrypto. 保留所有权利。",
     terms: "服务条款",
     privacy: "隐私政策",
     tagline: "机构级 RWA 投资平台",

@@ -6,9 +6,12 @@
 from typing import List, Optional
 
 from falib.utils.config import SETTINGS
+from falib.utils.log import get_logger
 
 from src.models import Account, TransactionAudit, AccountKyc
 from src.services.dev.schemas import ResetableDataInfo, ResetDataType, TokenRecipient
+
+logger = get_logger("business.dev.service")
 
 
 class DevToolsService:
@@ -40,10 +43,10 @@ class DevToolsService:
         """
         重置测试数据
 
-        Args:
+        参数:
             data_types: 要重置的数据类型列表
 
-        Returns:
+        返回:
             各类型重置的记录数
 
         注意: TransactionAudit 是不可变的审计记录，不支持删除
@@ -82,10 +85,10 @@ class DevToolsService:
         """
         获取可接收测试代币的用户列表
 
-        Args:
+        参数:
             exclude_address: 要排除的地址（通常是 admin 自己）
 
-        Returns:
+        返回:
             可接收代币的用户列表
         """
         recipients = []

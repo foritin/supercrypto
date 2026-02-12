@@ -20,11 +20,25 @@ from src.models.contracts.provider_registry import (
     ProviderRegistry,
     compute_key_hash,
 )
-from src.shared.aerich_redirect import TORTOISE_ORM
 from src.shared.common.adapters import get_async_minio_adapter, get_async_web3_adapter
 from src.shared.schemas.enums import ChainID, ContractStatus
+from src.shared.services.lock_service import DistributedLockService, LockAcquireError
 
-schedule_logger = get_logger("schedule.contract_task")
+schedule_logger = get_logger("scheduler.contract_sync")
+
+
+def _is_db_available() -> bool:
+    """检查 Tortoise ORM 连接池是否可用 (未关闭)"""
+    try:
+        conn = Tortoise.get_connection("default")
+        pool = getattr(conn, "_pool", None)
+        if pool is None:
+            return False
+        if getattr(pool, "_closing", False) or getattr(pool, "_closed", False):
+            return False
+        return True
+    except Exception:
+        return False
 
 
 async def get_network_chain() -> tuple[str, int]:
@@ -189,10 +203,32 @@ async def async_sync_provider_registry():
     """
     主同步任务：同步 AddressProvider 注册状态
 
-    此任务用于定期调度执行，从链上查询 Provider 状态并更新数据库
+    此任务用于定期调度执行，从链上查询 Provider 状态并更新数据库。
+    复用应用级 Tortoise ORM 连接池，不自行 init/close。
+    使用分布式锁防止并发执行。
     """
-    await Tortoise.init(config=TORTOISE_ORM)
+    # 检查连接池是否可用 (热重载/关闭期间跳过)
+    if not _is_db_available():
+        schedule_logger.debug("DB pool not available, skipping async_sync_provider_registry")
+        return
 
+    # 获取分布式锁，防止并发执行
+    try:
+        lock_service = await DistributedLockService.get_instance()
+    except Exception as e:
+        schedule_logger.warning(f"Failed to get lock service, executing without lock: {e}")
+        return await _do_sync_provider_registry()
+
+    try:
+        async with lock_service.lock("task:provider_sync", timeout=90):
+            return await _do_sync_provider_registry()
+    except LockAcquireError:
+        schedule_logger.info("Another provider sync task is running, skipping")
+        return
+
+
+async def _do_sync_provider_registry():
+    """执行实际的 Provider 同步逻辑 (内部方法)"""
     network, chain_id = await get_network_chain()
     schedule_logger.info(
         f"Starting Provider sync for network={network}, chain_id={chain_id}"

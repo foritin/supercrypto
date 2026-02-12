@@ -17,7 +17,7 @@ from src.models.base import AbstractModel, TimestampMixin
 from src.shared.schemas.enums import (
     IdType,
     KycStatus,
-    NetWork,
+    Network,
     OnChainSyncStatus,
     ReviewPriority,
     RiskLevel,
@@ -69,7 +69,7 @@ class AccountKyc(AbstractModel, TimestampMixin):
 
     address = fields.CharField(max_length=42, description="钱包地址 (小写)")
     network = fields.CharEnumField(
-        NetWork, max_length=20, default=NetWork.HARDHAT, description="网络类型"
+        Network, max_length=20, default=Network.HARDHAT, description="网络类型"
     )
     status = fields.CharEnumField(
         KycStatus, max_length=20, default=KycStatus.NOT_STARTED, description="KYC 状态"

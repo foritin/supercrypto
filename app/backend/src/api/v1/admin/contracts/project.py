@@ -7,7 +7,7 @@
 Requirements: 2.1
 """
 
-from falib.utils.handlers import success_response
+from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends
 
 from src.services.project_registry import get_config_loader
@@ -34,4 +34,4 @@ async def list_registry_projects(
     """
     loader = get_config_loader()
     projects = loader.list_projects()
-    return success_response(list_data=projects)
+    return create_success_response(list_data=projects)

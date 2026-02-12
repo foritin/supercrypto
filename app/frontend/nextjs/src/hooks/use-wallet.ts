@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { supportedChains, chainNames } from '@/config/wagmi';
@@ -11,15 +12,15 @@ export function useWallet() {
   const { disconnect, error: disconnectError } = useDisconnect();
   const { switchChain, error: switchError, isPending: isSwitching } = useSwitchChain();
 
-  const connectWallet = React.useCallback(() => {
+  const connectWallet = useCallback(() => {
     connect({ connector: injected() });
   }, [connect]);
 
-  const disconnectWallet = React.useCallback(() => {
+  const disconnectWallet = useCallback(() => {
     disconnect();
   }, [disconnect]);
 
-  const switchToChain = React.useCallback(
+  const switchToChain = useCallback(
     (targetChainId: number) => {
       switchChain({ chainId: targetChainId });
     },

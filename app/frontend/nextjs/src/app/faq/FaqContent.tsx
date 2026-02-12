@@ -13,7 +13,8 @@ import {
   Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { PageBadge } from "@/components/ui/page-badge";
 
 /**
  * FAQ 页面内容组件
@@ -219,7 +220,7 @@ const FaqCategorySection: React.FC<FaqCategorySectionProps> = ({
   return (
     <div className="mb-8">
       <div className="flex items-center gap-2 mb-4">
-        <div className="p-2 rounded-lg bg-[#00D4AA]/10 text-[#00D4AA]">
+        <div className="p-2 rounded-lg bg-primary/10 text-primary">
           {category.icon}
         </div>
         <h2 className="text-lg font-semibold text-white">{category.title}</h2>
@@ -294,10 +295,10 @@ export function FaqContent() {
     : faqData;
 
   return (
-    <div className="min-h-screen bg-[#0A0F0D]">
+    <div className="min-h-screen bg-bg-dark">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-[#00D4AA]/3 rounded-full blur-[150px]" />
+        <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-primary/3 rounded-full blur-[150px]" />
       </div>
 
       {/* Content */}
@@ -308,13 +309,11 @@ export function FaqContent() {
             ref={headerRef.ref as React.RefObject<HTMLElement>}
             className="text-center mb-12 scroll-reveal is-visible"
           >
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#00D4AA]/10 border border-[#00D4AA]/20 mb-6">
-              <HelpCircle className="w-4 h-4 text-[#00D4AA]" />
-              <span className="text-sm text-[#00D4AA] font-medium">
-                {t("faq.badge", "Help Center")}
-              </span>
-            </div>
+            <PageBadge
+              icon={<HelpCircle />}
+              text={t("faq.badge", "Help Center")}
+              className="mb-6"
+            />
 
             {/* Title */}
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
@@ -343,7 +342,7 @@ export function FaqContent() {
                   "w-full pl-12 pr-4 py-3 rounded-xl",
                   "bg-white/[0.03] border border-white/[0.08]",
                   "text-white placeholder:text-white/40",
-                  "focus:outline-none focus:border-[#00D4AA]/50 focus:ring-1 focus:ring-[#00D4AA]/50",
+                  "focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50",
                   "transition-all"
                 )}
               />
@@ -391,7 +390,7 @@ export function FaqContent() {
           </div>
 
           {/* Contact Support */}
-          <div className="mt-16 p-8 rounded-2xl bg-gradient-to-br from-[#00D4AA]/10 to-[#00D4AA]/5 border border-[#00D4AA]/20">
+          <div className="mt-16 p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
             <div className="text-center">
               <h3 className="text-xl font-semibold text-white mb-3">
                 {t("faq.contact.title", "Still have questions?")}
@@ -403,8 +402,8 @@ export function FaqContent() {
                 )}
               </p>
               <a
-                href="mailto:support@slimcrypto.com"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-[#0a0f0d] font-medium transition-colors"
+                href="mailto:support@supercrypto.com"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary hover:bg-primary/90 text-bg-dark font-medium transition-colors"
               >
                 {t("faq.contact.button", "Contact Support")}
               </a>

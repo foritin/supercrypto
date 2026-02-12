@@ -2,17 +2,20 @@
 
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useChainId } from 'wagmi';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTransactionContext } from '@/contexts/transaction-context';
 import { useTransactionReceipt } from '@/hooks/use-transaction';
+import { getExplorerUrl } from '@/lib/utils';
 import { CheckCircle, ExternalLink, RotateCcw, ArrowRight, FileText } from 'lucide-react';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 
 export function CompletionStep() {
   const { t } = useTranslation();
-  const { 
+  const chainId = useChainId();
+  const {
     asset, 
     amount, 
     expectedYield, 
@@ -38,7 +41,7 @@ export function CompletionStep() {
 
   if (!asset || !amount) {
     return (
-      <Card className="p-8 glass border-[#00D4AA]/20 text-center">
+      <Card className="p-8 glass border-primary/20 text-center">
         <p className="text-white/60">
           {t('invest.noData', 'No investment data found')}
         </p>
@@ -55,18 +58,18 @@ export function CompletionStep() {
   const isError = receipt.isError;
 
   return (
-    <Card className="glass border-[#00D4AA]/20 overflow-hidden">
+    <Card className="glass border-primary/20 overflow-hidden">
       {/* Success Header */}
-      <div className="p-8 text-center bg-gradient-to-b from-[#00D4AA]/10 to-transparent">
+      <div className="p-8 text-center bg-gradient-to-b from-primary/10 to-transparent">
         <div className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${
-          isSuccess ? 'bg-[#00D4AA]' : isError ? 'bg-red-500' : 'bg-[#00D4AA]/20'
+          isSuccess ? 'bg-primary' : isError ? 'bg-red-500' : 'bg-primary/20'
         }`}>
           {isSuccess ? (
-            <CheckCircle className="h-10 w-10 text-[#0A0F0D]" />
+            <CheckCircle className="h-10 w-10 text-bg-dark" />
           ) : isError ? (
             <FileText className="h-10 w-10 text-white" />
           ) : (
-            <div className="w-8 h-8 border-4 border-[#00D4AA] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           )}
         </div>
         
@@ -93,23 +96,23 @@ export function CompletionStep() {
       <div className="px-8 pb-8">
         <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-4 mb-6">
           <div className="flex justify-between items-center">
-            <span className="text-white/60">Asset</span>
+            <span className="text-white/60">{t('invest.detail.asset')}</span>
             <span className="font-medium text-white">{asset.name}</span>
           </div>
           
           <div className="flex justify-between items-center">
-            <span className="text-white/60">Amount Invested</span>
+            <span className="text-white/60">{t('invest.detail.amountInvested')}</span>
             <span className="font-medium text-white">{amount} ETH</span>
           </div>
           
           <div className="flex justify-between items-center">
-            <span className="text-white/60">Expected Return</span>
-            <span className="font-medium text-[#00D4AA]">+{expectedYield} ETH</span>
+            <span className="text-white/60">{t('invest.detail.expectedReturn')}</span>
+            <span className="font-medium text-primary">+{expectedYield} ETH</span>
           </div>
           
           {lockEndDate && (
             <div className="flex justify-between items-center">
-              <span className="text-white/60">Unlock Date</span>
+              <span className="text-white/60">{t('invest.detail.unlockDate')}</span>
               <span className="font-medium text-white">
                 {lockEndDate.toLocaleDateString()}
               </span>
@@ -118,12 +121,12 @@ export function CompletionStep() {
 
           {transactionHash && (
             <div className="pt-4 border-t border-white/10">
-              <span className="text-white/60 text-sm">Transaction Hash</span>
+              <span className="text-white/60 text-sm">{t('invest.detail.txHash')}</span>
               <a
-                href={`https://etherscan.io/tx/${transactionHash}`}
+                href={getExplorerUrl(chainId, 'tx', transactionHash) || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 mt-1 text-[#00D4AA] hover:underline"
+                className="flex items-center gap-2 mt-1 text-primary hover:underline"
               >
                 <span className="font-mono text-sm">
                   {transactionHash.slice(0, 10)}...{transactionHash.slice(-8)}

@@ -12,10 +12,10 @@
 
 import { useTranslation } from "react-i18next";
 import {
-  Shield,
-  Warning,
-  ShieldWarning,
-} from "@phosphor-icons/react";
+  ShieldCheck,
+  AlertTriangle,
+  ShieldAlert,
+} from "lucide-react";
 import { SectionCard } from "@/components/ui";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { KycDetail, RiskLevel } from "@/services/admin-kyc";
@@ -40,28 +40,28 @@ const RISK_CONFIG: Record<
     bgColor: "rgba(82, 196, 26, 0.1)",
     borderColor: "rgba(82, 196, 26, 0.3)",
     labelKey: "admin.kyc.stepper.riskLow",
-    icon: Shield,
+    icon: ShieldCheck,
   },
   medium: {
     color: "text-yellow-400",
     bgColor: "rgba(250, 173, 20, 0.1)",
     borderColor: "rgba(250, 173, 20, 0.3)",
     labelKey: "admin.kyc.stepper.riskMedium",
-    icon: Warning,
+    icon: AlertTriangle,
   },
   high: {
     color: "text-orange-400",
     bgColor: "rgba(255, 140, 0, 0.1)",
     borderColor: "rgba(255, 140, 0, 0.3)",
     labelKey: "admin.kyc.stepper.riskHigh",
-    icon: ShieldWarning,
+    icon: ShieldAlert,
   },
   critical: {
     color: "text-red-400",
     bgColor: "rgba(255, 77, 79, 0.1)",
     borderColor: "rgba(255, 77, 79, 0.3)",
     labelKey: "admin.kyc.stepper.riskCritical",
-    icon: ShieldWarning,
+    icon: ShieldAlert,
   },
 };
 
@@ -88,7 +88,6 @@ export function StepRiskAssessment({ kycDetail }: StepRiskAssessmentProps) {
           style={{ background: config.bgColor }}
         >
           <Icon
-            weight="fill"
             className="w-8 h-8"
             style={{ color: config.color.replace("text-", "") }}
           />
@@ -111,7 +110,7 @@ export function StepRiskAssessment({ kycDetail }: StepRiskAssessmentProps) {
       {risk_details?.factors && risk_details.factors.length > 0 && (
         <SectionCard
           title={t("admin.kyc.stepper.riskFactors")}
-          icon={<Warning weight="fill" className="w-4 h-4" />}
+          icon={<AlertTriangle className="w-4 h-4" />}
           className="border-white/[0.08]"
         >
           <div className="space-y-2">
@@ -143,7 +142,7 @@ export function StepRiskAssessment({ kycDetail }: StepRiskAssessmentProps) {
       {/* PEP 匹配警告 */}
       {risk_details?.pep_matches && risk_details.pep_matches.length > 0 && (
         <Alert className="bg-amber-500/10 border-amber-500/30 rounded-xl">
-          <Warning weight="fill" className="w-4 h-4 text-amber-400" />
+          <AlertTriangle className="w-4 h-4 text-amber-400" />
           <AlertDescription className="text-amber-200">
             <div className="font-medium mb-1">{t("admin.kyc.stepper.pepWarning")}</div>
             <div className="space-y-1">
@@ -164,7 +163,7 @@ export function StepRiskAssessment({ kycDetail }: StepRiskAssessmentProps) {
       {risk_details?.sanction_matches &&
         risk_details.sanction_matches.length > 0 && (
           <Alert className="bg-red-500/10 border-red-500/30 rounded-xl">
-            <ShieldWarning weight="fill" className="w-4 h-4 text-red-400" />
+            <ShieldAlert className="w-4 h-4 text-red-400" />
             <AlertDescription className="text-red-200">
               <div className="font-medium mb-1">{t("admin.kyc.stepper.sanctionMatch")}</div>
               <div className="space-y-1">

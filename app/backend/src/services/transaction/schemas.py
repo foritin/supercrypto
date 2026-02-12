@@ -4,7 +4,7 @@ Transaction领域 - Schema定义
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 from src.shared.schemas.base import IDMixin, TimestampMixin
 
@@ -47,9 +47,7 @@ class TransactionResponse(TransactionBase, IDMixin, TimestampMixin):
     wallet_id: Optional[int] = Field(None, description="关联钱包ID")
     note: Optional[str] = Field(None, description="备注")
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(from_attributes=True, json_schema_extra={
             "example": {
                 "id": 1,
                 "tx_hash": "0xabcdef1234567890...",
@@ -65,7 +63,7 @@ class TransactionResponse(TransactionBase, IDMixin, TimestampMixin):
                 "created_at": "2025-11-16T10:00:00Z",
                 "updated_at": "2025-11-16T10:05:00Z"
             }
-        }
+        })
 
 
 class TransactionListQuery(BaseModel):
@@ -89,8 +87,7 @@ class TransactionStats(BaseModel):
     failed_count: int = Field(description="失败数量")
     total_amount: str = Field(description="总金额")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "total_transactions": 100,
                 "pending_count": 5,
@@ -98,5 +95,5 @@ class TransactionStats(BaseModel):
                 "failed_count": 5,
                 "total_amount": "10.5"
             }
-        }
+        })
 

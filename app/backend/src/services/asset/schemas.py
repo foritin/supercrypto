@@ -6,7 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 from src.shared.schemas.enums import AssetStatus, AssetType
 
@@ -71,6 +71,13 @@ class AssetStatusUpdateRequest(BaseModel):
     status: AssetStatus = Field(..., description="新状态")
 
 
+class UpdatePriceRequest(BaseModel):
+    """更新资产价格请求"""
+
+    price: float = Field(..., gt=0, description="新价格")
+    source: str = Field(default="manual", description="价格来源")
+
+
 class AssetListItem(BaseModel):
     """资产列表项"""
 
@@ -92,8 +99,7 @@ class AssetListItem(BaseModel):
     subscription_progress: float
     is_available: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RecentInvestor(BaseModel):
@@ -103,8 +109,7 @@ class RecentInvestor(BaseModel):
     amount: float = Field(..., description="投资金额")
     invested_at: datetime = Field(..., description="投资时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssetDetailResponse(BaseModel):
@@ -161,8 +166,7 @@ class AssetDetailResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssetPriceHistoryItem(BaseModel):
@@ -173,8 +177,7 @@ class AssetPriceHistoryItem(BaseModel):
     source: Optional[str]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AssetListQuery(BaseModel):
@@ -207,8 +210,7 @@ class ContractBindingResponse(BaseModel):
     is_primary: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============ 项目绑定相关 Schema ============

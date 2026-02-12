@@ -15,14 +15,14 @@ import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useConnection, useWalletClient, usePublicClient } from 'wagmi'
 import { parseAbi } from 'viem'
-import { Shield } from '@phosphor-icons/react'
+import { ShieldCheck } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { useCurrentUser } from '@/hooks'
 import { useTransactionTimeout } from '@/hooks/use-tx-timeout'
 import { notification } from '@/lib/notification'
 import { recordAdmission } from '@/services/admin-kyc'
-import { KYC_MANAGER_ABI } from './kyc-manager-abi'
+import { KYC_MANAGER_ABI } from '@/constants/abis/kyc-manager-abi'
 import { savePendingTx, clearPendingTx, getPendingTx } from './tx-recovery'
 
 // ============ Types ============
@@ -274,8 +274,8 @@ export function AdmissionButton({
       disabled={isProcessing}
       className={`
         rounded-xl h-10 px-6
-        bg-gradient-to-r from-[#00D4AA] to-[#00E5BB]
-        text-[#0a0f0d] font-semibold
+        bg-gradient-to-r from-primary to-[#00E5BB]
+        text-bg-dark font-semibold
         hover:shadow-[0_0_20px_rgba(0,212,170,0.4)]
         disabled:opacity-60 disabled:cursor-not-allowed
         transition-all duration-300
@@ -283,12 +283,12 @@ export function AdmissionButton({
     >
       {isProcessing ? (
         <span className="flex items-center gap-2">
-          <span className="w-4 h-4 border-2 border-[#0a0f0d]/30 border-t-[#0a0f0d] rounded-full animate-spin" />
+          <span className="w-4 h-4 border-2 border-bg-dark/30 border-t-bg-dark rounded-full animate-spin" />
           {buttonLabel}
         </span>
       ) : (
         <span className="flex items-center gap-2">
-          <Shield weight="fill" className="w-4 h-4" />
+          <ShieldCheck className="w-4 h-4" />
           {buttonLabel}
         </span>
       )}

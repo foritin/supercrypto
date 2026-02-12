@@ -12,7 +12,7 @@ from collections import defaultdict
 from falib.utils.log import get_logger
 from fastapi import HTTPException, Request, status
 
-logger = get_logger("middleware.rate_limit")
+logger = get_logger("system.middleware.rate_limit")
 
 
 class RateLimiter:
@@ -28,7 +28,7 @@ class RateLimiter:
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self._requests: dict[str, list[float]] = defaultdict(list)
-        self._lock = asyncio.Lock()
+        self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
     def _get_key(self, request: Request) -> str:
         """
@@ -57,7 +57,7 @@ class RateLimiter:
         key = self._get_key(request)
         now = time.monotonic()
 
-        async with self._lock:
+        async with self._locks[key]:
             timestamps = self._requests[key]
             # 清理过期记录
             cutoff = now - self.window_seconds
@@ -81,15 +81,17 @@ class RateLimiter:
     async def cleanup(self) -> None:
         """清理所有过期记录 (可由定时任务调用)"""
         now = time.monotonic()
-        async with self._lock:
-            expired_keys = []
-            for key, timestamps in self._requests.items():
+        expired_keys = []
+        for key in list(self._requests.keys()):
+            async with self._locks[key]:
+                timestamps = self._requests[key]
                 cutoff = now - self.window_seconds
                 self._requests[key] = [t for t in timestamps if t > cutoff]
                 if not self._requests[key]:
                     expired_keys.append(key)
-            for key in expired_keys:
-                del self._requests[key]
+        for key in expired_keys:
+            del self._requests[key]
+            del self._locks[key]
 
 
 # ============ 预置限流器实例 ============

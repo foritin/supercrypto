@@ -2,6 +2,8 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
+import { useChainId } from 'wagmi';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StepIndicator } from '@/components/ui/step-indicator';
-import { cn } from '@/lib/utils';
+import { cn, getExplorerUrl } from '@/lib/utils';
 import { 
   ArrowLeft, 
   Wallet, 
@@ -47,18 +49,18 @@ const mockAssetData = {
   image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80',
 };
 
-// Risk config
+// Risk config - 使用 i18n key
 const riskConfig = {
-  low: { color: 'bg-green-500/20 text-green-400 border-green-500/30', label: 'Low Risk' },
-  medium: { color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', label: 'Medium Risk' },
-  high: { color: 'bg-red-500/20 text-red-400 border-red-500/30', label: 'High Risk' },
+  low: { color: 'bg-green-500/20 text-green-400 border-green-500/30', labelKey: 'redeem.risk.low' },
+  medium: { color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', labelKey: 'redeem.risk.medium' },
+  high: { color: 'bg-red-500/20 text-red-400 border-red-500/30', labelKey: 'redeem.risk.high' },
 };
 
-// Step definitions
-const steps = [
-  { title: 'Amount', description: 'Enter redeem amount' },
-  { title: 'Preview', description: 'Review details' },
-  { title: 'Confirm', description: 'Submit transaction' },
+// Step definitions - 使用 i18n key，在组件中通过 t() 翻译
+const stepKeys = [
+  { titleKey: 'redeem.steps.amount', descKey: 'redeem.steps.amountDesc' },
+  { titleKey: 'redeem.steps.preview', descKey: 'redeem.steps.previewDesc' },
+  { titleKey: 'redeem.steps.confirm', descKey: 'redeem.steps.confirmDesc' },
 ];
 
 // Fee configuration
@@ -67,7 +69,15 @@ const REDEMPTION_FEE_RATE = 0.001; // 0.1%
 export default function RedeemPage() {
   const router = useRouter();
   const params = useParams();
+  const { t } = useTranslation();
+  const chainId = useChainId();
   const [currentStep, setCurrentStep] = React.useState(0);
+
+  // 动态生成翻译后的步骤
+  const steps = stepKeys.map(s => ({
+    title: t(s.titleKey),
+    description: t(s.descKey),
+  }));
   const [isLoading, setIsLoading] = React.useState(true);
   const [asset] = React.useState(mockAssetData);
   const [redeemAmount, setRedeemAmount] = React.useState('');
@@ -123,7 +133,7 @@ export default function RedeemPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0F0D] pt-24 pb-16 px-4 sm:px-6">
+      <div className="min-h-screen bg-bg-dark pt-24 pb-16 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto">
           <Skeleton className="h-8 w-32 mb-8" />
           <Skeleton className="h-64 w-full" />
@@ -135,39 +145,39 @@ export default function RedeemPage() {
   // Success State
   if (txStatus === 'success') {
     return (
-      <div className="min-h-screen bg-[#0A0F0D] pt-24 pb-16 px-4 sm:px-6">
+      <div className="min-h-screen bg-bg-dark pt-24 pb-16 px-4 sm:px-6">
         <div className="max-w-md mx-auto">
-          <Card className="glass border-[#00D4AA]/30 p-8 text-center">
-            <div className="w-20 h-20 rounded-full bg-[#00D4AA]/20 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="h-10 w-10 text-[#00D4AA]" />
+          <Card className="glass border-primary/30 p-8 text-center">
+            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="h-10 w-10 text-primary" />
             </div>
             
-            <h2 className="text-2xl font-bold text-white mb-2">Redemption Successful!</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">{t('redeem.redemptionSuccessful')}</h2>
             <p className="text-white/60 mb-6">
-              Your redemption of <span className="text-[#00D4AA] font-semibold">${redeemValue.toLocaleString()}</span> has been processed successfully.
+              {t('redeem.redemptionSuccessDesc', { amount: redeemValue.toLocaleString() })}
             </p>
             
             <div className="p-4 rounded-lg bg-white/5 mb-6">
               <div className="flex justify-between mb-2">
-                <span className="text-white/50">Received</span>
+                <span className="text-white/50">{t('redeem.received')}</span>
                 <span className="text-white font-semibold">${receiveAmount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between mb-2">
-                <span className="text-white/50">Transaction Hash</span>
+                <span className="text-white/50">{t('redeem.txHash')}</span>
                 <a 
-                  href={`https://etherscan.io/tx/${txHash}`}
+                  href={getExplorerUrl(chainId, 'tx', txHash) || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#00D4AA] hover:underline text-sm"
+                  className="text-primary hover:underline text-sm"
                 >
                   {txHash.slice(0, 6)}...{txHash.slice(-4)}
                 </a>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/50">Status</span>
+                <span className="text-white/50">{t('redeem.status')}</span>
                 <span className="text-green-400 flex items-center gap-1">
                   <CheckCircle2 className="h-3 w-3" />
-                  Confirmed
+                  {t('redeem.confirmed')}
                 </span>
               </div>
             </div>
@@ -178,13 +188,13 @@ export default function RedeemPage() {
                 className="flex-1 border-white/10"
                 onClick={() => router.push('/portfolio')}
               >
-                View Portfolio
+                {t('redeem.viewPortfolio')}
               </Button>
               <Button 
-                className="flex-1 bg-[#00D4AA] hover:bg-[#00B896] text-[#0A0F0D]"
+                className="flex-1 bg-primary hover:bg-primary-dark text-bg-dark"
                 onClick={() => router.push('/assets')}
               >
-                Explore Assets
+                {t('redeem.exploreAssets')}
               </Button>
             </div>
           </Card>
@@ -194,7 +204,7 @@ export default function RedeemPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0F0D] pt-24 pb-16 px-4 sm:px-6">
+    <div className="min-h-screen bg-bg-dark pt-24 pb-16 px-4 sm:px-6">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <Button
@@ -203,7 +213,7 @@ export default function RedeemPage() {
           className="mb-6 text-white/60 hover:text-white hover:bg-white/5 -ml-2"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          {currentStep === 0 ? 'Back to Asset' : 'Back'}
+          {currentStep === 0 ? t('redeem.backToAsset') : t('common.back')}
         </Button>
 
         {/* Step Indicator */}
@@ -212,7 +222,7 @@ export default function RedeemPage() {
         </div>
 
         {/* Main Content */}
-        <Card className="glass border-[#00D4AA]/20 overflow-hidden">
+        <Card className="glass border-primary/20 overflow-hidden">
           {/* Asset Header */}
           <div className="p-6 border-b border-white/10">
             <div className="flex items-center gap-4">
@@ -225,14 +235,14 @@ export default function RedeemPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <h2 className="text-xl font-bold text-white">{asset.name}</h2>
                   <Badge variant="outline" className={cn(riskInfo.color, 'text-xs')}>
-                    {riskInfo.label}
+                    {t(riskInfo.labelKey)}
                   </Badge>
                 </div>
-                <p className="text-white/50 text-sm">{asset.symbol} • Matured</p>
+                <p className="text-white/50 text-sm">{asset.symbol} • {t('redeem.matured')}</p>
               </div>
               <div className="text-right">
-                <p className="text-white/50 text-xs mb-1">Current Value</p>
-                <p className="text-xl font-bold text-[#00D4AA]">${asset.currentValue.toLocaleString()}</p>
+                <p className="text-white/50 text-xs mb-1">{t('redeem.currentValue')}</p>
+                <p className="text-xl font-bold text-primary">${asset.currentValue.toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -243,7 +253,7 @@ export default function RedeemPage() {
             {currentStep === 0 && (
               <div className="space-y-6">
                 <div>
-                  <label className="block text-white/70 text-sm mb-2">Redemption Amount</label>
+                  <label className="block text-white/70 text-sm mb-2">{t('redeem.redemptionAmount')}</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">$</span>
                     <Input
@@ -257,13 +267,13 @@ export default function RedeemPage() {
                       size="sm"
                       variant="ghost"
                       onClick={handleMaxClick}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[#00D4AA] hover:text-[#00B896] hover:bg-[#00D4AA]/10"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-primary hover:text-primary-dark hover:bg-primary/10"
                     >
                       MAX
                     </Button>
                   </div>
                   <p className="text-white/40 text-xs mt-2">
-                    Available: ${maxRedeemAmount.toLocaleString()}
+                    {t('redeem.available', { amount: maxRedeemAmount.toLocaleString() })}
                   </p>
                 </div>
 
@@ -287,10 +297,9 @@ export default function RedeemPage() {
                   <div className="flex items-start gap-3">
                     <Info className="h-5 w-5 text-blue-400 mt-0.5" />
                     <div>
-                      <p className="text-blue-400 font-medium text-sm mb-1">Redemption Info</p>
+                      <p className="text-blue-400 font-medium text-sm mb-1">{t('redeem.redemptionInfo')}</p>
                       <p className="text-blue-400/70 text-xs">
-                        This investment has matured. You can redeem your full principal plus accrued yield. 
-                        A 0.1% redemption fee applies.
+                        {t('redeem.redemptionInfoDesc')}
                       </p>
                     </div>
                   </div>
@@ -299,9 +308,9 @@ export default function RedeemPage() {
                 <Button
                   onClick={handleNextStep}
                   disabled={!canProceed}
-                  className="w-full h-12 bg-[#00D4AA] hover:bg-[#00B896] text-[#0A0F0D] font-semibold disabled:opacity-50"
+                  className="w-full h-12 bg-primary hover:bg-primary-dark text-bg-dark font-semibold disabled:opacity-50"
                 >
-                  Continue
+                  {t('common.continue')}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
@@ -311,51 +320,51 @@ export default function RedeemPage() {
             {currentStep === 1 && (
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <Receipt className="h-5 w-5 text-[#00D4AA]" />
-                  Redemption Preview
+                  <Receipt className="h-5 w-5 text-primary" />
+                  {t('redeem.redemptionPreview')}
                 </h3>
 
                 {/* Amount Breakdown */}
                 <div className="p-4 rounded-lg bg-white/5 space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-white/60">Redemption Amount</span>
+                    <span className="text-white/60">{t('redeem.redemptionAmount')}</span>
                     <span className="text-white font-medium">${redeemValue.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/40">Principal Portion</span>
+                    <span className="text-white/40">{t('redeem.principalPortion')}</span>
                     <span className="text-white/60">${principalPortion.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/40">Yield Portion</span>
+                    <span className="text-white/40">{t('redeem.yieldPortion')}</span>
                     <span className="text-green-400">+${yieldPortion.toLocaleString()}</span>
                   </div>
                   <div className="h-px bg-white/10" />
                   <div className="flex justify-between">
-                    <span className="text-white/60">Redemption Fee (0.1%)</span>
+                    <span className="text-white/60">{t('redeem.redemptionFee')}</span>
                     <span className="text-red-400">-${feeAmount.toFixed(2)}</span>
                   </div>
                   <div className="h-px bg-white/10" />
                   <div className="flex justify-between">
-                    <span className="text-white font-medium">You Will Receive</span>
-                    <span className="text-[#00D4AA] font-bold text-lg">${receiveAmount.toLocaleString()}</span>
+                    <span className="text-white font-medium">{t('redeem.youWillReceive')}</span>
+                    <span className="text-primary font-bold text-lg">${receiveAmount.toLocaleString()}</span>
                   </div>
                 </div>
 
                 {/* Yield Summary */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg bg-[#00D4AA]/5 border border-[#00D4AA]/10">
-                    <div className="flex items-center gap-2 text-[#00D4AA] mb-1">
+                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+                    <div className="flex items-center gap-2 text-primary mb-1">
                       <TrendingUp className="h-4 w-4" />
-                      <span className="text-sm">Total Yield</span>
+                      <span className="text-sm">{t('redeem.totalYield')}</span>
                     </div>
                     <p className="text-xl font-bold text-white">${asset.totalYield.toLocaleString()}</p>
                   </div>
                   <div className="p-4 rounded-lg bg-white/5">
                     <div className="flex items-center gap-2 text-white/60 mb-1">
                       <Clock className="h-4 w-4" />
-                      <span className="text-sm">Lock Period</span>
+                      <span className="text-sm">{t('redeem.lockPeriodLabel')}</span>
                     </div>
-                    <p className="text-xl font-bold text-white">{asset.lockPeriod} months</p>
+                    <p className="text-xl font-bold text-white">{t('redeem.monthsUnit', { months: asset.lockPeriod })}</p>
                   </div>
                 </div>
 
@@ -365,13 +374,13 @@ export default function RedeemPage() {
                     onClick={handlePrevStep}
                     className="flex-1 h-12 border-white/10 text-white hover:bg-white/5"
                   >
-                    Back
+                    {t('common.back')}
                   </Button>
                   <Button
                     onClick={handleNextStep}
-                    className="flex-1 h-12 bg-[#00D4AA] hover:bg-[#00B896] text-[#0A0F0D] font-semibold"
+                    className="flex-1 h-12 bg-primary hover:bg-primary-dark text-bg-dark font-semibold"
                   >
-                    Confirm Redemption
+                    {t('redeem.confirmRedemption')}
                   </Button>
                 </div>
               </div>
@@ -383,35 +392,35 @@ export default function RedeemPage() {
                 {!isSubmitting && txStatus !== 'pending' && (
                   <>
                     <div className="text-center mb-6">
-                      <div className="w-16 h-16 rounded-full bg-[#00D4AA]/10 flex items-center justify-center mx-auto mb-4">
-                        <Shield className="h-8 w-8 text-[#00D4AA]" />
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                        <Shield className="h-8 w-8 text-primary" />
                       </div>
-                      <h3 className="text-lg font-semibold text-white mb-2">Confirm Transaction</h3>
+                      <h3 className="text-lg font-semibold text-white mb-2">{t('redeem.confirmTransaction')}</h3>
                       <p className="text-white/60 text-sm">
-                        Please review and confirm your redemption transaction
+                        {t('redeem.confirmTransactionDesc')}
                       </p>
                     </div>
 
                     <div className="p-4 rounded-lg bg-white/5 space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-white/60">Redeem</span>
+                        <span className="text-white/60">{t('redeem.redeemLabel')}</span>
                         <span className="text-white">${redeemValue.toLocaleString()} {asset.symbol}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-white/60">Receive</span>
-                        <span className="text-[#00D4AA] font-semibold">${receiveAmount.toLocaleString()} USDC</span>
+                        <span className="text-white/60">{t('redeem.receiveLabel')}</span>
+                        <span className="text-primary font-semibold">${receiveAmount.toLocaleString()} {t('redeem.receiveToken', 'USDC')}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-white/40">Network Fee</span>
-                        <span className="text-white/60">~$2.50</span>
+                        <span className="text-white/40">{t('redeem.networkFee')}</span>
+                        <span className="text-white/60">{t('redeem.estimatedNetworkFee', '~$2.50')}</span>
                       </div>
                     </div>
 
                     <Button
                       onClick={handleSubmit}
-                      className="w-full h-12 bg-[#00D4AA] hover:bg-[#00B896] text-[#0A0F0D] font-semibold"
+                      className="w-full h-12 bg-primary hover:bg-primary-dark text-bg-dark font-semibold"
                     >
-                      Submit Transaction
+                      {t('redeem.submitTransaction')}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </>
@@ -421,13 +430,13 @@ export default function RedeemPage() {
                 {isSubmitting && (
                   <div className="text-center py-8">
                     <div className="relative w-20 h-20 mx-auto mb-6">
-                      <div className="absolute inset-0 rounded-full border-4 border-[#00D4AA]/20" />
-                      <div className="absolute inset-0 rounded-full border-4 border-[#00D4AA] border-t-transparent animate-spin" />
-                      <Loader2 className="absolute inset-0 m-auto h-8 w-8 text-[#00D4AA] animate-spin" />
+                      <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
+                      <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                      <Loader2 className="absolute inset-0 m-auto h-8 w-8 text-primary animate-spin" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">Processing Redemption</h3>
+                    <h3 className="text-xl font-bold text-white mb-2">{t('redeem.processingRedemption')}</h3>
                     <p className="text-white/60">
-                      Please wait while your transaction is being processed...
+                      {t('redeem.processingDesc')}
                     </p>
                   </div>
                 )}
@@ -439,7 +448,7 @@ export default function RedeemPage() {
         {/* Security Note */}
         <p className="text-center text-white/40 text-xs mt-6 flex items-center justify-center gap-1">
           <Shield className="h-3 w-3" />
-          Secured by blockchain technology. All transactions are irreversible.
+          {t('redeem.securityNote')}
         </p>
       </div>
     </div>

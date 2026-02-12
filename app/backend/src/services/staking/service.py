@@ -1,5 +1,5 @@
 """
-Staking Domain - Business Service
+质押领域 - 业务服务层
 """
 
 from datetime import date, datetime, timedelta, timezone
@@ -7,7 +7,9 @@ from decimal import Decimal
 from typing import List, Optional, Tuple
 
 from falib.utils.config import SETTINGS
+from falib.utils.log import get_logger
 from tortoise.functions import Sum
+from tortoise.transactions import in_transaction
 
 from src.models.staking import (
     BASE_DAILY_RATE,
@@ -36,6 +38,8 @@ from src.shared.schemas.enums import StakingPeriod, StakingStatus, SubscriptionS
 
 # 默认每日基础限额
 DEFAULT_DAILY_LIMIT = Decimal("100000")  # 10万 RWA Token
+
+logger = get_logger("business.staking.service")
 
 # 最小质押金额
 MIN_STAKE_AMOUNT = Decimal("100")
@@ -95,9 +99,9 @@ class StakingService:
     """质押服务"""
 
     @property
-    def environment(self) -> str:
-        """获取当前环境"""
-        return SETTINGS.environment
+    def network(self) -> str:
+        """获取当前网络"""
+        return SETTINGS.network
 
     def _get_multiplier(self, period: int) -> Decimal:
         """获取周期对应的奖励倍数"""
@@ -141,7 +145,7 @@ class StakingService:
         subscription = await Subscription.filter(
             id=data.subscription_id,
             wallet_address=wallet_address.lower(),
-            environment=self.environment,
+            environment=self.network,
         ).first()
 
         if not subscription:
@@ -200,7 +204,7 @@ class StakingService:
         subscription = await Subscription.filter(
             id=data.subscription_id,
             wallet_address=wallet_address.lower(),
-            environment=self.environment,
+            environment=self.network,
         ).first()
 
         if not subscription:
@@ -236,29 +240,32 @@ class StakingService:
             data.amount, data.period, multiplier
         )
 
-        # 创建质押记录
-        staking = await StakingRecord.create(
-            wallet_address=wallet_address.lower(),
-            subscription_id=subscription.id,
-            amount=data.amount,
-            period=data.period,
-            multiplier=multiplier,
-            start_date=start_date,
-            end_date=end_date,
-            expected_rewards=expected_rewards,
-            stake_tx_hash=data.tx_hash,
-            status=StakingStatus.ACTIVE,
-            environment=self.environment,
-        )
+        # 使用事务保护：创建质押记录 + 更新限额 + 顺延认购时间必须原子执行
+        async with in_transaction() as conn:
+            # 创建质押记录
+            staking = await StakingRecord.create(
+                wallet_address=wallet_address.lower(),
+                subscription_id=subscription.id,
+                amount=data.amount,
+                period=data.period,
+                multiplier=multiplier,
+                start_date=start_date,
+                end_date=end_date,
+                expected_rewards=expected_rewards,
+                stake_tx_hash=data.tx_hash,
+                status=StakingStatus.ACTIVE,
+                environment=self.network,
+                using_db=conn,
+            )
 
-        # 更新限额
-        limit.used_limit += data.amount
-        await limit.save()
+            # 更新限额
+            limit.used_limit += data.amount
+            await limit.save(using_db=conn)
 
-        # 顺延认购赎回时间
-        if subscription.status == SubscriptionStatus.ACTIVE:
-            subscription.end_date = subscription.end_date + timedelta(days=data.period)
-            await subscription.save()
+            # 顺延认购赎回时间
+            if subscription.status == SubscriptionStatus.ACTIVE:
+                subscription.end_date = subscription.end_date + timedelta(days=data.period)
+                await subscription.save(using_db=conn)
 
         return await self._to_response(staking)
 
@@ -273,7 +280,7 @@ class StakingService:
         获取用户质押列表
         """
         query = StakingRecord.filter(
-            wallet_address=wallet_address.lower(), environment=self.environment
+            wallet_address=wallet_address.lower(), environment=self.network
         )
 
         if status:
@@ -302,7 +309,7 @@ class StakingService:
         staking = await StakingRecord.filter(
             id=staking_id,
             wallet_address=wallet_address.lower(),
-            environment=self.environment,
+            environment=self.network,
         ).first()
 
         if not staking:
@@ -324,7 +331,7 @@ class StakingService:
         staking = await StakingRecord.filter(
             id=staking_id,
             wallet_address=wallet_address.lower(),
-            environment=self.environment,
+            environment=self.network,
         ).first()
 
         if not staking:
@@ -336,29 +343,32 @@ class StakingService:
         if not staking.is_matured:
             raise BusinessException(code=400, message="Staking has not matured yet")
 
-        # 更新状态
-        staking.status = StakingStatus.UNSTAKED
-        staking.unstake_tx_hash = tx_hash
+        # 使用事务保护：更新质押状态 + 领取奖励 + 恢复认购时间必须原子执行
+        async with in_transaction() as conn:
+            # 更新状态
+            staking.status = StakingStatus.UNSTAKED
+            staking.unstake_tx_hash = tx_hash
 
-        # 自动领取剩余奖励
-        if staking.pending_rewards > 0:
-            await RewardClaim.create(
-                wallet_address=wallet_address.lower(),
-                staking_record=staking,
-                amount=staking.pending_rewards,
-                tx_hash=tx_hash,
-                environment=self.environment,
-            )
-            staking.claimed_rewards = staking.expected_rewards
+            # 自动领取剩余奖励
+            if staking.pending_rewards > 0:
+                await RewardClaim.create(
+                    wallet_address=wallet_address.lower(),
+                    staking_record=staking,
+                    amount=staking.pending_rewards,
+                    tx_hash=tx_hash,
+                    environment=self.network,
+                    using_db=conn,
+                )
+                staking.claimed_rewards = staking.expected_rewards
 
-        await staking.save()
+            await staking.save(using_db=conn)
 
-        # 恢复认购赎回时间
-        if staking.subscription_id:
-            subscription = await Subscription.filter(id=staking.subscription_id).first()
-            if subscription and subscription.original_end_date:
-                subscription.end_date = subscription.original_end_date
-                await subscription.save()
+            # 恢复认购赎回时间
+            if staking.subscription_id:
+                subscription = await Subscription.filter(id=staking.subscription_id).first()
+                if subscription and subscription.original_end_date:
+                    subscription.end_date = subscription.original_end_date
+                    await subscription.save(using_db=conn)
 
         return await self._to_response(staking)
 
@@ -371,7 +381,7 @@ class StakingService:
         staking = await StakingRecord.filter(
             id=staking_id,
             wallet_address=wallet_address.lower(),
-            environment=self.environment,
+            environment=self.network,
         ).first()
 
         if not staking:
@@ -387,18 +397,21 @@ class StakingService:
         if claimable <= 0:
             raise BusinessException(code=400, message="No rewards to claim")
 
-        # 创建领取记录
-        claim = await RewardClaim.create(
-            wallet_address=wallet_address.lower(),
-            staking_record=staking,
-            amount=claimable,
-            tx_hash=tx_hash,
-            environment=self.environment,
-        )
+        # 使用事务保护：创建领取记录 + 更新已领取金额必须原子执行
+        async with in_transaction() as conn:
+            # 创建领取记录
+            claim = await RewardClaim.create(
+                wallet_address=wallet_address.lower(),
+                staking_record=staking,
+                amount=claimable,
+                tx_hash=tx_hash,
+                environment=self.network,
+                using_db=conn,
+            )
 
-        # 更新已领取
-        staking.claimed_rewards += claimable
-        await staking.save()
+            # 更新已领取
+            staking.claimed_rewards += claimable
+            await staking.save(using_db=conn)
 
         return RewardClaimResponse(
             id=claim.id,
@@ -413,7 +426,7 @@ class StakingService:
         获取用户质押统计
         """
         stakings = await StakingRecord.filter(
-            wallet_address=wallet_address.lower(), environment=self.environment
+            wallet_address=wallet_address.lower(), environment=self.network
         )
 
         total_staked = Decimal(0)
@@ -463,7 +476,7 @@ class StakingService:
         today = date.today()
 
         limit = await StakingLimit.filter(
-            date=today, environment=self.environment
+            date=today, environment=self.network
         ).first()
 
         if limit:
@@ -472,7 +485,7 @@ class StakingService:
         # 获取昨日未用限额
         yesterday = today - timedelta(days=1)
         yesterday_limit = await StakingLimit.filter(
-            date=yesterday, environment=self.environment
+            date=yesterday, environment=self.network
         ).first()
 
         carried = Decimal(0)
@@ -485,7 +498,7 @@ class StakingService:
             base_limit=DEFAULT_DAILY_LIMIT,
             carried_limit=carried,
             used_limit=Decimal(0),
-            environment=self.environment,
+            environment=self.network,
         )
 
         return limit
@@ -521,7 +534,7 @@ class StakingService:
         """
         # 计算已分发奖励
         total_claimed = (
-            await RewardClaim.filter(environment=self.environment)
+            await RewardClaim.filter(environment=self.network)
             .annotate(total=Sum("amount"))
             .values_list("total", flat=True)
         )
@@ -532,7 +545,7 @@ class StakingService:
         total_staked = (
             await StakingRecord.filter(
                 status__in=[StakingStatus.ACTIVE, StakingStatus.MATURED],
-                environment=self.environment,
+                environment=self.network,
             )
             .annotate(total=Sum("amount"))
             .values_list("total", flat=True)

@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
 from tortoise.expressions import Q
+from tortoise.transactions import in_transaction
 
 from src.models.kyc import AccountKyc
 from src.models.kyc_audit_log import KycAuditLog
@@ -36,9 +37,9 @@ from src.shared.schemas.enums import (
     KycStatus,
     OnChainSyncStatus,
 )
-from src.shared.services.minio_service import get_minio_service
+from src.shared.common.storage import get_storage_service
 
-logger = get_logger("kyc.admin")
+logger = get_logger("business.admin.kyc_service")
 
 
 async def create_kyc_audit_log(
@@ -53,20 +54,20 @@ async def create_kyc_audit_log(
 
     当 KYC 状态发生变更时，自动调用此函数记录审核日志。
 
-    Args:
+    参数:
         kyc_id: KYC 记录 ID
         action: 操作类型 (submit/review/approve/reject/resubmit/sync/reset)
         actor_address: 操作者钱包地址
         actor_role: 操作者角色 (user/admin/system)
         details: 操作详情 (可选，JSON 格式)
 
-    Returns:
+    返回:
         KycAuditLog: 创建的审核日志记录
 
-    Raises:
+    异常:
         ValueError: 当 kyc_id 对应的 KYC 记录不存在时
 
-    Example:
+    示例:
         >>> await create_kyc_audit_log(
         ...     kyc_id=1,
         ...     action=KycAuditAction.APPROVE,
@@ -103,10 +104,10 @@ class AdminKycService:
     """Admin KYC 服务"""
 
     def __init__(self):
-        self.minio_service = get_minio_service()
+        self.storage = get_storage_service()
 
     @property
-    def environment(self) -> str:
+    def network(self) -> str:
         """获取当前网络环境 (用于过滤 KYC 记录)"""
         return SETTINGS.network
 
@@ -116,15 +117,15 @@ class AdminKycService:
         """
         获取待审核列表
 
-        Args:
+        参数:
             page: 页码
             page_size: 每页数量
 
-        Returns:
+        返回:
             Tuple[List[AccountKyc], int, int]: (列表, 总数, 总页数)
         """
         query = AccountKyc.filter(
-            status=KycStatus.PENDING, network=self.environment
+            status=KycStatus.PENDING, network=self.network
         ).order_by("-created_at")
 
         total = await query.count()
@@ -139,15 +140,15 @@ class AdminKycService:
         """
         按状态获取 KYC 列表
 
-        Args:
+        参数:
             status: KYC 状态 (None 表示全部)
             page: 页码
             page_size: 每页数量
 
-        Returns:
+        返回:
             Tuple[List[AccountKyc], int, int]: (列表, 总数, 总页数)
         """
-        query = AccountKyc.filter(network=self.environment)
+        query = AccountKyc.filter(network=self.network)
 
         if status:
             query = query.filter(status=status)
@@ -168,11 +169,11 @@ class AdminKycService:
 
         处理时间 = (reviewed_at - submitted_at) 转换为分钟
 
-        Args:
+        参数:
             submitted_at: 提交时间
             reviewed_at: 审核时间
 
-        Returns:
+        返回:
             处理时间 (分钟)，如果任一时间为空则返回 None
 
         Requirements Reference: 3.7
@@ -191,10 +192,10 @@ class AdminKycService:
         """
         将 AccountKyc 模型转换为 KycListItem Schema
 
-        Args:
+        参数:
             kyc: AccountKyc 模型实例
 
-        Returns:
+        返回:
             KycListItem Schema 实例
         """
         return KycListItem(
@@ -252,16 +253,16 @@ class AdminKycService:
         - sort_by: submitted_at, risk_score, priority
         - sort_order: asc, desc
 
-        Args:
+        参数:
             query_params: KycListQuery 查询参数
 
-        Returns:
+        返回:
             Tuple[List[KycListItem], int, int]: (列表项, 总数, 总页数)
 
         Requirements Reference: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7
         """
         # 基础查询 - 按当前环境筛选
-        query = AccountKyc.filter(network=self.environment)
+        query = AccountKyc.filter(network=self.network)
 
         # ========== 筛选条件 ==========
 
@@ -350,16 +351,16 @@ class AdminKycService:
         - 审核日志列表
         - 预留字段 (ocr_data, facial_comparison)
 
-        Args:
+        参数:
             kyc_id: KYC ID
 
-        Returns:
+        返回:
             KycDetail 响应对象，如果 KYC 不存在则返回 None
 
         Requirements Reference: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
         """
         # 获取 KYC 记录
-        kyc = await AccountKyc.filter(id=kyc_id, network=self.environment).first()
+        kyc = await AccountKyc.filter(id=kyc_id, network=self.network).first()
         if not kyc:
             return None
 
@@ -399,10 +400,10 @@ class AdminKycService:
         从 AccountKycDocument 关联表获取证件照片，
         并从 AccountKyc 获取自拍照片、人脸图片和活体检测视频。
 
-        Args:
+        参数:
             kyc: AccountKyc 模型实例
 
-        Returns:
+        返回:
             包含 id_front, id_back, selfie, face_image, liveness_video 预签名 URL 的字典
 
         Requirements Reference: 4.3, 1.1, 1.2, 1.3, 1.4
@@ -422,18 +423,18 @@ class AdminKycService:
             for doc in kyc_documents:
                 # 获取证件正面 URL
                 if doc.id_front_url:
-                    documents["id_front"] = await self.minio_service.get_presigned_url(
+                    documents["id_front"] = await self.storage.get_presigned_url(
                         doc.id_front_url
                     )
                 # 获取证件背面 URL
                 if doc.id_back_url:
-                    documents["id_back"] = await self.minio_service.get_presigned_url(
+                    documents["id_back"] = await self.storage.get_presigned_url(
                         doc.id_back_url
                     )
 
             # 获取自拍照片 URL (存储在 AccountKyc 表中)
             if kyc.selfie_url:
-                documents["selfie"] = await self.minio_service.get_presigned_url(
+                documents["selfie"] = await self.storage.get_presigned_url(
                     kyc.selfie_url
                 )
 
@@ -445,7 +446,7 @@ class AdminKycService:
         # 获取人脸图片 URL (存储在 AccountKyc 表中)
         try:
             if kyc.face_image_url:
-                documents["face_image"] = await self.minio_service.get_presigned_url(
+                documents["face_image"] = await self.storage.get_presigned_url(
                     kyc.face_image_url
                 )
         except Exception as e:
@@ -458,7 +459,7 @@ class AdminKycService:
             if kyc.liveness_video_url:
                 documents[
                     "liveness_video"
-                ] = await self.minio_service.get_presigned_url(kyc.liveness_video_url)
+                ] = await self.storage.get_presigned_url(kyc.liveness_video_url)
         except Exception as e:
             logger.warning(
                 f"Failed to generate liveness_video presigned URL for kyc_id={kyc.id}: {e}"
@@ -472,10 +473,10 @@ class AdminKycService:
 
         按 created_at 降序排序 (最新的在前)。
 
-        Args:
+        参数:
             kyc_id: KYC ID
 
-        Returns:
+        返回:
             KycAuditLogEntry 列表
 
         Requirements Reference: 4.4
@@ -502,16 +503,16 @@ class AdminKycService:
         查询指定 KYC 的所有审核日志记录，按 created_at 降序排序 (最新的在前)。
         返回的每条日志包含 action, actor_address, actor_role, details, created_at 字段。
 
-        Args:
+        参数:
             kyc_id: KYC ID
 
-        Returns:
+        返回:
             KycAuditLogEntry 列表，按 created_at 降序排序
 
-        Raises:
+        异常:
             ValueError: 当 kyc_id 对应的 KYC 记录不存在时
 
-        Example:
+        示例:
             >>> service = get_admin_kyc_service()
             >>> logs = await service.get_audit_logs(kyc_id=1)
             >>> for log in logs:
@@ -520,7 +521,7 @@ class AdminKycService:
         Requirements Reference: 7.1, 7.2, 7.3
         """
         # 验证 KYC 记录存在
-        kyc = await AccountKyc.filter(id=kyc_id, network=self.environment).first()
+        kyc = await AccountKyc.filter(id=kyc_id, network=self.network).first()
         if not kyc:
             raise ValueError(f"KYC record with id {kyc_id} not found")
 
@@ -537,13 +538,13 @@ class AdminKycService:
 
         注意: 此方法保留用于向后兼容，推荐使用 get_detail() 方法。
 
-        Args:
+        参数:
             kyc_id: KYC ID
 
-        Returns:
+        返回:
             包含 kyc 和 documents 的字典，或 None
         """
-        kyc = await AccountKyc.filter(id=kyc_id, network=self.environment).first()
+        kyc = await AccountKyc.filter(id=kyc_id, network=self.network).first()
         if not kyc:
             return None
 
@@ -556,14 +557,14 @@ class AdminKycService:
         """
         比较数据库和合约状态
 
-        Args:
+        参数:
             kyc_id: KYC ID
 
-        Returns:
+        返回:
             包含 database 和 on_chain 状态的字典
         """
         # 直接查询 AccountKyc 模型，而不是使用 get_detail()
-        kyc = await AccountKyc.filter(id=kyc_id, network=self.environment).first()
+        kyc = await AccountKyc.filter(id=kyc_id, network=self.network).first()
         if not kyc:
             return None
 
@@ -606,12 +607,12 @@ class AdminKycService:
         """
         获取同步失败的 KYC 列表
 
-        Returns:
+        返回:
             同步失败的 KYC 列表
         """
         return await AccountKyc.filter(
             on_chain_sync_status=OnChainSyncStatus.FAILED,
-            network=self.environment,
+            network=self.network,
         ).order_by("-updated_at")
 
     async def get_stats(self) -> KycStats:
@@ -626,7 +627,7 @@ class AdminKycService:
         - 每日统计 (最近7天)
         - 审核者统计
 
-        Returns:
+        返回:
             KycStats 响应对象
 
         Requirements Reference: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7
@@ -686,13 +687,13 @@ class AdminKycService:
 
         分别查询各状态的数量。
 
-        Returns:
+        返回:
             包含 pending, approved, rejected, failed_sync, total 的字典
 
         Requirements Reference: 6.2
         """
         # 分别查询各状态数量 (Tortoise ORM 聚合查询兼容性更好)
-        base_query = AccountKyc.filter(network=self.environment)
+        base_query = AccountKyc.filter(network=self.network)
 
         pending = await base_query.filter(status=KycStatus.PENDING).count()
         approved = await base_query.filter(status=KycStatus.APPROVED).count()
@@ -720,14 +721,14 @@ class AdminKycService:
         计算已审核记录的平均处理时间和中位数处理时间。
         处理时间 = reviewed_at - submitted_at (分钟)
 
-        Returns:
+        返回:
             包含 avg 和 median 的字典
 
         Requirements Reference: 6.3
         """
         # 获取所有已审核的记录 (有 submitted_at 和 reviewed_at)
         reviewed_records = await AccountKyc.filter(
-            network=self.environment,
+            network=self.network,
             submitted_at__isnull=False,
             reviewed_at__isnull=False,
         ).values("submitted_at", "reviewed_at")
@@ -771,10 +772,10 @@ class AdminKycService:
         - approval_rate = approved / (approved + rejected) * 100
         - resubmit_rate = 重新提交次数 / 总提交次数 * 100
 
-        Args:
+        参数:
             basic_counts: 基础计数统计
 
-        Returns:
+        返回:
             包含 approval_rate 和 resubmit_rate 的字典
 
         Requirements Reference: 6.4
@@ -792,13 +793,13 @@ class AdminKycService:
         # 计算重新提交率
         # 通过审核日志中的 RESUBMIT 操作来统计
         resubmit_count = await KycAuditLog.filter(
-            kyc__network=self.environment,
+            kyc__network=self.network,
             action=KycAuditAction.RESUBMIT,
         ).count()
 
         # 总提交次数 = SUBMIT 操作次数
         submit_count = await KycAuditLog.filter(
-            kyc__network=self.environment,
+            kyc__network=self.network,
             action=KycAuditAction.SUBMIT,
         ).count()
 
@@ -818,7 +819,7 @@ class AdminKycService:
 
         统计各风险等级的 KYC 记录数量。
 
-        Returns:
+        返回:
             风险等级到数量的映射 (如 {"low": 10, "medium": 5, "high": 2, "critical": 0})
 
         Requirements Reference: 6.5
@@ -829,7 +830,7 @@ class AdminKycService:
         distribution = {level.value: 0 for level in RiskLevel}
 
         # 按风险等级分组统计
-        records = await AccountKyc.filter(network=self.environment).values("risk_level")
+        records = await AccountKyc.filter(network=self.network).values("risk_level")
 
         for record in records:
             risk_level = record["risk_level"]
@@ -850,7 +851,7 @@ class AdminKycService:
 
         统计每天的提交、通过、拒绝数量。
 
-        Returns:
+        返回:
             DailyStats 列表 (按日期升序)
 
         Requirements Reference: 6.6
@@ -869,7 +870,7 @@ class AdminKycService:
 
         # 统计提交数量 (按 submitted_at)
         submitted_records = await AccountKyc.filter(
-            network=self.environment,
+            network=self.network,
             submitted_at__gte=datetime_module.datetime.combine(
                 seven_days_ago, datetime_module.time.min
             ),
@@ -887,7 +888,7 @@ class AdminKycService:
 
         # 统计审核数量 (按 reviewed_at)
         reviewed_records = await AccountKyc.filter(
-            network=self.environment,
+            network=self.network,
             reviewed_at__gte=datetime_module.datetime.combine(
                 seven_days_ago, datetime_module.time.min
             ),
@@ -934,14 +935,14 @@ class AdminKycService:
 
         统计每个审核者的审核数量和通过率。
 
-        Returns:
+        返回:
             ReviewerStats 列表 (按审核数量降序)
 
         Requirements Reference: 6.7
         """
         # 获取所有有审核者的记录
         reviewed_records = await AccountKyc.filter(
-            network=self.environment,
+            network=self.network,
             reviewer_address__isnull=False,
         ).values("reviewer_address", "status")
 
@@ -997,7 +998,7 @@ class AdminKycService:
         处理多个 KYC 记录的审核操作，支持批量通过或拒绝。
         采用"尽力而为"策略：遇到单条记录错误时继续处理其他记录。
 
-        Args:
+        参数:
             request: 批量审核请求，包含:
                 - kyc_ids: KYC ID 列表
                 - action: 审核操作 (approve/reject)
@@ -1006,7 +1007,7 @@ class AdminKycService:
                 - is_accredited: 是否为合格投资者 (仅 approve 时有效)
             reviewer_address: 审核者钱包地址
 
-        Returns:
+        返回:
             BatchReviewResponse: 包含处理结果统计和各条记录的处理状态
 
         Requirements Reference: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
@@ -1040,7 +1041,7 @@ class AdminKycService:
             try:
                 # 获取 KYC 记录
                 kyc = await AccountKyc.filter(
-                    id=kyc_id, network=self.environment
+                    id=kyc_id, network=self.network
                 ).first()
 
                 if not kyc:
@@ -1067,65 +1068,67 @@ class AdminKycService:
                     failed_count += 1
                     continue
 
-                # 执行审核操作
-                kyc.reviewed_at = datetime.now(timezone.utc)
-                kyc.reviewer_address = reviewer_address.lower()
+                # 使用事务保护：KYC 状态更新 + 审计日志创建必须原子执行
+                async with in_transaction() as conn:
+                    # 执行审核操作
+                    kyc.reviewed_at = datetime.now(timezone.utc)
+                    kyc.reviewer_address = reviewer_address.lower()
 
-                if request.action == "approve":
-                    # 通过审核 (Requirement 5.2, 5.4)
-                    kyc.status = KycStatus.APPROVED
-                    kyc.is_accredited = request.is_accredited
+                    if request.action == "approve":
+                        # 通过审核 (Requirement 5.2, 5.4)
+                        kyc.status = KycStatus.APPROVED
+                        kyc.is_accredited = request.is_accredited
 
-                    # 链上准入由前端 MetaMask 发起 (与单条审核一致)
-                    # 此处仅标记为 PENDING，等待前端调用 record_admission
-                    kyc.on_chain_sync_status = OnChainSyncStatus.PENDING
-                    kyc.on_chain_error = None
+                        # 链上准入由前端 MetaMask 发起 (与单条审核一致)
+                        # 此处仅标记为 PENDING，等待前端调用 record_admission
+                        kyc.on_chain_sync_status = OnChainSyncStatus.PENDING
+                        kyc.on_chain_error = None
 
-                    # 创建审核日志 (Requirement 5.7)
-                    await create_kyc_audit_log(
-                        kyc_id=kyc_id,
-                        action=KycAuditAction.APPROVE,
-                        actor_address=reviewer_address,
-                        actor_role="admin",
-                        details={
-                            "is_accredited": request.is_accredited,
-                            "batch_review": True,
-                            "on_chain_sync_status": kyc.on_chain_sync_status.value
-                            if kyc.on_chain_sync_status
-                            else None,
-                        },
-                    )
+                        # 创建审核日志 (Requirement 5.7)
+                        await create_kyc_audit_log(
+                            kyc_id=kyc_id,
+                            action=KycAuditAction.APPROVE,
+                            actor_address=reviewer_address,
+                            actor_role="admin",
+                            details={
+                                "is_accredited": request.is_accredited,
+                                "batch_review": True,
+                                "on_chain_sync_status": kyc.on_chain_sync_status.value
+                                if kyc.on_chain_sync_status
+                                else None,
+                            },
+                        )
 
-                else:
-                    # 拒绝审核 (Requirement 5.2, 5.3)
-                    kyc.status = KycStatus.REJECTED
-                    # 组合拒绝原因
-                    reject_reason_parts: List[str] = []
-                    if request.reject_reason_code:
-                        reject_reason_parts.append(request.reject_reason_code)
-                    if request.reject_reason:
-                        reject_reason_parts.append(request.reject_reason)
-                    kyc.reject_reason = (
-                        ": ".join(reject_reason_parts) if reject_reason_parts else None
-                    )
-                    kyc.is_accredited = False
-                    kyc.on_chain_sync_status = OnChainSyncStatus.NOT_REQUIRED
+                    else:
+                        # 拒绝审核 (Requirement 5.2, 5.3)
+                        kyc.status = KycStatus.REJECTED
+                        # 组合拒绝原因
+                        reject_reason_parts: List[str] = []
+                        if request.reject_reason_code:
+                            reject_reason_parts.append(request.reject_reason_code)
+                        if request.reject_reason:
+                            reject_reason_parts.append(request.reject_reason)
+                        kyc.reject_reason = (
+                            ": ".join(reject_reason_parts) if reject_reason_parts else None
+                        )
+                        kyc.is_accredited = False
+                        kyc.on_chain_sync_status = OnChainSyncStatus.NOT_REQUIRED
 
-                    # 创建审核日志 (Requirement 5.7)
-                    await create_kyc_audit_log(
-                        kyc_id=kyc_id,
-                        action=KycAuditAction.REJECT,
-                        actor_address=reviewer_address,
-                        actor_role="admin",
-                        details={
-                            "reject_reason_code": request.reject_reason_code,
-                            "reject_reason": request.reject_reason,
-                            "batch_review": True,
-                        },
-                    )
+                        # 创建审核日志 (Requirement 5.7)
+                        await create_kyc_audit_log(
+                            kyc_id=kyc_id,
+                            action=KycAuditAction.REJECT,
+                            actor_address=reviewer_address,
+                            actor_role="admin",
+                            details={
+                                "reject_reason_code": request.reject_reason_code,
+                                "reject_reason": request.reject_reason,
+                                "batch_review": True,
+                            },
+                        )
 
-                # 保存 KYC 记录
-                await kyc.save()
+                    # 保存 KYC 记录
+                    await kyc.save(using_db=conn)
 
                 # 记录成功
                 results.append(

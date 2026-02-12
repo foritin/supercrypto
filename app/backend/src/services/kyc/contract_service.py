@@ -20,11 +20,11 @@ from falib.utils.log import get_logger
 from src.models.account import Account
 from src.shared.common.chain_logger import ChainLogger
 from src.shared.common.metrics import start_timer
-from src.shared.schemas.enums import NetType
+from src.shared.schemas.enums import Network
 from src.shared.schemas.enums.contract import ContractScope, ContractType
 
-logger = get_logger("kyc.contract")
-chain_log = ChainLogger("kyc.contract")
+logger = get_logger("business.kyc.contract")
+chain_log = ChainLogger("business.kyc.contract")
 
 # 本地 ABI 文件目录 (fallback)
 LOCAL_ABI_PATH = Path(__file__).parent.parent.parent.parent / ".build" / "abi"
@@ -62,13 +62,13 @@ class KycContractService:
 
         env = SETTINGS.environment
 
-        # 环境映射到 NetType
+        # 环境映射到 Network 枚举
         net_type_map = {
-            "hardhat": NetType.LOCAL,
-            "sepolia": NetType.TEST,
-            "mainnet": NetType.MAIN,
+            "hardhat": Network.HARDHAT,
+            "sepolia": Network.SEPOLIA,
+            "mainnet": Network.ETHEREUM,
         }
-        net_type = net_type_map.get(env, NetType.LOCAL)
+        net_type = net_type_map.get(env, Network.HARDHAT)
 
         admin = await Account.filter(tag="admin", network=net_type).first()
         if not admin:
@@ -91,7 +91,7 @@ class KycContractService:
             self._deployment = await ContractDeployment.filter(
                 scope=ContractScope.GLOBAL,
                 contract_type=ContractType.KYC,
-                network=SETTINGS.NETWORK,
+                network=SETTINGS.network,
                 status=ContractStatus.ACTIVE,
             ).first()
 
@@ -192,16 +192,16 @@ class KycContractService:
         """
         调用合约 addInvestor()
 
-        Args:
+        参数:
             investor_address: 投资者地址
             country_code: 国家代码 (2 字符)
             is_accredited: 是否为合格投资者
             wait_confirmation: 是否等待确认
 
-        Returns:
+        返回:
             Tuple[str, bool]: (tx_hash, success)
 
-        Raises:
+        异常:
             ValueError: Admin 不是 verifier
         """
         contract = await self._get_contract()
@@ -327,10 +327,10 @@ class KycContractService:
         """
         查询合约中的 KYC 状态
 
-        Args:
+        参数:
             investor_address: 投资者地址
 
-        Returns:
+        返回:
             bool: 是否已验证
         """
         contract = await self._get_contract()
@@ -342,10 +342,10 @@ class KycContractService:
         """
         获取投资者完整信息
 
-        Args:
+        参数:
             investor_address: 投资者地址
 
-        Returns:
+        返回:
             dict: 投资者信息，如果不存在返回 None
         """
         contract = await self._get_contract()

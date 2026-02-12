@@ -1,5 +1,5 @@
 """
-Contract Sync Service - 合约同步与主合约管理服务
+合约同步与主合约管理服务
 _Requirements: 3.1_
 
 负责合约记录更新和主合约标记管理
@@ -14,27 +14,27 @@ from src.models.contracts.contract_deployment import ContractDeployment
 from src.shared.schemas.enums import ContractScope, ErrorCode
 from src.shared.common.exceptions import BusinessException
 
-logger = get_logger("contract.sync_service")
+logger = get_logger("business.contract.sync")
 
 
 class ContractSyncService:
     """合约同步与主合约管理服务"""
 
     def __init__(self, network: Optional[str] = None):
-        self.network = network or SETTINGS.NETWORK
+        self.network = network or SETTINGS.network
 
     async def update_registry_record(self, contract_name: str, address: str) -> ContractDeployment:
         """
         手动更新本地合约记录
 
-        Args:
+        参数:
             contract_name: 合约名称
             address: 新的合约地址
 
-        Returns:
+        返回:
             更新后的合约对象
 
-        Raises:
+        异常:
             Exception: 合约不存在
         """
         contract = await ContractDeployment.filter(
@@ -57,13 +57,13 @@ class ContractSyncService:
         2. 合约必须是 PROJECT scope（只有项目专属合约可以设为主合约）
         3. 项目不能已有主合约（每个项目只能有一个主合约）
 
-        Args:
+        参数:
             contract_id: 合约 ID
 
-        Returns:
+        返回:
             更新后的合约对象
 
-        Raises:
+        异常:
             BusinessException: 合约不存在、scope 不正确、或项目已有主合约
         """
         # 1. 验证合约存在
@@ -119,13 +119,13 @@ class ContractSyncService:
         1. 合约必须存在
         2. 合约必须是当前的主合约（is_primary=True）
 
-        Args:
+        参数:
             contract_id: 合约 ID
 
-        Returns:
+        返回:
             更新后的合约对象
 
-        Raises:
+        异常:
             BusinessException: 合约不存在或合约不是主合约
         """
         # 1. 验证合约存在

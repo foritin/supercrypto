@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { Globe } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { SUPPORTED_LANGUAGES, LANGUAGE_NAMES, type SupportedLanguage } from '@/config/i18n'
+import { SUPPORTED_LANGUAGES, LANGUAGE_NAMES, type SupportedLanguage } from '@/providers/i18n-provider'
 import {
   DropdownMenu,
   DropdownMenuTrigger,

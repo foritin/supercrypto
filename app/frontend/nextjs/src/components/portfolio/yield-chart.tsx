@@ -77,7 +77,7 @@ const timeRanges: { value: TimeRange; label: string }[] = [
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload || payload.length === 0) return null;
   return (
-    <div className="glass border border-[#00D4AA]/30 rounded-xl p-4 shadow-xl">
+    <div className="glass border border-primary/30 rounded-xl p-4 shadow-xl">
       <p className="text-white/60 text-sm mb-2">{label}</p>
       <div className="space-y-2">
         {payload.map((entry: any, index: number) => (
@@ -131,17 +131,17 @@ export function YieldChart({
   };
 
   return (
-    <Card className={cn('glass border-[#00D4AA]/10 p-6', className)}>
+    <Card className={cn('glass border-primary/10 p-6', className)}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-[#00D4AA]" />
+            <TrendingUp className="h-5 w-5 text-primary" />
             {title}
           </h3>
           {stats && (
             <div className="flex items-center gap-4 mt-1">
               <span className="text-white/60 text-sm">
-                Current: <span className="text-[#00D4AA] font-semibold">${stats.currentValue.toLocaleString()}</span>
+                Current: <span className="text-primary font-semibold">${stats.currentValue.toLocaleString()}</span>
               </span>
               <span className="text-white/60 text-sm">
                 Yield: <span className="text-green-400 font-semibold">+{stats.yieldPercentage.toFixed(2)}%</span>
@@ -159,7 +159,7 @@ export function YieldChart({
               className={cn(
                 'text-xs px-3 py-1 h-7',
                 timeRange === range.value
-                  ? 'bg-[#00D4AA]/20 text-[#00D4AA]'
+                  ? 'bg-primary/20 text-primary'
                   : 'text-white/60 hover:text-white hover:bg-white/10'
               )}
             >
@@ -212,7 +212,7 @@ export function YieldChart({
           <div className="text-center">
             <p className="text-white/50 text-xs mb-1">Total Invested</p>
             <p className="text-white font-semibold flex items-center justify-center gap-1">
-              <DollarSign className="h-3.5 w-3.5 text-[#00D4AA]" />
+              <DollarSign className="h-3.5 w-3.5 text-primary" />
               50,000
             </p>
           </div>
@@ -225,7 +225,7 @@ export function YieldChart({
           </div>
           <div className="text-center">
             <p className="text-white/50 text-xs mb-1">APY</p>
-            <p className="text-[#00D4AA] font-semibold">~12.5%</p>
+            <p className="text-primary font-semibold">~12.5%</p>
           </div>
         </div>
       )}

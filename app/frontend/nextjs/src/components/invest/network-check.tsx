@@ -88,12 +88,12 @@ export function NetworkCheck({ requiredChainId, children }: NetworkCheckProps) {
     const targetChain = availableChains.find((c) => c.id === requiredChainId);
     
     return (
-      <Alert className="bg-[#00D4AA]/10 border-[#00D4AA]/30">
-        <Loader2 className="h-4 w-4 text-[#00D4AA] animate-spin" />
-        <AlertTitle className="text-[#00D4AA]">
+      <Alert className="bg-primary/10 border-primary/30">
+        <Loader2 className="h-4 w-4 text-primary animate-spin" />
+        <AlertTitle className="text-primary">
           {t('network.switching', 'Switching Network')}
         </AlertTitle>
-        <AlertDescription className="text-[#00D4AA]/80">
+        <AlertDescription className="text-primary/80">
           {t('network.autoSwitching', 'Automatically switching to {{chain}}...', {
             chain: targetChain?.name || 'required network',
           })}
@@ -104,12 +104,12 @@ export function NetworkCheck({ requiredChainId, children }: NetworkCheckProps) {
 
   return (
     <div className="space-y-4">
-      <Alert className="bg-[#00D4AA]/10 border-[#00D4AA]/30">
-        <CheckCircle className="h-4 w-4 text-[#00D4AA]" />
-        <AlertTitle className="text-[#00D4AA]">
+      <Alert className="bg-primary/10 border-primary/30">
+        <CheckCircle className="h-4 w-4 text-primary" />
+        <AlertTitle className="text-primary">
           {t('network.connected', 'Connected')}
         </AlertTitle>
-        <AlertDescription className="text-[#00D4AA]/80">
+        <AlertDescription className="text-primary/80">
           {t('network.currentNetwork', 'Current network: {{network}}', {
             network: currentChainName,
           })}

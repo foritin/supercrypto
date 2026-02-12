@@ -13,8 +13,7 @@ import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'ax
 import { getJwtToken, clearAuthData } from '@/utils/auth'
 import { refreshAccessToken } from '@/services/auth'
 
-// API Base URL - can be configured via environment
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+import { API_BASE_URL } from '@/constants/api'
 
 /**
  * API Error

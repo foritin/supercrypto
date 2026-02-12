@@ -2,16 +2,22 @@
 公开认证路由 - 登录、登出、刷新令牌
 
 路由前缀: /api/v1/public/auth
+
+安全策略:
+- access token 通过 JSON 响应返回，前端仅在内存中保持
+- refresh token 通过 httpOnly cookie 设置，前端无法通过 JS 访问
+- 页面刷新时通过 /auth/refresh 端点（读取 cookie）换取新 access token
 """
 
 import datetime
+from typing import Optional
 
 from falib.utils.config import SETTINGS
 from falib.utils.handlers import create_success_response
-from fastapi import APIRouter, HTTPException, Request, status
+from falib.utils.log import get_logger
+from fastapi import APIRouter, Cookie, HTTPException, Request, Response, status
 
 from src.services.auth.schemas import (
-    LogoutRequest,
     RefreshTokenRequest,
     TokenRequest,
     TokenResponse,
@@ -25,6 +31,11 @@ from src.shared.security import (
 )
 from src.shared.services import session_service
 
+logger = get_logger("business.api.auth")
+
+# refresh token cookie 名称
+REFRESH_TOKEN_COOKIE = "supercrypto_refresh_token"
+
 router = APIRouter()
 
 
@@ -34,12 +45,13 @@ router = APIRouter()
 async def login(
     data: TokenRequest,
     request: Request,
+    response: Response,
 ):
     """
     登录获取令牌
 
     - **address**: 钱包地址
-    - **signature**: 钱包签名 (对 "ApprovePlatformAccess" 消息的签名)
+    - **signature**: 钱包签名 (对 "SlimCryptoAccess" 消息的签名)
 
     签名验证流程：
     1. 前端使用 MetaMask 对固定消息进行签名
@@ -47,7 +59,7 @@ async def login(
     3. 验证通过后颁发 JWT token
     4. 创建 Redis 会话记录
     """
-    if data.backdoor and data.backdoor == SETTINGS.BACKDOOR:
+    if SETTINGS.environment in ("dev", "test") and data.backdoor and data.backdoor == SETTINGS.BACKDOOR:
         pass
     else:
         # 验证签名
@@ -96,30 +108,42 @@ async def login(
     access_token = create_access_token(token_data, expires_delta=expire)
     new_refresh_token = create_refresh_token(token_data, expires_delta=expire)
 
-    response = TokenResponse(
+    response_data = TokenResponse(
         access_token=access_token,
         refresh_token=new_refresh_token,
         token_type="Bearer",
         expires_in_mins=expires_in_mins,
     )
-    return create_success_response(object_data=response)
+
+    # 通过 httpOnly cookie 设置 refresh token，前端 JS 无法访问
+    _set_refresh_cookie(response, new_refresh_token, expires_in_mins)
+
+    return create_success_response(object_data=response_data)
 
 
 @router.post("/refresh", summary="刷新令牌", description="使用刷新令牌获取新的访问令牌")
-async def refresh_token_api(data: RefreshTokenRequest):
+async def refresh_token_api(
+    response: Response,
+    data: Optional[RefreshTokenRequest] = None,
+    supercrypto_refresh_token: Optional[str] = Cookie(None),
+):
     """
     刷新令牌
 
-    - **refresh_token**: 刷新令牌
+    支持两种方式提供 refresh token:
+    1. httpOnly cookie（推荐，页面刷新时自动携带）
+    2. 请求体中的 refresh_token 字段（向后兼容）
 
     返回：
     - 成功：新的 access_token 和 refresh_token
     - 失败 401 "refresh_token_expired"：需要断开 MetaMask 重新登录
     """
-    try:
-        new_access_token, new_refresh_token = refresh_tokens(data.refresh_token)
-    except RefreshTokenExpiredException:
-        # Refresh Token 过期 - 前端应断开 MetaMask 重新登录
+    # 优先从 cookie 读取，其次从请求体读取
+    refresh_token_value = supercrypto_refresh_token
+    if not refresh_token_value and data and data.refresh_token:
+        refresh_token_value = data.refresh_token
+
+    if not refresh_token_value:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="refresh_token_expired",
@@ -129,46 +153,58 @@ async def refresh_token_api(data: RefreshTokenRequest):
             },
         )
 
-    response = TokenResponse(
+    try:
+        new_access_token, new_refresh_token = refresh_tokens(refresh_token_value)
+    except RefreshTokenExpiredException:
+        # Refresh Token 过期 - 清除 cookie，前端应断开 MetaMask 重新登录
+        _clear_refresh_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="refresh_token_expired",
+            headers={
+                "WWW-Authenticate": "Bearer",
+                "X-Token-Status": "refresh_expired",
+            },
+        )
+
+    response_data = TokenResponse(
         access_token=new_access_token,
         refresh_token=new_refresh_token,
         token_type="Bearer",
         expires_in_mins=SETTINGS.REFRESH_TOKEN_EXPIRE_MINUTES,
     )
-    return create_success_response(object_data=response)
 
-
-@router.post("/logout", summary="登出", description="用户登出，清理会话并失效所有token")
-async def logout(data: LogoutRequest):
-    """
-    登出
-
-    - **wallet_address**: 钱包地址
-
-    清理：
-    1. 递增 token 版本号（使所有设备的 token 立即失效）
-    2. 清理所有会话数据
-
-    Token 版本号机制确保：
-    - 所有已颁发的 access_token 和 refresh_token 立即失效
-    - 用户需要重新签名登录获取新 token
-    """
-    wallet_address = data.wallet_address.lower()
-
-    # 递增 token 版本号（使所有 token 失效）
-    new_version, affected_count = await session_service.increment_token_version(
-        wallet_address
+    # 更新 httpOnly cookie 中的 refresh token
+    _set_refresh_cookie(
+        response, new_refresh_token, SETTINGS.REFRESH_TOKEN_EXPIRE_MINUTES
     )
 
-    # 清理所有会话
-    cleared_count = await session_service.clear_user_sessions(wallet_address)
+    return create_success_response(object_data=response_data)
 
-    return create_success_response(
-        object_data={
-            "wallet_address": wallet_address,
-            "new_token_version": new_version,
-            "invalidated_tokens": affected_count,
-            "cleared_sessions": cleared_count,
-        },
-        msg="Logout successful. All tokens have been invalidated.",
+
+def _set_refresh_cookie(
+    response: Response, refresh_token: str, expires_in_mins: int
+) -> None:
+    """设置 httpOnly refresh token cookie"""
+    is_production = SETTINGS.environment == "production"
+    response.set_cookie(
+        key=REFRESH_TOKEN_COOKIE,
+        value=refresh_token,
+        httponly=True,
+        secure=is_production,  # production 环境强制 HTTPS
+        samesite="lax",
+        max_age=expires_in_mins * 60,
+        path="/api/v1/public/auth",  # 仅在 auth 路径下发送 cookie
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    """清除 refresh token cookie"""
+    is_production = SETTINGS.environment == "production"
+    response.delete_cookie(
+        key=REFRESH_TOKEN_COOKIE,
+        httponly=True,
+        secure=is_production,
+        samesite="lax",
+        path="/api/v1/public/auth",
     )

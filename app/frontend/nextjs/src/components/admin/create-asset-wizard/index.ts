@@ -5,19 +5,19 @@
  */
 
 // 主组件
-export { CreateAssetWizard } from './CreateAssetWizard'
+export { CreateAssetWizard } from './create-asset-wizard'
 
 // 步骤指示器组件
-export { StepIndicator } from './StepIndicator'
+export { StepIndicator } from './step-indicator'
 
 // 步骤组件
-export { BasicInfoStep, createBasicInfoSchema, type BasicInfoFormValues } from './steps/BasicInfoStep'
-export { FinancialStep, createFinancialSchema, type FinancialFormValues } from './steps/FinancialStep'
-export { MediaStep } from './steps/MediaStep'
-export { PreviewStep } from './steps/PreviewStep'
+export { BasicInfoStep, createBasicInfoSchema, type BasicInfoFormValues } from './steps/basic-info-step'
+export { FinancialStep, createFinancialSchema, type FinancialFormValues } from './steps/financial-step'
+export { MediaStep } from './steps/media-step'
+export { PreviewStep } from './steps/preview-step'
 
 // 预览组件
-export { AssetCardPreview } from './AssetCardPreview'
+export { AssetCardPreview } from './asset-card-preview'
 
 // Context 和 Hooks
 export { 
@@ -28,7 +28,7 @@ export {
   useCanProceed,
   useIsFirstStep,
   useIsLastStep,
-} from './WizardContext'
+} from './wizard-context'
 
 // 类型导出
 export type {

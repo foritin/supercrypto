@@ -47,7 +47,7 @@ export function NetworkSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         align="end" 
-        className="w-48 bg-[#111815] border border-[#00D4AA]/20 rounded-lg shadow-xl p-1"
+        className="w-48 bg-[#111815] border border-primary/20 rounded-lg shadow-xl p-1"
       >
         {supportedChains.map((chain) => (
           <DropdownMenuItem
@@ -55,14 +55,14 @@ export function NetworkSwitcher() {
             onClick={() => switchToChain(chain.id)}
             className={`px-3 py-2 text-sm rounded-md cursor-pointer transition-colors ${
               chain.id === chainId
-                ? 'bg-[#00D4AA]/20 text-[#00D4AA]'
+                ? 'bg-primary/20 text-primary'
                 : 'text-white/80 hover:bg-white/10 hover:text-white'
             }`}
           >
             <div className="flex items-center justify-between w-full">
               <span>{chain.name}</span>
               {chain.id === chainId && (
-                <span className="h-2 w-2 rounded-full bg-[#00D4AA]" />
+                <span className="h-2 w-2 rounded-full bg-primary" />
               )}
             </div>
           </DropdownMenuItem>

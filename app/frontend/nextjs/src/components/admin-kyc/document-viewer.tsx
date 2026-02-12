@@ -152,12 +152,12 @@ export function DocumentViewer({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className={`fixed inset-0 z-50 bg-[#0a0f0d]/95 backdrop-blur-sm ${
+        className={`fixed inset-0 z-50 bg-bg-dark/95 backdrop-blur-sm ${
           isFullscreen ? "" : "p-4 md:p-8"
         }`}
       >
         {/* Header */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-[#0a0f0d] to-transparent">
+        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-bg-dark to-transparent">
           <div className="flex items-center gap-4">
             <h3 className="text-lg font-semibold text-white">
               {compareMode ? "文档对比" : currentDoc.label}
@@ -320,7 +320,7 @@ export function DocumentViewer({
         </div>
 
         {/* Bottom Toolbar */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0a0f0d] to-transparent">
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-bg-dark to-transparent">
           <div className="flex items-center justify-center gap-4 flex-wrap">
             {/* Navigation */}
             {!compareMode && documents.length > 1 && (

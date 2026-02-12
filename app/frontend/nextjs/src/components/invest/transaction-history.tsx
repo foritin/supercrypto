@@ -2,9 +2,11 @@
 
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useChainId } from 'wagmi';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTransactionStore, type Transaction, type TransactionStatus } from '@/stores/transaction-store';
+import { getExplorerUrl } from '@/lib/utils';
 import { 
   ExternalLink, 
   RefreshCw, 
@@ -35,7 +37,7 @@ const statusConfig: Record<TransactionStatus, { icon: React.ReactNode; color: st
   },
   success: {
     icon: <CheckCircle className="h-4 w-4" />,
-    color: 'text-[#00D4AA]',
+    color: 'text-primary',
     label: 'Success',
   },
   failed: {
@@ -62,11 +64,11 @@ const typeLabels: Record<string, string> = {
 };
 
 function TransactionItem({ tx }: { tx: Transaction }) {
-  const { t } = useTranslation();
+  const chainId = useChainId();
   const status = statusConfig[tx.status];
   
   return (
-    <div className="p-4 rounded-lg bg-white/5 border border-white/10 hover:border-[#00D4AA]/30 transition-colors">
+    <div className="p-4 rounded-lg bg-white/5 border border-white/10 hover:border-primary/30 transition-colors">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -86,7 +88,7 @@ function TransactionItem({ tx }: { tx: Transaction }) {
           <div className="flex items-center gap-4 text-xs text-white/40">
             <span>{formatDistanceToNow(tx.createdAt, { addSuffix: true })}</span>
             {tx.tokenAmount && (
-              <span className="text-[#00D4AA]">
+              <span className="text-primary">
                 {tx.tokenAmount} {tx.tokenSymbol}
               </span>
             )}
@@ -94,10 +96,10 @@ function TransactionItem({ tx }: { tx: Transaction }) {
         </div>
         
         <a
-          href={`https://etherscan.io/tx/${tx.hash}`}
+          href={getExplorerUrl(chainId, 'tx', tx.hash) || '#'}
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-[#00D4AA] transition-colors"
+          className="shrink-0 p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-primary transition-colors"
         >
           <ExternalLink className="h-4 w-4" />
         </a>
@@ -138,7 +140,7 @@ export function TransactionHistory({ limit = 10, showFilters = true }: Transacti
 
   if (allTransactions.length === 0) {
     return (
-      <Card className="p-8 glass border-[#00D4AA]/20 text-center">
+      <Card className="p-8 glass border-primary/20 text-center">
         <Clock className="h-12 w-12 text-white/20 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-white mb-2">
           {t('history.noTransactions', 'No Transactions Yet')}
@@ -151,7 +153,7 @@ export function TransactionHistory({ limit = 10, showFilters = true }: Transacti
   }
 
   return (
-    <Card className="glass border-[#00D4AA]/20">
+    <Card className="glass border-primary/20">
       {/* Header */}
       <div className="p-6 border-b border-white/10">
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -172,7 +174,7 @@ export function TransactionHistory({ limit = 10, showFilters = true }: Transacti
                 <select
                   value={filter}
                   onChange={(e) => setFilter(e.target.value as TransactionStatus | 'all')}
-                  className="appearance-none bg-white/5 border border-white/10 rounded-lg px-4 py-2 pr-10 text-sm text-white focus:outline-none focus:border-[#00D4AA]/50"
+                  className="appearance-none bg-white/5 border border-white/10 rounded-lg px-4 py-2 pr-10 text-sm text-white focus:outline-none focus:border-primary/50"
                 >
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>

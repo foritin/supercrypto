@@ -22,7 +22,7 @@ from src.shared.common.exceptions import ConflictException, NotFoundException
 from src.shared.common.utils import calculate_total_pages
 from src.shared.schemas.enums.audit import TransactionAuditStatus, TransactionAuditType
 
-logger = get_logger("audit.transaction")
+logger = get_logger("business.transaction.service")
 
 
 class TransactionAuditService:
@@ -34,9 +34,9 @@ class TransactionAuditService:
     """
 
     @property
-    def environment(self) -> str:
-        """当前环境"""
-        return getattr(SETTINGS, "ENVIRONMENT", "hardhat")
+    def network(self) -> str:
+        """获取当前网络"""
+        return SETTINGS.network
 
     async def record_transaction(
         self,
@@ -69,7 +69,7 @@ class TransactionAuditService:
         """
         记录交易
 
-        Args:
+        参数:
             tx_hash: 交易哈希
             chain_id: 链ID
             network: 网络名称
@@ -92,10 +92,10 @@ class TransactionAuditService:
             description: 描述
             extra_data: 额外数据
 
-        Returns:
+        返回:
             TransactionAudit: 交易审计记录
 
-        Raises:
+        异常:
             ConflictException: 交易哈希已存在
         """
         # 检查是否已存在
@@ -129,7 +129,7 @@ class TransactionAuditService:
             nonce=nonce,
             description=description,
             extra_data=extra_data,
-            environment=self.environment,
+            environment=self.network,
         )
 
         logger.info(
@@ -161,7 +161,7 @@ class TransactionAuditService:
         - updated_at
         - confirmed_at
 
-        Args:
+        参数:
             tx_hash: 交易哈希
             status: 新状态
             block_number: 区块高度
@@ -170,10 +170,10 @@ class TransactionAuditService:
             effective_gas_price: 实际Gas价格
             error_message: 错误信息
 
-        Returns:
+        返回:
             TransactionAudit: 更新后的交易记录
 
-        Raises:
+        异常:
             NotFoundException: 交易不存在
         """
         tx = await TransactionAudit.get_or_none(tx_hash=tx_hash)
@@ -227,7 +227,7 @@ class TransactionAuditService:
         """
         查询交易记录
 
-        Args:
+        参数:
             chain_id: 链ID
             from_address: 发送方地址
             to_address: 接收方地址
@@ -240,7 +240,7 @@ class TransactionAuditService:
             page: 页码
             page_size: 每页数量
 
-        Returns:
+        返回:
             Tuple[List[TransactionAuditResponse], int, int]: (交易列表, 总数, 总页数)
         """
         query = TransactionAudit.all()
@@ -297,13 +297,13 @@ class TransactionAuditService:
         """
         根据哈希获取交易
 
-        Args:
+        参数:
             tx_hash: 交易哈希
 
-        Returns:
+        返回:
             TransactionAuditResponse: 交易记录
 
-        Raises:
+        异常:
             NotFoundException: 交易不存在
         """
         tx = await TransactionAudit.get_or_none(tx_hash=tx_hash)
@@ -319,10 +319,10 @@ class TransactionAuditService:
         """
         获取待确认交易
 
-        Args:
+        参数:
             chain_id: 链ID（可选）
 
-        Returns:
+        返回:
             List[TransactionAuditResponse]: 待确认交易列表
         """
         query = TransactionAudit.filter(status=TransactionAuditStatus.PENDING)
@@ -341,12 +341,12 @@ class TransactionAuditService:
         """
         获取交易统计
 
-        Args:
+        参数:
             chain_id: 链ID（可选）
             start_time: 开始时间
             end_time: 结束时间
 
-        Returns:
+        返回:
             TransactionStats: 统计数据
         """
         from tortoise.functions import Count

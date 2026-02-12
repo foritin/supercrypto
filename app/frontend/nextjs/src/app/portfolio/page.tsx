@@ -1,19 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   DollarSign,
   TrendingUp,
   Clock,
   History,
   Download,
-  ExternalLink,
   Info,
   Copy,
   Wallet,
   PieChart,
   ArrowUpRight,
   ChevronRight,
+  AlertTriangle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAccount } from 'wagmi';
@@ -45,115 +45,25 @@ import {
 } from '@/components/ui/tooltip';
 import { DataTable } from '@/components/ui/data-table';
 import { ColumnDef } from '@tanstack/react-table';
-import { cn } from '@/lib/utils';
+import { cn, truncateAddress } from '@/lib/utils';
 import { RequireWallet } from '@/components/auth';
-
-// Mock data - in production, this comes from API
-interface SubscriptionItem {
-  id: string;
-  asset_name: string;
-  asset_symbol: string;
-  amount: number;
-  apy: number;
-  lock_period: number;
-  days_remaining: number;
-  status: 'active' | 'matured' | 'redeemed';
-  is_matured: boolean;
-  expected_interest: number;
-  total_return: number;
-  start_date?: string;
-  end_date?: string;
-  token_type: string;
-}
-
-interface UserStats {
-  total_invested: number;
-  total_value: number;
-  total_earnings: number;
-  active_subscriptions: number;
-}
-
-interface TransactionRecord {
-  id: string;
-  created_at: string;
-  tx_type: string;
-  amount: string;
-  status: string;
-  tx_hash: string;
-  network?: string;
-}
+import { EmptyState } from '@/components/ui/empty-state';
+import { type SubscriptionResponse } from '@/types/subscription';
+import {
+  useSubscriptions,
+  useUserStats,
+  useTransactionHistory,
+  IS_TRANSACTION_MOCK,
+  type PortfolioTransaction,
+} from '@/hooks/use-portfolio';
 
 const TRANSACTION_TYPE_NAMES: Record<string, string> = {
-  subscribe: 'Subscribe',
-  redeem: 'Redeem',
-  stake: 'Stake',
-  unstake: 'Unstake',
-  claim: 'Claim',
+  subscribe: 'portfolio.txTypes.subscribe',
+  redeem: 'portfolio.txTypes.redeem',
+  stake: 'portfolio.txTypes.stake',
+  unstake: 'portfolio.txTypes.unstake',
+  claim: 'portfolio.txTypes.claim',
 };
-
-// Mock data
-const mockSubscriptions: SubscriptionItem[] = [
-  {
-    id: '1',
-    asset_name: 'Premium Real Estate Fund I',
-    asset_symbol: 'PREFI',
-    amount: 50000,
-    apy: 12.5,
-    lock_period: 12,
-    days_remaining: 180,
-    status: 'active',
-    is_matured: false,
-    expected_interest: 6250,
-    total_return: 56250,
-    start_date: '2024-01-15',
-    end_date: '2025-01-15',
-    token_type: 'SuperRWA',
-  },
-  {
-    id: '2',
-    asset_name: 'Gold Reserve Token',
-    asset_symbol: 'GRT',
-    amount: 25000,
-    apy: 8.2,
-    lock_period: 6,
-    days_remaining: 0,
-    status: 'matured',
-    is_matured: true,
-    expected_interest: 1025,
-    total_return: 26025,
-    start_date: '2023-09-01',
-    end_date: '2024-03-01',
-    token_type: 'SuperRWA',
-  },
-];
-
-const mockUserStats: UserStats = {
-  total_invested: 75000,
-  total_value: 82275,
-  total_earnings: 7275,
-  active_subscriptions: 1,
-};
-
-const mockTransactions: TransactionRecord[] = [
-  {
-    id: '1',
-    created_at: '2024-01-15T10:30:00Z',
-    tx_type: 'subscribe',
-    amount: '50000',
-    status: 'confirmed',
-    tx_hash: '0x1234567890abcdef1234567890abcdef12345678',
-    network: 'ethereum',
-  },
-  {
-    id: '2',
-    created_at: '2023-09-01T14:20:00Z',
-    tx_type: 'subscribe',
-    amount: '25000',
-    status: 'confirmed',
-    tx_hash: '0xabcdef1234567890abcdef1234567890abcdef12',
-    network: 'ethereum',
-  },
-];
 
 // Stat Card Component with Glassmorphism
 interface StatCardProps {
@@ -162,19 +72,19 @@ interface StatCardProps {
   precision?: number;
   prefix?: React.ReactNode;
   icon: React.ReactNode;
-  trend?: number;
+  trend?: number | undefined;
   color: 'primary' | 'success' | 'warning' | 'info';
 }
 
 const colorMap = {
-  primary: 'from-[#00D4AA]/20 to-[#00D4AA]/5 border-[#00D4AA]/30',
+  primary: 'from-primary/20 to-primary/5 border-primary/30',
   success: 'from-green-500/20 to-green-500/5 border-green-500/30',
   warning: 'from-yellow-500/20 to-yellow-500/5 border-yellow-500/30',
   info: 'from-blue-500/20 to-blue-500/5 border-blue-500/30',
 };
 
 const iconColorMap = {
-  primary: 'text-[#00D4AA]',
+  primary: 'text-primary',
   success: 'text-green-400',
   warning: 'text-yellow-400',
   info: 'text-blue-400',
@@ -225,57 +135,61 @@ function StatCard({ title, value, precision = 2, prefix, icon, trend, color }: S
 }
 
 // Empty State Component
-function EmptyState({ message, icon }: { message: string; icon?: React.ReactNode }) {
+// Dev mode mock data indicator
+function MockDataBanner() {
+  const { t } = useTranslation();
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-white/40">
-      <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-        {icon || <PieChart className="h-8 w-8" />}
-      </div>
-      <span>{message}</span>
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-medium">
+      <AlertTriangle className="h-3.5 w-3.5" />
+      <span>⚠️ {t('portfolio.mockDataBanner', '开发模式 - 使用模拟数据')}</span>
     </div>
   );
 }
 
 export default function PortfolioPage() {
   const { t } = useTranslation();
-  const { address, isConnected } = useAccount();
-  const [mounted, setMounted] = useState(false);
+  const { isConnected } = useAccount();
 
-  // Data states
-  const [subscriptions] = useState<SubscriptionItem[]>(mockSubscriptions);
-  const [userStats] = useState<UserStats>(mockUserStats);
-  const [transactions] = useState<TransactionRecord[]>(mockTransactions);
-  const [isLoading] = useState(false);
+  // Data from React Query hooks
+  const {
+    data: subscriptionsData,
+    isLoading: isLoadingSubscriptions,
+  } = useSubscriptions();
+  const {
+    data: userStats,
+    isLoading: isLoadingStats,
+  } = useUserStats();
+  const {
+    data: transactions,
+    isLoading: isLoadingTransactions,
+  } = useTransactionHistory();
+
+  const subscriptions = subscriptionsData?.items ?? [];
   
   // Modal states
-  const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionItem | null>(null);
+  const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionResponse | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const handleViewDetail = useCallback((subscription: SubscriptionItem) => {
+  const handleViewDetail = useCallback((subscription: SubscriptionResponse) => {
     setSelectedSubscription(subscription);
     setDetailModalOpen(true);
   }, []);
 
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
-    // Could add toast notification here
   }, []);
 
   // Subscription table columns
-  const subscriptionColumns: ColumnDef<SubscriptionItem>[] = useMemo(
+  const subscriptionColumns: ColumnDef<SubscriptionResponse>[] = useMemo(
     () => [
       {
         accessorKey: 'asset_name',
         header: t('portfolio.table.asset'),
         cell: ({ row }) => (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#00D4AA]/20 to-[#00D4AA]/5 flex items-center justify-center">
-              <span className="text-[#00D4AA] font-bold text-sm">
-                {row.original.asset_symbol.slice(0, 2)}
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <span className="text-primary font-bold text-sm">
+                {(row.original.asset_symbol ?? row.original.asset_name ?? '??').slice(0, 2)}
               </span>
             </div>
             <div>
@@ -289,7 +203,7 @@ export default function PortfolioPage() {
         accessorKey: 'amount',
         header: t('portfolio.table.amount'),
         cell: ({ row }) => (
-          <span className="font-semibold text-[#00D4AA]">
+          <span className="font-semibold text-primary">
             ${row.original.amount.toLocaleString()}
           </span>
         ),
@@ -298,7 +212,7 @@ export default function PortfolioPage() {
         accessorKey: 'apy',
         header: t('portfolio.table.apy'),
         cell: ({ row }) => (
-          <Badge className="bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30">
+          <Badge className="bg-primary/20 text-primary border-primary/30">
             {row.original.apy}% APY
           </Badge>
         ),
@@ -312,10 +226,10 @@ export default function PortfolioPage() {
           const progressPercent = Math.max(0, 100 - (daysRemaining / (period * 30)) * 100);
           return (
             <div className="flex flex-col gap-1 min-w-[120px]">
-              <span className="text-white/70">{period} months</span>
+              <span className="text-white/70">{t('portfolio.monthsLabel', { months: period })}</span>
               <Progress value={progressPercent} className="h-1" />
               <span className="text-xs text-white/50">
-                {daysRemaining > 0 ? `${daysRemaining} days left` : 'Matured'}
+                {daysRemaining > 0 ? t('portfolio.daysLeftLabel', { days: daysRemaining }) : t('portfolio.matured')}
               </span>
             </div>
           );
@@ -346,9 +260,9 @@ export default function PortfolioPage() {
             variant="ghost"
             size="sm"
             onClick={() => handleViewDetail(row.original)}
-            className="text-white/60 hover:text-[#00D4AA] hover:bg-[#00D4AA]/10"
+            className="text-white/60 hover:text-primary hover:bg-primary/10"
           >
-            Details
+            {t('portfolio.detailsButton')}
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         ),
@@ -358,7 +272,7 @@ export default function PortfolioPage() {
   );
 
   // Transaction table columns
-  const transactionColumns: ColumnDef<TransactionRecord>[] = useMemo(
+  const transactionColumns: ColumnDef<PortfolioTransaction>[] = useMemo(
     () => [
       {
         accessorKey: 'created_at',
@@ -374,7 +288,7 @@ export default function PortfolioPage() {
         header: t('portfolio.txTable.type'),
         cell: ({ row }) => {
           const type = row.original.tx_type;
-          const colorMap: Record<string, string> = {
+          const txColorMap: Record<string, string> = {
             subscribe: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
             redeem: 'bg-green-500/20 text-green-400 border-green-500/30',
             stake: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
@@ -382,8 +296,8 @@ export default function PortfolioPage() {
             claim: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
           };
           return (
-            <Badge variant="outline" className={colorMap[type] || colorMap.subscribe}>
-              {TRANSACTION_TYPE_NAMES[type] || type}
+            <Badge variant="outline" className={txColorMap[type] || txColorMap.subscribe}>
+              {t(TRANSACTION_TYPE_NAMES[type] || type)}
             </Badge>
           );
         },
@@ -402,13 +316,13 @@ export default function PortfolioPage() {
         header: t('portfolio.txTable.status'),
         cell: ({ row }) => {
           const status = row.original.status;
-          const colorMap: Record<string, string> = {
+          const statusColorMap: Record<string, string> = {
             pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-            confirmed: 'bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30',
+            confirmed: 'bg-primary/20 text-primary border-primary/30',
             failed: 'bg-red-500/20 text-red-400 border-red-500/30',
           };
           return (
-            <Badge variant="outline" className={colorMap[status] || colorMap.pending}>
+            <Badge variant="outline" className={statusColorMap[status] || statusColorMap.pending}>
               {status}
             </Badge>
           );
@@ -425,12 +339,12 @@ export default function PortfolioPage() {
                 <TooltipTrigger asChild>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs text-white/50">
-                      {hash.slice(0, 6)}...{hash.slice(-4)}
+                      {truncateAddress(hash)}
                     </span>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-white/40 hover:text-[#00D4AA]"
+                      className="h-6 w-6 text-white/40 hover:text-primary"
                       onClick={() => copyToClipboard(hash)}
                     >
                       <Copy className="h-3 w-3" />
@@ -449,9 +363,9 @@ export default function PortfolioPage() {
     [t, copyToClipboard]
   );
 
-  if (!mounted) {
+  if (!isConnected) {
     return (
-      <div className="min-h-screen bg-[#0A0F0D] pt-24 px-6">
+      <div className="min-h-screen bg-bg-dark pt-24 px-6">
         <div className="max-w-7xl mx-auto">
           <Skeleton className="h-8 w-48 mb-8" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -467,16 +381,16 @@ export default function PortfolioPage() {
 
   return (
     <RequireWallet>
-      <div className="min-h-screen bg-[#0A0F0D] pt-24 pb-16 px-4 sm:px-6">
+      <div className="min-h-screen bg-bg-dark pt-24 pb-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           {/* Page Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00D4AA]/20 to-[#00D4AA]/5 flex items-center justify-center border border-[#00D4AA]/30">
-                <Wallet className="h-5 w-5 text-[#00D4AA]" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/30">
+                <Wallet className="h-5 w-5 text-primary" />
               </div>
-              <span className="text-[#00D4AA] text-sm font-semibold uppercase tracking-wider">
-                My Portfolio
+              <span className="text-primary text-sm font-semibold uppercase tracking-wider">
+                {t('portfolio.myPortfolio')}
               </span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
@@ -489,60 +403,70 @@ export default function PortfolioPage() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-            <StatCard
-              title="Total Invested"
-              value={userStats?.total_invested || 0}
-              prefix="$"
-              icon={<DollarSign className="h-5 w-5" />}
-              color="primary"
-            />
-            <StatCard
-              title="Current Value"
-              value={userStats?.total_value || 0}
-              prefix="$"
-              icon={<TrendingUp className="h-5 w-5" />}
-              trend={9.7}
-              color="success"
-            />
-            <StatCard
-              title="Total Earnings"
-              value={userStats?.total_earnings || 0}
-              prefix="$"
-              icon={<TrendingUp className="h-5 w-5" />}
-              trend={12.5}
-              color="info"
-            />
-            <StatCard
-              title="Active Investments"
-              value={userStats?.active_subscriptions || 0}
-              precision={0}
-              icon={<Clock className="h-5 w-5" />}
-              color="warning"
-            />
+            {isLoadingStats ? (
+              [...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full" />
+              ))
+            ) : (
+              <>
+                <StatCard
+                  title={t('portfolio.totalInvestedLabel')}
+                  value={userStats?.total_invested ?? 0}
+                  prefix="$"
+                  icon={<DollarSign className="h-5 w-5" />}
+                  color="primary"
+                />
+                <StatCard
+                  title={t('portfolio.currentValueLabel')}
+                  value={userStats?.total_value ?? 0}
+                  prefix="$"
+                  icon={<TrendingUp className="h-5 w-5" />}
+                  trend={userStats?.total_invested ? Number(((((userStats.total_value ?? 0) - userStats.total_invested) / userStats.total_invested) * 100).toFixed(1)) : undefined}
+                  color="success"
+                />
+                <StatCard
+                  title={t('portfolio.totalEarningsLabel')}
+                  value={userStats?.total_earnings ?? 0}
+                  prefix="$"
+                  icon={<TrendingUp className="h-5 w-5" />}
+                  color="info"
+                />
+                <StatCard
+                  title={t('portfolio.activeInvestmentsLabel')}
+                  value={userStats?.active_subscriptions ?? 0}
+                  precision={0}
+                  icon={<Clock className="h-5 w-5" />}
+                  color="warning"
+                />
+              </>
+            )}
           </div>
 
           {/* Main Content Tabs */}
-          <Card className="glass border-[#00D4AA]/10">
+          <Card className="glass border-primary/10">
             <Tabs defaultValue="investments" className="p-6">
               <TabsList className="mb-6 bg-white/5 border border-white/10 p-1">
                 <TabsTrigger 
                   value="investments" 
-                  className="flex items-center gap-2 data-[state=active]:bg-[#00D4AA]/20 data-[state=active]:text-[#00D4AA]"
+                  className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
                 >
                   <PieChart className="h-4 w-4" />
-                  My Investments
+                  {t('portfolio.myInvestments')}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="history"
-                  className="flex items-center gap-2 data-[state=active]:bg-[#00D4AA]/20 data-[state=active]:text-[#00D4AA]"
+                  className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
                 >
                   <History className="h-4 w-4" />
-                  Transaction History
+                  {t('portfolio.transactionHistory')}
+                  {IS_TRANSACTION_MOCK && (
+                    <span className="ml-1 text-yellow-400 text-[10px]">⚠️</span>
+                  )}
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="investments">
-                {isLoading ? (
+                {isLoadingSubscriptions ? (
                   <div className="space-y-4">
                     {[...Array(3)].map((_, i) => (
                       <Skeleton key={i} className="h-16 w-full" />
@@ -555,7 +479,7 @@ export default function PortfolioPage() {
                   />
                 ) : (
                   <EmptyState 
-                    message="No investments yet. Start exploring RWA assets!" 
+                    message={t('portfolio.noInvestmentsYet')} 
                     icon={<PieChart className="h-8 w-8" />}
                   />
                 )}
@@ -564,40 +488,43 @@ export default function PortfolioPage() {
               <TabsContent value="history">
                 <div className="flex flex-col gap-4">
                   <div className="flex justify-between items-center mb-4">
-                    <Select defaultValue="all">
-                      <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-white">
-                        <SelectValue placeholder="Filter by type" />
-                      </SelectTrigger>
-                      <SelectContent className="glass border-white/10">
-                        <SelectItem value="all">All Types</SelectItem>
-                        <SelectItem value="subscribe">Subscribe</SelectItem>
-                        <SelectItem value="redeem">Redeem</SelectItem>
-                        <SelectItem value="claim">Claim Rewards</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-3">
+                      <Select defaultValue="all">
+                        <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-white">
+                          <SelectValue placeholder={t('portfolio.filterByTypeLabel')} />
+                        </SelectTrigger>
+                        <SelectContent className="glass border-white/10">
+                          <SelectItem value="all">{t('portfolio.allTypes')}</SelectItem>
+                          <SelectItem value="subscribe">{t('portfolio.subscribe')}</SelectItem>
+                          <SelectItem value="redeem">{t('portfolio.redeemType')}</SelectItem>
+                          <SelectItem value="claim">{t('portfolio.claimRewards')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {IS_TRANSACTION_MOCK && <MockDataBanner />}
+                    </div>
                     <Button 
                       variant="outline" 
                       className="border-white/10 text-white/70 hover:text-white hover:bg-white/5"
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      Export
+                      {t('portfolio.exportLabel')}
                     </Button>
                   </div>
 
-                  {isLoading ? (
+                  {isLoadingTransactions ? (
                     <div className="space-y-4">
                       {[...Array(5)].map((_, i) => (
                         <Skeleton key={i} className="h-12 w-full" />
                       ))}
                     </div>
-                  ) : transactions.length > 0 ? (
+                  ) : (transactions ?? []).length > 0 ? (
                     <DataTable
                       columns={transactionColumns}
-                      data={transactions}
+                      data={transactions ?? []}
                     />
                   ) : (
                     <EmptyState 
-                      message="No transactions yet" 
+                      message={t('portfolio.noTransactionsYet')} 
                       icon={<History className="h-8 w-8" />}
                     />
                   )}
@@ -609,11 +536,11 @@ export default function PortfolioPage() {
 
         {/* Subscription Detail Modal */}
         <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-          <DialogContent className="glass border-[#00D4AA]/20 max-w-[500px]">
+          <DialogContent className="glass border-primary/20 max-w-[500px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-white">
-                <Info className="h-5 w-5 text-[#00D4AA]" />
-                Investment Details
+                <Info className="h-5 w-5 text-primary" />
+                {t('portfolio.investmentDetails')}
               </DialogTitle>
             </DialogHeader>
 
@@ -622,14 +549,14 @@ export default function PortfolioPage() {
                 {/* Asset Info */}
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#00D4AA]/20 to-[#00D4AA]/5 flex items-center justify-center">
-                      <span className="text-[#00D4AA] font-bold">
-                        {selectedSubscription.asset_symbol.slice(0, 2)}
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                      <span className="text-primary font-bold">
+                        {(selectedSubscription.asset_symbol ?? selectedSubscription.asset_name ?? '??').slice(0, 2)}
                       </span>
                     </div>
                     <div>
                       <h3 className="font-semibold text-white">{selectedSubscription.asset_name}</h3>
-                      <Badge className="bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30">
+                      <Badge className="bg-primary/20 text-primary border-primary/30">
                         {selectedSubscription.apy}% APY
                       </Badge>
                     </div>
@@ -637,13 +564,13 @@ export default function PortfolioPage() {
 
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-white/50 mb-1">Invested Amount</p>
-                      <p className="text-[#00D4AA] font-semibold text-lg">
+                      <p className="text-white/50 mb-1">{t('portfolio.investedAmount')}</p>
+                      <p className="text-primary font-semibold text-lg">
                         ${selectedSubscription.amount.toLocaleString()}
                       </p>
                     </div>
                     <div>
-                      <p className="text-white/50 mb-1">Expected Return</p>
+                      <p className="text-white/50 mb-1">{t('portfolio.expectedReturnLabel')}</p>
                       <p className="text-green-400 font-semibold text-lg">
                         +${selectedSubscription.expected_interest.toLocaleString()}
                       </p>
@@ -654,11 +581,11 @@ export default function PortfolioPage() {
                 {/* Lock Progress */}
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-white/50">Lock Progress</span>
+                    <span className="text-white/50">{t('portfolio.lockProgress')}</span>
                     <span className="text-white">
                       {selectedSubscription.days_remaining > 0 
-                        ? `${selectedSubscription.days_remaining} days remaining`
-                        : 'Matured'}
+                        ? t('portfolio.daysRemaining', { days: selectedSubscription.days_remaining })
+                        : t('portfolio.matured')}
                     </span>
                   </div>
                   <Progress 
@@ -695,11 +622,11 @@ export default function PortfolioPage() {
                 onClick={() => setDetailModalOpen(false)}
                 className="border-white/10 text-white/70 hover:text-white hover:bg-white/5"
               >
-                Close
+                {t('common.close')}
               </Button>
               {selectedSubscription?.is_matured && selectedSubscription?.status !== 'redeemed' && (
-                <Button className="bg-[#00D4AA] hover:bg-[#00B896] text-[#0A0F0D]">
-                  Redeem Now
+                <Button className="bg-primary hover:bg-primary-dark text-bg-dark">
+                  {t('portfolio.redeemNow')}
                 </Button>
               )}
             </DialogFooter>

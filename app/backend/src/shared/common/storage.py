@@ -25,7 +25,7 @@ from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
 from fastapi import UploadFile
 
-logger = get_logger("system.storage")
+logger = get_logger("system.service.storage")
 
 
 # ============================================
@@ -425,6 +425,107 @@ class StorageService:
                 results[original_path] = self._apply_redirect(url or "")
         
         return results
+
+    # ============================================
+    # 低级别操作方法 (用于 KYC 等非资产场景)
+    # ============================================
+
+    async def upload_raw(
+        self,
+        object_name: str,
+        file_data: bytes,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        """
+        上传原始文件到 MinIO（低级别接口）
+
+        不经过资产路径生成和文件验证，直接按指定路径上传。
+        适用于 KYC 文档等非资产场景。
+
+        Args:
+            object_name: 对象存储路径
+            file_data: 文件二进制数据
+            content_type: 文件 MIME 类型
+
+        Returns:
+            对象存储路径
+        """
+        async with self._get_adapter() as minio:
+            await minio.put_object(self.bucket, object_name, file_data)
+
+        logger.info(f"Raw file uploaded to MinIO: {object_name} ({len(file_data)} bytes)")
+        return object_name
+
+    async def delete_by_prefix(
+        self,
+        prefix: str,
+    ) -> int:
+        """
+        按前缀删除文件（用于覆盖上传时清理旧文件）
+
+        Args:
+            prefix: 对象名称前缀，如 "kyc/0x123.../id_card_front_"
+
+        Returns:
+            删除的文件数量
+        """
+        from minio.deleteobjects import DeleteObject
+
+        try:
+            async with self._get_adapter() as minio:
+                # 列出匹配前缀的所有对象
+                objects = minio.client.list_objects(
+                    bucket_name=self.bucket,
+                    prefix=prefix,
+                    recursive=False,
+                )
+
+                # 收集要删除的对象
+                delete_objects = [DeleteObject(obj.object_name) for obj in objects]
+
+                if delete_objects:
+                    errors = list(
+                        minio.client.remove_objects(self.bucket, delete_objects)
+                    )
+                    deleted_count = len(delete_objects) - len(errors)
+
+                    if errors:
+                        for error in errors:
+                            logger.warning(f"Failed to delete {error.name}: {error.message}")
+
+                    logger.info(
+                        f"Deleted {deleted_count} files with prefix '{prefix}' from {self.bucket}"
+                    )
+                    return deleted_count
+
+            return 0
+        except Exception as e:
+            logger.error(f"Failed to delete files by prefix '{prefix}': {e}")
+            return 0
+
+    async def file_exists(
+        self,
+        object_name: str,
+    ) -> bool:
+        """
+        检查文件是否存在
+
+        Args:
+            object_name: 对象名称/路径
+
+        Returns:
+            文件是否存在
+        """
+        try:
+            async with self._get_adapter() as minio:
+                minio.client.stat_object(
+                    bucket_name=self.bucket,
+                    object_name=object_name,
+                )
+            return True
+        except Exception:
+            return False
+
 
 
 # ============================================

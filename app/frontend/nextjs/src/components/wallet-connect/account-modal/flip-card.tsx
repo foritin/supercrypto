@@ -5,7 +5,7 @@ import { Copy, Check, ExternalLink, LogOut, RotateCcw, ChevronDown, Wallet, Netw
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
 import { useEnsName, usePublicClient } from 'wagmi'
-import { cn } from '@/lib/utils'
+import { cn, getExplorerUrl } from '@/lib/utils'
 import {
   Popover,
   PopoverContent,
@@ -98,11 +98,7 @@ export function FlipCardModal({
   }, [address])
 
   // 区块浏览器
-  const explorerUrl = chainId === 1 
-    ? `https://etherscan.io/address/${address}`
-    : chainId === 11155111
-    ? `https://sepolia.etherscan.io/address/${address}`
-    : null
+  const explorerUrl = chainId ? getExplorerUrl(chainId, 'address', address) : null
 
   // KYC 状态
   const isKycVerified = kycStatus === 'verified'
@@ -160,7 +156,7 @@ export function FlipCardModal({
           >
             {/* ===== 正面：视觉名片 ===== */}
             <div
-              className="absolute inset-0 rounded-2xl overflow-hidden border border-[#00D4AA]/40 shadow-[0_0_20px_rgba(0,212,170,0.15)]"
+              className="absolute inset-0 rounded-2xl overflow-hidden border border-primary/40 shadow-[0_0_20px_rgba(0,212,170,0.15)]"
               style={{ 
                 backfaceVisibility: 'hidden',
                 height: '220px',
@@ -182,7 +178,7 @@ export function FlipCardModal({
                   "absolute -right-8 top-5 w-32 py-1 text-center text-xs font-bold",
                   "rotate-45 shadow-lg",
                   isKycVerified 
-                    ? "bg-[#00D4AA] text-black" 
+                    ? "bg-primary text-black" 
                     : "bg-amber-400 text-black"
                 )}
               >
@@ -203,7 +199,7 @@ export function FlipCardModal({
                     className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
                   >
                     {copied ? (
-                      <Check className="w-4 h-4 text-[#00D4AA]" />
+                      <Check className="w-4 h-4 text-primary" />
                     ) : (
                       <Copy className="w-4 h-4 text-white/70" />
                     )}
@@ -232,7 +228,7 @@ export function FlipCardModal({
             {/* ===== 背面：详细信息 ===== */}
             <div
               className={cn(
-                "rounded-2xl overflow-hidden bg-[#0a0f0d] border border-[#00D4AA]/40 shadow-[0_0_20px_rgba(0,212,170,0.15)]",
+                "rounded-2xl overflow-hidden bg-bg-dark border border-primary/40 shadow-[0_0_20px_rgba(0,212,170,0.15)]",
                 isFlipped && isDetailsOpen ? "relative" : "absolute inset-0"
               )}
               style={{ 
@@ -242,7 +238,7 @@ export function FlipCardModal({
               }}
             >
               {/* 顶部装饰线 */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-px bg-gradient-to-r from-transparent via-[#00D4AA]/50 to-transparent" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
               <div className="flex flex-col p-4">
                 {/* 余额 - 核心信息 */}
@@ -257,7 +253,7 @@ export function FlipCardModal({
                   <span className={cn(
                     "px-2.5 py-1 rounded-full text-xs font-medium",
                     isAuthenticated 
-                      ? "bg-[#00D4AA]/15 text-[#00D4AA]" 
+                      ? "bg-primary/15 text-primary" 
                       : "bg-amber-500/15 text-amber-400"
                   )}>
                     {isAuthenticated 
@@ -265,7 +261,7 @@ export function FlipCardModal({
                       : `⚠ ${t('wallet.accountModal.notAuthenticated')}`}
                   </span>
                   {isKycVerified && (
-                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-[#00D4AA]/15 text-[#00D4AA]">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-primary/15 text-primary">
                       ✓ KYC
                     </span>
                   )}

@@ -20,7 +20,7 @@ from src.models.contracts.contract_deployment import ContractDeployment
 from src.shared.schemas.enums import ContractStatus
 from src.shared.schemas.enums.contract import ContractRegistryStatus
 
-logger = get_logger("contract.binding")
+logger = get_logger("business.contract.binding")
 
 
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
@@ -86,13 +86,13 @@ class BindingSyncService:
         """
         手动更新合约绑定状态
 
-        Args:
+        参数:
             project_name: 项目名称
             contract_name: 合约名称
             network: 网络
             bindings: 绑定地址映射 {dep_name: address}
 
-        Returns:
+        返回:
             BindingSyncResult: 同步结果
         """
         result = BindingSyncResult(contract_name=contract_name, success=False)
@@ -175,14 +175,14 @@ class BindingSyncService:
         """
         更新合约部署状态
 
-        Args:
+        参数:
             project_name: 项目名称
             contract_name: 合约名称
             network: 网络
             address: 部署地址
             status: 新状态
 
-        Returns:
+        返回:
             BindingSyncResult
         """
         result = BindingSyncResult(contract_name=contract_name, success=False)
@@ -256,11 +256,11 @@ class BindingSyncService:
 
         注意: 需要配置 Web3 适配器才能使用
 
-        Args:
+        参数:
             project_name: 项目名称
             network: 网络名称
 
-        Returns:
+        返回:
             ProjectSyncResult: 项目同步结果
         """
         import time
@@ -345,7 +345,7 @@ class BindingSyncService:
         """
         获取合约绑定状态
 
-        Returns:
+        返回:
             绑定状态字典，包含地址和绑定信息
         """
         # 使用新的 ContractDeployment 模型

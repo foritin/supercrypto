@@ -61,7 +61,7 @@ export function GodModeIndicator() {
                 key={permission}
                 className="flex items-center gap-2 text-white/90"
               >
-                <span className="text-[#00D4AA]">✓</span>
+                <span className="text-primary">✓</span>
                 <span className="capitalize">{permission}</span>
               </li>
             ))}

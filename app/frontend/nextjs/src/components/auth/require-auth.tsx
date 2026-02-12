@@ -268,7 +268,7 @@ export function RequireAuth({
             <div className="glass-card-enhanced max-w-[480px] w-full p-10 md:p-12 text-center relative z-10">
               {/* 图标容器 */}
               <div className="icon-box icon-box-gold w-[88px] h-[88px] mx-auto mb-7 flex items-center justify-center">
-                <ShieldCheck className="w-11 h-11 text-[#FFD700]" aria-hidden="true" />
+                <ShieldCheck className="w-11 h-11 text-gold" aria-hidden="true" />
               </div>
               
               {/* 标题 */}

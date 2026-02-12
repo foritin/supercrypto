@@ -7,8 +7,8 @@
  */
 
 // Hooks
-export { useTypewriter, useTypewriterOnce } from '@/hooks/useTypewriter';
+export { useTypewriter, useTypewriterOnce } from '@/hooks/use-typewriter';
 
 // Components
-export { YieldCalculator } from '../calculator/YieldCalculator';
-export { LogoWall } from '../logo-wall/LogoWall';
+export { YieldCalculator } from '../calculator/yield-calculator';
+export { LogoWall } from '../logo-wall/logo-wall';

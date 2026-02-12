@@ -23,7 +23,7 @@ class Subscription(AbstractModel, TimestampMixin):
     asset = fields.ForeignKeyField(
         "models.Asset",
         related_name="subscriptions",
-        on_delete=fields.CASCADE,
+        on_delete=fields.RESTRICT,
         description="关联资产",
     )
 

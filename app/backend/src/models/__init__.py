@@ -53,6 +53,7 @@ from src.shared.schemas.enums import (
     LockPeriod,
     MediaType,
     NetWork,
+    Network,
     OnChainSyncStatus,
     ReviewPriority,
     RiskLevel,
@@ -130,8 +131,9 @@ __all__ = [
     # Transaction
     "TransactionStatus",
     "TransactionType",
-    # Account
-    "NetWork",
+    # Account / Network
+    "Network",
+    "NetWork",  # 向后兼容别名
     # Audit
     "AuditAction",
     "AuditCategory",

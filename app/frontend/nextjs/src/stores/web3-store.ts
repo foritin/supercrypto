@@ -2,33 +2,32 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { type Address, type Chain } from 'viem';
 
+/**
+ * Web3 Store — 仅管理 wagmi hooks 无法提供的 UI 状态和用户偏好
+ *
+ * 钱包连接状态 (isConnected, address, chainId, chain) 已移除，
+ * 请直接使用 wagmi hooks:
+ *   - useAccount()    → isConnected, address
+ *   - useChainId()    → chainId
+ *   - useChains()     → chain
+ */
 export interface Web3State {
-  // Connection state
-  isConnected: boolean;
-  address: Address | null;
-  chainId: number | null;
-  chain: Chain | null;
-  
-  // UI state
+  // UI state (wagmi 不提供)
   isConnecting: boolean;
   isSwitchingChain: boolean;
   connectionError: string | null;
-  
-  // User preferences
+
+  // User preferences (需要持久化)
   preferredChainId: number | null;
   autoConnect: boolean;
-  
+
   // Actions
-  setConnected: (address: Address, chainId: number, chain: Chain) => void;
-  setDisconnected: () => void;
   setConnecting: (isConnecting: boolean) => void;
   setSwitchingChain: (isSwitching: boolean) => void;
   setConnectionError: (error: string | null) => void;
   setPreferredChain: (chainId: number) => void;
   setAutoConnect: (autoConnect: boolean) => void;
-  switchChain: (chainId: number, chain: Chain) => void;
   clearError: () => void;
 }
 
@@ -36,10 +35,6 @@ export const useWeb3Store = create<Web3State>()(
   persist(
     (set) => ({
       // Initial state
-      isConnected: false,
-      address: null,
-      chainId: null,
-      chain: null,
       isConnecting: false,
       isSwitchingChain: false,
       connectionError: null,
@@ -47,26 +42,6 @@ export const useWeb3Store = create<Web3State>()(
       autoConnect: true,
 
       // Actions
-      setConnected: (address, chainId, chain) =>
-        set({
-          isConnected: true,
-          address,
-          chainId,
-          chain,
-          connectionError: null,
-          isConnecting: false,
-        }),
-
-      setDisconnected: () =>
-        set({
-          isConnected: false,
-          address: null,
-          chainId: null,
-          chain: null,
-          isConnecting: false,
-          connectionError: null,
-        }),
-
       setConnecting: (isConnecting) => set({ isConnecting }),
 
       setSwitchingChain: (isSwitchingChain) => set({ isSwitchingChain }),
@@ -76,13 +51,6 @@ export const useWeb3Store = create<Web3State>()(
       setPreferredChain: (preferredChainId) => set({ preferredChainId }),
 
       setAutoConnect: (autoConnect) => set({ autoConnect }),
-
-      switchChain: (chainId, chain) =>
-        set({
-          chainId,
-          chain,
-          isSwitchingChain: false,
-        }),
 
       clearError: () => set({ connectionError: null }),
     }),

@@ -45,7 +45,7 @@ const common = {
     sessionRevoked: "You have been logged out by an administrator",
   },
   footer: {
-    copyright: "© {{year}} SlimCrypto. All rights reserved.",
+    copyright: "© {{year}} SuperCrypto. All rights reserved.",
     terms: "Terms of Service",
     privacy: "Privacy Policy",
     tagline: "Institutional-grade RWA investment platform",

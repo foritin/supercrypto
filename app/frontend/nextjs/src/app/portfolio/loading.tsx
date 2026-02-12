@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function PortfolioLoading() {
   return (
-    <div className="min-h-screen bg-[#0A0F0D] pt-24 px-4 sm:px-6">
+    <div className="min-h-screen bg-bg-dark pt-24 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         {/* Header Skeleton */}
         <div className="flex items-center gap-3 mb-2">

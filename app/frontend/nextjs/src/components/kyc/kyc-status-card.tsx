@@ -175,10 +175,10 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
               "w-12 h-12 mb-4",
               // Desktop: 正常图标容器
               "sm:w-16 sm:h-16 sm:mb-6",
-              "rounded-full bg-[#00D4AA]/20 flex items-center justify-center"
+              "rounded-full bg-primary/20 flex items-center justify-center"
             )}>
               <CheckCircle2 
-                className="w-8 h-8 sm:w-10 sm:h-10 text-[#00D4AA]" 
+                className="w-8 h-8 sm:w-10 sm:h-10 text-primary" 
                 aria-hidden="true" 
               />
             </div>
@@ -197,7 +197,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
                 </p>
               )}
               {kycData?.is_accredited && (
-                <Badge variant="default" className="bg-[#00D4AA]">
+                <Badge variant="default" className="bg-primary">
                   {t('kyc.accreditedInvestor')}
                 </Badge>
               )}

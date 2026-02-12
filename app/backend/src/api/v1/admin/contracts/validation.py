@@ -9,7 +9,7 @@ Requirements: 2.1
 
 from typing import Optional
 
-from falib.utils.handlers import success_response
+from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
@@ -155,4 +155,4 @@ async def validate_contracts(
         rwa_binding=rwa_binding,
     )
 
-    return success_response(object_data=response.model_dump())
+    return create_success_response(object_data=response.model_dump())

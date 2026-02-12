@@ -322,12 +322,12 @@ export function WalletConnect() {
                     className: cn(
                       "group relative flex items-center justify-center gap-3 px-7 py-3 rounded-full",
                       "font-semibold text-[15px] tracking-wide",
-                      "border-2 border-[#00D4AA] text-[#00D4AA]",
-                      "bg-transparent hover:bg-[#00D4AA]/10",
+                      "border-2 border-primary text-primary",
+                      "bg-transparent hover:bg-primary/10",
                       "transition-all duration-300",
                       "hover:shadow-[0_0_25px_rgba(0,212,170,0.4)]",
                       "active:scale-[0.98]",
-                      "focus:outline-none focus:ring-2 focus:ring-[#00D4AA]/50 focus:ring-offset-2 focus:ring-offset-[#0a0f0d]"
+                      "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-bg-dark"
                     ),
                     style: {}
                   },
@@ -336,13 +336,13 @@ export function WalletConnect() {
                     className: cn(
                       "group relative flex items-center justify-center gap-3 px-7 py-3 rounded-full",
                       "font-semibold text-[15px] tracking-wide",
-                      "backdrop-blur-md bg-[#00D4AA]/15",
-                      "text-[#00D4AA]",
+                      "backdrop-blur-md bg-primary/15",
+                      "text-primary",
                       "transition-all duration-300",
-                      "hover:bg-[#00D4AA]/25",
+                      "hover:bg-primary/25",
                       "hover:shadow-[0_0_25px_rgba(0,212,170,0.3)]",
                       "active:scale-[0.98]",
-                      "focus:outline-none focus:ring-2 focus:ring-[#00D4AA]/50"
+                      "focus:outline-none focus:ring-2 focus:ring-primary/50"
                     ),
                     style: {}
                   },
@@ -351,11 +351,11 @@ export function WalletConnect() {
                     className: cn(
                       "group flex items-center gap-2 px-4 h-10 rounded-lg",
                       "font-medium text-[14px]",
-                      "text-[#00D4AA]",
+                      "text-primary",
                       "transition-all duration-200",
-                      "hover:bg-[#00D4AA]/10",
-                      "active:bg-[#00D4AA]/15",
-                      "focus:outline-none focus:ring-2 focus:ring-[#00D4AA]/50"
+                      "hover:bg-primary/10",
+                      "active:bg-primary/15",
+                      "focus:outline-none focus:ring-2 focus:ring-primary/50"
                     ),
                     style: {}
                   }
@@ -488,7 +488,7 @@ export function WalletConnect() {
                       <span 
                         className={cn(
                           "w-2 h-2 rounded-full shrink-0",
-                          isAuthenticated ? "bg-[#00D4AA]" : "bg-amber-400",
+                          isAuthenticated ? "bg-primary" : "bg-amber-400",
                           isAuthenticated 
                             ? "shadow-[0_0_6px_rgba(0,212,170,0.6)]" 
                             : "shadow-[0_0_6px_rgba(251,191,36,0.6)]"

@@ -37,7 +37,7 @@ export function SubmissionStep() {
 
   const handleSubmit = async () => {
     if (!asset || !amount || !address || !chainId) {
-      setError('Missing required transaction data');
+      setError(t('invest.error.missingData'));
       setSignState('error');
       return;
     }
@@ -59,7 +59,7 @@ export function SubmissionStep() {
       // Execute transaction
       const hash = await executeTransaction(txRequest, {
         type: 'deposit',
-        description: `Invest ${amount} ETH in ${asset.name}`,
+        description: t('invest.txDescription', { amount, name: asset.name }),
         tokenSymbol: asset.symbol,
         tokenAmount: amount,
         onSuccess: (receipt) => {
@@ -98,9 +98,9 @@ export function SubmissionStep() {
         return (
           <div className="text-center py-12">
             <div className="relative w-24 h-24 mx-auto mb-6">
-              <div className="absolute inset-0 rounded-full border-4 border-[#00D4AA]/20" />
-              <div className="absolute inset-0 rounded-full border-4 border-[#00D4AA] border-t-transparent animate-spin" />
-              <Wallet className="absolute inset-0 m-auto h-10 w-10 text-[#00D4AA]" />
+              <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
+              <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+              <Wallet className="absolute inset-0 m-auto h-10 w-10 text-primary" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">
               {t('invest.signInWallet', 'Sign in Wallet')}
@@ -114,8 +114,8 @@ export function SubmissionStep() {
       case 'submitted':
         return (
           <div className="text-center py-12">
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-[#00D4AA]/20 flex items-center justify-center">
-              <Send className="h-10 w-10 text-[#00D4AA]" />
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-primary/20 flex items-center justify-center">
+              <Send className="h-10 w-10 text-primary" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">
               {t('invest.submitted', 'Transaction Submitted')}
@@ -124,7 +124,7 @@ export function SubmissionStep() {
               {t('invest.submittedDesc', 'Your transaction has been submitted to the network and is being confirmed')}
             </p>
             <div className="mt-6 flex justify-center">
-              <Loader2 className="h-6 w-6 text-[#00D4AA] animate-spin" />
+              <Loader2 className="h-6 w-6 text-primary animate-spin" />
             </div>
           </div>
         );
@@ -155,7 +155,7 @@ export function SubmissionStep() {
       default:
         return (
           <div className="text-center py-12">
-            <Loader2 className="h-10 w-10 text-[#00D4AA] animate-spin mx-auto mb-4" />
+            <Loader2 className="h-10 w-10 text-primary animate-spin mx-auto mb-4" />
             <p className="text-white/60">{t('common.loading', 'Loading...')}</p>
           </div>
         );
@@ -163,7 +163,7 @@ export function SubmissionStep() {
   };
 
   return (
-    <Card className="glass border-[#00D4AA]/20">
+    <Card className="glass border-primary/20">
       {renderContent()}
     </Card>
   );

@@ -1,7 +1,7 @@
 "use client";
 /**
  * ════════════════════════════════════════════════════════════════
- * 管理员仪表盘页面 - V6 Enhancement Edition
+ * 管理员仪表盘页面 - Enhancement Edition
  * Story 7.5-FE: 平台数据统计前端仪表盘
  * 
  * 风格: 高级、精简、协调的Web3仪表盘
@@ -26,11 +26,11 @@ import {
   PlatformStatsResponse,
 } from "@/services/admin";
 import { RequireAuth } from "@/components/auth";
-import { V6Background } from "@/components/layout/V6Background";
-import { V6StatCard } from "@/components/dashboard/V6StatCard";
-import { V6Chart } from "@/components/dashboard/V6Chart";
-import { V6ActivityList } from "@/components/dashboard/V6ActivityList";
-import { DashboardSkeleton } from "@/components/ui/Loading";
+import { V6Background } from "@/components/layout/v6-background";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { DashboardChart } from "@/components/dashboard/chart";
+import { ActivityList } from "@/components/dashboard/activity-list";
+import { DashboardSkeleton } from "@/components/ui/loading";
 import { getErrorMessage } from "@/utils/error-handler";
 
 // 主仪表盘页面
@@ -203,9 +203,9 @@ export default function AdminDashboardPage() {
         {/* 主内容 */}
         {stats && (
           <div className="space-y-6">
-            {/* V6 统计卡片 - 无边条清爽版 */}
+            {/* 统计卡片 - 无边条清爽版 */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <V6StatCard
+              <StatCard
                 title={t("admin.dashboard.tvl")}
                 value={stats.tvl.total_tvl}
                 prefix="$"
@@ -215,7 +215,7 @@ export default function AdminDashboardPage() {
                 delay={0}
               />
 
-              <V6StatCard
+              <StatCard
                 title={t("admin.dashboard.totalUsers")}
                 value={stats.users.total_users}
                 icon={Users}
@@ -224,7 +224,7 @@ export default function AdminDashboardPage() {
                 delay={0.1}
               />
 
-              <V6StatCard
+              <StatCard
                 title={t("admin.dashboard.activeSubscriptions", "活跃认购")}
                 value={stats.active_subscriptions}
                 icon={FileText}
@@ -233,7 +233,7 @@ export default function AdminDashboardPage() {
                 delay={0.2}
               />
 
-              <V6StatCard
+              <StatCard
                 title={t("admin.dashboard.activeStakes")}
                 value={stats.staking.active_stakes}
                 icon={Zap}
@@ -248,7 +248,7 @@ export default function AdminDashboardPage() {
               {/* 左侧 - 2列 */}
               <div className="lg:col-span-2 space-y-6">
                 {/* 图表 */}
-                <V6Chart
+                <DashboardChart
                   title={t("admin.dashboard.chart.title", "数据趋势")}
                   subtitle={t("admin.dashboard.chart.subtitle", "TVL 与质押金额变化")}
                   data={chartData}
@@ -256,8 +256,8 @@ export default function AdminDashboardPage() {
                   label2={t("admin.dashboard.staking", "质押")}
                 />
 
-                {/* V6 活动列表 - 深色统一图标 */}
-                <V6ActivityList
+                {/* 活动列表 - 深色统一图标 */}
+                <ActivityList
                   title={t("admin.dashboard.recentActivity")}
                   activities={mockActivities}
                 />

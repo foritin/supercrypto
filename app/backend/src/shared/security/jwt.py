@@ -9,12 +9,15 @@ from typing import Optional, Tuple
 
 import jwt
 from falib.utils.config import SETTINGS
+from falib.utils.log import get_logger
 
 from src.shared.common.exceptions import UnauthorizedException
 from src.shared.security.exceptions import (
     AccessTokenExpiredException,
     RefreshTokenExpiredException,
 )
+
+logger = get_logger("system.security.jwt")
 
 
 def create_access_token(
@@ -37,7 +40,12 @@ def create_access_token(
         expire = datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(
             minutes=SETTINGS.ACCESS_TOKEN_EXPIRE_MINUTES
         )
-    to_encode.update({"exp": expire, "type": "access"})
+    to_encode.update({
+        "exp": expire,
+        "type": "access",
+        "iss": "supercrypto-api",
+        "aud": "supercrypto-client",
+    })
     encoded_jwt = jwt.encode(to_encode, SETTINGS.JWT_SECRET, algorithm="HS256")
     return encoded_jwt
 
@@ -62,7 +70,12 @@ def create_refresh_token(
         expire = datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(
             minutes=SETTINGS.REFRESH_TOKEN_EXPIRE_MINUTES
         )
-    to_encode.update({"exp": expire, "type": "refresh"})
+    to_encode.update({
+        "exp": expire,
+        "type": "refresh",
+        "iss": "supercrypto-api",
+        "aud": "supercrypto-client",
+    })
     encoded_jwt = jwt.encode(to_encode, SETTINGS.JWT_SECRET, algorithm="HS256")
     return encoded_jwt
 
@@ -84,7 +97,13 @@ def verify_token(token: str, expected_type: Optional[str] = None) -> dict:
         UnauthorizedException: 令牌无效
     """
     try:
-        payload = jwt.decode(token, SETTINGS.JWT_SECRET, algorithms=["HS256"])
+        payload = jwt.decode(
+            token,
+            SETTINGS.JWT_SECRET,
+            algorithms=["HS256"],
+            issuer="supercrypto-api",
+            audience="supercrypto-client",
+        )
         address = payload.get("address")
         if not address:
             raise UnauthorizedException("Invalid token: missing address")
@@ -101,6 +120,8 @@ def verify_token(token: str, expected_type: Optional[str] = None) -> dict:
                 token,
                 SETTINGS.JWT_SECRET,
                 algorithms=["HS256"],
+                issuer="supercrypto-api",
+                audience="supercrypto-client",
                 options={"verify_exp": False},
             )
             token_type = expired_payload.get("type", "access")

@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from hypothesis import given, strategies as st, settings, assume, HealthCheck
 
 from src.services.asset.service import AssetService
-from src.shared.schemas.enums import ContractScope, ContractStatus, NetWork
+from src.shared.schemas.enums import ContractScope, ContractStatus, Network
 
 
 def run_async(coro):
@@ -24,10 +24,28 @@ def run_async(coro):
         loop.close()
 
 
+def create_mock_status_service(project_name: str = "test"):
+    """创建模拟的 ContractStatusService，避免真实 ORM 查询"""
+    mock_status_service = MagicMock()
+    mock_status_service.get_contract_status = AsyncMock(return_value={
+        "project_contracts": [{
+            "project": project_name,
+            "project_readiness": "ready",
+            "readiness_details": {
+                "has_primary": True,
+                "all_registered": True,
+                "no_missing_deps": True,
+            },
+        }],
+    })
+    mock_status_service.check_project_can_modify = AsyncMock(return_value=None)
+    return mock_status_service
+
+
 def create_asset_service():
     """创建 AssetService 实例（在测试内部使用）"""
     with patch("src.services.asset.service.SETTINGS") as mock_settings:
-        mock_settings.NETWORK = NetWork.HARDHAT
+        mock_settings.NETWORK = Network.HARDHAT
         return AssetService()
 
 
@@ -194,6 +212,7 @@ class TestProperty3BindingOnlyProjectScope:
              patch("src.services.asset.service.ContractDeployment") as MockContract, \
              patch("src.services.asset.service.AssetContractBinding") as MockBinding, \
              patch("src.services.contract.get_contract_service") as mock_get_service, \
+             patch("src.services.contract.get_contract_status_service", return_value=create_mock_status_service(project_name)), \
              patch.object(asset_service, "_to_detail_response", new=AsyncMock(return_value=mock_detail_response)):
 
             # 模拟资产查询
@@ -293,7 +312,8 @@ class TestProperty3BindingOnlyProjectScope:
         with patch("src.services.asset.service.Asset") as MockAsset, \
              patch("src.services.asset.service.ContractDeployment") as MockContract, \
              patch("src.services.asset.service.AssetContractBinding") as MockBinding, \
-             patch("src.services.contract.get_contract_service") as mock_get_service:
+             patch("src.services.contract.get_contract_service") as mock_get_service, \
+             patch("src.services.contract.get_contract_status_service", return_value=create_mock_status_service(project_name)):
 
             MockAsset.filter.return_value.first = AsyncMock(return_value=mock_asset)
 
@@ -319,7 +339,8 @@ class TestProperty3BindingOnlyProjectScope:
                 )
 
             # 验证错误消息
-            assert "没有设置主合约" in str(exc_info.value.message)
+            assert "没有设置主合约" in str(exc_info.value.message) or \
+                   "no primary contract" in str(exc_info.value.message).lower()
 
 
 
@@ -412,6 +433,7 @@ class TestProperty4AssetFieldAutoFill:
              patch("src.services.asset.service.ContractDeployment") as MockContract, \
              patch("src.services.asset.service.AssetContractBinding") as MockBinding, \
              patch("src.services.contract.get_contract_service") as mock_get_service, \
+             patch("src.services.contract.get_contract_status_service", return_value=create_mock_status_service(project_name)), \
              patch.object(asset_service, "_to_detail_response", new=AsyncMock(return_value=mock_detail_response)):
 
             # 模拟资产查询
@@ -514,6 +536,7 @@ class TestProperty4AssetFieldAutoFill:
              patch("src.services.asset.service.ContractDeployment") as MockContract, \
              patch("src.services.asset.service.AssetContractBinding") as MockBinding, \
              patch("src.services.contract.get_contract_service") as mock_get_service, \
+             patch("src.services.contract.get_contract_status_service", return_value=create_mock_status_service(project_name)), \
              patch.object(asset_service, "_to_detail_response", new=AsyncMock(return_value=mock_detail_response)):
 
             # 模拟资产查询
@@ -621,6 +644,7 @@ class TestProperty4AssetFieldAutoFill:
              patch("src.services.asset.service.ContractDeployment") as MockContract, \
              patch("src.services.asset.service.AssetContractBinding") as MockBinding, \
              patch("src.services.contract.get_contract_service") as mock_get_service, \
+             patch("src.services.contract.get_contract_status_service", return_value=create_mock_status_service(project_name)), \
              patch.object(asset_service, "_to_detail_response", new=AsyncMock(return_value=mock_detail_response)):
 
             # 模拟资产查询

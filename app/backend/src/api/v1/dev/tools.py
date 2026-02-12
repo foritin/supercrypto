@@ -5,7 +5,7 @@
 路由前缀: /api/v1/dev
 """
 
-from falib.utils.handlers import create_success_response, success_response
+from falib.utils.handlers import create_error_response, create_success_response
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.services.dev.schemas import DataResetRequest
@@ -65,9 +65,9 @@ async def reset_data(request: DataResetRequest):
 
     # 验证确认文字
     if request.confirmation != "RESET":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid confirmation. Please type 'RESET' to confirm.",
+        return create_error_response(
+            code=status.HTTP_400_BAD_REQUEST,
+            msg="Invalid confirmation. Please type 'RESET' to confirm.",
         )
 
     # 执行重置
@@ -129,4 +129,4 @@ async def get_token_recipients(
         )
 
     recipients = await service.get_token_recipients()
-    return success_response(list_data=[r.model_dump() for r in recipients])
+    return create_success_response(list_data=[r.model_dump() for r in recipients])

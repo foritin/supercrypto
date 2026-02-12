@@ -200,7 +200,8 @@ class AssetPriceHistory(AbstractModel, TimestampMixin):
     asset = fields.ForeignKeyField(
         "models.Asset",
         related_name="price_history",
-        on_delete=fields.CASCADE,
+        on_delete=fields.SET_NULL,
+        null=True,
         description="关联资产",
     )
     price = fields.DecimalField(

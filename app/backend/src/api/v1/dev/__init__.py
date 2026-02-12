@@ -2,22 +2,21 @@
 开发工具 API 路由 (仅 dev/test 环境)
 
 路由前缀: /api/v1/dev
+
+双重保护:
+1. router.py 中通过 SETTINGS.environment 条件判断是否注册路由
+2. 所有端点通过 require_dev_environment 依赖进行运行时环境检查
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from src.api.v1.dev.deps import require_dev_environment
 from src.api.v1.dev import kyc, tools
 
-# 注意: project_registry 模块已废弃，使用新的 Contract 模型
-# from src.api.v1.dev import project_registry
-
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_dev_environment)])
 
 # 通用开发工具
 router.include_router(tools.router, tags=["开发者工具"])
 
 # KYC 开发工具
 router.include_router(kyc.router, prefix="/kyc", tags=["KYC 开发工具"])
-
-# 项目注册表工具 (已废弃 - 使用 Contract 模型替代)
-# router.include_router(project_registry.router, tags=["项目注册表"])

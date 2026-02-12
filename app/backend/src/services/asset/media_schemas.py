@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 
 class MediaUploadResponse(BaseModel):
@@ -23,8 +23,7 @@ class MediaUploadResponse(BaseModel):
     sort_order: int = 0
     is_primary: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MediaUpdateRequest(BaseModel):
@@ -57,8 +56,7 @@ class MediaListResponse(BaseModel):
     sort_order: int = 0
     is_primary: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MediaStatsResponse(BaseModel):

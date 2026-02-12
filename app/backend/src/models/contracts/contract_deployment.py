@@ -26,7 +26,7 @@ from src.shared.schemas.enums import (
     ContractScope,
     ContractStatus,
     ContractType,
-    NetWork,
+    Network,
 )
 
 if TYPE_CHECKING:
@@ -59,7 +59,7 @@ class ContractDeployment(AbstractModel, TimestampMixin):
     config: fields.ForeignKeyNullableRelation["ContractConfig"] = fields.ForeignKeyField(
         "models.ContractConfig",
         related_name="deployments",
-        on_delete=fields.CASCADE,
+        on_delete=fields.SET_NULL,
         null=True,
         description="关联的合约配置",
     )
@@ -70,7 +70,7 @@ class ContractDeployment(AbstractModel, TimestampMixin):
     name = fields.CharField(max_length=255, description="合约名称")
     address = fields.CharField(max_length=255, unique=True, description="合约地址")
     deployer_address = fields.CharField(max_length=255, description="部署者地址")
-    network = fields.CharEnumField(NetWork, max_length=255, description="网络类型")
+    network = fields.CharEnumField(Network, max_length=255, description="网络类型")
     # 使用 BigIntField 而非 IntEnumField，因为 chain_id 可能很大 (如 Sepolia=11155111)
     chain_id = fields.BigIntField(description="链ID (EIP-155)")
 
@@ -243,7 +243,7 @@ class ContractDeployment(AbstractModel, TimestampMixin):
         return await query.order_by("name")
 
     @classmethod
-    async def get_by_network(cls, network: NetWork) -> Sequence["ContractDeployment"]:
+    async def get_by_network(cls, network: Network) -> Sequence["ContractDeployment"]:
         """获取指定网络的所有部署记录"""
         return await cls.filter(network=network).order_by("name")
 

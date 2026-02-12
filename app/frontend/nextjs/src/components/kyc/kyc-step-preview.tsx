@@ -83,8 +83,8 @@ export function KycStepPreview({ onStart, className }: KycStepPreviewProps) {
       {/* 头部 */}
       <div className="p-6 sm:p-8 border-b border-white/[0.08]">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-xl bg-[#00D4AA]/10">
-            <Shield className="w-6 h-6 text-[#00D4AA]" />
+          <div className="p-2 rounded-xl bg-primary/10">
+            <Shield className="w-6 h-6 text-primary" />
           </div>
           <h2 className="text-xl font-semibold text-white">
             {t('kyc.preview.title', 'Identity Verification')}
@@ -116,7 +116,7 @@ export function KycStepPreview({ onStart, className }: KycStepPreviewProps) {
                 <div
                   className={cn(
                     'w-10 h-10 rounded-xl flex items-center justify-center',
-                    'bg-[#00D4AA]/10 text-[#00D4AA]'
+                    'bg-primary/10 text-primary'
                   )}
                 >
                   {step.icon}
@@ -151,11 +151,11 @@ export function KycStepPreview({ onStart, className }: KycStepPreviewProps) {
         </div>
 
         {/* 底部信息 */}
-        <div className="mt-6 p-4 rounded-lg bg-[#FFD700]/5 border border-[#FFD700]/20">
+        <div className="mt-6 p-4 rounded-lg bg-gold/5 border border-gold/20">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-[#FFD700] flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-sm font-medium text-[#FFD700] mb-1">
+              <h4 className="text-sm font-medium text-gold mb-1">
                 {t('kyc.preview.requirements.title', 'Before You Start')}
               </h4>
               <ul className="text-sm text-white/60 space-y-1">
@@ -173,7 +173,7 @@ export function KycStepPreview({ onStart, className }: KycStepPreviewProps) {
             onClick={onStart}
             className={cn(
               'w-full h-12',
-              'bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-[#0a0f0d] font-medium'
+              'bg-primary hover:bg-primary/90 text-bg-dark font-medium'
             )}
           >
             {t('kyc.preview.startButton', 'Start Verification')}

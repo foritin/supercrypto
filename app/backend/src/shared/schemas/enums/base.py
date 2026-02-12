@@ -3,7 +3,7 @@
 from enum import Enum
 
 
-class NetWork(str, Enum):
+class Network(str, Enum):
     """网络类型枚举"""
 
     ETHEREUM = "mainnet"
@@ -22,7 +22,7 @@ class NetWork(str, Enum):
     POL = "pol"
 
     @classmethod
-    def from_value(cls, value: str) -> "NetWork":
+    def from_value(cls, value: str) -> "Network":
         """从值获取网络类型"""
         return cls(value)
 
@@ -30,3 +30,7 @@ class NetWork(str, Enum):
     def from_value_to_name(cls, value: str) -> str:
         """从值获取网络类型名称"""
         return cls(value).name.lower()
+
+
+# 向后兼容别名 (已废弃，请使用 Network)
+NetWork = Network

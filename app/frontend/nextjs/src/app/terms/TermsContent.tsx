@@ -3,7 +3,8 @@
 import React from "react";
 import { FileText, Scale, Users, Shield, AlertCircle, Globe, Wallet } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { PageBadge } from "@/components/ui/page-badge";
 
 /**
  * ════════════════════════════════════════════════════════════════
@@ -24,7 +25,7 @@ const Section: React.FC<SectionProps> = ({ icon, title, content }) => {
   return (
     <section className="mb-10 scroll-reveal">
       <div className="flex items-start gap-4 mb-4">
-        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#00D4AA]/10 flex items-center justify-center">
+        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
           {icon}
         </div>
         <h2 className="text-xl font-semibold text-white mt-2">{title}</h2>
@@ -41,11 +42,11 @@ export function TermsContent() {
   const headerRef = useScrollReveal();
 
   return (
-    <div className="min-h-screen bg-[#0A0F0D]">
+    <div className="min-h-screen bg-bg-dark">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[#00D4AA]/3 rounded-full blur-[150px]" />
-        <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-[#FFD700]/3 rounded-full blur-[120px]" />
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-primary/3 rounded-full blur-[150px]" />
+        <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-gold/3 rounded-full blur-[120px]" />
       </div>
 
       {/* Content */}
@@ -56,12 +57,11 @@ export function TermsContent() {
             ref={headerRef.ref as React.RefObject<HTMLElement>}
             className="text-center mb-16 scroll-reveal is-visible"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#00D4AA]/10 border border-[#00D4AA]/20 mb-6">
-              <Scale className="w-4 h-4 text-[#00D4AA]" />
-              <span className="text-sm text-[#00D4AA] font-medium">
-                {t("terms.badge", "Legal Document")}
-              </span>
-            </div>
+            <PageBadge
+              icon={<Scale />}
+              text={t("terms.badge", "Legal Document")}
+              className="mb-6"
+            />
 
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
               {t("terms.title", "Terms of Service")}
@@ -70,7 +70,7 @@ export function TermsContent() {
             <p className="text-lg text-white/60 max-w-2xl mx-auto">
               {t(
                 "terms.subtitle",
-                "These terms govern your use of the SlimCrypto platform. By accessing or using our services, you agree to be bound by these terms."
+                "These terms govern your use of the SuperCrypto platform. By accessing or using our services, you agree to be bound by these terms."
               )}
             </p>
 
@@ -80,9 +80,9 @@ export function TermsContent() {
           </section>
 
           {/* Acceptance Notice */}
-          <div className="mb-12 p-6 rounded-xl bg-[#00D4AA]/5 border border-[#00D4AA]/20">
+          <div className="mb-12 p-6 rounded-xl bg-primary/5 border border-primary/20">
             <div className="flex items-start gap-4">
-              <FileText className="flex-shrink-0 w-6 h-6 text-[#00D4AA] mt-1" />
+              <FileText className="flex-shrink-0 w-6 h-6 text-primary mt-1" />
               <div>
                 <h3 className="text-white font-medium mb-2">
                   {t("terms.acceptance.title", "Acceptance of Terms")}
@@ -90,7 +90,7 @@ export function TermsContent() {
                 <p className="text-white/60 text-sm leading-relaxed">
                   {t(
                     "terms.acceptance.content",
-                    "By accessing or using the SlimCrypto platform, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, you must not use our services."
+                    "By accessing or using the SuperCrypto platform, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, you must not use our services."
                   )}
                 </p>
               </div>
@@ -101,35 +101,35 @@ export function TermsContent() {
           <div className="space-y-6">
             {/* 1. Definitions */}
             <Section
-              icon={<FileText className="w-5 h-5 text-[#00D4AA]" />}
+              icon={<FileText className="w-5 h-5 text-primary" />}
               title={t("terms.definitions.title", "1. Definitions")}
               content={
                 <>
                   <p>{t("terms.definitions.p1", "In these Terms:")}</p>
                   <ul className="space-y-2 mt-3">
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>
                         <strong className="text-white/90">"Platform"</strong>{" "}
-                        {t("terms.definitions.platform", "refers to the SlimCrypto website, applications, and all related services.")}
+                        {t("terms.definitions.platform", "refers to the SuperCrypto website, applications, and all related services.")}
                       </span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>
                         <strong className="text-white/90">"User"</strong>{" "}
                         {t("terms.definitions.user", "refers to any individual or entity accessing or using the Platform.")}
                       </span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>
                         <strong className="text-white/90">"Assets"</strong>{" "}
                         {t("terms.definitions.assets", "refers to tokenized real-world assets available on the Platform.")}
                       </span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>
                         <strong className="text-white/90">"Wallet"</strong>{" "}
                         {t("terms.definitions.wallet", "refers to your digital wallet used to interact with the Platform.")}
@@ -142,30 +142,30 @@ export function TermsContent() {
 
             {/* 2. Eligibility */}
             <Section
-              icon={<Users className="w-5 h-5 text-[#00D4AA]" />}
+              icon={<Users className="w-5 h-5 text-primary" />}
               title={t("terms.eligibility.title", "2. Eligibility")}
               content={
                 <>
                   <p>{t("terms.eligibility.p1", "To use our Platform, you must:")}</p>
                   <ul className="space-y-2 mt-3">
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.eligibility.item1", "Be at least 18 years of age or the legal age of majority in your jurisdiction")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.eligibility.item2", "Have the legal capacity to enter into binding contracts")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.eligibility.item3", "Not be prohibited from using our services under applicable laws")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.eligibility.item4", "Complete identity verification (KYC) as required")}</span>
                     </li>
                   </ul>
-                  <p className="mt-4 p-4 rounded-lg bg-[#FFD700]/5 border border-[#FFD700]/20 text-[#FFD700]/90">
+                  <p className="mt-4 p-4 rounded-lg bg-gold/5 border border-gold/20 text-gold/90">
                     {t("terms.eligibility.notice", "We reserve the right to suspend or terminate accounts that do not meet these eligibility requirements.")}
                   </p>
                 </>
@@ -174,26 +174,26 @@ export function TermsContent() {
 
             {/* 3. Services */}
             <Section
-              icon={<Wallet className="w-5 h-5 text-[#00D4AA]" />}
+              icon={<Wallet className="w-5 h-5 text-primary" />}
               title={t("terms.services.title", "3. Our Services")}
               content={
                 <>
-                  <p>{t("terms.services.p1", "SlimCrypto provides a platform for:")}</p>
+                  <p>{t("terms.services.p1", "SuperCrypto provides a platform for:")}</p>
                   <ul className="space-y-2 mt-3">
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.services.item1", "Accessing information about tokenized real-world assets")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.services.item2", "Investing in RWA tokens through blockchain transactions")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.services.item3", "Managing your investment portfolio")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.services.item4", "Receiving yield distributions from investments")}</span>
                     </li>
                   </ul>
@@ -206,30 +206,30 @@ export function TermsContent() {
 
             {/* 4. User Responsibilities */}
             <Section
-              icon={<Shield className="w-5 h-5 text-[#00D4AA]" />}
+              icon={<Shield className="w-5 h-5 text-primary" />}
               title={t("terms.responsibilities.title", "4. User Responsibilities")}
               content={
                 <>
                   <p>{t("terms.responsibilities.p1", "As a user, you agree to:")}</p>
                   <ul className="space-y-2 mt-3">
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.responsibilities.item1", "Maintain the security of your wallet and private keys")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.responsibilities.item2", "Provide accurate and complete information during registration")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.responsibilities.item3", "Comply with all applicable laws and regulations")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.responsibilities.item4", "Not use the Platform for illegal activities")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.responsibilities.item5", "Not attempt to gain unauthorized access to our systems")}</span>
                     </li>
                   </ul>
@@ -239,32 +239,32 @@ export function TermsContent() {
 
             {/* 5. Risks */}
             <Section
-              icon={<AlertCircle className="w-5 h-5 text-[#00D4AA]" />}
+              icon={<AlertCircle className="w-5 h-5 text-primary" />}
               title={t("terms.risks.title", "5. Investment Risks")}
               content={
                 <>
                   <p>{t("terms.risks.p1", "You acknowledge and understand that:")}</p>
                   <ul className="space-y-2 mt-3">
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.risks.item1", "All investments carry risk, and you may lose some or all of your invested capital")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.risks.item2", "Past performance does not guarantee future results")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.risks.item3", "Cryptocurrency and tokenized assets are highly volatile")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.risks.item4", "You should only invest what you can afford to lose")}</span>
                     </li>
                   </ul>
                   <p className="mt-4">
                     {t("terms.risks.p2", "For a complete description of risks, please refer to our")}{" "}
-                    <a href="/risk-disclosure" className="text-[#00D4AA] hover:underline">
+                    <a href="/risk-disclosure" className="text-primary hover:underline">
                       {t("terms.risks.link", "Risk Disclosure")}
                     </a>{" "}
                     {t("terms.risks.p3", "document.")}
@@ -275,22 +275,22 @@ export function TermsContent() {
 
             {/* 6. Limitation of Liability */}
             <Section
-              icon={<Scale className="w-5 h-5 text-[#00D4AA]" />}
+              icon={<Scale className="w-5 h-5 text-primary" />}
               title={t("terms.liability.title", "6. Limitation of Liability")}
               content={
                 <>
                   <p>{t("terms.liability.p1", "To the maximum extent permitted by law:")}</p>
                   <ul className="space-y-2 mt-3">
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.liability.item1", "We are not liable for any loss of profits, revenue, or data")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.liability.item2", "We are not responsible for losses due to market volatility or smart contract failures")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.liability.item3", "Our total liability is limited to the amount you paid to use our services in the 12 months preceding the claim")}</span>
                     </li>
                   </ul>
@@ -300,7 +300,7 @@ export function TermsContent() {
 
             {/* 7. Governing Law */}
             <Section
-              icon={<Globe className="w-5 h-5 text-[#00D4AA]" />}
+              icon={<Globe className="w-5 h-5 text-primary" />}
               title={t("terms.governing.title", "7. Governing Law")}
               content={
                 <>
@@ -314,22 +314,22 @@ export function TermsContent() {
 
             {/* 8. Changes */}
             <Section
-              icon={<FileText className="w-5 h-5 text-[#00D4AA]" />}
+              icon={<FileText className="w-5 h-5 text-primary" />}
               title={t("terms.changes.title", "8. Changes to Terms")}
               content={
                 <>
                   <p>{t("terms.changes.p1", "We may update these Terms from time to time. We will notify you of any material changes by:")}</p>
                   <ul className="space-y-2 mt-3">
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.changes.item1", "Posting the updated Terms on the Platform")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.changes.item2", "Sending an email to your registered address")}</span>
                     </li>
                     <li className="flex gap-2">
-                      <span className="text-[#00D4AA]">•</span>
+                      <span className="text-primary">•</span>
                       <span>{t("terms.changes.item3", "Displaying a notice when you access the Platform")}</span>
                     </li>
                   </ul>
@@ -341,14 +341,14 @@ export function TermsContent() {
             />
 
             {/* Contact */}
-            <div className="mt-12 p-6 rounded-xl bg-[#00D4AA]/5 border border-[#00D4AA]/20">
+            <div className="mt-12 p-6 rounded-xl bg-primary/5 border border-primary/20">
               <h3 className="text-white font-medium mb-3">
                 {t("terms.contact.title", "Contact Us")}
               </h3>
               <p className="text-white/60 text-sm">
                 {t("terms.contact.content", "If you have any questions about these Terms, please contact us at")}{" "}
-                <a href="mailto:legal@slimcrypto.com" className="text-[#00D4AA] hover:underline">
-                  legal@slimcrypto.com
+                <a href="mailto:legal@supercrypto.com" className="text-primary hover:underline">
+                  legal@supercrypto.com
                 </a>
               </p>
             </div>

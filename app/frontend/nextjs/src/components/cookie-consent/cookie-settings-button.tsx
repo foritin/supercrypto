@@ -68,7 +68,7 @@ function CookieCategoryCard({
       <div
         className={cn(
           'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center',
-          required ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 'bg-white/5 text-white/60'
+          required ? 'bg-primary/10 text-primary' : 'bg-white/5 text-white/60'
         )}
       >
         {icon}
@@ -77,7 +77,7 @@ function CookieCategoryCard({
         <div className="flex items-center justify-between gap-2 mb-1">
           <h4 className="font-medium text-white">{title}</h4>
           {required && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[#00D4AA]/10 text-[#00D4AA]">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
               Required
             </span>
           )}
@@ -91,7 +91,7 @@ function CookieCategoryCard({
           onCheckedChange={onToggle}
           className={cn(
             'w-5 h-5 rounded border-2',
-            'data-[state=checked]:bg-[#00D4AA] data-[state=checked]:border-[#00D4AA]',
+            'data-[state=checked]:bg-primary data-[state=checked]:border-primary',
             required && 'opacity-50 cursor-not-allowed'
           )}
         />
@@ -150,7 +150,7 @@ export function CookieSettingsButton({
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Cookie className="w-5 h-5 text-[#FFD700]" />
+              <Cookie className="w-5 h-5 text-gold" />
               {t('cookieConsent.settings.title', 'Cookie Preferences')}
             </DialogTitle>
             <DialogDescription>
@@ -214,7 +214,7 @@ export function CookieSettingsButton({
             </Button>
             <Button
               onClick={handleSave}
-              className="flex-1 h-11 bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-[#0a0f0d] font-medium"
+              className="flex-1 h-11 bg-primary hover:bg-primary/90 text-bg-dark font-medium"
             >
               {t('cookieConsent.settings.save', 'Save Preferences')}
             </Button>

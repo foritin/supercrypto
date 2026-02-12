@@ -5,6 +5,7 @@ import { Download, Chrome, Flame, Shield, Info } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -52,6 +53,9 @@ export function InstallMetaMaskModal({ open, onClose }: InstallMetaMaskModalProp
             />
             <span>{t('metamask.install.title')}</span>
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {t('metamask.install.description')}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">

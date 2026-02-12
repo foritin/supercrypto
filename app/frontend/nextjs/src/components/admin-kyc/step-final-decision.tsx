@@ -13,16 +13,16 @@
 
 import { useTranslation } from "react-i18next";
 import {
-  CheckCircle,
-  XCircle as XCircleIcon,
+  CheckCircle2,
+  XCircle,
   Clock,
   FileText,
-  ArrowsClockwise,
-  Warning,
+  RefreshCw,
+  AlertTriangle,
   User,
-  Shield,
+  ShieldCheck,
   Gavel,
-} from "@phosphor-icons/react";
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -66,7 +66,7 @@ export interface ReviewSummaryProps {
 // Step icon mapping (for ReviewSummary)
 // ---------------------------------------------------------------------------
 
-const STEP_ICONS: React.ElementType[] = [User, FileText, Shield];
+const STEP_ICONS: React.ElementType[] = [User, FileText, ShieldCheck];
 
 // ---------------------------------------------------------------------------
 // ReviewSummary - 前三步确认状态汇总
@@ -85,7 +85,7 @@ export function ReviewSummary({ confirmedSteps }: ReviewSummaryProps) {
   return (
     <SectionCard
       title={t("admin.kyc.stepper.reviewSummary")}
-      icon={<Gavel weight="fill" className="w-4 h-4" />}
+      icon={<Gavel className="w-4 h-4" />}
       className="border-white/[0.08]"
     >
       <div className="space-y-2">
@@ -110,7 +110,6 @@ export function ReviewSummary({ confirmedSteps }: ReviewSummaryProps) {
                   }`}
                 >
                   <Icon
-                    weight="fill"
                     className={`w-4 h-4 ${
                       isConfirmed ? "text-emerald-400" : "text-amber-400"
                     }`}
@@ -121,8 +120,7 @@ export function ReviewSummary({ confirmedSteps }: ReviewSummaryProps) {
               <div className="flex items-center gap-1.5">
                 {isConfirmed ? (
                   <>
-                    <CheckCircle
-                      weight="fill"
+                    <CheckCircle2
                       className="w-4 h-4 text-emerald-400"
                     />
                     <span
@@ -134,8 +132,7 @@ export function ReviewSummary({ confirmedSteps }: ReviewSummaryProps) {
                   </>
                 ) : (
                   <>
-                    <Warning
-                      weight="fill"
+                    <AlertTriangle
                       className="w-4 h-4 text-amber-400"
                     />
                     <span
@@ -165,19 +162,19 @@ function AuditTimeline({ logs }: { logs: KycDetail["audit_logs"] }) {
   const getActionIcon = (action: string) => {
     switch (action) {
       case "submit":
-        return <FileText weight="fill" className="w-4 h-4 text-white/60" />;
+        return <FileText className="w-4 h-4 text-white/60" />;
       case "approve":
         return (
-          <CheckCircle weight="fill" className="w-4 h-4 text-emerald-400" />
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
         );
       case "reject":
-        return <XCircleIcon weight="fill" className="w-4 h-4 text-red-400" />;
+        return <XCircle className="w-4 h-4 text-red-400" />;
       case "sync":
         return (
-          <ArrowsClockwise weight="bold" className="w-4 h-4 text-white/60" />
+          <RefreshCw className="w-4 h-4 text-white/60" />
         );
       default:
-        return <Clock weight="fill" className="w-4 h-4 text-white/60" />;
+        return <Clock className="w-4 h-4 text-white/60" />;
     }
   };
 
@@ -200,7 +197,7 @@ function AuditTimeline({ logs }: { logs: KycDetail["audit_logs"] }) {
     return (
       <SectionCard
         title={t("admin.kyc.stepper.auditHistory")}
-        icon={<Clock weight="fill" className="w-4 h-4" />}
+        icon={<Clock className="w-4 h-4" />}
         className="border-white/[0.08]"
       >
         <div className="text-center py-6 text-white/40 text-sm">
@@ -213,7 +210,7 @@ function AuditTimeline({ logs }: { logs: KycDetail["audit_logs"] }) {
   return (
     <SectionCard
       title={t("admin.kyc.stepper.auditHistory")}
-      icon={<Clock weight="fill" className="w-4 h-4" />}
+      icon={<Clock className="w-4 h-4" />}
       className="border-white/[0.08]"
     >
       <div className="space-y-4">
@@ -290,7 +287,7 @@ export function StepFinalDecision({
       {/* 合格投资者勾选框 */}
       <SectionCard
         title={t("admin.kyc.stepper.investorQualification")}
-        icon={<Shield weight="fill" className="w-4 h-4" />}
+        icon={<ShieldCheck className="w-4 h-4" />}
         className="border-white/[0.08]"
       >
         <div className="flex items-center gap-3 py-1">
@@ -315,7 +312,7 @@ export function StepFinalDecision({
       {/* 审核操作区域 */}
       <SectionCard
         title={t("admin.kyc.stepper.reviewDecision")}
-        icon={<Gavel weight="fill" className="w-4 h-4" />}
+        icon={<Gavel className="w-4 h-4" />}
         className="border-white/[0.08]"
       >
         {rejectFormVisible ? (
@@ -373,7 +370,7 @@ export function StepFinalDecision({
               onClick={onToggleRejectForm}
               disabled={isProcessing}
             >
-              <XCircleIcon weight="fill" className="w-4 h-4 mr-2" />
+              <XCircle className="w-4 h-4 mr-2" />
               {t("admin.kyc.stepper.reject")}
             </Button>
             <Button
@@ -381,7 +378,7 @@ export function StepFinalDecision({
               onClick={onApprove}
               disabled={isProcessing}
             >
-              <CheckCircle weight="fill" className="w-4 h-4 mr-2" />
+              <CheckCircle2 className="w-4 h-4 mr-2" />
               {isProcessing ? t("admin.kyc.stepper.processing") : t("admin.kyc.stepper.approveReview")}
             </Button>
           </div>

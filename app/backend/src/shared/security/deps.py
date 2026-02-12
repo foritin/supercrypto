@@ -7,6 +7,7 @@ FastAPI 权限依赖
 from typing import Optional
 
 from falib.utils.config import SETTINGS
+from falib.utils.log import get_logger
 from fastapi import HTTPException, status
 from starlette.requests import Request
 
@@ -18,6 +19,8 @@ from src.shared.security.exceptions import (
 )
 from src.shared.security.jwt import verify_token
 from src.shared.services import session_service
+
+logger = get_logger("system.security.deps")
 
 
 def extract_token_from_header(authorization: Optional[str]) -> str:
@@ -203,7 +206,7 @@ async def require_admin(request: Request) -> str:
     wallet_address = await require_user(request)
 
     # 查询账户并验证管理员权限
-    wallet = SETTINGS.NETWORK
+    wallet = SETTINGS.network
     account = await Account.filter(address=wallet_address, network=wallet).first()
 
     if not account or account.tag != "admin":

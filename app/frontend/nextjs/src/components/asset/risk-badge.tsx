@@ -77,7 +77,7 @@ function ExpandableBadge({ type, isExpanded, onHover, onLeave }: ExpandableBadge
     verified: {
       icon: <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 cursor-pointer" />,
       label: t("assets.compliance.verified"),
-      className: "bg-[#00D4AA]/10 border-[#00D4AA]/30 text-[#00D4AA]",
+      className: "bg-primary/10 border-primary/30 text-primary",
     },
     insured: {
       icon: <Shield className="h-3.5 w-3.5 flex-shrink-0 cursor-pointer" />,

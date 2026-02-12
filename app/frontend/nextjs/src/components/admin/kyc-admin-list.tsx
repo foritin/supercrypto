@@ -66,17 +66,13 @@ import { useKycList, useKycReview } from '@/hooks/use-kyc-admin'
 import { KycStatus } from '@/services/kyc'
 import type { KycFullResponse } from '@/services/kyc'
 import { truncateAddress } from '@/utils/format'
+import { KYC_STATUS_BADGE } from '@/constants/status-config'
 
 // KYC Detail Modal
 import { KycDetailModal } from './kyc-detail-modal'
 
-// Status badge variant mapping
-const STATUS_BADGE_VARIANTS: Record<KycStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  [KycStatus.NOT_STARTED]: 'outline',
-  [KycStatus.PENDING]: 'secondary',
-  [KycStatus.APPROVED]: 'default',
-  [KycStatus.REJECTED]: 'destructive',
-}
+// 使用共享状态徽章配置
+const STATUS_BADGE_VARIANTS = KYC_STATUS_BADGE
 
 // Copyable address component
 function CopyableAddress({ address }: { address: string }) {

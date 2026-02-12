@@ -19,7 +19,7 @@ from src.shared.schemas.enums import DependencyType
 
 from .schemas import ContractConfigSchema, DependencyTypeEnum, ProjectConfigSchema
 
-logger = get_logger("contract.registry")
+logger = get_logger("business.contract.registry_config")
 
 
 class ConfigLoadError(Exception):
@@ -83,14 +83,14 @@ class ProjectConfigLoader:
         
         从 Python 配置转换为 Pydantic schema
 
-        Args:
+        参数:
             project_name: 项目名称
             use_cache: 是否使用缓存
 
-        Returns:
+        返回:
             ProjectConfigSchema: 验证后的配置对象
 
-        Raises:
+        异常:
             ConfigLoadError: 配置加载失败
             CyclicDependencyError: 存在循环依赖
         """
@@ -158,7 +158,7 @@ class ProjectConfigLoader:
         """
         检测循环依赖 (DFS)
 
-        Raises:
+        异常:
             CyclicDependencyError: 检测到循环依赖
         """
         # 构建依赖图
@@ -213,11 +213,11 @@ class ProjectConfigLoader:
         
         注意: 部署脚本已自动完成此操作，此方法仅用于手动同步
 
-        Args:
+        参数:
             project_name: 项目名称
             force: 是否强制覆盖
 
-        Returns:
+        返回:
             同步结果统计
         """
         config = self.load_config(project_name, use_cache=False)

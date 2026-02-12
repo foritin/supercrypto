@@ -1,5 +1,5 @@
 """
-Contract Status Service - 合约状态查询服务
+合约状态查询服务
 _Requirements: 3.1_
 """
 
@@ -15,7 +15,7 @@ from src.models.contracts.provider_registry import ProviderRegistry
 from src.shared.common.exceptions import BusinessException
 from src.shared.schemas.enums import ContractStatus, ErrorCode
 
-logger = get_logger("contract.status_service")
+logger = get_logger("business.contract.status")
 
 # 合约类型配置
 CONTRACT_TYPE_CONFIGS = {
@@ -47,7 +47,7 @@ class ContractStatusService:
     """合约状态查询服务"""
 
     def __init__(self, network: Optional[str] = None):
-        self.network = network or SETTINGS.NETWORK
+        self.network = network or SETTINGS.network
 
     async def get_contract_address(
         self, project_name: str, contract_name: str
@@ -473,10 +473,10 @@ class ContractStatusService:
         
         _Requirements: 8.1-8.4 - 已绑定 Asset 的项目合约变更限制
         
-        Args:
+        参数:
             project_name: 项目名称
             
-        Raises:
+        异常:
             BusinessException: 如果项目已绑定 Asset，抛出 PROJECT_BOUND_CANNOT_MODIFY 异常
         """
         # 查询项目主合约

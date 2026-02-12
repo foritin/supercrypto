@@ -19,7 +19,7 @@ from src.shared.common.exceptions import NotFoundException
 from src.shared.common.utils import calculate_total_pages
 from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
 
-logger = get_logger("audit.service")
+logger = get_logger("business.audit.service")
 
 
 class AuditService:
@@ -31,9 +31,9 @@ class AuditService:
     """
 
     @property
-    def environment(self) -> str:
-        """当前环境"""
-        return getattr(SETTINGS, "ENVIRONMENT", "hardhat")
+    def network(self) -> str:
+        """获取当前网络"""
+        return SETTINGS.network
 
     async def log(
         self,
@@ -62,7 +62,7 @@ class AuditService:
         """
         记录审计日志
 
-        Args:
+        参数:
             category: 审计类别
             action: 操作类型
             operator_id: 操作者ID
@@ -85,7 +85,7 @@ class AuditService:
             error_code: 错误码
             error_message: 错误信息
 
-        Returns:
+        返回:
             AuditLog: 创建的审计日志
         """
         try:
@@ -112,7 +112,7 @@ class AuditService:
                 duration_ms=duration_ms,
                 error_code=error_code,
                 error_message=error_message,
-                environment=self.environment,
+                environment=self.network,
             )
 
             logger.debug(
@@ -162,7 +162,7 @@ class AuditService:
         """
         查询审计日志
 
-        Args:
+        参数:
             category: 类别过滤
             action: 操作类型过滤
             operator_id: 操作者ID过滤
@@ -177,7 +177,7 @@ class AuditService:
             page: 页码
             page_size: 每页数量
 
-        Returns:
+        返回:
             Tuple[List[AuditLogResponse], int, int]: (日志列表, 总数, 总页数)
         """
         query = AuditLog.all()
@@ -242,13 +242,13 @@ class AuditService:
         """
         获取单条审计日志
 
-        Args:
+        参数:
             log_id: 日志ID
 
-        Returns:
+        返回:
             AuditLogResponse: 审计日志
 
-        Raises:
+        异常:
             NotFoundException: 日志不存在
         """
         log = await AuditLog.get_or_none(id=log_id)
@@ -264,11 +264,11 @@ class AuditService:
         """
         获取操作者历史
 
-        Args:
+        参数:
             operator_id: 操作者ID
             limit: 返回数量限制
 
-        Returns:
+        返回:
             List[AuditLogResponse]: 审计日志列表
         """
         logs = (
@@ -286,12 +286,12 @@ class AuditService:
         """
         获取目标对象历史
 
-        Args:
+        参数:
             target_type: 目标类型
             target_id: 目标ID
             limit: 返回数量限制
 
-        Returns:
+        返回:
             List[AuditLogResponse]: 审计日志列表
         """
         logs = (
@@ -311,11 +311,11 @@ class AuditService:
         """
         获取统计数据
 
-        Args:
+        参数:
             start_time: 开始时间
             end_time: 结束时间
 
-        Returns:
+        返回:
             AuditStats: 统计数据
         """
         query = AuditLog.all()

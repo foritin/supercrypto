@@ -58,8 +58,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { SectionCard } from "@/components/ui/SectionCard";
-import { InfoRow } from "@/components/ui/InfoRow";
+import { SectionCard } from "@/components/ui/section-card";
+import { InfoRow } from "@/components/ui/info-row";
 
 // ============================================================================
 // Types
@@ -257,7 +257,7 @@ function OCRCard({ data }: { data?: OCRData | null }) {
     <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
       <div className="px-4 py-3 bg-white/[0.03] border-b border-white/[0.06] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Scan className="w-4 h-4 text-[#00D4AA]" />
+          <Scan className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold text-white/90">{t("admin.kyc.stepper.docReview.ocrResult")}</span>
         </div>
         <TooltipProvider>
@@ -350,7 +350,7 @@ function RiskCheckList({ checks }: { checks?: RiskCheck[] }) {
     <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
       <div className="px-4 py-3 bg-white/[0.03] border-b border-white/[0.06]">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-[#00D4AA]" />
+          <ShieldCheck className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold text-white/90">{t("admin.kyc.stepper.docReview.riskCheck")}</span>
         </div>
       </div>
@@ -396,8 +396,8 @@ function PhotoThumbnail({
       onClick={onClick}
       className={`group relative aspect-[3/2] rounded-xl overflow-hidden transition-all duration-300 ${
         isActive 
-          ? "ring-2 ring-[#00D4AA] ring-offset-2 ring-offset-[#0a0a0f]" 
-          : "hover:ring-2 hover:ring-white/20 hover:ring-offset-2 hover:ring-offset-[#0a0a0f]"
+          ? "ring-2 ring-primary ring-offset-2 ring-offset-bg-dark" 
+          : "hover:ring-2 hover:ring-white/20 hover:ring-offset-2 hover:ring-offset-bg-dark"
       }`}
     >
       <Image
@@ -423,7 +423,7 @@ function PhotoThumbnail({
       
       {/* Badge */}
       {badge && (
-        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-[#00D4AA]/90 text-[10px] font-medium text-black">
+        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-primary/90 text-[10px] font-medium text-black">
           {badge}
         </div>
       )}
@@ -446,7 +446,7 @@ function VideoThumbnail({
   return (
     <button
       onClick={onClick}
-      className="group relative aspect-[3/2] rounded-xl overflow-hidden transition-all duration-300 hover:ring-2 hover:ring-[#00D4AA] hover:ring-offset-2 hover:ring-offset-[#0a0a0f]"
+      className="group relative aspect-[3/2] rounded-xl overflow-hidden transition-all duration-300 hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-bg-dark"
     >
       <video src={src} className="w-full h-full object-cover" preload="metadata" />
       
@@ -574,7 +574,7 @@ function ImageViewerModal({
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className={`relative z-10 bg-[#111916] border border-white/10 rounded-2xl shadow-2xl max-h-[85vh] overflow-hidden transition-all duration-300 ${
+                  className={`relative z-10 bg-bg-card border border-white/10 rounded-2xl shadow-2xl max-h-[85vh] overflow-hidden transition-all duration-300 ${
                     compareMode ? "w-[95vw] max-w-7xl" : "w-[90vw] max-w-5xl"
                   }`}
                 >
@@ -600,7 +600,7 @@ function ImageViewerModal({
                             e.stopPropagation();
                             setCompareMode(!compareMode);
                           }}
-                          className={compareMode ? "bg-white/10 text-[#00D4AA]" : "text-white/60 hover:text-white"}
+                          className={compareMode ? "bg-white/10 text-primary" : "text-white/60 hover:text-white"}
                         >
                           <ArrowRightLeft className="w-4 h-4 mr-1.5" />
                           {compareMode ? t("admin.kyc.stepper.docReview.exitCompare") : t("admin.kyc.stepper.docReview.compare")}

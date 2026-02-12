@@ -23,15 +23,15 @@ import {
   type AuditFilters,
   DEFAULT_AUDIT_FILTERS,
 } from "@/components/admin/audit";
-import {
-  auditService,
-  type AuditLog,
-  type TransactionAudit,
-  type AuditStats as AuditStatsType,
-  type TransactionStats,
-  type AuditLogQueryParams,
-  type TransactionAuditQueryParams,
-} from "@/services/audit";
+import { auditService } from "@/services/audit";
+import type {
+  AuditLog,
+  TransactionAudit,
+  AuditStats as AuditStatsType,
+  TransactionStats,
+  AuditLogQueryParams,
+  TransactionAuditQueryParams,
+} from "@/types/audit";
 
 export default function AuditLogsPage() {
   const { t } = useTranslation();

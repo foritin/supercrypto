@@ -7,6 +7,7 @@ KYC 链上同步任务
 - C-04: 主动查询合约 isVerified() 与 DB 对账 (替代事件监听，更可靠)
 """
 
+import json
 from datetime import datetime, timezone
 
 from falib.utils.config import SETTINGS
@@ -14,14 +15,18 @@ from falib.utils.log import get_logger
 from tortoise import Tortoise
 
 from src.shared.common.chain_logger import ChainLogger
+from src.shared.services.lock_service import DistributedLockService, LockAcquireError
 
-schedule_logger = get_logger("schedule.kyc_sync")
-chain_log = ChainLogger("schedule.kyc_sync")
+schedule_logger = get_logger("scheduler.kyc_sync")
+chain_log = ChainLogger("scheduler.kyc_sync")
 
 # ============ 配置 ============
 
 MAX_RETRY_ATTEMPTS = 3
 """单条记录最大重试次数 (超过后标记为需人工介入)"""
+
+RECONCILE_BATCH_SIZE = 100
+"""对账任务每批处理的最大记录数"""
 
 
 def _is_db_available() -> bool:
@@ -52,13 +57,31 @@ async def retry_failed_kyc_syncs() -> None:
     - 链上仍未验证 → 递增失败计数，超过阈值记录告警
 
     注意: 复用应用级 Tortoise 连接池，不自行 init/close。
+    使用分布式锁防止并发执行。
     """
-    try:
-        # 检查连接池是否可用 (热重载/关闭期间跳过)
-        if not _is_db_available():
-            schedule_logger.debug("DB pool not available, skipping retry_failed_kyc_syncs")
-            return
+    # 检查连接池是否可用 (热重载/关闭期间跳过)
+    if not _is_db_available():
+        schedule_logger.debug("DB pool not available, skipping retry_failed_kyc_syncs")
+        return
 
+    # 获取分布式锁，防止并发执行
+    try:
+        lock_service = await DistributedLockService.get_instance()
+    except Exception as e:
+        schedule_logger.warning(f"Failed to get lock service, executing without lock: {e}")
+        return await _do_retry_failed_kyc_syncs()
+
+    try:
+        async with lock_service.lock("task:kyc_retry_sync", timeout=120):
+            return await _do_retry_failed_kyc_syncs()
+    except LockAcquireError:
+        schedule_logger.info("Another kyc retry sync task is running, skipping")
+        return
+
+
+async def _do_retry_failed_kyc_syncs() -> None:
+    """执行实际的 KYC 重试同步逻辑 (内部方法)"""
+    try:
         schedule_logger.info("Starting retry_failed_kyc_syncs task")
 
         from src.models.kyc import AccountKyc
@@ -118,29 +141,27 @@ async def retry_failed_kyc_syncs() -> None:
                         tx_hash=kyc.on_chain_tx_hash,
                     )
                 else:
-                    # 链上仍未验证 — 计数失败次数
-                    retry_count = _parse_retry_count(kyc.on_chain_error)
-                    retry_count += 1
+                    # 链上仍未验证 — 使用 JSON 结构化字段计数失败次数
+                    retry_info = _parse_retry_info(kyc.on_chain_error)
+                    retry_info["retry_count"] += 1
+                    retry_info["last_error"] = "investor not verified on-chain"
+                    retry_info["last_retry_at"] = datetime.now(timezone.utc).isoformat()
 
-                    if retry_count >= MAX_RETRY_ATTEMPTS:
+                    if retry_info["retry_count"] >= MAX_RETRY_ATTEMPTS:
                         # B-08: 超过阈值 — 记录告警
-                        kyc.on_chain_error = (
-                            f"Auto-retry exhausted ({retry_count}/{MAX_RETRY_ATTEMPTS}): "
-                            f"investor not verified on-chain. Manual intervention required."
-                        )
+                        retry_info["exhausted"] = True
+                        retry_info["requires_manual_intervention"] = True
+                        kyc.on_chain_error = json.dumps(retry_info, ensure_ascii=False)
                         await kyc.save()
 
                         await _notify_sync_failure(
                             kyc_id=kyc.id,
                             wallet_address=kyc.address,
                             tx_hash=kyc.on_chain_tx_hash or "unknown",
-                            error=kyc.on_chain_error,
+                            error=f"Auto-retry exhausted ({retry_info['retry_count']}/{MAX_RETRY_ATTEMPTS})",
                         )
                     else:
-                        kyc.on_chain_error = (
-                            f"Auto-retry attempt {retry_count}/{MAX_RETRY_ATTEMPTS}: "
-                            f"investor not verified on-chain"
-                        )
+                        kyc.on_chain_error = json.dumps(retry_info, ensure_ascii=False)
                         await kyc.save()
 
                     still_failed += 1
@@ -158,18 +179,26 @@ async def retry_failed_kyc_syncs() -> None:
         schedule_logger.error(f"retry_failed_kyc_syncs task error: {e}")
 
 
-def _parse_retry_count(error_msg: str | None) -> int:
-    """从 on_chain_error 字段解析已重试次数"""
-    if not error_msg:
-        return 0
-    import re
+def _parse_retry_info(error_field: str | None) -> dict:
+    """
+    从 on_chain_error 字段解析结构化重试信息
 
-    match = re.search(r"Auto-retry attempt (\d+)/", error_msg)
-    if match:
-        return int(match.group(1))
-    if "Auto-retry exhausted" in error_msg:
-        return MAX_RETRY_ATTEMPTS
-    return 0
+    返回格式: {"retry_count": N, "last_error": "...", "last_retry_at": "..."}
+    兼容旧格式: 如果字段不是 JSON，返回初始结构
+    """
+    if not error_field:
+        return {"retry_count": 0, "last_error": None, "last_retry_at": None}
+    try:
+        info = json.loads(error_field)
+        if isinstance(info, dict) and "retry_count" in info:
+            return info
+    except (json.JSONDecodeError, TypeError):
+        pass
+    # 兼容旧格式字符串 — 尝试从旧格式提取计数
+    import re
+    match = re.search(r"Auto-retry (?:attempt|exhausted) \(?(\d+)/", error_field)
+    count = int(match.group(1)) if match else 0
+    return {"retry_count": count, "last_error": error_field, "last_retry_at": None}
 
 
 # ============ B-08: 失败通知 ============
@@ -227,18 +256,38 @@ async def reconcile_chain_events() -> None:
     - 查询所有需要对账的 KYC 记录 (SYNCED / FAILED / PENDING 且已审核通过)
     - 逐条调用合约 isVerified() 查询链上真实状态
     - 发现不一致时修正 DB 并记录审计日志
+    - 每批最多处理 RECONCILE_BATCH_SIZE 条记录
 
     优势:
     - 不依赖事件日志解析，无 web3 版本兼容问题
     - 直接读取链上最终状态，结果可靠
     - 能发现事件监听遗漏的状态变更
-    """
-    try:
-        # 检查连接池是否可用 (热重载/关闭期间跳过)
-        if not _is_db_available():
-            schedule_logger.debug("DB pool not available, skipping reconcile_chain_events")
-            return
 
+    使用分布式锁防止并发执行。
+    """
+    # 检查连接池是否可用 (热重载/关闭期间跳过)
+    if not _is_db_available():
+        schedule_logger.debug("DB pool not available, skipping reconcile_chain_events")
+        return
+
+    # 获取分布式锁，防止并发执行
+    try:
+        lock_service = await DistributedLockService.get_instance()
+    except Exception as e:
+        schedule_logger.warning(f"Failed to get lock service, executing without lock: {e}")
+        return await _do_reconcile_chain_events()
+
+    try:
+        async with lock_service.lock("task:kyc_reconcile", timeout=240):
+            return await _do_reconcile_chain_events()
+    except LockAcquireError:
+        schedule_logger.info("Another kyc reconcile task is running, skipping")
+        return
+
+
+async def _do_reconcile_chain_events() -> None:
+    """执行实际的链上对账逻辑 (内部方法)"""
+    try:
         schedule_logger.info("Starting reconcile_chain_events task (active query mode)")
 
         from src.models.kyc import AccountKyc
@@ -261,13 +310,16 @@ async def reconcile_chain_events() -> None:
         synced_records = await AccountKyc.filter(
             on_chain_sync_status=OnChainSyncStatus.SYNCED,
             network=SETTINGS.network,
-        ).all()
+        ).limit(RECONCILE_BATCH_SIZE).all()
 
-        failed_or_pending_records = await AccountKyc.filter(
-            on_chain_sync_status__in=[OnChainSyncStatus.FAILED, OnChainSyncStatus.PENDING],
-            status=KycStatus.APPROVED,
-            network=SETTINGS.network,
-        ).all()
+        remaining_batch = RECONCILE_BATCH_SIZE - len(synced_records)
+        failed_or_pending_records = []
+        if remaining_batch > 0:
+            failed_or_pending_records = await AccountKyc.filter(
+                on_chain_sync_status__in=[OnChainSyncStatus.FAILED, OnChainSyncStatus.PENDING],
+                status=KycStatus.APPROVED,
+                network=SETTINGS.network,
+            ).limit(remaining_batch).all()
 
         all_records = synced_records + failed_or_pending_records
 

@@ -32,7 +32,7 @@ from src.shared.middleware.rate_limit import (
 from src.shared.schemas.enums import KycStatus, ReviewPriority, RiskLevel
 from src.shared.security import require_admin
 
-logger = get_logger("kyc.api")
+logger = get_logger("business.api.admin.kyc")
 
 router = APIRouter()
 
@@ -219,7 +219,7 @@ async def get_kyc_by_id(
 
 
 @router.get(
-    "/",
+    "",
     summary="List KYC Records",
     description="List KYC records with advanced filtering, sorting and pagination (admin only)",
 )

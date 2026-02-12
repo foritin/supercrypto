@@ -5,6 +5,16 @@ import i18n from "i18next";
 import { I18nextProvider, initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
+// 支持的语言列表
+export const SUPPORTED_LANGUAGES = ["en-US", "zh-CN"] as const;
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+
+// 语言显示名称
+export const LANGUAGE_NAMES: Record<SupportedLanguage, string> = {
+  "en-US": "English",
+  "zh-CN": "中文",
+};
+
 // 导入翻译文件
 import enCommon from "@/locales/en-US/common";
 import enHome from "@/locales/en-US/home";

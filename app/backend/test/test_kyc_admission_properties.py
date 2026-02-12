@@ -23,7 +23,7 @@ from src.shared.common.exceptions import BusinessException
 from src.shared.schemas.enums import (
     KycAuditAction,
     KycStatus,
-    NetWork,
+    Network,
     OnChainSyncStatus,
 )
 
@@ -80,7 +80,7 @@ def create_mock_kyc(
     kyc = MagicMock(spec=AccountKyc)
     kyc.id = kyc_id
     kyc.address = address
-    kyc.network = NetWork.HARDHAT
+    kyc.network = Network.HARDHAT
     kyc.status = status
     kyc.on_chain_sync_status = on_chain_sync_status
     kyc.on_chain_tx_hash = on_chain_tx_hash
@@ -168,7 +168,7 @@ class TestReviewApprovalStateTransition:
 
         # 创建 KycService 实例
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         # Mock 数据库操作
@@ -267,7 +267,7 @@ class TestAdmissionRecordingStateAndAudit:
         )
 
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         with (
@@ -369,7 +369,7 @@ class TestRevocationRecordingStateAndAudit:
         )
 
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         with (
@@ -473,7 +473,7 @@ class TestStateValidationRejectsInvalidTransitions:
         )
 
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc:
@@ -517,7 +517,7 @@ class TestStateValidationRejectsInvalidTransitions:
         )
 
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc:
@@ -571,7 +571,7 @@ class TestStateValidationRejectsInvalidTransitions:
         )
 
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc:
@@ -613,7 +613,7 @@ class TestStateValidationRejectsInvalidTransitions:
         record_admission() 在 KYC 不存在时应抛出 BusinessException (404)。
         """
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc:
@@ -652,7 +652,7 @@ class TestStateValidationRejectsInvalidTransitions:
         record_revocation() 在 KYC 不存在时应抛出 BusinessException (404)。
         """
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc:

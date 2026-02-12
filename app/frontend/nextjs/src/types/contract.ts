@@ -57,6 +57,36 @@ export interface ContractActions {
 export type ProjectReadinessStatus = 'ready' | 'partially_ready' | 'not_ready';
 
 
-// ===== Re-export from services for convenience =====
-// Note: Main contract types are defined in services/contract.ts
-// These types extend those definitions with readiness and binding features
+// ===== 从 services/contract.ts 重新导出合约管理类型 =====
+
+export type {
+  ContractAddresses,
+  SubscriptionParams,
+  SubscriptionContractInfo,
+  ContractAddress,
+  RegistrationStatus,
+  ContractType,
+  ContractTypeConfig,
+  DependencyStatusItem,
+  ContractStatusItem,
+  ProjectInfo,
+  ProjectContractsGroup,
+  ContractStats,
+  ContractStatusResponse,
+  ContractStatusList,
+  ContractDependency,
+  UpdateContractAddressRequest,
+  UpdateContractAddressResponse,
+  ConfirmSyncRequest,
+  ResetDeployRequest,
+  PrepareRegisterRequest,
+  PrepareRegisterResponse,
+  ConfirmRegisterRequest,
+  ConfirmRegisterResponse,
+  PrepareUnregisterRequest,
+  PrepareUnregisterResponse,
+  ConfirmUnregisterRequest,
+  ConfirmUnregisterResponse,
+  ContractValidationResult,
+  ContractValidationResponse,
+} from '@/services/contract'

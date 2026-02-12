@@ -9,7 +9,7 @@ Requirements: 2.1
 
 from typing import Optional
 
-from falib.utils.handlers import create_error_response, success_response
+from falib.utils.handlers import create_error_response, create_success_response
 from fastapi import APIRouter, Depends
 
 from src.services.contract.service import ContractService, get_contract_service
@@ -43,7 +43,7 @@ async def get_contract_status(
     }
     """
     status_data = await service.get_contract_status()
-    return success_response(object_data=status_data)
+    return create_success_response(object_data=status_data)
 
 
 @router.get(
@@ -68,7 +68,7 @@ async def get_dependency_graph(
     用于树形可视化组件渲染依赖关系图
     """
     graph_data = await service.get_dependency_graph()
-    return success_response(object_data=graph_data)
+    return create_success_response(object_data=graph_data)
 
 
 @router.get(
@@ -88,7 +88,7 @@ async def get_provider_status(
         category: 可选，按分类过滤 (如 "vanke", "common")
     """
     result = await service.get_provider_status(category=category)
-    return success_response(object_data=result)
+    return create_success_response(object_data=result)
 
 
 # ============ 主合约管理端点 ============
@@ -142,7 +142,7 @@ async def set_primary_contract(
             "chain_id": contract.chain_id,
         }
 
-        return success_response(object_data=contract_data)
+        return create_success_response(object_data=contract_data)
     except BusinessException as e:
         return create_error_response(
             msg=e.message,
@@ -201,7 +201,7 @@ async def unset_primary_contract(
             "chain_id": contract.chain_id,
         }
 
-        return success_response(object_data=contract_data)
+        return create_success_response(object_data=contract_data)
     except BusinessException as e:
         return create_error_response(
             msg=e.message,

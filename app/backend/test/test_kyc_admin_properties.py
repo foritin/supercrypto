@@ -22,7 +22,7 @@ from src.services.admin.kyc_service import (
 from src.shared.schemas.enums import (
     KycAuditAction,
     KycStatus,
-    NetWork,
+    Network,
     ReviewPriority,
     RiskLevel,
 )
@@ -72,7 +72,7 @@ class TestDefaultValuesProperty:
         # 创建 KYC 记录 (不指定风险相关字段)
         kyc = AccountKyc(
             address=wallet_address,
-            network=NetWork.HARDHAT,
+            network=Network.HARDHAT,
             status=KycStatus.NOT_STARTED,
         )
         

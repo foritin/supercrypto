@@ -226,10 +226,10 @@ export function Step2DocumentUpload({
                           'relative flex items-center sm:flex-col sm:items-center',
                           'p-3 sm:p-4 rounded-xl cursor-pointer',
                           'border transition-all duration-200',
-                          'hover:border-[#00D4AA]/30',
+                          'hover:border-primary/30',
                           'min-h-[56px] sm:min-h-0',
                           isSelected
-                            ? 'border-[#00D4AA]/60 bg-[#00D4AA]/5'
+                            ? 'border-primary/60 bg-primary/5'
                             : 'border-white/[0.06] bg-white/[0.02]'
                         )}
                       >
@@ -250,13 +250,13 @@ export function Step2DocumentUpload({
                             'w-5 h-5 sm:w-4 sm:h-4 rounded-full border-2 transition-all',
                             'mr-3 sm:mr-0 flex-shrink-0',
                             isSelected
-                              ? 'border-[#00D4AA] bg-[#00D4AA]'
+                              ? 'border-primary bg-primary'
                               : 'border-white/30 bg-transparent'
                           )}
                         >
                           {isSelected && (
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="w-2 h-2 sm:w-1.5 sm:h-1.5 rounded-full bg-[#0a0f0d]" />
+                              <div className="w-2 h-2 sm:w-1.5 sm:h-1.5 rounded-full bg-bg-dark" />
                             </div>
                           )}
                         </div>
@@ -265,7 +265,7 @@ export function Step2DocumentUpload({
                           className={cn(
                             'hidden sm:flex p-3 rounded-lg mb-2 transition-colors',
                             isSelected
-                              ? 'bg-[#00D4AA]/20 text-[#00D4AA]'
+                              ? 'bg-primary/20 text-primary'
                               : 'bg-white/5 text-white/60'
                           )}
                         >

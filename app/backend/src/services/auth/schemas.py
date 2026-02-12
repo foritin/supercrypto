@@ -5,7 +5,7 @@ Auth 领域 - Schema 定义
 
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TokenRequest(BaseModel):
@@ -25,7 +25,7 @@ class TokenRequest(BaseModel):
         """
         获取网络类型
 
-        Returns:
+        返回:
             mainnet: 主网 (chain_id=1)
             testnet: 官方测试网 (Sepolia, Holesky 等)
             hardhat: 本地开发网络 (Hardhat, Ganache)
@@ -56,8 +56,7 @@ class TokenRequest(BaseModel):
 
         return "custom"
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
                 "signature": "0x1234567890abcdef...",
@@ -65,7 +64,7 @@ class TokenRequest(BaseModel):
                 "chain_name": "Sepolia",
                 "expires_in_mins": 60,
             }
-        }
+        })
 
 
 class TokenResponse(BaseModel):
@@ -76,15 +75,14 @@ class TokenResponse(BaseModel):
     token_type: str = Field(default="Bearer", description="令牌类型")
     expires_in_mins: int = Field(..., description="令牌过期时间(分钟)")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "token_type": "Bearer",
                 "expires_in_mins": 60,
             }
-        }
+        })
 
 
 class RefreshTokenRequest(BaseModel):
@@ -108,8 +106,7 @@ class CurrentUserResponse(BaseModel):
     net_type: str = Field(default="hardhat", description="网络类型")
     kyc_status: Optional[str] = Field(None, description="KYC 状态")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SessionInfo(BaseModel):
@@ -122,5 +119,4 @@ class SessionInfo(BaseModel):
     user_agent: Optional[str] = Field(None, description="用户代理")
     ip_address: Optional[str] = Field(None, description="IP 地址")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

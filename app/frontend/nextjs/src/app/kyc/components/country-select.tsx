@@ -81,7 +81,7 @@ export function CountrySelect({ value, onChange, onBlur, error, placeholder }: C
           'w-full h-10 px-4 rounded-lg bg-white/5 border text-left flex items-center gap-3 transition-colors',
           error 
             ? 'border-red-500 focus:border-red-400 ring-1 ring-red-500/20' 
-            : 'border-white/10 hover:border-white/20 focus:border-[#00D4AA]/50',
+            : 'border-white/10 hover:border-white/20 focus:border-primary/50',
         )}
       >
         {/* 图标 */}
@@ -126,13 +126,13 @@ export function CountrySelect({ value, onChange, onBlur, error, placeholder }: C
                 className={cn(
                   'w-full px-4 py-2.5 flex items-center gap-3 text-left transition-colors',
                   isSelected 
-                    ? 'bg-[#00D4AA]/10 text-[#00D4AA]' 
+                    ? 'bg-primary/10 text-primary' 
                     : 'text-white hover:bg-white/5'
                 )}
               >
                 {Flag && <Flag className="w-5 h-4 rounded-sm flex-shrink-0" />}
                 <span className="flex-1">{t(country.labelKey, country.code)}</span>
-                {isSelected && <Check className="h-4 w-4 text-[#00D4AA]" />}
+                {isSelected && <Check className="h-4 w-4 text-primary" />}
               </button>
             );
           })}

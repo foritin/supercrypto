@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 from falib.utils.config import SETTINGS
+from falib.utils.log import get_logger
 
 from src.models.account import Account
 from src.services.account.schemas import (
@@ -18,6 +19,8 @@ from src.services.account.schemas import (
 )
 from src.shared.common.exceptions import ConflictException, NotFoundException
 from src.shared.common.utils import calculate_total_pages
+
+logger = get_logger("business.account.service")
 
 
 class AccountService:
@@ -30,19 +33,19 @@ class AccountService:
     @property
     def network(self) -> str:
         """当前网络类型"""
-        return SETTINGS.NETWORK
+        return SETTINGS.network
 
     async def create(self, data: AccountCreate) -> AccountResponse:
         """
         创建账户
 
-        Args:
+        参数:
             data: 账户创建数据
 
-        Returns:
+        返回:
             AccountResponse: 账户响应
 
-        Raises:
+        异常:
             ConflictException: 地址已存在
         """
         address = data.address.lower()
@@ -69,13 +72,13 @@ class AccountService:
         """
         根据地址获取账户
 
-        Args:
+        参数:
             address: 钱包地址
 
-        Returns:
+        返回:
             AccountResponse: 账户响应
 
-        Raises:
+        异常:
             NotFoundException: 账户不存在
         """
         address = address.lower()
@@ -93,10 +96,10 @@ class AccountService:
         """
         根据地址获取账户（不存在返回 None）
 
-        Args:
+        参数:
             address: 钱包地址
 
-        Returns:
+        返回:
             Optional[AccountResponse]: 账户响应或 None
         """
         address = address.lower()
@@ -111,10 +114,10 @@ class AccountService:
         """
         根据地址获取 ORM 模型（内部使用）
 
-        Args:
+        参数:
             address: 钱包地址
 
-        Returns:
+        返回:
             Optional[Account]: ORM 模型或 None
         """
         address = address.lower()
@@ -124,14 +127,14 @@ class AccountService:
         """
         更新账户
 
-        Args:
+        参数:
             address: 钱包地址
             data: 更新数据
 
-        Returns:
+        返回:
             AccountResponse: 更新后的账户
 
-        Raises:
+        异常:
             NotFoundException: 账户不存在
         """
         address = address.lower()
@@ -154,10 +157,10 @@ class AccountService:
         """
         更新最后登录时间
 
-        Args:
+        参数:
             address: 钱包地址
 
-        Returns:
+        返回:
             AccountResponse: 更新后的账户
         """
         address = address.lower()
@@ -179,10 +182,10 @@ class AccountService:
         """
         查询账户列表
 
-        Args:
+        参数:
             query: 查询参数
 
-        Returns:
+        返回:
             Tuple[List[AccountResponse], int, int]: (账户列表, 总数, 总页数)
         """
         q = Account.filter(network=self.network)
@@ -207,13 +210,13 @@ class AccountService:
         """
         删除账户
 
-        Args:
+        参数:
             address: 钱包地址
 
-        Returns:
+        返回:
             bool: 删除成功返回 True
 
-        Raises:
+        异常:
             NotFoundException: 账户不存在
         """
         address = address.lower()
@@ -233,10 +236,10 @@ class AccountService:
         """
         检查地址是否存在
 
-        Args:
+        参数:
             address: 钱包地址
 
-        Returns:
+        返回:
             bool: 存在返回 True
         """
         address = address.lower()

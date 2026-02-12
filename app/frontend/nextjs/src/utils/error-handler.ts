@@ -4,7 +4,7 @@
  * 根据后端返回的 error_code 进行国际化翻译
  * 优先级：error_code 翻译 > 后端 message > HTTP 状态码默认消息
  */
-import i18n from '@/config/i18n'
+import { i18n } from '@/providers/i18n-provider'
 import { ApiError } from '@/services/api'
 
 /**

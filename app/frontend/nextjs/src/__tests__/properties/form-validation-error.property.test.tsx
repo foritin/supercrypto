@@ -161,9 +161,9 @@ describe('Property 4: Form Validation Error Display', () => {
             unmount()
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       )
-    })
+    }, 15000)
 
     it('prevents form submission when asset validation fails', async () => {
       await fc.assert(

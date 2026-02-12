@@ -129,7 +129,7 @@ function CookieCategoryCard({
       <div
         className={cn(
           'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center',
-          required ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 'bg-white/5 text-white/60'
+          required ? 'bg-primary/10 text-primary' : 'bg-white/5 text-white/60'
         )}
       >
         {icon}
@@ -138,7 +138,7 @@ function CookieCategoryCard({
         <div className="flex items-center justify-between gap-2 mb-1">
           <h4 className="font-medium text-white">{title}</h4>
           {required && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[#00D4AA]/10 text-[#00D4AA]">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
               Required
             </span>
           )}
@@ -152,7 +152,7 @@ function CookieCategoryCard({
           onCheckedChange={onToggle}
           className={cn(
             'w-5 h-5 rounded border-2',
-            'data-[state=checked]:bg-[#00D4AA] data-[state=checked]:border-[#00D4AA]',
+            'data-[state=checked]:bg-primary data-[state=checked]:border-primary',
             required && 'opacity-50 cursor-not-allowed'
           )}
         />
@@ -250,7 +250,7 @@ export function CookieConsent({ className }: CookieConsentProps) {
         <div
           className={cn(
             'mx-4 mb-4 p-4 sm:p-6 rounded-2xl',
-            'bg-[#111916]/95 backdrop-blur-xl',
+            'bg-bg-card/95 backdrop-blur-xl',
             'border border-white/[0.08]',
             'shadow-2xl shadow-black/50',
             'max-w-[1200px] lg:mx-auto'
@@ -259,8 +259,8 @@ export function CookieConsent({ className }: CookieConsentProps) {
           <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
             {/* 左侧：图标和文案 */}
             <div className="flex items-start gap-4 flex-1">
-              <div className="flex-shrink-0 p-2 rounded-xl bg-[#FFD700]/10">
-                <Cookie className="w-5 h-5 text-[#FFD700]" />
+              <div className="flex-shrink-0 p-2 rounded-xl bg-gold/10">
+                <Cookie className="w-5 h-5 text-gold" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-white mb-1">
@@ -307,7 +307,7 @@ export function CookieConsent({ className }: CookieConsentProps) {
                 onClick={handleAcceptAll}
                 className={cn(
                   'h-10 px-4',
-                  'bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-[#0a0f0d]',
+                  'bg-primary hover:bg-primary/90 text-bg-dark',
                   'text-sm font-medium'
                 )}
               >
@@ -332,7 +332,7 @@ export function CookieConsent({ className }: CookieConsentProps) {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Cookie className="w-5 h-5 text-[#FFD700]" />
+              <Cookie className="w-5 h-5 text-gold" />
               {t('cookieConsent.settings.title', 'Cookie Preferences')}
             </DialogTitle>
             <DialogDescription>
@@ -396,7 +396,7 @@ export function CookieConsent({ className }: CookieConsentProps) {
             </Button>
             <Button
               onClick={handleSaveSettings}
-              className="flex-1 h-11 bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-[#0a0f0d] font-medium"
+              className="flex-1 h-11 bg-primary hover:bg-primary/90 text-bg-dark font-medium"
             >
               {t('cookieConsent.settings.save', 'Save Preferences')}
             </Button>

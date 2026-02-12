@@ -61,8 +61,8 @@ export function KycLanding() {
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="text-center py-12">
-        <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#00D4AA]/20 to-[#00D4AA]/5 flex items-center justify-center border border-[#00D4AA]/30">
-          <Shield className="h-12 w-12 text-[#00D4AA]" />
+        <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/30">
+          <Shield className="h-12 w-12 text-primary" />
         </div>
         <h1 className="text-4xl font-bold text-white mb-4">
           {t('kyc.landing.title', 'Identity Verification')}
@@ -93,7 +93,7 @@ export function KycLanding() {
           </Button>
 
           {status === 'draft' && lastSaved && (
-            <p className="text-sm text-[#00D4AA]">
+            <p className="text-sm text-primary">
               {t('kyc.landing.draftSaved', 'Last saved: {{time}}', {
                 time: new Date(lastSaved).toLocaleString(),
               })}
@@ -111,11 +111,11 @@ export function KycLanding() {
           {benefits.map((benefit, index) => (
             <Card
               key={index}
-              className="p-6 glass border-white/10 hover:border-[#00D4AA]/30 transition-colors"
+              className="p-6 glass border-white/10 hover:border-primary/30 transition-colors"
             >
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#00D4AA]/10 flex items-center justify-center shrink-0">
-                  <benefit.icon className="h-6 w-6 text-[#00D4AA]" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <benefit.icon className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-white mb-1">{benefit.title}</h3>
@@ -128,15 +128,15 @@ export function KycLanding() {
       </div>
 
       {/* Requirements Section */}
-      <Card className="p-8 glass border-[#00D4AA]/20">
+      <Card className="p-8 glass border-primary/20">
         <h2 className="text-xl font-bold text-white mb-6">
           {t('kyc.landing.whatYouNeed', 'What You\'ll Need')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {requirements.map((req, index) => (
             <div key={index} className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#00D4AA]/10 flex items-center justify-center shrink-0">
-                <req.icon className="h-5 w-5 text-[#00D4AA]" />
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <req.icon className="h-5 w-5 text-primary" />
               </div>
               <p className="text-sm text-white/70">{req.text}</p>
             </div>
@@ -157,8 +157,8 @@ export function KycLanding() {
             { step: '4', title: 'Review', desc: 'Submit & wait' },
           ].map((item, index) => (
             <div key={index} className="text-center">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#00D4AA]/10 border border-[#00D4AA]/30 flex items-center justify-center">
-                <span className="text-[#00D4AA] font-bold">{item.step}</span>
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
+                <span className="text-primary font-bold">{item.step}</span>
               </div>
               <h4 className="font-medium text-white mb-1">{item.title}</h4>
               <p className="text-xs text-white/50">{item.desc}</p>
@@ -199,7 +199,7 @@ export function KycLanding() {
         </Button>
         <p className="mt-4 text-sm text-white/40">
           {t('kyc.landing.questions', 'Questions? Contact our ')}
-          <a href="/support" className="text-[#00D4AA] hover:underline">
+          <a href="/support" className="text-primary hover:underline">
             {t('kyc.landing.supportTeam', 'support team')}
           </a>
         </p>

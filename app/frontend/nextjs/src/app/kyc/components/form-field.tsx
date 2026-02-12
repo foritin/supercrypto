@@ -51,7 +51,7 @@ export function FormInput({ error, icon, className, type, ...props }: FormInputP
           icon && 'pl-10',
           error 
             ? 'border-red-500 focus:border-red-400 ring-1 ring-red-500/20' 
-            : 'border-white/10 focus:border-[#00D4AA]/50',
+            : 'border-white/10 focus:border-primary/50',
           // 日期输入框样式
           isDateInput && [
             // 日历图标样式 - 使用 brightness 和 invert 让图标变白
@@ -105,7 +105,7 @@ export function FormSelect({ error, icon, options, className, ...props }: FormSe
           icon && 'pl-10',
           error 
             ? 'border-red-500 focus:border-red-400 ring-1 ring-red-500/20' 
-            : 'border-white/10 focus:border-[#00D4AA]/50',
+            : 'border-white/10 focus:border-primary/50',
           className
         )}
         {...props}

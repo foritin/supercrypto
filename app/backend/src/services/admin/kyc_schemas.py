@@ -8,7 +8,7 @@ KYC 管理后端增强功能的 Pydantic Schema 定义
 import datetime as dt
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 from src.shared.schemas.enums import (
     KycAuditAction,
@@ -32,8 +32,7 @@ class KycAuditLogEntry(BaseModel):
     details: Optional[Dict[str, Any]] = Field(None, description="操作详情")
     created_at: dt.datetime = Field(..., description="创建时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============ 列表响应 ============
@@ -81,8 +80,7 @@ class KycListItem(BaseModel):
     created_at: Optional[dt.datetime] = Field(None, description="创建时间")
     updated_at: Optional[dt.datetime] = Field(None, description="更新时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============ 详情响应 ============

@@ -19,7 +19,7 @@ class Chain(AbstractModel, TimestampMixin):
 
     # 基础信息
     chain_id = fields.IntField(
-        unique=True, index=True, description="链 ID (如 1, 31337)"
+        unique=True, db_index=True, description="链 ID (如 1, 31337)"
     )
     name = fields.CharField(max_length=64, description="网络名称 (如 Ethereum)")
     display_name = fields.CharField(
@@ -45,11 +45,11 @@ class Chain(AbstractModel, TimestampMixin):
     environment = fields.CharField(
         max_length=20,
         default="development",
-        index=True,
+        db_index=True,
         description="环境: development / production / all",
     )
     is_testnet = fields.BooleanField(default=False, description="是否为测试网")
-    is_enabled = fields.BooleanField(default=True, index=True, description="是否启用")
+    is_enabled = fields.BooleanField(default=True, db_index=True, description="是否启用")
 
     # 显示配置
     icon = fields.CharField(max_length=64, null=True, description="图标标识")

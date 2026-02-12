@@ -213,7 +213,7 @@ export function IdentityStep() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-8 glass border-[#00D4AA]/20">
+      <Card className="p-8 glass border-primary/20">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button
@@ -228,7 +228,7 @@ export function IdentityStep() {
             </h3>
           </div>
           {lastSaved && (
-            <span className="flex items-center gap-1 text-xs text-[#00D4AA]">
+            <span className="flex items-center gap-1 text-xs text-primary">
               <Save className="h-3 w-3" />
               {t('kyc.autoSaved', 'Auto-saved')}
             </span>
@@ -239,7 +239,7 @@ export function IdentityStep() {
           {/* Address Section */}
           <div className="space-y-4">
             <h4 className="text-lg font-medium text-white flex items-center gap-2">
-              <Home className="h-5 w-5 text-[#00D4AA]" />
+              <Home className="h-5 w-5 text-primary" />
               {t('kyc.identity.address', 'Residential Address')}
             </h4>
 
@@ -343,7 +343,7 @@ export function IdentityStep() {
           {/* Document Upload Section */}
           <div className="pt-6 border-t border-white/10">
             <h4 className="text-lg font-medium text-white flex items-center gap-2 mb-4">
-              <FileText className="h-5 w-5 text-[#00D4AA]" />
+              <FileText className="h-5 w-5 text-primary" />
               {t('kyc.identity.document', 'Identity Document')}
             </h4>
 
@@ -359,13 +359,13 @@ export function IdentityStep() {
                     onClick={() => updateFormData({ documentType: type.value as typeof formData.documentType })}
                     className={`p-4 rounded-xl border-2 text-center transition-all ${
                       formData.documentType === type.value
-                        ? 'border-[#00D4AA] bg-[#00D4AA]/10'
+                        ? 'border-primary bg-primary/10'
                         : 'border-white/10 hover:border-white/30'
                     }`}
                   >
                     <span className="text-2xl mb-2 block">{type.icon}</span>
                     <span className={`text-sm font-medium ${
-                      formData.documentType === type.value ? 'text-[#00D4AA]' : 'text-white'
+                      formData.documentType === type.value ? 'text-primary' : 'text-white'
                     }`}>
                       {type.label}
                     </span>
@@ -443,10 +443,10 @@ export function IdentityStep() {
                 {/* 当前证件类型上传状态提示 */}
                 {currentDocUploadHint && (
                   <p className={`text-sm flex items-center gap-1.5 ${
-                    currentDocUploadHint.type === 'success' ? 'text-[#00D4AA]' : 'text-amber-400'
+                    currentDocUploadHint.type === 'success' ? 'text-primary' : 'text-amber-400'
                   }`}>
                     <span className={`inline-block w-1.5 h-1.5 rounded-full ${
-                      currentDocUploadHint.type === 'success' ? 'bg-[#00D4AA]' : 'bg-amber-400'
+                      currentDocUploadHint.type === 'success' ? 'bg-primary' : 'bg-amber-400'
                     }`} />
                     {currentDocUploadHint.message}
                   </p>
@@ -457,7 +457,7 @@ export function IdentityStep() {
             {/* 多证件上传提示 */}
             <div className="mt-4 p-4 rounded-lg bg-white/5 border border-white/10">
               <p className="text-sm text-white/60">
-                <span className="text-[#00D4AA] font-medium">💡 {t('kyc.identity.uploadTip.title', 'Tip')}:</span>{' '}
+                <span className="text-primary font-medium">💡 {t('kyc.identity.uploadTip.title', 'Tip')}:</span>{' '}
                 {t('kyc.identity.uploadTip.description', 'You only need to upload one type of document to continue. However, uploading multiple document types can speed up the verification process.')}
               </p>
               
@@ -480,7 +480,7 @@ export function IdentityStep() {
                           key={docType}
                           className={`text-xs px-2 py-0.5 rounded-full ${
                             isComplete 
-                              ? 'bg-[#00D4AA]/20 text-[#00D4AA]' 
+                              ? 'bg-primary/20 text-primary' 
                               : 'bg-white/5 text-white/30'
                           }`}
                         >

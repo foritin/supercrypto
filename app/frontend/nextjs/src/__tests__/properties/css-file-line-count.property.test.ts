@@ -23,7 +23,7 @@ import * as path from 'path';
 const fileConstraints = [
   { path: '../../app/globals.css', maxLines: 120, name: 'globals.css' }, // 包含 @theme 配置
   { path: '../../styles/variables.css', maxLines: 250, name: 'variables.css' }, // 包含完整的设计令牌
-  { path: '../../styles/animations.css', maxLines: 300, name: 'animations.css' }, // 包含所有动画定义
+  { path: '../../styles/animations.css', maxLines: 350, name: 'animations.css' }, // 包含所有动画定义
   { path: '../../styles/base.css', maxLines: 150, name: 'base.css' }, // 包含无障碍样式
   { path: '../../styles/components/hero.css', maxLines: 200, name: 'hero.css' }, // Hero 区域样式
   { path: '../../styles/components/scroll-reveal.css', maxLines: 100, name: 'scroll-reveal.css' },

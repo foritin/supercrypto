@@ -18,7 +18,7 @@ const mockAssets: InvestmentAsset[] = [
     id: 'real-estate-1',
     name: 'Premium Real Estate Fund I',
     symbol: 'PREFI',
-    tokenAddress: '0x1234567890123456789012345678901234567890',
+    tokenAddress: (process.env.NEXT_PUBLIC_PREFI_TOKEN_ADDRESS || '0x1234567890123456789012345678901234567890') as `0x${string}`,
     decimals: 18,
     apy: 12.5,
     minInvestment: '0.1',
@@ -31,7 +31,7 @@ const mockAssets: InvestmentAsset[] = [
     id: 'commodities-1',
     name: 'Gold Reserve Token',
     symbol: 'GRT',
-    tokenAddress: '0x0987654321098765432109876543210987654321',
+    tokenAddress: (process.env.NEXT_PUBLIC_GRT_TOKEN_ADDRESS || '0x0987654321098765432109876543210987654321') as `0x${string}`,
     decimals: 18,
     apy: 8.2,
     minInvestment: '0.05',
@@ -125,8 +125,8 @@ export function InvestmentStep() {
 
   if (!isConnected) {
     return (
-      <Card className="p-8 glass border-[#00D4AA]/20 text-center">
-        <AlertCircle className="h-12 w-12 text-[#00D4AA] mx-auto mb-4" />
+      <Card className="p-8 glass border-primary/20 text-center">
+        <AlertCircle className="h-12 w-12 text-primary mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-white mb-2">
           {t('invest.connectWallet', 'Connect Your Wallet')}
         </h3>
@@ -140,7 +140,7 @@ export function InvestmentStep() {
   return (
     <div className="space-y-6">
       {/* Asset Selection */}
-      <Card className="p-6 glass border-[#00D4AA]/20">
+      <Card className="p-6 glass border-primary/20">
         <h3 className="text-lg font-semibold text-white mb-4">
           {t('invest.selectAsset', 'Select Asset')}
         </h3>
@@ -154,21 +154,21 @@ export function InvestmentStep() {
               }}
               className={`p-4 rounded-xl border-2 text-left transition-all ${
                 asset?.id === a.id
-                  ? 'border-[#00D4AA] bg-[#00D4AA]/10'
-                  : 'border-white/10 hover:border-[#00D4AA]/50'
+                  ? 'border-primary bg-primary/10'
+                  : 'border-white/10 hover:border-primary/50'
               }`}
             >
               <div className="flex justify-between items-start mb-2">
                 <h4 className="font-medium text-white">{a.name}</h4>
-                <span className="text-[#00D4AA] font-bold">{a.apy}% APY</span>
+                <span className="text-primary font-bold">{a.apy}% APY</span>
               </div>
               <p className="text-white/60 text-sm mb-3">{a.symbol}</p>
               <div className="flex items-center gap-4 text-xs text-white/50">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {a.lockPeriod} days lock
+                  {t('invest.daysLock', { days: a.lockPeriod })}
                 </span>
-                <span>Min: {a.minInvestment} ETH</span>
+                <span>{t('invest.minInvestment', { min: a.minInvestment })}</span>
               </div>
             </button>
           ))}
@@ -177,7 +177,7 @@ export function InvestmentStep() {
 
       {/* Amount Input */}
       {asset && (
-        <Card className="p-6 glass border-[#00D4AA]/20">
+        <Card className="p-6 glass border-primary/20">
           <h3 className="text-lg font-semibold text-white mb-4">
             {t('invest.enterAmount', 'Enter Investment Amount')}
           </h3>
@@ -239,36 +239,36 @@ export function InvestmentStep() {
 
             {/* Yield Preview */}
             {amount && !validationError && expectedYield && (
-              <div className="p-4 rounded-xl bg-[#00D4AA]/10 border border-[#00D4AA]/30">
+              <div className="p-4 rounded-xl bg-primary/10 border border-primary/30">
                 <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="h-5 w-5 text-[#00D4AA]" />
-                  <span className="font-medium text-[#00D4AA]">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  <span className="font-medium text-primary">
                     {t('invest.expectedYield', 'Expected Yield')}
                   </span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/60">Investment Amount</span>
+                    <span className="text-white/60">{t('invest.detail.investmentAmount')}</span>
                     <span className="text-white font-medium">{amount} ETH</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/60">APY</span>
-                    <span className="text-[#00D4AA] font-medium">{asset.apy}%</span>
+                    <span className="text-white/60">{t('invest.detail.apy')}</span>
+                    <span className="text-primary font-medium">{asset.apy}%</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/60">Lock Period</span>
-                    <span className="text-white font-medium">{asset.lockPeriod} days</span>
+                    <span className="text-white/60">{t('invest.detail.lockPeriod')}</span>
+                    <span className="text-white font-medium">{t('invest.detail.daysUnit', { days: asset.lockPeriod })}</span>
                   </div>
                   <div className="h-px bg-white/10 my-2" />
                   <div className="flex justify-between">
-                    <span className="text-white/80">Expected Return</span>
-                    <span className="text-[#00D4AA] font-bold text-lg">
+                    <span className="text-white/80">{t('invest.detail.expectedReturn')}</span>
+                    <span className="text-primary font-bold text-lg">
                       +{expectedYield} ETH
                     </span>
                   </div>
                   {lockEndDate && (
                     <div className="flex justify-between text-xs text-white/50">
-                      <span>Unlock Date</span>
+                      <span>{t('invest.detail.unlockDate')}</span>
                       <span>{lockEndDate.toLocaleDateString()}</span>
                     </div>
                   )}
@@ -281,9 +281,9 @@ export function InvestmentStep() {
               <div className="flex items-start gap-2 text-sm text-white/60">
                 <Info className="h-4 w-4 mt-0.5 shrink-0" />
                 <div className="space-y-1">
-                  <p>Minimum investment: {asset.minInvestment} ETH</p>
-                  <p>Maximum investment: {asset.maxInvestment} ETH</p>
-                  <p>Your investment will be locked for {asset.lockPeriod} days</p>
+                  <p>{t('invest.assetInfo.minInvestment', { min: asset.minInvestment })}</p>
+                  <p>{t('invest.assetInfo.maxInvestment', { max: asset.maxInvestment })}</p>
+                  <p>{t('invest.assetInfo.lockNotice', { days: asset.lockPeriod })}</p>
                 </div>
               </div>
             </div>

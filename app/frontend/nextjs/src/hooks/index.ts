@@ -21,3 +21,5 @@ export {
   useSubscriptionContract,
   type TxState,
 } from './use-subscription-contract'
+
+export { useAssets } from './use-assets'

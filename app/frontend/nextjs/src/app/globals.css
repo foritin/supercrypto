@@ -1,49 +1,27 @@
-/* ============================================
-   SuperCrypto - Global Styles Entry Point
-   ============================================
-   Tailwind + CVA 架构：全局 CSS 仅保留必要内容
-   - Tailwind 导入
-   - CSS 变量 (主题)
-   - @keyframes 动画
-   - 特殊组件样式 (视频背景、玻璃态等)
-   ============================================ */
-
+/* SuperCrypto - Global Styles Entry Point */
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
-
-/* 第三方库样式 */
 @import "react-day-picker/style.css";
 
-/* Design Tokens - SuperCrypto Design System */
-@import "../styles/tokens/colors.css";      /* Color tokens */
-@import "../styles/tokens/typography.css";  /* Typography tokens */
-@import "../styles/tokens/spacing.css";     /* Spacing tokens */
-@import "../styles/tokens/effects.css";     /* Glassmorphism & effects */
+/* Design Tokens */
+@import "../styles/tokens/colors.css";
+@import "../styles/tokens/typography.css";
+@import "../styles/tokens/spacing.css";
+@import "../styles/tokens/effects.css";
 
-/* 样式模块导入 - 精简版 */
-@import "../styles/variables.css";       /* CSS 变量/主题 */
-@import "../styles/animations.css";      /* @keyframes 动画 */
-@import "../styles/base.css";            /* 滚动条、无障碍 */
-@import "../styles/components/hero.css"; /* 视频背景组件 */
-@import "../styles/components/glassmorphism.css"; /* 玻璃态效果 */
-@import "../styles/components/wizard.css";        /* 向导组件动画 */
-@import "../styles/legacy/ant-design.css";        /* 第三方库覆盖 */
+/* 样式模块 */
+@import "../styles/variables.css";
+@import "../styles/animations.css";
+@import "../styles/base.css";
+@import "../styles/components/hero.css";
+@import "../styles/components/glassmorphism.css";
+@import "../styles/components/wizard.css";
+@import "../styles/legacy/ant-design.css";
 
-/* 已移除 - 未使用或可用 Tailwind 替代:
-   - scroll-reveal.css (未使用)
-   - phoenix-prototype.css (部分已迁移)
-   - premium-v5-dashboard.css (待迁移到 CVA)
-*/
-
-/* Tailwind 自定义变体 */
 @custom-variant dark (&:is(.dark *));
 
-/* ============================================
-   @theme inline - Tailwind 主题配置
-   ============================================ */
-
 @theme inline {
-  /* Border Radius System */
+  /* Border Radius */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -51,8 +29,7 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  
-  /* Color System - HSL format for Tailwind compatibility */
+  /* Color System */
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -72,7 +49,19 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  
+  /* Web3 品牌色 */
+  --color-primary-light: #33ffcc;
+  --color-primary-dark: #00a080;
+  --color-gold: #ffd700;
+  --color-gold-light: #ffe55c;
+  --color-gold-dark: #c9a000;
+  /* Web3 背景色 */
+  --color-bg-dark: var(--bg-dark);
+  --color-bg-card: var(--bg-card);
+  --color-bg-card-hover: var(--bg-card-hover);
+  --color-bg-elevated: var(--bg-elevated);
+  /* 发光效果 */
+  --color-primary-glow: rgba(0, 212, 170, 0.4);
   /* Semantic Colors */
   --color-success: hsl(var(--success));
   --color-success-foreground: hsl(var(--success-foreground));
@@ -82,14 +71,12 @@
   --color-error-foreground: hsl(var(--error-foreground));
   --color-info: hsl(var(--info));
   --color-info-foreground: hsl(var(--info-foreground));
-  
   /* Chart Colors */
   --color-chart-1: hsl(var(--chart-1));
   --color-chart-2: hsl(var(--chart-2));
   --color-chart-3: hsl(var(--chart-3));
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
-  
   /* Sidebar Colors */
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
@@ -100,10 +87,6 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 }
-
-/* ============================================
-   @layer base - 基础层配置
-   ============================================ */
 
 @layer base {
   * {

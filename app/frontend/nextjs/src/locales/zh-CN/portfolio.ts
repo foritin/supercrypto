@@ -89,6 +89,57 @@ const portfolio = {
     exportFailed: "导出失败",
     filterByType: "按类型筛选",
     
+    // 页面头部
+    myPortfolio: "我的投资组合",
+    
+    // 统计卡片标题
+    totalInvestedLabel: "总投资额",
+    currentValueLabel: "当前价值",
+    totalEarningsLabel: "累计收益",
+    activeInvestmentsLabel: "活跃投资",
+    
+    // 标签页
+    myInvestments: "我的投资",
+    transactionHistory: "交易历史",
+    
+    // 空状态
+    noInvestmentsYet: "暂无投资记录，开始探索 RWA 资产吧！",
+    noTransactionsYet: "暂无交易记录",
+
+    // 开发模式
+    mockDataBanner: "开发模式 - 使用模拟数据",
+    
+    // 筛选
+    filterByTypeLabel: "按类型筛选",
+    allTypes: "全部类型",
+    subscribe: "认购",
+    redeemType: "赎回",
+    claimRewards: "领取奖励",
+    exportLabel: "导出",
+    
+    // 表格单元格标签
+    daysLeftLabel: "剩余 {{days}} 天",
+    monthsLabel: "{{months}} 个月",
+    detailsButton: "详情",
+    
+    // 详情弹窗
+    investmentDetails: "投资详情",
+    investedAmount: "投资金额",
+    expectedReturnLabel: "预期收益",
+    lockProgress: "锁定进度",
+    daysRemaining: "剩余 {{days}} 天",
+    closeButton: "关闭",
+    redeemNow: "立即赎回",
+
+    // 交易类型
+    txTypes: {
+      subscribe: "认购",
+      redeem: "赎回",
+      stake: "质押",
+      unstake: "解质押",
+      claim: "领取",
+    },
+
     // 旧的扁平结构（保留兼容）
     totalInvested: "总投资额",
     totalValue: "当前价值",
@@ -102,7 +153,6 @@ const portfolio = {
     months: "个月",
     expectedReturn: "预期收益",
     maturityDate: "到期日期",
-    daysRemaining: "天后到期",
     actions: "操作",
     redeemed: "已赎回",
     locked: "锁定中",

@@ -6,7 +6,7 @@ Account 领域 - Schema 定义
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import ConfigDict, BaseModel, Field, field_validator
 
 from src.shared.schemas.base import IDMixin, TimestampMixin
 
@@ -50,15 +50,14 @@ class AccountCreate(AccountBase):
             raise ValueError("Invalid private key format")
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
                 "private_key": "0x0123456789abcdef...",
                 "tag": "我的主钱包",
                 "net_type": "test",
             }
-        }
+        })
 
 
 class AccountUpdate(BaseModel):
@@ -75,8 +74,7 @@ class AccountUpdate(BaseModel):
             raise ValueError("net_type必须是: hardhat, sepolia, mainnet 之一")
         return v
 
-    class Config:
-        json_schema_extra = {"example": {"tag": "更新后的标签", "net_type": "mainnet"}}
+    model_config = ConfigDict(json_schema_extra={"example": {"tag": "更新后的标签", "net_type": "mainnet"}})
 
 
 class AccountResponse(AccountBase, IDMixin, TimestampMixin):
@@ -84,9 +82,7 @@ class AccountResponse(AccountBase, IDMixin, TimestampMixin):
 
     last_login_dt: Optional[datetime] = Field(None, description="最后登录时间(UTC)")
 
-    class Config:
-        from_attributes = True  # 支持从ORM模型转换
-        json_schema_extra = {
+    model_config = ConfigDict(from_attributes=True, json_schema_extra={
             "example": {
                 "id": 1,
                 "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
@@ -96,7 +92,7 @@ class AccountResponse(AccountBase, IDMixin, TimestampMixin):
                 "created_at": "2025-11-01T08:00:00Z",
                 "updated_at": "2025-11-16T10:00:00Z",
             }
-        }
+        })
 
 
 class AccountWithBalance(AccountResponse):
@@ -105,9 +101,7 @@ class AccountWithBalance(AccountResponse):
     balance: str = Field(description="账户余额（字符串格式保证精度）")
     balance_usd: Optional[str] = Field(None, description="美元价值")
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(from_attributes=True, json_schema_extra={
             "example": {
                 "id": 1,
                 "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
@@ -119,7 +113,7 @@ class AccountWithBalance(AccountResponse):
                 "created_at": "2025-11-01T08:00:00Z",
                 "updated_at": "2025-11-16T10:00:00Z",
             }
-        }
+        })
 
 
 class AccountListQuery(BaseModel):

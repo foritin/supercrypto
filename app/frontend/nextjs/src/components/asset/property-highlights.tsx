@@ -68,7 +68,7 @@ function HighlightItem({ icon, label, value, highlight = false }: HighlightItemP
           className={cn(
             "flex items-center justify-center w-7 h-7 rounded-md",
             "bg-white/[0.03] text-white/40",
-            "group-hover:bg-[#00D4AA]/10 group-hover:text-[#00D4AA]",
+            "group-hover:bg-primary/10 group-hover:text-primary",
             "transition-all duration-200"
           )}
         >
@@ -81,7 +81,7 @@ function HighlightItem({ icon, label, value, highlight = false }: HighlightItemP
       <span
         className={cn(
           "font-medium text-right tabular-nums",
-          highlight ? "text-[#00D4AA]" : "text-white",
+          highlight ? "text-primary" : "text-white",
           "group-hover:scale-105 transition-transform duration-200"
         )}
       >

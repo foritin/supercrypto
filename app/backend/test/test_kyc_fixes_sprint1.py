@@ -23,7 +23,7 @@ from src.services.kyc.service import KycService
 from src.shared.common.exceptions import BusinessException
 from src.shared.schemas.enums import (
     KycStatus,
-    NetWork,
+    Network,
     OnChainSyncStatus,
 )
 
@@ -52,7 +52,7 @@ def create_mock_kyc(
     address="0x" + "a" * 40,
     status=KycStatus.PENDING,
     on_chain_sync_status=OnChainSyncStatus.NOT_REQUIRED,
-    network=NetWork.HARDHAT,
+    network=Network.HARDHAT,
     **kwargs,
 ) -> MagicMock:
     kyc = MagicMock(spec=AccountKyc)
@@ -139,7 +139,7 @@ class TestB02RecordAdmissionChainVerify:
         mock_contract_service.is_verified = AsyncMock(return_value=False)
 
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             service = KycService()
 
         with (
@@ -174,7 +174,7 @@ class TestB02RecordAdmissionChainVerify:
         mock_contract_service.is_verified = AsyncMock(return_value=True)
 
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             service = KycService()
 
         with (
@@ -216,7 +216,7 @@ class TestB02RecordAdmissionChainVerify:
         tx_hash = "0x" + "c" * 64
 
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             service = KycService()
 
         with (
@@ -270,7 +270,7 @@ class TestB04RevocationStatus:
         )
 
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             service = KycService()
 
         with (
@@ -307,7 +307,7 @@ class TestB04RevocationStatus:
             )
 
             with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-                mock_settings.environment = "hardhat"
+                mock_settings.network = "hardhat"
                 service = KycService()
 
             with patch("src.services.kyc.service.AccountKyc") as MockKyc:
@@ -341,7 +341,7 @@ class TestB07BatchReviewApprove:
         from src.services.admin.kyc_service import AdminKycService
 
         with patch("src.services.admin.kyc_service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             admin_service = AdminKycService()
 
         request = BatchReviewRequest(
@@ -355,9 +355,14 @@ class TestB07BatchReviewApprove:
             patch(
                 "src.services.admin.kyc_service.create_kyc_audit_log"
             ) as MockAuditLog,
+            patch("src.services.admin.kyc_service.in_transaction") as MockTransaction,
         ):
             MockKyc.filter.return_value.first = AsyncMock(return_value=mock_kyc)
             MockAuditLog.return_value = AsyncMock()
+            # 模拟事务上下文管理器
+            mock_conn = AsyncMock()
+            MockTransaction.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
+            MockTransaction.return_value.__aexit__ = AsyncMock(return_value=False)
 
             result = run_async(admin_service.batch_review(request, "0x" + "a" * 40))
 

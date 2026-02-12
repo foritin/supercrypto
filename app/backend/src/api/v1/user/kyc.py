@@ -24,12 +24,13 @@ from src.services.kyc.schemas import (
     Base64UploadRequest,
     KycApplyRequest,
     KycUploadResponse,
+    UpdateKycStatusRequest,
 )
 from src.services.kyc.service import KycService
+from src.shared.common.storage import get_storage_service
 from src.shared.security import require_user
-from src.shared.services.minio_service import get_minio_service
 
-logger = get_logger("kyc.api")
+logger = get_logger("business.api.user.kyc")
 
 router = APIRouter()
 
@@ -133,15 +134,15 @@ async def upload_kyc_document(
 
     # 上传到 MinIO
     try:
-        minio_service = get_minio_service()
+        storage = get_storage_service()
 
         # 先删除该类型的旧文件 (覆盖上传)
-        deleted_count = await minio_service.delete_by_prefix(prefix)
+        deleted_count = await storage.delete_by_prefix(prefix)
         if deleted_count > 0:
             logger.info(f"Deleted {deleted_count} old file(s) for {document_type}")
 
         # 上传新文件
-        await minio_service.upload_file(
+        await storage.upload_raw(
             object_name=object_name,
             file_data=content,
             content_type=file.content_type or f"image/{ext}",
@@ -307,15 +308,15 @@ async def upload_base64_image(
 
     # 7. 上传到 MinIO
     try:
-        minio_service = get_minio_service()
+        storage = get_storage_service()
 
         # 先删除该类型的旧文件 (覆盖上传)
-        deleted_count = await minio_service.delete_by_prefix(prefix)
+        deleted_count = await storage.delete_by_prefix(prefix)
         if deleted_count > 0:
             logger.info(f"Deleted {deleted_count} old file(s) for {document_type}")
 
         # 上传新文件
-        await minio_service.upload_file(
+        await storage.upload_raw(
             object_name=object_name,
             file_data=decoded_data,
             content_type=content_type,
@@ -434,15 +435,15 @@ async def upload_liveness_video(
 
     # 8. 上传到 MinIO
     try:
-        minio_service = get_minio_service()
+        storage = get_storage_service()
 
         # 先删除旧的活体检测视频 (覆盖上传)
-        deleted_count = await minio_service.delete_by_prefix(prefix)
+        deleted_count = await storage.delete_by_prefix(prefix)
         if deleted_count > 0:
             logger.info(f"Deleted {deleted_count} old liveness video(s)")
 
         # 上传新文件
-        await minio_service.upload_file(
+        await storage.upload_raw(
             object_name=object_name,
             file_data=content,
             content_type="video/webm",
@@ -490,10 +491,10 @@ async def get_document_url(
         )
 
     try:
-        minio_service = get_minio_service()
+        storage = get_storage_service()
 
         # 检查文件是否存在
-        exists = await minio_service.file_exists(file_path)
+        exists = await storage.file_exists(file_path)
         if not exists:
             return create_error_response(
                 msg="文件不存在",
@@ -501,7 +502,7 @@ async def get_document_url(
             )
 
         # 获取预签名 URL (1小时有效)
-        url = await minio_service.get_presigned_url(file_path, expires=3600)
+        url = await storage.get_presigned_url(file_path, expires=3600)
 
         return create_success_response(
             object_data={"url": url, "file_path": file_path},
@@ -518,7 +519,7 @@ async def get_document_url(
     description="Update KYC status. Users can only set status to not_started when current status is rejected.",
 )
 async def update_kyc_status(
-    target_status: str = Form(..., description="目标状态: not_started"),
+    data: UpdateKycStatusRequest,
     wallet_address: str = Depends(require_user),
     service: KycService = Depends(get_kyc_service),
 ):
@@ -529,7 +530,7 @@ async def update_kyc_status(
     - 当前状态为 rejected 时，可以设置为 not_started（重新提交）
     """
     try:
-        result = await service.update_status(wallet_address, target_status)
+        result = await service.update_status(wallet_address, data.target_status)
         return create_success_response(
             object_data={"status": result},
             msg="状态更新成功",

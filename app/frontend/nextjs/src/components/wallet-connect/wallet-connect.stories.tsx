@@ -39,7 +39,7 @@ function WalletConnectButtonDisconnected({
     },
     // 变体1: 描边风格
     outline: {
-      className: "group relative flex items-center gap-2.5 px-5 h-11 rounded-full font-semibold text-[14px] tracking-wide transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] border-2 border-[#00D4AA] hover:bg-[#00D4AA]/10",
+      className: "group relative flex items-center gap-2.5 px-5 h-11 rounded-full font-semibold text-[14px] tracking-wide transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] border-2 border-primary hover:bg-primary/10",
       style: {
         background: 'transparent',
         color: '#00D4AA',
@@ -66,7 +66,7 @@ function WalletConnectButtonDisconnected({
     },
     // 变体4: 极简风格
     minimal: {
-      className: "group relative flex items-center gap-2 px-4 h-10 rounded-lg font-medium text-[13px] transition-all duration-200 hover:bg-[#00D4AA]/10",
+      className: "group relative flex items-center gap-2 px-4 h-10 rounded-lg font-medium text-[13px] transition-all duration-200 hover:bg-primary/10",
       style: {
         background: 'transparent',
         color: '#00D4AA',
@@ -130,7 +130,7 @@ function WalletConnectButtonConnected({
         </button>
         {/* 地址按钮 */}
         <button type="button" className="group flex items-center gap-2 hover:opacity-80 transition-all duration-200">
-          <span className={`w-2 h-2 rounded-full shrink-0 ${isAuthenticated ? 'bg-[#00D4AA] shadow-[0_0_6px_rgba(0,212,170,0.6)]' : 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]'}`} />
+          <span className={`w-2 h-2 rounded-full shrink-0 ${isAuthenticated ? 'bg-primary shadow-[0_0_6px_rgba(0,212,170,0.6)]' : 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]'}`} />
           <span className="text-sm font-medium text-white/90">{address}</span>
           <svg className="w-3.5 h-3.5 text-white/40 group-hover:text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="m6 9 6 6 6-6"/>
@@ -146,7 +146,7 @@ function WalletConnectButtonConnected({
           className="flex items-center gap-2 px-4 h-10 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
         >
           <span className="text-sm">{chainIcon}</span>
-          <span className={`w-2 h-2 rounded-full ${isAuthenticated ? 'bg-[#00D4AA]' : 'bg-amber-400'}`} />
+          <span className={`w-2 h-2 rounded-full ${isAuthenticated ? 'bg-primary' : 'bg-amber-400'}`} />
           <span className="text-sm font-medium text-white">{address}</span>
           <svg className="w-3 h-3 text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="m6 9 6 6 6-6"/>
@@ -158,16 +158,16 @@ function WalletConnectButtonConnected({
     card: (
       <button
         type="button"
-        className="flex items-center gap-3 px-4 py-2 rounded-xl bg-gradient-to-r from-white/5 to-white/10 border border-white/10 hover:border-[#00D4AA]/30 transition-all"
+        className="flex items-center gap-3 px-4 py-2 rounded-xl bg-gradient-to-r from-white/5 to-white/10 border border-white/10 hover:border-primary/30 transition-all"
       >
-        <div className="w-8 h-8 rounded-full bg-[#00D4AA]/20 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
           <span>{chainIcon}</span>
         </div>
         <div className="flex flex-col items-start">
           <span className="text-xs text-white/50">Connected</span>
           <span className="text-sm font-medium text-white">{address}</span>
         </div>
-        <div className={`w-2 h-2 rounded-full ${isAuthenticated ? 'bg-[#00D4AA] animate-pulse' : 'bg-amber-400'}`} />
+        <div className={`w-2 h-2 rounded-full ${isAuthenticated ? 'bg-primary animate-pulse' : 'bg-amber-400'}`} />
       </button>
     ),
   }

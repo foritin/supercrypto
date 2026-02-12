@@ -12,11 +12,15 @@
 """
 
 import asyncio
+import uuid
 from contextlib import asynccontextmanager
 from typing import Optional
 
 import redis.asyncio as redis
 from falib.utils.config import SETTINGS
+from falib.utils.log import get_logger
+
+logger = get_logger("system.service.lock")
 
 
 class LockAcquireError(Exception):
@@ -39,11 +43,21 @@ class DistributedLockService:
     - 锁超时自动释放 (防止死锁)
     - 等待获取锁 (blocking)
     - 锁重入检测
+    - 使用 uuid4 唯一标识 + Lua 脚本原子释放，防止误释放其他进程的锁
     """
 
     _instance: Optional["DistributedLockService"] = None
     _redis: Optional[redis.Redis] = None
     _initialized: bool = False
+
+    # Lua 脚本: 原子验证锁持有者后释放，防止误释放其他进程的锁
+    RELEASE_LOCK_SCRIPT = """
+if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("del", KEYS[1])
+else
+    return 0
+end
+"""
 
     def __init__(self):
         self.lock_timeout = 30  # 锁超时时间 (秒)
@@ -112,6 +126,9 @@ class DistributedLockService:
         """
         获取分布式锁
 
+        使用 uuid4 作为锁值，释放时通过 Lua 脚本原子验证，
+        确保只有锁的持有者才能释放锁，防止误释放其他进程的锁。
+
         Args:
             key: 锁的 key (会自动添加 lock: 前缀)
             timeout: 锁超时时间 (秒)，默认 30 秒
@@ -131,6 +148,7 @@ class DistributedLockService:
         """
         redis_client = self._ensure_redis()
         lock_key = f"lock:{key}"
+        lock_value = str(uuid.uuid4())
         lock_timeout = timeout or self.lock_timeout
         acquired = False
 
@@ -138,7 +156,7 @@ class DistributedLockService:
             # 尝试获取锁
             acquired = await redis_client.set(
                 lock_key,
-                "1",
+                lock_value,
                 nx=True,  # 仅当 key 不存在时设置
                 ex=lock_timeout,  # 过期时间
             )
@@ -149,7 +167,7 @@ class DistributedLockService:
                 for _ in range(max_attempts):
                     await asyncio.sleep(self.retry_interval)
                     acquired = await redis_client.set(
-                        lock_key, "1", nx=True, ex=lock_timeout
+                        lock_key, lock_value, nx=True, ex=lock_timeout
                     )
                     if acquired:
                         break
@@ -160,15 +178,17 @@ class DistributedLockService:
             yield
 
         finally:
-            # 释放锁
+            # 使用 Lua 脚本原子释放锁，仅当锁值匹配时才删除
             if acquired:
                 try:
-                    await redis_client.delete(lock_key)
+                    await redis_client.eval(
+                        self.RELEASE_LOCK_SCRIPT, 1, lock_key, lock_value
+                    )
                 except Exception:
-                    # 忽略释放锁时的错误
+                    # 忽略释放锁时的错误 (如 Redis 连接断开)
                     pass
 
-    async def try_lock(self, key: str, timeout: Optional[int] = None) -> bool:
+    async def try_lock(self, key: str, timeout: Optional[int] = None) -> Optional[str]:
         """
         尝试获取锁 (非阻塞)
 
@@ -177,35 +197,41 @@ class DistributedLockService:
             timeout: 锁超时时间 (秒)
 
         Returns:
-            是否成功获取锁
+            成功时返回锁的唯一标识符 (用于释放锁)，失败时返回 None
 
         Raises:
             RedisNotInitializedError: Redis 未初始化时抛出
         """
         redis_client = self._ensure_redis()
         lock_key = f"lock:{key}"
+        lock_value = str(uuid.uuid4())
         lock_timeout = timeout or self.lock_timeout
 
-        result = await redis_client.set(lock_key, "1", nx=True, ex=lock_timeout)
-        return bool(result)
+        result = await redis_client.set(lock_key, lock_value, nx=True, ex=lock_timeout)
+        return lock_value if result else None
 
-    async def unlock(self, key: str) -> bool:
+    async def unlock(self, key: str, lock_value: str) -> bool:
         """
         释放锁
 
+        使用 Lua 脚本原子验证锁值后释放，防止误释放其他进程的锁。
+
         Args:
             key: 锁的 key
+            lock_value: 获取锁时返回的唯一标识符
 
         Returns:
-            是否成功释放
+            是否成功释放 (如果锁已过期或被其他进程持有，返回 False)
 
         Raises:
             RedisNotInitializedError: Redis 未初始化时抛出
         """
         redis_client = self._ensure_redis()
         lock_key = f"lock:{key}"
-        result = await redis_client.delete(lock_key)
-        return result > 0
+        result = await redis_client.eval(
+            self.RELEASE_LOCK_SCRIPT, 1, lock_key, lock_value
+        )
+        return result == 1
 
     async def is_locked(self, key: str) -> bool:
         """

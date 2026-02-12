@@ -11,15 +11,17 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useChainId } from "wagmi";
 import {
   User,
-  DeviceMobile,
+  Smartphone,
   FileText,
-  ArrowSquareOut,
+  ExternalLink,
   Check,
   Copy,
-} from "@phosphor-icons/react";
+} from "lucide-react";
 import { SectionCard, InfoRow } from "@/components/ui";
+import { getExplorerUrl } from "@/lib/utils";
 import type { KycDetail } from "@/services/admin-kyc";
 
 export interface StepBasicInfoProps {
@@ -28,6 +30,7 @@ export interface StepBasicInfoProps {
 
 export function StepBasicInfo({ kycDetail }: StepBasicInfoProps) {
   const { t } = useTranslation();
+  const chainId = useChainId();
   const [copied, setCopied] = useState(false);
 
   const { kyc, ocr_data } = kycDetail;
@@ -43,7 +46,7 @@ export function StepBasicInfo({ kycDetail }: StepBasicInfoProps) {
       {/* 基本信息卡片 */}
       <SectionCard
         title={t("admin.kyc.stepper.basicInfo")}
-        icon={<User weight="fill" className="w-4 h-4" />}
+        icon={<User className="w-4 h-4" />}
         className="border-white/[0.08]"
       >
         <InfoRow label={t("admin.kyc.stepper.fullName")}>
@@ -71,7 +74,7 @@ export function StepBasicInfo({ kycDetail }: StepBasicInfoProps) {
       {/* 钱包地址卡片 */}
       <SectionCard
         title={t("admin.kyc.stepper.walletAddress")}
-        icon={<DeviceMobile weight="fill" className="w-4 h-4" />}
+        icon={<Smartphone className="w-4 h-4" />}
         className="border-white/[0.08]"
       >
         <div className="flex items-center justify-between gap-2">
@@ -85,21 +88,21 @@ export function StepBasicInfo({ kycDetail }: StepBasicInfoProps) {
               style={{ color: copied ? "#52c41a" : "rgba(255, 255, 255, 0.45)" }}
             >
               {copied ? (
-                <Check weight="bold" className="h-4 w-4" />
+                <Check className="h-4 w-4" />
               ) : (
-                <Copy weight="bold" className="h-4 w-4" />
+                <Copy className="h-4 w-4" />
               )}
             </button>
             <button
               onClick={() =>
                 window.open(
-                  `https://etherscan.io/address/${kyc.wallet_address}`,
+                  getExplorerUrl(chainId, 'address', kyc.wallet_address) || '#',
                   "_blank"
                 )
               }
               className="flex items-center gap-1 text-xs bg-transparent border-none cursor-pointer p-1.5 rounded transition-colors hover:bg-white/5 text-white/45"
             >
-              <ArrowSquareOut weight="bold" className="h-4 w-4" />
+              <ExternalLink className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -109,7 +112,7 @@ export function StepBasicInfo({ kycDetail }: StepBasicInfoProps) {
       {ocr_data && (
         <SectionCard
           title={t("admin.kyc.stepper.ocrInfo")}
-          icon={<FileText weight="fill" className="w-4 h-4" />}
+          icon={<FileText className="w-4 h-4" />}
           className="border-white/[0.08]"
         >
           <InfoRow label={t("admin.kyc.stepper.confidence")}>

@@ -97,14 +97,22 @@ export interface KycFullResponse extends KycStatusResponse {
   // 基本信息
   full_name: string | null
   date_of_birth: string | null
+  address: string | null
   // 多证件信息
   documents: KycDocumentResponse[]
   has_selfie: boolean
   // 向后兼容字段 (已废弃)
   id_type: string | null
+  id_number: string | null
   id_number_last4: string | null
   has_id_front: boolean
   has_id_back: boolean
+  // 文档 URL
+  id_front_url: string | null
+  id_back_url: string | null
+  selfie_url: string | null
+  // 活体检测
+  liveness_verified: boolean
   // 链上同步状态
   on_chain_sync_status: string | null
   on_chain_tx_hash: string | null

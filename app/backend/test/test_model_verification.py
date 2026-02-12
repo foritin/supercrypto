@@ -25,7 +25,7 @@ from src.models import (
     RiskLevel,
     ReviewPriority,
 )
-from src.shared.schemas.enums import NetWork
+from src.shared.schemas.enums import Network
 
 
 class TestModelImports:
@@ -182,16 +182,19 @@ class TestModelIntegration:
         async def cleanup():
             await Tortoise.close_connections()
         
-        asyncio.get_event_loop().run_until_complete(init())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(init())
         yield
-        asyncio.get_event_loop().run_until_complete(cleanup())
+        loop.run_until_complete(cleanup())
+        loop.close()
 
     def test_create_account_kyc_with_defaults(self, setup_db):
         """Test creating AccountKyc with default values"""
         async def run_test():
             kyc = await AccountKyc.create(
                 address="0x1234567890123456789012345678901234567890",
-                network=NetWork.HARDHAT,
+                network=Network.HARDHAT,
             )
             
             # Verify default values
@@ -214,7 +217,7 @@ class TestModelIntegration:
             # Create AccountKyc first
             kyc = await AccountKyc.create(
                 address="0x2234567890123456789012345678901234567890",
-                network=NetWork.HARDHAT,
+                network=Network.HARDHAT,
             )
             
             # Create KycAuditLog with foreign key
@@ -250,7 +253,7 @@ class TestModelIntegration:
             # Create AccountKyc
             kyc = await AccountKyc.create(
                 address="0x3234567890123456789012345678901234567890",
-                network=NetWork.HARDHAT,
+                network=Network.HARDHAT,
             )
             
             # Create KycAuditLog

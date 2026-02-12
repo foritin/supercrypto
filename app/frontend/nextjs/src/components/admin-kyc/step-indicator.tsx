@@ -81,7 +81,7 @@ export function StepIndicator({
                     status === "confirmed"
                       ? "bg-emerald-500/20 border-2 border-emerald-500 group-hover:bg-emerald-500/30 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.3)]"
                       : status === "in-progress"
-                        ? "bg-[#00D4AA]/20 border-2 border-[#00D4AA] shadow-[0_0_12px_rgba(0,212,170,0.3)]"
+                        ? "bg-primary/20 border-2 border-primary shadow-[0_0_12px_rgba(0,212,170,0.3)]"
                         : "bg-white/5 border-2 border-white/15"
                   }
                 `}
@@ -92,7 +92,7 @@ export function StepIndicator({
                   <Icon
                     className={`w-4 h-4 ${
                       status === "in-progress"
-                        ? "text-[#00D4AA]"
+                        ? "text-primary"
                         : "text-white/30"
                     }`}
                   />
@@ -106,7 +106,7 @@ export function StepIndicator({
                     status === "confirmed"
                       ? "text-emerald-400/70"
                       : status === "in-progress"
-                        ? "text-[#00D4AA]/70"
+                        ? "text-primary/70"
                         : "text-white/25"
                   }`}
                 >
@@ -133,7 +133,7 @@ export function StepIndicator({
                   confirmedSteps[index]
                     ? "bg-emerald-500/40"
                     : index < currentStep
-                      ? "bg-[#00D4AA]/30"
+                      ? "bg-primary/30"
                       : "bg-white/10"
                 }`}
               />

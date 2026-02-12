@@ -115,12 +115,12 @@ export const IDCardUploader: React.FC<IDCardUploaderProps> = ({
               <div
                 className={cn(
                   'w-12 h-12 rounded-xl',
-                  'bg-[#00D4AA]/10 border border-[#00D4AA]/20',
+                  'bg-primary/10 border border-primary/20',
                   'flex items-center justify-center'
                 )}
                 aria-hidden="true"
               >
-                {value ? <ImageIcon className="w-6 h-6 text-[#00D4AA]" /> : <Upload className="w-6 h-6 text-[#00D4AA]" />}
+                {value ? <ImageIcon className="w-6 h-6 text-primary" /> : <Upload className="w-6 h-6 text-primary" />}
               </div>
 
               {/* 提示文案 */}
@@ -145,15 +145,15 @@ export const IDCardUploader: React.FC<IDCardUploaderProps> = ({
       {/* 拍摄提示 */}
       <ul className="mt-3 space-y-1" aria-label={t('kyc.upload.guide.tipsTitle')}>
         <li className="text-xs text-white/50 flex items-center gap-1.5">
-          <span className="inline-block w-1 h-1 rounded-full bg-[#00D4AA] flex-shrink-0" aria-hidden="true" />
+          <span className="inline-block w-1 h-1 rounded-full bg-primary flex-shrink-0" aria-hidden="true" />
           {t('kyc.upload.guide.tip1')}
         </li>
         <li className="text-xs text-white/50 flex items-center gap-1.5">
-          <span className="inline-block w-1 h-1 rounded-full bg-[#00D4AA] flex-shrink-0" aria-hidden="true" />
+          <span className="inline-block w-1 h-1 rounded-full bg-primary flex-shrink-0" aria-hidden="true" />
           {t('kyc.upload.guide.tip2')}
         </li>
         <li className="text-xs text-white/50 flex items-center gap-1.5">
-          <span className="inline-block w-1 h-1 rounded-full bg-[#00D4AA] flex-shrink-0" aria-hidden="true" />
+          <span className="inline-block w-1 h-1 rounded-full bg-primary flex-shrink-0" aria-hidden="true" />
           {t('kyc.upload.guide.tip3')}
         </li>
       </ul>

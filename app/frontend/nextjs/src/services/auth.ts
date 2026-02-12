@@ -13,8 +13,7 @@ import {
   TokenData,
 } from "@/utils/auth";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+import { API_BASE_URL } from "@/constants/api";
 
 /**
  * Login response from backend
@@ -40,12 +39,16 @@ export async function login(
   chainId?: number,
   chainName?: string
 ): Promise<LoginResponse> {
-  const response = await axios.post(`${API_BASE_URL}/public/auth/token`, {
-    address: address.toLowerCase(),
-    signature,
-    chain_id: chainId,
-    chain_name: chainName,
-  });
+  const response = await axios.post(
+    `${API_BASE_URL}/public/auth/token`,
+    {
+      address: address.toLowerCase(),
+      signature,
+      chain_id: chainId,
+      chain_name: chainName,
+    },
+    { withCredentials: true } // 接收后端设置的 httpOnly cookie
+  );
 
   const data = response.data.data.object_data as LoginResponse;
 
@@ -66,16 +69,20 @@ export async function login(
 
 /**
  * Refresh access token using refresh token
+ * 优先通过 httpOnly cookie 自动携带 refresh token（推荐）
+ * 同时支持 localStorage 中的 refresh token（向后兼容）
  * @returns New token data or null if refresh failed
  */
 export async function refreshAccessToken(): Promise<TokenData | null> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
-
   try {
-    const response = await axios.post(`${API_BASE_URL}/public/auth/refresh`, {
-      refresh_token: refreshToken,
-    });
+    // 发送请求时浏览器会自动携带 httpOnly cookie
+    // 同时传递 localStorage 中的 refresh token 作为后备
+    const refreshToken = getRefreshToken();
+    const response = await axios.post(
+      `${API_BASE_URL}/public/auth/refresh`,
+      refreshToken ? { refresh_token: refreshToken } : {},
+      { withCredentials: true } // 确保携带 httpOnly cookie
+    );
 
     const data = response.data.data.object_data as LoginResponse;
 
@@ -144,9 +151,31 @@ export async function validateSession(): Promise<boolean> {
   }
 }
 
+/**
+ * Try to restore session on page load
+ * 页面刷新时通过 httpOnly cookie 中的 refresh token 换取新的 access token
+ * 恢复登录状态到 user store
+ * @returns true if session was restored, false otherwise
+ */
+export async function tryRestoreSession(): Promise<boolean> {
+  try {
+    const tokenData = await refreshAccessToken();
+    if (!tokenData) return false;
+
+    // 恢复 user store 中的认证状态
+    const { useUserStore } = await import("@/stores/user-store");
+    const expiresAt = Date.now() + tokenData.expiresInMins * 60 * 1000;
+    useUserStore.getState().setAuthenticated(tokenData.accessToken, expiresAt);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const authService = {
   login,
   logout,
   refreshAccessToken,
   validateSession,
+  tryRestoreSession,
 };

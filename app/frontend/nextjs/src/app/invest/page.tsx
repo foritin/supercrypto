@@ -40,7 +40,7 @@ function InvestContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0F0D] py-8 px-4">
+    <div className="min-h-screen bg-bg-dark py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -60,7 +60,7 @@ function InvestContent() {
         </div>
 
         {/* Step Indicator */}
-        <Card className="p-6 mb-6 glass border-[#00D4AA]/20">
+        <Card className="p-6 mb-6 glass border-primary/20">
           <StepIndicator
             steps={steps.map((s, i) => ({
               title: s.title,

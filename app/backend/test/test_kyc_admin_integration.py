@@ -16,14 +16,19 @@ import pytest
 
 from src.models.kyc import AccountKyc
 from src.services.admin.kyc_service import AdminKycService
-from src.shared.schemas.enums import KycStatus, NetWork
+from src.shared.schemas.enums import KycStatus, Network
 
 # ============ Helper Functions ============
 
 
 def run_async(coro):
     """运行异步函数的辅助函数"""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 # ============ Fixtures ============
@@ -43,7 +48,7 @@ def mock_kyc_record():
         kyc = MagicMock(spec=AccountKyc)
         kyc.id = kyc_id
         kyc.address = address
-        kyc.network = NetWork.HARDHAT
+        kyc.network = Network.HARDHAT
         kyc.status = KycStatus.PENDING
         kyc.face_image_url = face_image_url
         kyc.liveness_video_url = liveness_video_url
@@ -111,7 +116,7 @@ class TestKycDetailIntegration:
         kyc = mock_kyc_record(face_image_url=face_image_path)
 
         service = AdminKycService()
-        service.minio_service = mock_minio_service
+        service.storage = mock_minio_service
 
         # Act
         documents = run_async(service._get_document_presigned_urls(kyc))
@@ -135,7 +140,7 @@ class TestKycDetailIntegration:
         kyc = mock_kyc_record(liveness_video_url=liveness_video_path)
 
         service = AdminKycService()
-        service.minio_service = mock_minio_service
+        service.storage = mock_minio_service
 
         # Act
         documents = run_async(service._get_document_presigned_urls(kyc))
@@ -166,7 +171,7 @@ class TestKycDetailIntegration:
         )
 
         service = AdminKycService()
-        service.minio_service = mock_minio_service
+        service.storage = mock_minio_service
 
         # Act
         documents = run_async(service._get_document_presigned_urls(kyc))
@@ -203,7 +208,7 @@ class TestKycDetailIntegration:
         )
 
         service = AdminKycService()
-        service.minio_service = mock_minio_service
+        service.storage = mock_minio_service
 
         # Act
         documents = run_async(service._get_document_presigned_urls(kyc))
@@ -229,7 +234,7 @@ class TestKycDetailIntegration:
         )
 
         service = AdminKycService()
-        service.minio_service = mock_minio_service
+        service.storage = mock_minio_service
 
         # Act
         documents = run_async(service._get_document_presigned_urls(kyc))
@@ -255,7 +260,7 @@ class TestKycDetailIntegration:
         )
 
         service = AdminKycService()
-        service.minio_service = mock_minio
+        service.storage = mock_minio
 
         # Act
         documents = run_async(service._get_document_presigned_urls(kyc))
@@ -282,7 +287,7 @@ class TestKycDetailIntegration:
         )
 
         service = AdminKycService()
-        service.minio_service = mock_minio
+        service.storage = mock_minio
 
         # Act
         documents = run_async(service._get_document_presigned_urls(kyc))
@@ -316,7 +321,7 @@ class TestKycDetailIntegration:
         mock_minio.get_presigned_url = AsyncMock(side_effect=selective_failure)
 
         service = AdminKycService()
-        service.minio_service = mock_minio
+        service.storage = mock_minio
 
         # Act
         documents = run_async(service._get_document_presigned_urls(kyc))
@@ -343,7 +348,7 @@ class TestKycDetailResponseStructure:
         kyc = mock_kyc_record()
 
         service = AdminKycService()
-        service.minio_service = mock_minio_service
+        service.storage = mock_minio_service
 
         # Act
         documents = run_async(service._get_document_presigned_urls(kyc))
@@ -369,7 +374,7 @@ class TestKycDetailResponseStructure:
         kyc = mock_kyc_record(face_image_url=face_image_path)
 
         service = AdminKycService()
-        service.minio_service = mock_minio_service
+        service.storage = mock_minio_service
 
         # Act
         documents = run_async(service._get_document_presigned_urls(kyc))

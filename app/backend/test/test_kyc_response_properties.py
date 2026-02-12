@@ -218,7 +218,7 @@ class TestProperty4ResponseSchemaCompleteness:
         
         # 创建 KycService 实例
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         # 创建模拟 KYC 记录
@@ -313,7 +313,7 @@ class TestProperty4ResponseSchemaCompleteness:
         
         # 创建 KycService 实例
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         # 创建模拟 KYC 记录
@@ -407,7 +407,7 @@ class TestProperty4ResponseSchemaCompleteness:
         
         # 创建 KycService 实例
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         # 创建模拟 KYC 记录
@@ -515,7 +515,7 @@ class TestProperty4ResponseSchemaCompleteness:
         
         # 创建 KycService 实例
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         # 创建模拟 KYC 记录 - 所有字段都填充
@@ -591,7 +591,7 @@ class TestProperty4ResponseSchemaCompleteness:
         
         # 创建 KycService 实例
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         # 创建模拟 KYC 记录 - 所有新字段为 None
@@ -707,7 +707,7 @@ class TestProperty4ResponseSchemaCompleteness:
         **Validates: Requirements 6.4**
         """
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         # 测试 face_image_url 存在时

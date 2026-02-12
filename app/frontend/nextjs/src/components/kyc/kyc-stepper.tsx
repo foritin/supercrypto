@@ -80,10 +80,10 @@ export const KycStepper: React.FC<KycStepperProps> = ({
                 disabled={!isClickable}
                 className={cn(
                   'flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300',
-                  status === 'completed' && 'text-[#00D4AA]',
+                  status === 'completed' && 'text-primary',
                   status === 'current' && 'text-white',
                   status === 'pending' && 'text-white/30',
-                  isClickable && 'cursor-pointer hover:text-[#33FFCC]'
+                  isClickable && 'cursor-pointer hover:text-primary-light'
                 )}
                 aria-current={status === 'current' ? 'step' : undefined}
                 aria-label={`${isZh ? step.titleZh : step.title} (${
@@ -97,8 +97,8 @@ export const KycStepper: React.FC<KycStepperProps> = ({
                   className={cn(
                     'flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-medium',
                     'transition-all duration-300',
-                    status === 'completed' && 'bg-[#00D4AA] text-[#0a0f0d]',
-                    status === 'current' && 'bg-white text-[#0a0f0d]',
+                    status === 'completed' && 'bg-primary text-bg-dark',
+                    status === 'current' && 'bg-white text-bg-dark',
                     status === 'pending' && 'bg-white/10 text-white/50'
                   )}
                 >
@@ -121,7 +121,7 @@ export const KycStepper: React.FC<KycStepperProps> = ({
                   <div
                     className={cn(
                       'h-full transition-all duration-500',
-                      status === 'completed' ? 'bg-[#00D4AA]' : 'bg-transparent'
+                      status === 'completed' ? 'bg-primary' : 'bg-transparent'
                     )}
                   />
                 </div>
@@ -171,7 +171,7 @@ export const KycStepper: React.FC<KycStepperProps> = ({
                 <span
                   className={cn(
                     'block rounded-full transition-all duration-300',
-                    status === 'completed' && 'w-2.5 h-2.5 bg-[#00D4AA]',
+                    status === 'completed' && 'w-2.5 h-2.5 bg-primary',
                     status === 'current' && 'w-3 h-3 bg-white ring-2 ring-white/20',
                     status === 'pending' && 'w-2 h-2 bg-white/20'
                   )}
@@ -184,7 +184,7 @@ export const KycStepper: React.FC<KycStepperProps> = ({
         {/* 进度条 */}
         <div className="mt-3 h-1 bg-white/10 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-[#00D4AA] to-[#33FFCC] transition-all duration-500 ease-out"
+            className="h-full bg-gradient-to-r from-primary to-primary-light transition-all duration-500 ease-out"
             style={{ width: `${((validCurrentStep + 1) / STEPS.length) * 100}%` }}
             role="progressbar"
             aria-valuenow={validCurrentStep + 1}

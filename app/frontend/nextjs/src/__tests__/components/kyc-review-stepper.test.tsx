@@ -96,6 +96,11 @@ vi.mock("@/services/api", () => ({
   post: vi.fn().mockResolvedValue({}),
 }));
 
+// Mock wagmi
+vi.mock("wagmi", () => ({
+  useChainId: () => 1,
+}));
+
 // Mock framer-motion to avoid animation issues in tests
 vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,

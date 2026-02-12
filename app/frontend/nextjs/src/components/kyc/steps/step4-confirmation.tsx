@@ -128,7 +128,7 @@ function SummarySection({ title, icon, children, className }: SummarySectionProp
     >
       {/* 区块标题 */}
       <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-white/10 bg-[rgba(26,36,30,0.8)]">
-        <span className="text-[#00D4AA]">{icon}</span>
+        <span className="text-primary">{icon}</span>
         <h3 className="text-xs sm:text-sm font-medium text-white/90">{title}</h3>
       </div>
       {/* 区块内容 */}
@@ -268,13 +268,13 @@ export function Step4Confirmation({
     <div className={cn('space-y-4 sm:space-y-6', className)}>
       {/* 信息摘要标题 */}
       <div className="flex items-center gap-2 text-white/90">
-        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#00D4AA]" />
+        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
         <h2 className="text-base sm:text-lg font-medium">{t('kyc.confirmation.title')}</h2>
       </div>
 
       {/* 提示信息 */}
-      <div className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg bg-[#00D4AA]/5 border border-[#00D4AA]/20">
-        <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#00D4AA] flex-shrink-0 mt-0.5" />
+      <div className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0 mt-0.5" />
         <p className="text-xs sm:text-sm text-white/70">
           {t('kyc.confirmation.hint')}
         </p>
@@ -347,7 +347,7 @@ export function Step4Confirmation({
                   'p-3 sm:p-4',
                   'border transition-colors',
                   field.value
-                    ? 'border-[#00D4AA]/30 bg-[#00D4AA]/5'
+                    ? 'border-primary/30 bg-primary/5'
                     : 'border-white/10 bg-[rgba(26,36,30,0.6)]',
                   errors.privacyAgreed && 'border-destructive/50'
                 )}
@@ -370,13 +370,13 @@ export function Step4Confirmation({
                     htmlFor="kyc-privacy-agreed"
                     className="text-xs sm:text-sm font-medium text-white/90 cursor-pointer"
                   >
-                    <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block mr-1 sm:mr-1.5 text-[#00D4AA]" />
+                    <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block mr-1 sm:mr-1.5 text-primary" />
                     {t('kyc.confirmation.privacyPolicy')}
                     <a
                       href="/privacy-policy"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#00D4AA] hover:underline ml-1"
+                      className="text-primary hover:underline ml-1"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {t('kyc.confirmation.privacyPolicyLink')}
@@ -403,7 +403,7 @@ export function Step4Confirmation({
                   'p-3 sm:p-4',
                   'border transition-colors',
                   field.value
-                    ? 'border-[#00D4AA]/30 bg-[#00D4AA]/5'
+                    ? 'border-primary/30 bg-primary/5'
                     : 'border-white/10 bg-[rgba(26,36,30,0.6)]',
                   errors.infoConfirmed && 'border-destructive/50'
                 )}
@@ -426,7 +426,7 @@ export function Step4Confirmation({
                     htmlFor="kyc-info-confirmed"
                     className="text-xs sm:text-sm font-medium text-white/90 cursor-pointer"
                   >
-                    <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block mr-1 sm:mr-1.5 text-[#00D4AA]" />
+                    <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block mr-1 sm:mr-1.5 text-primary" />
                     {t('kyc.confirmation.infoConfirm')}
                   </FormLabel>
                   <p id="kyc-info-desc" className="text-[10px] sm:text-xs text-white/50">

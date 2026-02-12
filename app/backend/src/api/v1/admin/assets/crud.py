@@ -18,6 +18,7 @@ from src.services.asset.schemas import (
     AssetCreateRequest,
     AssetStatusUpdateRequest,
     AssetUpdateRequest,
+    UpdatePriceRequest,
 )
 from src.services.asset.service import AssetService
 from src.services.audit.service import audit_service
@@ -239,8 +240,7 @@ async def update_asset_status(
 )
 async def update_asset_price(
     asset_id: int,
-    price: float = Query(..., gt=0, description="新价格"),
-    source: str = Query("manual", description="价格来源"),
+    data: UpdatePriceRequest,
     service: AssetService = Depends(get_asset_service),
     admin_address: str = Depends(require_admin),
 ):
@@ -249,7 +249,7 @@ async def update_asset_price(
 
     - 会自动记录价格历史
     """
-    result = await service.update_price(asset_id, Decimal(str(price)), source)
+    result = await service.update_price(asset_id, Decimal(str(data.price)), data.source)
 
     # 记录审计日志
     await audit_service.log_async(
@@ -260,8 +260,8 @@ async def update_asset_price(
         target_type="asset",
         target_id=asset_id,
         status=AuditStatus.SUCCESS,
-        description=f"Asset #{asset_id} price updated to {price}",
-        new_value={"price": str(price), "source": source},
+        description=f"Asset #{asset_id} price updated to {data.price}",
+        new_value={"price": str(data.price), "source": data.source},
     )
 
     return create_success_response(

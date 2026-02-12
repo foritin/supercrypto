@@ -3,8 +3,8 @@
  * 审计模块 Web3 专用组件导出
  */
 
-export { AddressDisplay } from './AddressDisplay';
-export { TxHashLink } from './TxHashLink';
-export { TokenAmount } from './TokenAmount';
-export { ChainBadge } from './ChainBadge';
-export { TxStatusBadge } from './TxStatusBadge';
+export { AddressDisplay } from './address-display';
+export { TxHashLink } from './tx-hash-link';
+export { TokenAmount } from './token-amount';
+export { ChainBadge } from './chain-badge';
+export { TxStatusBadge } from './tx-status-badge';

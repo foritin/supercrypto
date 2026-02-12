@@ -21,7 +21,7 @@ from src.services.transaction.schemas import (
     TransactionListQuery,
     TransactionUpdate,
 )
-from src.services.transaction.services import TransactionService
+from src.services.transaction.service import TransactionService
 
 router = APIRouter()
 
@@ -32,7 +32,7 @@ def get_transaction_service() -> TransactionService:
 
 
 @router.post(
-    "/",
+    "",
     status_code=status.HTTP_201_CREATED,
     summary="记录交易",
     description="创建新的交易记录",
@@ -106,7 +106,7 @@ async def get_transaction_by_hash(
 
 
 @router.get(
-    "/",
+    "",
     summary="查询交易列表",
     description="查询交易列表，支持多种过滤条件",
 )

@@ -4,7 +4,7 @@ import { Copy, Check, ExternalLink } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
+import { cn, getExplorerUrl } from '@/lib/utils'
 import { truncateAddress } from '@/utils/format'
 
 interface AddressSectionProps {
@@ -34,25 +34,14 @@ export function AddressSection({ address, chainId }: AddressSectionProps) {
   }
 
   // 获取区块浏览器 URL
-  const getExplorerUrl = () => {
-    if (!chainId) return null
-    const explorers: Record<number, string> = {
-      1: 'https://etherscan.io',
-      11155111: 'https://sepolia.etherscan.io',
-      31337: null as unknown as string, // localhost 无浏览器
-    }
-    const baseUrl = explorers[chainId]
-    return baseUrl ? `${baseUrl}/address/${address}` : null
-  }
-
-  const explorerUrl = getExplorerUrl()
+  const explorerUrl = chainId ? getExplorerUrl(chainId, 'address', address) : null
 
   return (
     <div className="flex items-center justify-between">
       {/* 地址显示 */}
       <div className="flex items-center gap-3">
         {/* 钱包图标/头像 */}
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00D4AA]/30 to-[#00D4AA]/10 flex items-center justify-center border border-[#00D4AA]/20">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/20">
           <span className="text-lg">👤</span>
         </div>
         
@@ -75,7 +64,7 @@ export function AddressSection({ address, chainId }: AddressSectionProps) {
           className={cn(
             "p-2 rounded-lg transition-all duration-200",
             "hover:bg-white/10 active:scale-95",
-            copied && "text-[#00D4AA]"
+            copied && "text-primary"
           )}
           title={t('wallet.copyAddress', '复制地址')}
         >

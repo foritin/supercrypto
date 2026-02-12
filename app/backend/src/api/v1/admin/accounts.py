@@ -19,7 +19,7 @@ def get_account_service() -> AccountService:
 
 
 @router.post(
-    "/",
+    "",
     status_code=status.HTTP_201_CREATED,
     summary="创建账户",
     description="创建新的账户，需要提供钱包地址和私钥",
@@ -65,7 +65,7 @@ async def get_account_by_address(
 
 
 @router.get(
-    "/",
+    "",
     summary="查询账户列表",
     description="查询账户列表，支持分页和过滤",
 )

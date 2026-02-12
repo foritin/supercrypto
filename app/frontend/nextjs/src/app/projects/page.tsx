@@ -7,8 +7,8 @@
 
 'use client';
 
-import { useProjects, syncProjectConfig } from '@/hooks/useProjectStatus';
-import { ProjectCard } from '@/components/project-registry/ProjectCard';
+import { useProjects, syncProjectConfig } from '@/hooks/use-project-status';
+import { ProjectCard } from '@/components/project-registry/project-card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, FolderOpen, AlertCircle, Inbox } from 'lucide-react';

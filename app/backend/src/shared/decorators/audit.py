@@ -12,7 +12,7 @@ from falib.utils.log import get_logger
 
 from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
 
-logger = get_logger("audit.decorator")
+logger = get_logger("system.decorator.audit")
 
 
 def audit_log(

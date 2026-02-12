@@ -5,7 +5,7 @@
 """
 
 # KYC 相关
-# 账户相关
+# 账户相关 (NetType/NetworkType 已废弃，统一使用 Network)
 from .account import NetType, NetworkType
 
 # 资产相关
@@ -19,7 +19,7 @@ from .audit import (
     TransactionAuditStatus,
     TransactionAuditType,
 )
-from .base import NetWork
+from .base import NetWork, Network
 
 # 合约相关
 from .contract import (
@@ -67,9 +67,11 @@ __all__ = [
     # Transaction
     "TransactionStatus",
     "TransactionType",
-    # Account
-    "NetType",
-    "NetworkType",
+    # Account / Network
+    "Network",
+    "NetWork",  # 向后兼容别名
+    "NetType",  # 向后兼容别名
+    "NetworkType",  # 向后兼容别名
     # Audit
     "AuditCategory",
     "AuditAction",
@@ -80,7 +82,6 @@ __all__ = [
     "ChainID",
     "ContractScope",
     "ContractType",
-    "NetWork",
     "ContractStatus",
     "DependencyType",
     "ContractRegistryStatus",

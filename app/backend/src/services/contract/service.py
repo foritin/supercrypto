@@ -1,5 +1,5 @@
 """
-Contract Service - 合约服务 (组合模式)
+合约服务 - 组合模式门面
 _Requirements: 3.1, 3.2_
 
 数据来源:
@@ -32,7 +32,7 @@ from src.services.contract.sync_service import (
     get_contract_sync_service,
 )
 
-logger = get_logger("contract.service")
+logger = get_logger("business.contract.service")
 
 
 class ContractService:
@@ -43,7 +43,7 @@ class ContractService:
     """
 
     def __init__(self, network: Optional[str] = None):
-        self.network = network or SETTINGS.NETWORK
+        self.network = network or SETTINGS.network
         self._status_service: Optional[ContractStatusService] = None
         self._registry_service: Optional[ContractRegistryService] = None
         self._sync_service: Optional[ContractSyncService] = None

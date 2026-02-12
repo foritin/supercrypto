@@ -19,14 +19,14 @@ const Slider = React.forwardRef<
 >(({ className, variant = 'default', glow = true, ...props }, ref) => {
   const trackColors = {
     default: 'bg-primary',
-    gold: 'bg-gradient-to-r from-[#FFD700] to-[#FFA500]',
-    primary: 'bg-gradient-to-r from-[#00D4AA] to-[#00A08C]',
+    gold: 'bg-gradient-to-r from-gold to-[#FFA500]',
+    primary: 'bg-gradient-to-r from-primary to-[#00A08C]',
   }
 
   const thumbColors = {
     default: 'border-primary/50 bg-primary shadow-[0_2px_8px_rgba(0,212,170,0.5)]',
-    gold: 'border-[#FFD700] bg-[#FFD700] shadow-[0_2px_8px_rgba(255,215,0,0.5)]',
-    primary: 'border-[#00D4AA] bg-[#00D4AA] shadow-[0_2px_8px_rgba(0,212,170,0.5)]',
+    gold: 'border-gold bg-gold shadow-[0_2px_8px_rgba(255,215,0,0.5)]',
+    primary: 'border-primary bg-primary shadow-[0_2px_8px_rgba(0,212,170,0.5)]',
   }
 
   const glowColors = {

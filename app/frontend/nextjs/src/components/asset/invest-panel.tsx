@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Wallet, TrendingUp, Clock, CheckCircle, PauseCircle, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProgressEnhanced } from "@/components/ui/progress-enhanced";
-import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { CountdownTimer } from "./countdown-timer";
 import { InvestorStats } from "./investor-stats";
 import type { AssetDetail, AssetStatus } from "@/services/asset";
@@ -40,7 +40,7 @@ function StatusBadge({
         return {
           icon: <TrendingUp className="h-3.5 w-3.5" />,
           text: t("assets.invest.statusBadge.active"),
-          className: "bg-gradient-to-r from-[#00D4AA] to-[#00B894] text-black",
+          className: "bg-gradient-to-r from-primary to-primary-dark text-black",
         };
       case "paused":
         return {
@@ -64,7 +64,7 @@ function StatusBadge({
         return {
           icon: <TrendingUp className="h-3.5 w-3.5" />,
           text: t("assets.invest.statusBadge.available"),
-          className: "bg-gradient-to-r from-[#00D4AA] to-[#00B894] text-black",
+          className: "bg-gradient-to-r from-primary to-primary-dark text-black",
         };
     }
   };
@@ -95,8 +95,8 @@ function StatCard({
 }) {
   return (
     <div className="flex flex-col items-center p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors">
-      <span className={`text-lg font-bold ${highlight ? "text-[#00D4AA]" : "text-white"}`}>
-        <AnimatedNumber value={value} format={format} duration={1200} className={highlight ? "text-[#00D4AA]" : ""} />
+      <span className={`text-lg font-bold ${highlight ? "text-primary" : "text-white"}`}>
+        <AnimatedNumber value={value} format={format} duration={1200} className={highlight ? "text-primary" : ""} />
       </span>
       <span className="text-white/40 text-[10px] uppercase mt-1">{label}</span>
     </div>
@@ -151,7 +151,7 @@ export function InvestPanel({
   return (
     <div className="relative bg-gradient-to-b from-white/[0.05] to-white/[0.02] border border-white/[0.08] rounded-2xl p-6 overflow-hidden">
       {/* 背景装饰 */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#00D4AA]/30 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
       
       {/* 投资状态徽章 */}
       <div className="flex justify-center mb-4">
@@ -210,13 +210,13 @@ export function InvestPanel({
             </div>
           </div>
           <div className="text-right">
-            <span className="text-[#00D4AA]/60 text-xs uppercase">{t("assets.invest.remaining")}</span>
-            <div className="text-[#00D4AA] font-semibold text-lg">
+            <span className="text-primary/60 text-xs uppercase">{t("assets.invest.remaining")}</span>
+            <div className="text-primary font-semibold text-lg">
               <AnimatedNumber 
                 value={asset.remaining_amount} 
                 format="usd-short" 
                 duration={1500}
-                className="text-[#00D4AA]"
+                className="text-primary"
               />
             </div>
           </div>
@@ -269,7 +269,7 @@ export function InvestPanel({
         className={`w-full h-[52px] text-base font-semibold rounded-xl transition-all duration-300 ${
           buttonState.disabled
             ? "bg-white/10 text-white/40 cursor-not-allowed"
-            : "bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-black hover:shadow-lg hover:shadow-[#00D4AA]/20"
+            : "bg-primary hover:bg-primary/90 text-black hover:shadow-lg hover:shadow-primary/20"
         }`}
         disabled={buttonState.disabled}
         onClick={buttonState.action}
@@ -289,7 +289,7 @@ export function InvestPanel({
         <p className="text-center mt-3 text-sm text-white/40">
           <Button
             variant="link"
-            className="text-[#00D4AA] p-0 h-auto hover:underline"
+            className="text-primary p-0 h-auto hover:underline"
             onClick={onGoToKyc}
           >
             {t("assets.invest.completeKyc")}
@@ -299,8 +299,8 @@ export function InvestPanel({
       )}
 
       {/* 装饰性光晕 */}
-      <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#00D4AA]/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-[#00D4AA]/3 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-primary/3 rounded-full blur-3xl pointer-events-none" />
     </div>
   );
 }

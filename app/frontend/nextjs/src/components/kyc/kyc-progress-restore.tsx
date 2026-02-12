@@ -151,15 +151,15 @@ export function KycProgressRestore({
     <div
       className={cn(
         'rounded-xl border p-4',
-        'bg-[#00D4AA]/5 border-[#00D4AA]/20',
+        'bg-primary/5 border-primary/20',
         'animate-in fade-in slide-in-from-top-2 duration-300',
         className
       )}
     >
       <div className="flex items-start gap-3">
         {/* 图标 */}
-        <div className="flex-shrink-0 p-2 rounded-lg bg-[#00D4AA]/10">
-          <RotateCcw className="w-5 h-5 text-[#00D4AA]" />
+        <div className="flex-shrink-0 p-2 rounded-lg bg-primary/10">
+          <RotateCcw className="w-5 h-5 text-primary" />
         </div>
 
         {/* 内容 */}
@@ -191,7 +191,7 @@ export function KycProgressRestore({
             <Button
               size="sm"
               onClick={handleRestore}
-              className="h-8 px-3 bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-[#0a0f0d] text-xs"
+              className="h-8 px-3 bg-primary hover:bg-primary/90 text-bg-dark text-xs"
             >
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
               {t('kyc.restore.resume', 'Resume')}

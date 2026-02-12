@@ -10,28 +10,29 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useChainId } from "wagmi";
 import {
   X,
-  CheckCircle,
-  XCircle as XCircleIcon,
-  Warning,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
   Clock,
   User,
   FileText,
-  Shield,
-  ShieldWarning,
+  ShieldCheck,
+  ShieldAlert,
   Calendar,
   CreditCard,
   Globe,
-  DeviceMobile,
-  ArrowSquareOut,
-  ArrowsClockwise,
+  Smartphone,
+  ExternalLink,
+  RefreshCw,
   Eye,
   Check,
   Copy,
   Hourglass,
-  TrendUp,
-} from "@phosphor-icons/react";
+  TrendingUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -57,6 +58,7 @@ import { DocumentViewer } from "./document-viewer";
 import { VideoPlayer } from "./video-player";
 import { DocumentReviewPanel } from "./document-review-panel";
 import { SectionCard, InfoRow } from "@/components/ui";
+import { getExplorerUrl } from "@/lib/utils";
 
 interface ReviewPanelProps {
   kycDetail: KycDetail | null;
@@ -89,14 +91,14 @@ const STATUS_CONFIG: Record<KycStatusType, { color: string; bgColor: string; bor
     bgColor: "rgba(82, 196, 26, 0.1)",
     borderColor: "rgba(82, 196, 26, 0.3)",
     labelKey: "admin.kyc.reviewPanel.statusApproved", 
-    icon: CheckCircle 
+    icon: CheckCircle2 
   },
   rejected: { 
     color: "text-red-400", 
     bgColor: "rgba(255, 77, 79, 0.1)",
     borderColor: "rgba(255, 77, 79, 0.3)",
     labelKey: "admin.kyc.reviewPanel.statusRejected", 
-    icon: XCircleIcon 
+    icon: XCircle 
   },
 };
 
@@ -107,28 +109,28 @@ const RISK_CONFIG: Record<RiskLevel, { color: string; bgColor: string; borderCol
     bgColor: "rgba(82, 196, 26, 0.1)",
     borderColor: "rgba(82, 196, 26, 0.3)",
     labelKey: "admin.kyc.stepper.riskLow", 
-    icon: Shield 
+    icon: ShieldCheck 
   },
   medium: { 
     color: "text-yellow-400", 
     bgColor: "rgba(250, 173, 20, 0.1)",
     borderColor: "rgba(250, 173, 20, 0.3)",
     labelKey: "admin.kyc.stepper.riskMedium", 
-    icon: Warning 
+    icon: AlertTriangle 
   },
   high: { 
     color: "text-orange-400", 
     bgColor: "rgba(255, 140, 0, 0.1)",
     borderColor: "rgba(255, 140, 0, 0.3)",
     labelKey: "admin.kyc.stepper.riskHigh", 
-    icon: ShieldWarning 
+    icon: ShieldAlert 
   },
   critical: { 
     color: "text-red-400", 
     bgColor: "rgba(255, 77, 79, 0.1)",
     borderColor: "rgba(255, 77, 79, 0.3)",
     labelKey: "admin.kyc.stepper.riskCritical", 
-    icon: ShieldWarning 
+    icon: ShieldAlert 
   },
 };
 
@@ -147,15 +149,15 @@ function AuditTimeline({ logs }: { logs: KycDetail["audit_logs"] }) {
   const getActionIcon = (action: string) => {
     switch (action) {
       case "submit":
-        return <FileText weight="fill" className="w-4 h-4 text-white/60" />;
+        return <FileText className="w-4 h-4 text-white/60" />;
       case "approve":
-        return <CheckCircle weight="fill" className="w-4 h-4 text-emerald-400" />;
+        return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
       case "reject":
-        return <XCircleIcon weight="fill" className="w-4 h-4 text-red-400" />;
+        return <XCircle className="w-4 h-4 text-red-400" />;
       case "sync":
-        return <ArrowsClockwise weight="bold" className="w-4 h-4 text-white/60" />;
+        return <RefreshCw className="w-4 h-4 text-white/60" />;
       default:
-        return <Clock weight="fill" className="w-4 h-4 text-white/60" />;
+        return <Clock className="w-4 h-4 text-white/60" />;
     }
   };
 
@@ -223,7 +225,7 @@ function RiskDetails({ riskLevel, riskScore, details }: {
       {/* 风险评分 */}
       <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: config.bgColor, border: `1px solid ${config.borderColor}` }}>
         <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: config.bgColor }}>
-          <Icon weight="fill" className="w-8 h-8" style={{ color: config.color.replace('text-', '') }} />
+          <Icon className="w-8 h-8" style={{ color: config.color.replace('text-', '') }} />
         </div>
         <div>
           <div className="flex items-center gap-2">
@@ -236,7 +238,7 @@ function RiskDetails({ riskLevel, riskScore, details }: {
 
       {/* 风险因素 */}
       {details?.factors && details.factors.length > 0 && (
-        <SectionCard title={t("admin.kyc.reviewPanel.riskFactors")} icon={<Warning weight="fill" className="w-4 h-4" />} className="border-white/[0.08]">
+        <SectionCard title={t("admin.kyc.reviewPanel.riskFactors")} icon={<AlertTriangle className="w-4 h-4" />} className="border-white/[0.08]">
           <div className="space-y-2">
             {details.factors.map((factor, index) => (
               <div key={index} className="flex items-center justify-between p-2 bg-white/5 rounded">
@@ -255,7 +257,7 @@ function RiskDetails({ riskLevel, riskScore, details }: {
       {/* PEP 匹配 */}
       {details?.pep_matches && details.pep_matches.length > 0 && (
         <Alert className="bg-amber-500/10 border-amber-500/30 rounded-xl">
-          <Warning weight="fill" className="w-4 h-4 text-amber-400" />
+          <AlertTriangle className="w-4 h-4 text-amber-400" />
           <AlertDescription className="text-amber-200">
             <div className="font-medium mb-1">{t("admin.kyc.reviewPanel.pepWarning")}</div>
             <div className="space-y-1">
@@ -273,7 +275,7 @@ function RiskDetails({ riskLevel, riskScore, details }: {
       {/* 制裁名单匹配 */}
       {details?.sanction_matches && details.sanction_matches.length > 0 && (
         <Alert className="bg-red-500/10 border-red-500/30 rounded-xl">
-          <ShieldWarning weight="fill" className="w-4 h-4 text-red-400" />
+          <ShieldAlert className="w-4 h-4 text-red-400" />
           <AlertDescription className="text-red-200">
             <div className="font-medium mb-1">{t("admin.kyc.reviewPanel.sanctionMatch")}</div>
             <div className="space-y-1">
@@ -302,6 +304,7 @@ export function ReviewPanel({
   isProcessing,
 }: ReviewPanelProps) {
   const { t } = useTranslation();
+  const chainId = useChainId();
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedRejectCode, setSelectedRejectCode] = useState("");
   const [customRejectReason, setCustomRejectReason] = useState("");
@@ -382,7 +385,7 @@ export function ReviewPanel({
                   border: `1px solid ${statusConfig.borderColor}`,
                 }}
               >
-                <User weight="fill" size={28} style={{ color: statusConfig.color.replace('text-', '') }} />
+                <User size={28} style={{ color: statusConfig.color.replace('text-', '') }} />
               </div>
               <div className="flex-1 min-w-0">
                 <SheetTitle className="text-xl font-semibold text-white mb-2">
@@ -399,7 +402,7 @@ export function ReviewPanel({
                         color: statusConfig.color,
                       }}
                     >
-                      <statusConfig.icon weight="fill" className="w-3 h-3" />
+                      <statusConfig.icon className="w-3 h-3" />
                       {t(statusConfig.labelKey)}
                     </Badge>
                     <Badge 
@@ -411,7 +414,7 @@ export function ReviewPanel({
                         color: riskConfig.color,
                       }}
                     >
-                      <riskConfig.icon weight="fill" className="w-3 h-3" />
+                      <riskConfig.icon className="w-3 h-3" />
                       {t(riskConfig.labelKey)}
                     </Badge>
                   </div>
@@ -441,7 +444,7 @@ export function ReviewPanel({
               {/* Overview Tab */}
               <TabsContent value="overview" className="mt-0 space-y-4">
                 {/* 基本信息卡片 */}
-                <SectionCard title={t("admin.kyc.reviewPanel.basicInfo")} icon={<User weight="fill" className="w-4 h-4" />} className="border-white/[0.08]">
+                <SectionCard title={t("admin.kyc.reviewPanel.basicInfo")} icon={<User className="w-4 h-4" />} className="border-white/[0.08]">
                   <InfoRow label={t("admin.kyc.reviewPanel.fullName")}>
                     <span className="text-white font-medium">{kyc.full_name || "-"}</span>
                   </InfoRow>
@@ -459,7 +462,7 @@ export function ReviewPanel({
                 </SectionCard>
 
                 {/* 钱包地址卡片 */}
-                <SectionCard title={t("admin.kyc.reviewPanel.walletAddress")} icon={<DeviceMobile weight="fill" className="w-4 h-4" />} className="border-white/[0.08]">
+                <SectionCard title={t("admin.kyc.reviewPanel.walletAddress")} icon={<Smartphone className="w-4 h-4" />} className="border-white/[0.08]">
                   <div className="flex items-center justify-between gap-2">
                     <code className="text-[13px] font-mono text-white/85 break-all leading-relaxed flex-1">
                       {kyc.wallet_address}
@@ -470,20 +473,20 @@ export function ReviewPanel({
                         className="flex items-center gap-1 text-xs bg-transparent border-none cursor-pointer p-1.5 rounded transition-colors hover:bg-white/5"
                         style={{ color: copied ? '#52c41a' : 'rgba(255, 255, 255, 0.45)' }}
                       >
-                        {copied ? <Check weight="bold" className="h-4 w-4" /> : <Copy weight="bold" className="h-4 w-4" />}
+                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </button>
                       <button
-                        onClick={() => window.open(`https://etherscan.io/address/${kyc.wallet_address}`, "_blank")}
+                        onClick={() => window.open(getExplorerUrl(chainId, 'address', kyc.wallet_address) || '#', "_blank")}
                         className="flex items-center gap-1 text-xs bg-transparent border-none cursor-pointer p-1.5 rounded transition-colors hover:bg-white/5 text-white/45"
                       >
-                        <ArrowSquareOut weight="bold" className="h-4 w-4" />
+                        <ExternalLink className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
                 </SectionCard>
 
                 {/* 审核状态卡片 */}
-                <SectionCard title={t("admin.kyc.reviewPanel.reviewStatus")} icon={<Hourglass weight="fill" className="w-4 h-4" />} className="border-white/[0.08]">
+                <SectionCard title={t("admin.kyc.reviewPanel.reviewStatus")} icon={<Hourglass className="w-4 h-4" />} className="border-white/[0.08]">
                   <InfoRow label={t("admin.kyc.reviewPanel.priority")}>
                     <span className={priorityConfig.color}>{t(priorityConfig.labelKey)}</span>
                   </InfoRow>
@@ -502,7 +505,7 @@ export function ReviewPanel({
 
                 {/* OCR 信息 */}
                 {ocr_data && (
-                  <SectionCard title={t("admin.kyc.reviewPanel.ocrInfo")} icon={<FileText weight="fill" className="w-4 h-4" />} className="border-white/[0.08]">
+                  <SectionCard title={t("admin.kyc.reviewPanel.ocrInfo")} icon={<FileText className="w-4 h-4" />} className="border-white/[0.08]">
                     <InfoRow label={t("admin.kyc.reviewPanel.confidence")}>
                       <span className="text-teal-400">{ocr_data.confidence_score}%</span>
                     </InfoRow>
@@ -535,9 +538,9 @@ export function ReviewPanel({
                       facial_comparison.is_match ? "text-emerald-400" : "text-red-400"
                     }`}>
                       {facial_comparison.is_match ? (
-                        <CheckCircle weight="fill" className="w-4 h-4" />
+                        <CheckCircle2 className="w-4 h-4" />
                       ) : (
-                        <Warning weight="fill" className="w-4 h-4" />
+                        <AlertTriangle className="w-4 h-4" />
                       )}
                       {t("admin.kyc.reviewPanel.facialComparisonResult")}
                     </div>
@@ -647,7 +650,7 @@ export function ReviewPanel({
                     onClick={() => setShowRejectForm(true)}
                     disabled={isProcessing}
                   >
-                    <XCircleIcon weight="fill" className="w-4 h-4 mr-2" />
+                    <XCircle className="w-4 h-4 mr-2" />
                     {t("admin.kyc.reviewPanel.reject")}
                   </Button>
                   <Button
@@ -655,7 +658,7 @@ export function ReviewPanel({
                     onClick={handleApprove}
                     disabled={isProcessing}
                   >
-                    <CheckCircle weight="fill" className="w-4 h-4 mr-2" />
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
                     {isProcessing ? t("admin.kyc.reviewPanel.processing") : t("admin.kyc.reviewPanel.approveReview")}
                   </Button>
                 </div>

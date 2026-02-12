@@ -28,7 +28,7 @@ const home = {
       apy: "Max APY",
     },
     features: {
-      title: "Why Choose SlimCrypto",
+      title: "Why Choose SuperCrypto",
       subtitle: "Built on blockchain technology with security, transparency, and high yields at its core",
       security: {
         title: "Bank-Grade Security",
@@ -130,7 +130,7 @@ const home = {
     lastUpdated: "Last Updated",
     intro: {
       title: "Notice to All Investors",
-      p1: "SlimCrypto provides a platform for investing in tokenized real-world assets (RWA). While we strive to offer secure and transparent investment opportunities, all investments carry inherent risks.",
+      p1: "SuperCrypto provides a platform for investing in tokenized real-world assets (RWA). While we strive to offer secure and transparent investment opportunities, all investments carry inherent risks.",
       p2: "By using our platform, you acknowledge that you have read, understood, and accept the risks outlined in this disclosure. If you do not understand these risks or are not prepared to accept them, you should not use our platform.",
     },
     general: {
@@ -194,16 +194,16 @@ const home = {
   terms: {
     badge: "Legal Document",
     title: "Terms of Service",
-    subtitle: "These terms govern your use of the SlimCrypto platform. By accessing or using our services, you agree to be bound by these terms.",
+    subtitle: "These terms govern your use of the SuperCrypto platform. By accessing or using our services, you agree to be bound by these terms.",
     lastUpdated: "Last Updated",
     acceptance: {
       title: "Acceptance of Terms",
-      content: "By accessing or using the SlimCrypto platform, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, you must not use our services.",
+      content: "By accessing or using the SuperCrypto platform, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree to these terms, you must not use our services.",
     },
     definitions: {
       title: "1. Definitions",
       p1: "In these Terms:",
-      platform: "refers to the SlimCrypto website, applications, and all related services.",
+      platform: "refers to the SuperCrypto website, applications, and all related services.",
       user: "refers to any individual or entity accessing or using the Platform.",
       assets: "refers to tokenized real-world assets available on the Platform.",
       wallet: "refers to your digital wallet used to interact with the Platform.",
@@ -219,7 +219,7 @@ const home = {
     },
     services: {
       title: "3. Our Services",
-      p1: "SlimCrypto provides a platform for:",
+      p1: "SuperCrypto provides a platform for:",
       item1: "Accessing information about tokenized real-world assets",
       item2: "Investing in RWA tokens through blockchain transactions",
       item3: "Managing your investment portfolio",
@@ -274,11 +274,11 @@ const home = {
   privacy: {
     badge: "Your Privacy Matters",
     title: "Privacy Policy",
-    subtitle: "This Privacy Policy explains how SlimCrypto collects, uses, and protects your personal information when you use our platform.",
+    subtitle: "This Privacy Policy explains how SuperCrypto collects, uses, and protects your personal information when you use our platform.",
     lastUpdated: "Last Updated",
     intro: {
       title: "Our Commitment",
-      content: "At SlimCrypto, we take your privacy seriously. We are committed to protecting your personal information and being transparent about how we collect and use data. This policy applies to all information collected through our platform.",
+      content: "At SuperCrypto, we take your privacy seriously. We are committed to protecting your personal information and being transparent about how we collect and use data. This policy applies to all information collected through our platform.",
     },
     collect: {
       title: "1. Information We Collect",

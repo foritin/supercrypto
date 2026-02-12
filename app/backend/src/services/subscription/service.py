@@ -1,5 +1,5 @@
 """
-Subscription Domain - Business Service
+认购领域 - 业务服务层
 
 幂等性设计:
 - 使用 tx_hash 作为唯一标识
@@ -14,7 +14,9 @@ from decimal import Decimal
 from typing import List, Optional, Tuple
 
 from falib.utils.config import SETTINGS
+from falib.utils.log import get_logger
 from tortoise.exceptions import IntegrityError
+from tortoise.transactions import in_transaction
 
 from src.models.asset import Asset
 from src.models.subscription import Subscription
@@ -29,6 +31,8 @@ from src.shared.common.exceptions import BusinessException
 from src.shared.schemas.enums import SubscriptionStatus
 from src.shared.services.lock_service import DistributedLockService, LockAcquireError
 
+logger = get_logger("business.subscription.service")
+
 
 class SubscriptionService:
     """认购服务"""
@@ -37,9 +41,9 @@ class SubscriptionService:
         self.asset_service = AssetService()
 
     @property
-    def environment(self) -> str:
-        """获取当前环境"""
-        return SETTINGS.environment
+    def network(self) -> str:
+        """获取当前网络"""
+        return SETTINGS.network
 
     async def preview_subscription(
         self, data: SubscriptionPreviewRequest
@@ -47,15 +51,15 @@ class SubscriptionService:
         """
         预览认购收益
 
-        Args:
+        参数:
             data: 预览请求
 
-        Returns:
+        返回:
             预览响应
         """
         # 获取资产
         asset = await Asset.filter(
-            id=data.asset_id, environment=self.environment
+            id=data.asset_id, environment=self.network
         ).first()
 
         if not asset:
@@ -117,18 +121,18 @@ class SubscriptionService:
         2. 使用分布式锁防止并发创建
         3. 数据库唯一约束作为最后防线
 
-        Args:
+        参数:
             wallet_address: 用户钱包地址
             data: 创建请求
 
-        Returns:
+        返回:
             认购响应
         """
         # ===== Step 1: 快速检查 - 如果已存在直接返回 (幂等性) =====
         if data.tx_hash:
             existing = (
                 await Subscription.filter(
-                    tx_hash=data.tx_hash, environment=self.environment
+                    tx_hash=data.tx_hash, environment=self.network
                 )
                 .prefetch_related("asset")
                 .first()
@@ -148,7 +152,7 @@ class SubscriptionService:
                 if data.tx_hash:
                     existing = (
                         await Subscription.filter(
-                            tx_hash=data.tx_hash, environment=self.environment
+                            tx_hash=data.tx_hash, environment=self.network
                         )
                         .prefetch_related("asset")
                         .first()
@@ -168,7 +172,7 @@ class SubscriptionService:
             if data.tx_hash:
                 existing = (
                     await Subscription.filter(
-                        tx_hash=data.tx_hash, environment=self.environment
+                        tx_hash=data.tx_hash, environment=self.network
                     )
                     .prefetch_related("asset")
                     .first()
@@ -185,16 +189,16 @@ class SubscriptionService:
         """
         执行实际的创建逻辑 (内部方法)
 
-        Args:
+        参数:
             wallet_address: 用户钱包地址
             data: 创建请求
 
-        Returns:
+        返回:
             认购响应
         """
         # 获取资产
         asset = await Asset.filter(
-            id=data.asset_id, environment=self.environment
+            id=data.asset_id, environment=self.network
         ).first()
 
         if not asset:
@@ -228,30 +232,39 @@ class SubscriptionService:
         )
 
         try:
-            # 创建认购记录
-            subscription = await Subscription.create(
-                wallet_address=wallet_address.lower(),
-                asset=asset,
-                amount=data.amount,
-                token_type=data.token_type,
-                lock_period=data.lock_period,
-                apy=apy,
-                rwa_token_amount=rwa_token_amount,
-                start_date=start_date,
-                end_date=end_date,
-                original_end_date=end_date,
-                expected_interest=expected_interest,
-                tx_hash=data.tx_hash,
-                status=SubscriptionStatus.ACTIVE,
-                environment=self.environment,
-            )
+            # 使用事务保护：创建认购记录 + 更新资产供应量必须原子执行
+            async with in_transaction() as conn:
+                # 创建认购记录
+                subscription = await Subscription.create(
+                    wallet_address=wallet_address.lower(),
+                    asset=asset,
+                    amount=data.amount,
+                    token_type=data.token_type,
+                    lock_period=data.lock_period,
+                    apy=apy,
+                    rwa_token_amount=rwa_token_amount,
+                    start_date=start_date,
+                    end_date=end_date,
+                    original_end_date=end_date,
+                    expected_interest=expected_interest,
+                    tx_hash=data.tx_hash,
+                    status=SubscriptionStatus.ACTIVE,
+                    environment=self.network,
+                    using_db=conn,
+                )
+
+                # 更新资产已认购金额（在同一事务中）
+                await self.asset_service.update_subscribed_amount(
+                    asset.id, data.amount, is_add=True
+                )
+
         except IntegrityError:
             # 数据库唯一约束冲突 - 说明记录已被创建 (并发情况)
             # 返回已存在的记录
             if data.tx_hash:
                 existing = (
                     await Subscription.filter(
-                        tx_hash=data.tx_hash, environment=self.environment
+                        tx_hash=data.tx_hash, environment=self.network
                     )
                     .prefetch_related("asset")
                     .first()
@@ -261,11 +274,6 @@ class SubscriptionService:
                     return await self._to_response(existing)
 
             raise BusinessException(code=409, message="认购记录创建冲突，请重试")
-
-        # 更新资产已认购金额
-        await self.asset_service.update_subscribed_amount(
-            asset.id, data.amount, is_add=True
-        )
 
         return await self._to_response(subscription)
 
@@ -280,18 +288,18 @@ class SubscriptionService:
         """
         获取用户认购列表
 
-        Args:
+        参数:
             wallet_address: 用户钱包地址
             status: 状态筛选
             asset_id: 资产筛选
             page: 页码
             page_size: 每页数量
 
-        Returns:
+        返回:
             (列表, 总数, 总页数)
         """
         query = Subscription.filter(
-            wallet_address=wallet_address.lower(), environment=self.environment
+            wallet_address=wallet_address.lower(), environment=self.network
         )
 
         if status:
@@ -324,18 +332,18 @@ class SubscriptionService:
         """
         获取认购详情
 
-        Args:
+        参数:
             subscription_id: 认购ID
             wallet_address: 用户钱包地址
 
-        Returns:
+        返回:
             认购详情或 None
         """
         subscription = (
             await Subscription.filter(
                 id=subscription_id,
                 wallet_address=wallet_address.lower(),
-                environment=self.environment,
+                environment=self.network,
             )
             .prefetch_related("asset")
             .first()
@@ -357,19 +365,19 @@ class SubscriptionService:
         """
         赎回认购
 
-        Args:
+        参数:
             subscription_id: 认购ID
             wallet_address: 用户钱包地址
             tx_hash: 赎回交易哈希
 
-        Returns:
+        返回:
             更新后的认购响应
         """
         subscription = (
             await Subscription.filter(
                 id=subscription_id,
                 wallet_address=wallet_address.lower(),
-                environment=self.environment,
+                environment=self.network,
             )
             .prefetch_related("asset")
             .first()
@@ -386,19 +394,21 @@ class SubscriptionService:
                 code=400, message="Subscription has not matured yet"
             )
 
-        # 更新状态
-        subscription.status = SubscriptionStatus.REDEEMED
-        subscription.redeemed_at = datetime.now(timezone.utc)
-        subscription.redeem_tx_hash = tx_hash
-        subscription.actual_interest = (
-            subscription.expected_interest
-        )  # 简化：实际利息=预期利息
-        await subscription.save()
+        # 使用事务保护：更新认购状态 + 更新资产供应量必须原子执行
+        async with in_transaction() as conn:
+            # 更新状态
+            subscription.status = SubscriptionStatus.REDEEMED
+            subscription.redeemed_at = datetime.now(timezone.utc)
+            subscription.redeem_tx_hash = tx_hash
+            subscription.actual_interest = (
+                subscription.expected_interest
+            )  # 简化：实际利息=预期利息
+            await subscription.save(using_db=conn)
 
-        # 更新资产已认购金额
-        await self.asset_service.update_subscribed_amount(
-            subscription.asset_id, subscription.amount, is_add=False
-        )
+            # 更新资产已认购金额
+            await self.asset_service.update_subscribed_amount(
+                subscription.asset_id, subscription.amount, is_add=False
+            )
 
         return await self._to_response(subscription)
 
@@ -406,14 +416,14 @@ class SubscriptionService:
         """
         获取用户统计数据
 
-        Args:
+        参数:
             wallet_address: 用户钱包地址
 
-        Returns:
+        返回:
             统计数据
         """
         subscriptions = await Subscription.filter(
-            wallet_address=wallet_address.lower(), environment=self.environment
+            wallet_address=wallet_address.lower(), environment=self.network
         ).prefetch_related("asset")
 
         total_invested = Decimal(0)

@@ -135,6 +135,9 @@ class ContractConfig(AbstractModel, TimestampMixin):
 
     class Meta:
         table = "contract_config"
+        indexes = [
+            ("project_name", "deploy_order"),
+        ]
 
     def __str__(self) -> str:
         return f"ContractConfig({self.contract_name}, project={self.project_name})"

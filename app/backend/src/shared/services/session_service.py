@@ -17,7 +17,7 @@ from falib.utils.log import get_logger
 
 from src.shared.common.adapters import get_async_redis_adapter
 
-logger = get_logger("auth.session")
+logger = get_logger("system.service.session")
 
 
 class SessionService:
@@ -74,6 +74,11 @@ class SessionService:
             await redis.set_json(session_key, session_data)
             await redis.expire(session_key, self.session_ttl)
 
+            # 维护用户会话索引 Set
+            index_key = f"user_sessions:{wallet_address}"
+            await redis.sadd(index_key, session_id)
+            await redis.expire(index_key, self.session_ttl)
+
         logger.info(f"Session created for {wallet_address[:8]}...: {session_id[:8]}...")
         return session_id
 
@@ -110,30 +115,40 @@ class SessionService:
 
         async with get_async_redis_adapter() as redis:
             deleted = await redis.delete(session_key)
+            # 从用户会话索引 Set 中移除
+            index_key = f"user_sessions:{wallet_address}"
+            await redis.srem(index_key, session_id)
             return deleted > 0
 
     async def _scan_user_sessions(
         self, redis, wallet_address: str
     ) -> List[Tuple[str, dict]]:
         """
-        扫描用户的所有会话
+        通过 Redis Set 索引获取用户的所有会话
 
         Returns:
             List of (key, data) tuples
         """
         sessions = []
-        cursor = 0
-        pattern = f"session:{wallet_address}:*"
+        index_key = f"user_sessions:{wallet_address}"
 
-        while True:
-            cursor, keys = await redis.scan(cursor, match=pattern, count=100)
-            for key in keys:
-                key_str = key.decode() if isinstance(key, bytes) else key
-                data = await redis.get_json(key_str)
-                if data:
-                    sessions.append((key_str, data))
-            if cursor == 0:
-                break
+        # 从 Set 获取所有 session_id
+        session_ids = await redis.smembers(index_key)
+        stale_ids = []
+
+        for sid in session_ids:
+            sid_str = sid.decode() if isinstance(sid, bytes) else sid
+            session_key = f"session:{wallet_address}:{sid_str}"
+            data = await redis.get_json(session_key)
+            if data:
+                sessions.append((session_key, data))
+            else:
+                # 会话已过期但索引未清理，标记为过期
+                stale_ids.append(sid_str)
+
+        # 清理过期的索引条目
+        if stale_ids:
+            await redis.srem(index_key, *stale_ids)
 
         return sessions
 
@@ -162,6 +177,10 @@ class SessionService:
                 deleted = await redis.delete(key_str)
                 if deleted:
                     cleared_count += 1
+
+            # 删除用户会话索引 Set
+            index_key = f"user_sessions:{wallet_address}"
+            await redis.delete(index_key)
 
         logger.info(
             f"Added {wallet_address[:8]}... to blacklist, cleared {cleared_count} sessions"
@@ -260,12 +279,16 @@ class SessionService:
         cleared_count = 0
 
         async with get_async_redis_adapter() as redis:
-            # 扫描并删除用户所有会话
+            # 通过索引获取并删除用户所有会话
             sessions = await self._scan_user_sessions(redis, wallet_address)
             for key_str, _ in sessions:
                 deleted = await redis.delete(key_str)
                 if deleted:
                     cleared_count += 1
+
+            # 删除用户会话索引 Set
+            index_key = f"user_sessions:{wallet_address}"
+            await redis.delete(index_key)
 
         logger.info(f"Cleared {cleared_count} sessions for {wallet_address[:8]}...")
         return cleared_count

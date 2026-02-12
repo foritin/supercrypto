@@ -9,8 +9,8 @@ Requirements: 2.1
 
 from typing import Optional
 
-from falib.utils.handlers import success_response
-from fastapi import APIRouter, Depends, HTTPException
+from falib.utils.handlers import create_error_response, create_success_response
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from src.services.audit.service import audit_service
@@ -71,9 +71,9 @@ async def sync_from_provider(
     """
     try:
         result = await service.sync_from_provider()
-        return success_response(object_data=result)
+        return create_success_response(object_data=result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return create_error_response(code=500, msg=str(e))
 
 
 # ============ Provider 注册端点 ============
@@ -99,9 +99,9 @@ async def prepare_register(
             contract_name=request.contract_name,
             provider_key=request.provider_key,
         )
-        return success_response(object_data=result)
+        return create_success_response(object_data=result)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return create_error_response(code=400, msg=str(e))
 
 
 @router.post(
@@ -143,9 +143,9 @@ async def confirm_register(
             },
         )
 
-        return success_response(object_data=result)
+        return create_success_response(object_data=result)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return create_error_response(code=400, msg=str(e))
 
 
 # ============ Provider 注销端点 ============
@@ -171,9 +171,9 @@ async def prepare_unregister(
             contract_name=request.contract_name,
             provider_key=request.provider_key,
         )
-        return success_response(object_data=result)
+        return create_success_response(object_data=result)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return create_error_response(code=400, msg=str(e))
 
 
 @router.post(
@@ -216,6 +216,6 @@ async def confirm_unregister(
             },
         )
 
-        return success_response(object_data=result)
+        return create_success_response(object_data=result)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return create_error_response(code=400, msg=str(e))

@@ -10,32 +10,35 @@ import {
   isJwtExpired,
 } from './auth'
 
-// Helper to set JWT token directly for testing
-const setJwtToken = (token: string) => {
-  localStorage.setItem('supercrypto-jwt', token)
-}
-
-// Helper to clear JWT token directly for testing
-const clearJwtToken = () => {
-  localStorage.removeItem('supercrypto-jwt')
-}
+/**
+ * 注意: vitest setup.ts 中 localStorage 被 vi.fn() mock，
+ * 需要手动模拟存储行为才能测试依赖 localStorage 的函数。
+ */
+const store: Record<string, string> = {}
 
 describe('Auth Utils', () => {
   beforeEach(() => {
-    localStorage.clear()
     vi.clearAllMocks()
+    // 清空模拟存储
+    Object.keys(store).forEach(key => delete store[key])
+
+    // 配置 localStorage mock 模拟真实行为
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => store[key] ?? null)
+    vi.mocked(localStorage.setItem).mockImplementation((key: string, value: string) => { store[key] = value })
+    vi.mocked(localStorage.removeItem).mockImplementation((key: string) => { delete store[key] })
+    vi.mocked(localStorage.clear).mockImplementation(() => { Object.keys(store).forEach(key => delete store[key]) })
   })
 
   describe('JWT Token Management', () => {
     const testToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZXhwIjoxOTk5OTk5OTk5fQ.signature'
 
-    it('should store JWT token', () => {
-      setJwtToken(testToken)
-      expect(localStorage.getItem('supercrypto-jwt')).toBe(testToken)
+    it('should store and retrieve JWT token via saveTokens', () => {
+      saveTokens({ accessToken: testToken, refreshToken: 'refresh', expiresInMins: 30 })
+      expect(getJwtToken()).toBe(testToken)
     })
 
     it('should retrieve JWT token', () => {
-      localStorage.setItem('supercrypto-jwt', testToken)
+      store['supercrypto-jwt'] = testToken
       expect(getJwtToken()).toBe(testToken)
     })
 
@@ -43,15 +46,9 @@ describe('Auth Utils', () => {
       expect(getJwtToken()).toBeNull()
     })
 
-    it('should clear JWT token', () => {
-      localStorage.setItem('supercrypto-jwt', testToken)
-      clearJwtToken()
-      expect(localStorage.getItem('supercrypto-jwt')).toBeNull()
-    })
-
     it('should check if token exists', () => {
       expect(hasJwtToken()).toBe(false)
-      setJwtToken(testToken)
+      saveTokens({ accessToken: testToken, refreshToken: 'refresh', expiresInMins: 30 })
       expect(hasJwtToken()).toBe(true)
     })
   })
@@ -59,13 +56,13 @@ describe('Auth Utils', () => {
   describe('Wallet Connection State', () => {
     it('should store wallet connected state', () => {
       setWalletConnected(true)
-      expect(localStorage.getItem('supercrypto-wallet-connected')).toBe('true')
+      expect(store['supercrypto-wallet-connected']).toBe('true')
     })
 
     it('should remove wallet connected state when false', () => {
-      localStorage.setItem('supercrypto-wallet-connected', 'true')
+      store['supercrypto-wallet-connected'] = 'true'
       setWalletConnected(false)
-      expect(localStorage.getItem('supercrypto-wallet-connected')).toBeNull()
+      expect(store['supercrypto-wallet-connected']).toBeUndefined()
     })
 
     it('should check if wallet was connected', () => {
@@ -77,13 +74,13 @@ describe('Auth Utils', () => {
 
   describe('clearAuthData', () => {
     it('should clear all auth data', () => {
-      localStorage.setItem('supercrypto-jwt', 'test-token')
-      localStorage.setItem('supercrypto-wallet-connected', 'true')
+      store['supercrypto-jwt'] = 'test-token'
+      store['supercrypto-wallet-connected'] = 'true'
       
       clearAuthData()
       
-      expect(localStorage.getItem('supercrypto-jwt')).toBeNull()
-      expect(localStorage.getItem('supercrypto-wallet-connected')).toBeNull()
+      expect(store['supercrypto-jwt']).toBeUndefined()
+      expect(store['supercrypto-wallet-connected']).toBeUndefined()
     })
   })
 

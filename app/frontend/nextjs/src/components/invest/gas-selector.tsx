@@ -96,16 +96,16 @@ export function GasSelector({ to, value, data }: GasSelectorProps) {
             onClick={() => setGasOption(option)}
             className={`p-4 rounded-xl border-2 text-left transition-all ${
               selectedGas?.label === option.label
-                ? 'border-[#00D4AA] bg-[#00D4AA]/10'
+                ? 'border-primary bg-primary/10'
                 : 'border-white/10 hover:border-white/30 bg-white/5'
             }`}
           >
             <div className="flex items-center gap-2 mb-2">
               {option.label === 'slow' && <Clock className="h-4 w-4 text-white/60" />}
-              {option.label === 'standard' && <Gauge className="h-4 w-4 text-[#00D4AA]" />}
+              {option.label === 'standard' && <Gauge className="h-4 w-4 text-primary" />}
               {option.label === 'fast' && <Zap className="h-4 w-4 text-yellow-400" />}
               <span className={`font-medium capitalize ${
-                selectedGas?.label === option.label ? 'text-[#00D4AA]' : 'text-white'
+                selectedGas?.label === option.label ? 'text-primary' : 'text-white'
               }`}>
                 {option.label}
               </span>

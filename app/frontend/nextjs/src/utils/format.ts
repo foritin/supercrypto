@@ -1,9 +1,7 @@
 import { formatUnits } from 'viem'
 
-// 截断地址显示
-export function truncateAddress(address: string): string {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`
-}
+// 从 lib/utils 统一导出截断地址工具函数
+export { truncateAddress } from '@/lib/utils'
 
 // 代币余额格式化，支持 bigint/字符串，按 decimals 处理
 export function formatTokenBalance(

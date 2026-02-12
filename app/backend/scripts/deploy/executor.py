@@ -33,7 +33,7 @@ from src.shared.schemas.enums import (
     ContractScope,
     ContractStatus,
     ContractType,
-    NetWork,
+    Network,
 )
 
 from .base import ZERO_ADDRESS, ContractConfig
@@ -80,9 +80,9 @@ def get_chain_id(network: str) -> int:
     return DevTools.get_enum_value(ChainID, network)
 
 
-def get_network_enum(network: str) -> NetWork:
+def get_network_enum(network: str) -> Network:
     """获取网络枚举"""
-    return DevTools.get_enum_value(NetWork, network)
+    return DevTools.get_enum_value(Network, network)
 
 
 def get_deployer(network: str, tag: str = "admin"):
@@ -176,7 +176,7 @@ def upload_abi(
 
 
 def get_deployed_contract(
-    name: str, chain_id: int, network: NetWork, project_name: str = ""
+    name: str, chain_id: int, network: Network, project_name: str = ""
 ) -> Optional[ContractDeployment]:
     """
     查询已部署的合约
@@ -203,7 +203,7 @@ def get_deployed_contract(
 
 
 def get_all_deployed(
-    chain_id: int, network: NetWork, project_name: str = ""
+    chain_id: int, network: Network, project_name: str = ""
 ) -> dict[str, str]:
     """
     获取已部署合约的地址映射
@@ -230,7 +230,7 @@ def get_all_deployed(
 
 
 def get_global_and_project_deployed(
-    chain_id: int, network: NetWork, project_name: str
+    chain_id: int, network: Network, project_name: str
 ) -> dict[str, str]:
     """
     获取公共合约 + 指定项目合约的地址映射
@@ -264,7 +264,7 @@ def deploy_contract(
     config: ContractConfig,
     deployer,
     chain_id: int,
-    network: NetWork,
+    network: Network,
     project_name: str = "",
     deployed: dict = None,
     provider=None,
@@ -362,7 +362,7 @@ def save_contract(
     name: str,
     address: str,
     deployer_address: str,
-    network: NetWork,
+    network: Network,
     chain_id: int,
     scope: str,
     contract_type: str,
@@ -483,7 +483,7 @@ def save_contract_config(config: ContractConfig, project_name: str):
 def update_project_registry_status(
     project_name: str,
     contract_name: str,
-    network: NetWork,
+    network: Network,
     address: str,
     tx_hash: str = None,
 ):
@@ -561,7 +561,7 @@ def create_provider_registry_record(
     project_name: str,
     provider_address: str,
     chain_id: int,
-    network: NetWork,
+    network: Network,
 ):
     """
     部署时预创建 ProviderRegistry 记录
@@ -642,7 +642,7 @@ def record_dependencies(
     contract_address: str,
     config: ContractConfig,
     chain_id: int,
-    network: NetWork,
+    network: Network,
 ):
     """
     记录合约依赖关系到数据库 (使用 ContractDeployment.bindings)

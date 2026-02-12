@@ -4,7 +4,7 @@
 
 提供资产媒体文件的上传、删除、排序等功能。
 
-Usage:
+用法:
     from src.services.asset.media_service import MediaService
 
     service = MediaService()
@@ -24,7 +24,7 @@ from src.shared.common.storage import (
 )
 from src.shared.schemas.enums import MediaType
 
-logger = get_logger("asset.media")
+logger = get_logger("business.asset.media")
 
 
 class MediaServiceError(Exception):
@@ -43,11 +43,11 @@ class MediaService:
         """
         获取文件的预签名临时访问 URL
         
-        Args:
+        参数:
             file_path: 文件相对路径
             expires: 过期时间（秒），默认 1 小时
             
-        Returns:
+        返回:
             预签名的临时访问 URL
         """
         return await self.storage.get_presigned_url(file_path, expires)
@@ -58,11 +58,11 @@ class MediaService:
         """
         批量获取文件的预签名临时访问 URL（复用连接）
         
-        Args:
+        参数:
             file_paths: 文件相对路径列表
             expires: 过期时间（秒），默认 1 小时
             
-        Returns:
+        返回:
             {原始路径: 预签名URL} 的字典
         """
         return await self.storage.get_presigned_urls_batch(file_paths, expires)
@@ -78,17 +78,17 @@ class MediaService:
         """
         上传媒体文件
 
-        Args:
+        参数:
             asset_id: 资产 ID
             file: 上传的文件
             media_type: 媒体类型
             title: 标题
             description: 描述
 
-        Returns:
+        返回:
             创建的 AssetMedia 实例
 
-        Raises:
+        异常:
             MediaServiceError: 上传失败
             FileSizeExceeded: 文件大小超出限制
             InvalidFileType: 不支持的文件类型
@@ -156,12 +156,12 @@ class MediaService:
         """
         批量上传媒体文件（复用连接）
 
-        Args:
+        参数:
             asset_id: 资产 ID
             files: 上传的文件列表
             media_type: 媒体类型
 
-        Returns:
+        返回:
             列表，每个元素为 (success, media, error_msg)
         """
         if not files:
@@ -260,11 +260,11 @@ class MediaService:
         """
         批量删除媒体文件（复用连接）
 
-        Args:
+        参数:
             asset_id: 资产 ID
             media_ids: 媒体 ID 列表
 
-        Returns:
+        返回:
             列表，每个元素为 (media_id, success, error_msg)
         """
         if not media_ids:
@@ -333,14 +333,14 @@ class MediaService:
         """
         更新媒体信息
 
-        Args:
+        参数:
             asset_id: 资产 ID
             media_id: 媒体 ID
             title: 新标题
             description: 新描述
             is_primary: 是否设为主图
 
-        Returns:
+        返回:
             更新后的 AssetMedia 实例
         """
         media = await AssetMedia.filter(id=media_id, asset_id=asset_id).first()
@@ -382,11 +382,11 @@ class MediaService:
         """
         批量排序媒体
 
-        Args:
+        参数:
             asset_id: 资产 ID
             media_ids: 按新顺序排列的媒体 ID 列表
 
-        Returns:
+        返回:
             排序后的媒体列表
         """
         # 验证所有媒体都属于该资产
@@ -416,11 +416,11 @@ class MediaService:
         """
         获取资产的媒体列表
 
-        Args:
+        参数:
             asset_id: 资产 ID
             media_type: 可选，按类型筛选
 
-        Returns:
+        返回:
             媒体列表
         """
         query = AssetMedia.filter(asset_id=asset_id)
@@ -434,10 +434,10 @@ class MediaService:
         """
         获取资产的媒体统计
 
-        Args:
+        参数:
             asset_id: 资产 ID
 
-        Returns:
+        返回:
             各类型媒体数量统计
         """
         from tortoise.functions import Count

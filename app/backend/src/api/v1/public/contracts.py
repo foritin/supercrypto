@@ -9,7 +9,7 @@
 - _Requirements: 1.3, 1.4_
 """
 
-from falib.utils.handlers import success_response
+from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends
 
 from src.services.contract import ContractService, get_contract_service
@@ -36,8 +36,8 @@ async def get_contract_address(
     contract_info = await contract_service.get_public_contract_address(contract_name)
 
     if not contract_info:
-        return success_response(
+        return create_success_response(
             object_data=None, msg=f"Contract not found: {contract_name}"
         )
 
-    return success_response(object_data=contract_info)
+    return create_success_response(object_data=contract_info)

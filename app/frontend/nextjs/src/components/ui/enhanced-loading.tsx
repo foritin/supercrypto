@@ -430,7 +430,7 @@ export function EnhancedLoading({
               </svg>
             </div>
             <span className="text-teal-400 font-semibold text-lg">
-              SlimCrypto
+              SuperCrypto
             </span>
           </motion.div>
         )}
@@ -485,7 +485,7 @@ export function LoadingOverlay({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0f0d]/90 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-bg-dark/90 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

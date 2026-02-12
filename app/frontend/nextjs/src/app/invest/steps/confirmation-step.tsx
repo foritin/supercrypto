@@ -31,7 +31,7 @@ export function ConfirmationStep() {
 
   if (!asset || !amount) {
     return (
-      <Card className="p-8 glass border-[#00D4AA]/20 text-center">
+      <Card className="p-8 glass border-primary/20 text-center">
         <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto mb-4" />
         <p className="text-white/60">
           {t('invest.noData', 'Missing investment data. Please go back and try again.')}
@@ -50,7 +50,7 @@ export function ConfirmationStep() {
   return (
     <div className="space-y-6">
       <NetworkCheck>
-        <Card className="p-6 glass border-[#00D4AA]/20">
+        <Card className="p-6 glass border-primary/20">
           <h3 className="text-lg font-semibold text-white mb-6">
             {t('invest.confirmDetails', 'Confirm Investment Details')}
           </h3>
@@ -59,7 +59,7 @@ export function ConfirmationStep() {
             {/* Investment Summary */}
             <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-4">
               <div className="flex justify-between items-center pb-4 border-b border-white/10">
-                <span className="text-white/60">Asset</span>
+                <span className="text-white/60">{t('invest.detail.asset')}</span>
                 <div className="text-right">
                   <p className="font-medium text-white">{asset.name}</p>
                   <p className="text-sm text-white/50">{asset.symbol}</p>
@@ -67,23 +67,23 @@ export function ConfirmationStep() {
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-white/60">Investment Amount</span>
+                <span className="text-white/60">{t('invest.detail.investmentAmount')}</span>
                 <span className="font-medium text-white text-lg">{amount} ETH</span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-white/60">APY</span>
-                <span className="font-medium text-[#00D4AA]">{asset.apy}%</span>
+                <span className="text-white/60">{t('invest.detail.apy')}</span>
+                <span className="font-medium text-primary">{asset.apy}%</span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-white/60">Lock Period</span>
-                <span className="font-medium text-white">{asset.lockPeriod} days</span>
+                <span className="text-white/60">{t('invest.detail.lockPeriod')}</span>
+                <span className="font-medium text-white">{t('invest.detail.daysUnit', { days: asset.lockPeriod })}</span>
               </div>
 
               {lockEndDate && (
                 <div className="flex justify-between items-center">
-                  <span className="text-white/60">Unlock Date</span>
+                  <span className="text-white/60">{t('invest.detail.unlockDate')}</span>
                   <span className="font-medium text-white">
                     {lockEndDate.toLocaleDateString(undefined, {
                       year: 'numeric',
@@ -97,8 +97,8 @@ export function ConfirmationStep() {
               <div className="h-px bg-white/10" />
 
               <div className="flex justify-between items-center">
-                <span className="text-white/80 font-medium">Expected Return</span>
-                <span className="font-bold text-[#00D4AA] text-lg">+{expectedYield} ETH</span>
+                <span className="text-white/80 font-medium">{t('invest.detail.expectedReturn')}</span>
+                <span className="font-bold text-primary text-lg">+{expectedYield} ETH</span>
               </div>
             </div>
 
@@ -127,20 +127,20 @@ export function ConfirmationStep() {
                 id="terms"
                 checked={agreedToTerms}
                 onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5 text-[#00D4AA] focus:ring-[#00D4AA]/50"
+                className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary/50"
               />
               <label htmlFor="terms" className="text-sm text-white/60 cursor-pointer">
                 {t('invest.agreeToTerms', 
                   'I have read and agree to the {{terms}} and {{risks}} associated with this investment.',
                   {
                     terms: (
-                      <a href="/terms" className="text-[#00D4AA] hover:underline" target="_blank">
-                        Terms of Service
+                      <a href="/terms" className="text-primary hover:underline" target="_blank">
+                        {t('invest.termsOfService')}
                       </a>
                     ),
                     risks: (
-                      <a href="/risk-disclosure" className="text-[#00D4AA] hover:underline" target="_blank">
-                        Risk Disclosure
+                      <a href="/risk-disclosure" className="text-primary hover:underline" target="_blank">
+                        {t('invest.riskDisclosure')}
                       </a>
                     ),
                   }
@@ -149,9 +149,9 @@ export function ConfirmationStep() {
             </div>
 
             {/* Security Note */}
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-[#00D4AA]/5 border border-[#00D4AA]/20">
-              <Shield className="h-4 w-4 text-[#00D4AA]" />
-              <span className="text-sm text-[#00D4AA]/80">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <Shield className="h-4 w-4 text-primary" />
+              <span className="text-sm text-primary/80">
                 {t('invest.secureTransaction', 'This transaction will be securely signed by your wallet')}
               </span>
             </div>

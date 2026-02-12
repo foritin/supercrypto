@@ -1,0 +1,179 @@
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import './service-providers.css';
+
+/**
+ * ════════════════════════════════════════════════════════════════
+ * SERVICE PROVIDERS - 区块链生态合作伙伴展示
+ *
+ * 特点:
+ * - 深色背景 + 白色圆形 logo 容器
+ * - 两行 logo，步进式滚动（非无限滚动）
+ * - 定时自动切换，平滑过渡
+ * ════════════════════════════════════════════════════════════════
+ */
+
+export interface ServiceProvider {
+  id: string;
+  name: string;
+  logo: string;
+}
+
+// 第一行: Layer 1 区块链
+export const ROW1_PROVIDERS: ServiceProvider[] = [
+  { id: 'ethereum', name: 'Ethereum', logo: '/partners/ethereum.svg' },
+  { id: 'solana', name: 'Solana', logo: '/partners/solana.svg' },
+  { id: 'avalanche', name: 'Avalanche', logo: '/partners/avalanche.svg' },
+  { id: 'hedera', name: 'Hedera', logo: '/partners/hedera.svg' },
+  { id: 'aptos', name: 'Aptos', logo: '/partners/aptos.svg' },
+  { id: 'sei', name: 'Sei', logo: '/partners/sei.svg' },
+  { id: 'bnb', name: 'BNB Chain', logo: '/partners/bnb.svg' },
+  { id: 'polkadot', name: 'Polkadot', logo: '/partners/polkadot.svg' },
+  { id: 'cosmos', name: 'Cosmos', logo: '/partners/cosmos.svg' },
+];
+
+// 第二行: Layer 2 & 基础设施
+export const ROW2_PROVIDERS: ServiceProvider[] = [
+  { id: 'polygon', name: 'Polygon', logo: '/partners/polygon.svg' },
+  { id: 'arbitrum', name: 'Arbitrum', logo: '/partners/arbitrum.svg' },
+  { id: 'optimism', name: 'Optimism', logo: '/partners/optimism.svg' },
+  { id: 'chainlink', name: 'Chainlink', logo: '/partners/chainlink.svg' },
+  { id: 'frax', name: 'Frax', logo: '/partners/frax.svg' },
+  { id: 'near', name: 'NEAR', logo: '/partners/near.svg' },
+  { id: 'blackrock', name: 'BlackRock', logo: '/partners/blackrock.svg' },
+  { id: 'vaneck', name: 'VanEck', logo: '/partners/vaneck.svg' },
+];
+
+interface ServiceProvidersProps {
+  /** 标题 */
+  title?: string;
+  /** 副标题 */
+  subtitle?: string;
+  /** 描述段落 */
+  description?: string;
+  /** 按钮文字 */
+  ctaText?: string;
+  /** 按钮链接 */
+  ctaLink?: string;
+  /** 自动滚动间隔(ms) */
+  autoScrollInterval?: number;
+  /** 可见的 logo 数量 */
+  visibleCount?: number;
+}
+
+export const ServiceProviders: React.FC<ServiceProvidersProps> = ({
+  title = 'Powered by Leading Blockchains',
+  subtitle = 'Multi-chain support for maximum flexibility and security',
+  description = 'Our platform integrates with the most trusted blockchain networks, providing seamless access to DeFi opportunities across multiple ecosystems.',
+  ctaText = 'Explore Ecosystem',
+  ctaLink = '/assets',
+  autoScrollInterval = 2500,
+  visibleCount = 5,
+}) => {
+  const [row1Index, setRow1Index] = useState(0);
+  const [row2Index, setRow2Index] = useState(0);
+
+  const itemSize = 100;
+  const gap = 12;
+  const itemTotalWidth = itemSize + gap;
+
+  const row1Extended = [...ROW1_PROVIDERS, ...ROW1_PROVIDERS, ...ROW1_PROVIDERS, ...ROW1_PROVIDERS];
+  const row2Extended = [...ROW2_PROVIDERS, ...ROW2_PROVIDERS, ...ROW2_PROVIDERS, ...ROW2_PROVIDERS];
+
+  const containerWidth = visibleCount * itemTotalWidth - gap;
+
+  const scrollRow1 = useCallback(() => {
+    setRow1Index(prev => (prev + 1) % ROW1_PROVIDERS.length);
+  }, []);
+
+  const scrollRow2 = useCallback(() => {
+    setRow2Index(prev => (prev + 1) % ROW2_PROVIDERS.length);
+  }, []);
+
+  useEffect(() => {
+    const timer1 = setInterval(scrollRow1, autoScrollInterval);
+    const timer2 = setInterval(scrollRow2, autoScrollInterval + 800);
+    return () => {
+      clearInterval(timer1);
+      clearInterval(timer2);
+    };
+  }, [scrollRow1, scrollRow2, autoScrollInterval]);
+
+  const renderLogoRow = (
+    providers: ServiceProvider[],
+    index: number
+  ) => {
+    const translateX = -index * itemTotalWidth;
+
+    return (
+      <div className="overflow-hidden" style={{ width: containerWidth }}>
+        <div
+          className="sp-row-track flex"
+          style={{
+            transform: `translateX(${translateX}px)`,
+            gap: `${gap}px`,
+          }}
+        >
+          {providers.map((provider, i) => (
+            <div
+              key={`${provider.id}-${i}`}
+              className="shrink-0 w-[100px] h-[100px] sm:w-20 sm:h-20 xs:w-[70px] xs:h-[70px] bg-white/95 rounded-full flex items-center justify-center p-[22px] sm:p-[18px] xs:p-3.5 shadow-[0_4px_20px_rgba(0,0,0,0.25),0_0_0_1px_rgba(255,255,255,0.1)] transition-all duration-300 hover:scale-[1.08] hover:shadow-[0_8px_32px_rgba(0,212,170,0.3),0_0_0_2px_rgba(0,212,170,0.4),0_0_40px_rgba(0,212,170,0.15)] group"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={provider.logo}
+                alt={provider.name}
+                className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-110"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <section className="py-[100px] px-6 sm:py-20 sm:px-5 relative overflow-hidden">
+      <div className="max-w-[1200px] mx-auto flex flex-col items-center text-center relative z-[1]">
+        {/* 标题区域 */}
+        <div className="mb-14">
+          <span className="inline-block text-primary text-xs font-semibold tracking-[2px] uppercase mb-4">
+            BLOCKCHAIN ECOSYSTEM
+          </span>
+          <h2 className="text-white/95 text-[clamp(28px,4vw,38px)] font-semibold leading-[1.3] m-0 mb-3">
+            {title}
+          </h2>
+          <p className="text-white/50 text-base m-0">{subtitle}</p>
+        </div>
+
+        {/* Logo 行 - 步进式滚动 */}
+        <div className="flex flex-col items-center gap-3 sm:gap-2.5 mb-12">
+          {renderLogoRow(row1Extended, row1Index)}
+          {renderLogoRow(row2Extended, row2Index)}
+        </div>
+
+        {/* 描述 */}
+        <p className="max-w-[600px] text-white/55 text-[15px] leading-[1.8] m-0 mb-9">
+          {description}
+        </p>
+
+        {/* CTA 按钮 */}
+        <Button
+          size="lg"
+          className="bg-gradient-to-br from-primary to-primary-dark text-[#0a0a0f] border-none rounded-[28px] px-8 h-12 text-[15px] font-semibold shadow-[0_4px_20px_rgba(0,212,170,0.3)] hover:translate-y-[-2px] hover:shadow-[0_6px_28px_rgba(0,212,170,0.4)] transition-all duration-300"
+          asChild
+        >
+          <Link href={ctaLink}>
+            {ctaText} <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
+      </div>
+    </section>
+  );
+};
+
+export default ServiceProviders;

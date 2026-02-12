@@ -6,6 +6,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { GlobalRiskDisclaimer } from "@/components/compliance";
 import { CookieConsent } from "@/components/cookie-consent";
+import { HtmlLangSync } from "@/components/html-lang-sync";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -14,7 +15,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SlimCrypto - RWA Investment Platform",
+  title: "SuperCrypto - RWA Investment Platform",
   description:
     "Tokenized Real World Asset investment platform with transparent returns",
   keywords: ["RWA", "DeFi", "Crypto", "Investment", "Tokenization"],
@@ -27,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="zh-CN"
       className={inter.variable}
       suppressHydrationWarning
       data-scroll-behavior="smooth"
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <ThemeProvider>
           <Providers>
+            <HtmlLangSync />
             <MainLayout>{children}</MainLayout>
           </Providers>
         </ThemeProvider>

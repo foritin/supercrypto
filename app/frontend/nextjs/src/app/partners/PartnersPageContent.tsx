@@ -3,7 +3,8 @@
 import React from "react";
 import { Building2, Link2, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { PageBadge } from "@/components/ui/page-badge";
 import {
   Partner,
   INSTITUTION_PARTNERS,
@@ -31,7 +32,7 @@ const PartnerCard: React.FC<PartnerCardProps> = ({ partner }) => {
       href={partner.website || `#${partner.id}`}
       target={partner.website ? "_blank" : undefined}
       rel={partner.website ? "noopener noreferrer" : undefined}
-      className="group relative flex flex-col items-center p-6 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-[#00D4AA]/30 transition-all duration-300 hover:bg-white/[0.05]"
+      className="group relative flex flex-col items-center p-6 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-primary/30 transition-all duration-300 hover:bg-white/[0.05]"
     >
       {/* Logo Container */}
       <div className="relative w-full h-16 flex items-center justify-center mb-4">
@@ -52,12 +53,12 @@ const PartnerCard: React.FC<PartnerCardProps> = ({ partner }) => {
       {/* External Link Indicator */}
       {partner.website && (
         <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ExternalLink className="w-4 h-4 text-[#00D4AA]" />
+          <ExternalLink className="w-4 h-4 text-primary" />
         </div>
       )}
 
       {/* Hover Glow Effect */}
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-[#00D4AA]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
     </a>
   );
 };
@@ -70,11 +71,11 @@ export function PartnersPageContent() {
   const disclaimerRef = useScrollReveal();
 
   return (
-    <div className="min-h-screen bg-[#0A0F0D]">
+    <div className="min-h-screen bg-bg-dark">
       {/* Background Gradient */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-[#00D4AA]/5 rounded-full blur-[150px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-[#FFD700]/3 rounded-full blur-[120px]" />
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-gold/3 rounded-full blur-[120px]" />
       </div>
 
       {/* Content */}
@@ -85,13 +86,11 @@ export function PartnersPageContent() {
           className="max-w-[1200px] mx-auto px-6 mb-16 scroll-reveal is-visible"
         >
           <div className="text-center">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#00D4AA]/10 border border-[#00D4AA]/20 mb-6">
-              <Building2 className="w-4 h-4 text-[#00D4AA]" />
-              <span className="text-sm text-[#00D4AA] font-medium">
-                {t("partners.badge", "Industry Infrastructure")}
-              </span>
-            </div>
+            <PageBadge
+              icon={<Building2 />}
+              text={t("partners.badge", "Industry Infrastructure")}
+              className="mb-6"
+            />
 
             {/* Title */}
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
@@ -114,8 +113,8 @@ export function PartnersPageContent() {
           className="max-w-[1200px] mx-auto px-6 mb-20 scroll-reveal"
         >
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-lg bg-[#FFD700]/10 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-[#FFD700]" />
+            <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-gold" />
             </div>
             <h2 className="text-2xl font-semibold text-white">
               {t("partners.institutions.title", "Financial Institutions")}
@@ -142,8 +141,8 @@ export function PartnersPageContent() {
           className="max-w-[1200px] mx-auto px-6 mb-20 scroll-reveal"
         >
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-lg bg-[#00D4AA]/10 flex items-center justify-center">
-              <Link2 className="w-5 h-5 text-[#00D4AA]" />
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Link2 className="w-5 h-5 text-primary" />
             </div>
             <h2 className="text-2xl font-semibold text-white">
               {t("partners.blockchain.title", "Blockchain Ecosystem")}

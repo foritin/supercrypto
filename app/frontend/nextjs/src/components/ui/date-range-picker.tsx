@@ -161,16 +161,16 @@ const DateRangePicker = React.forwardRef<HTMLButtonElement, DateRangePickerProps
             className={cn(
               // Web3 dark theme styling for calendar
               "[&_.rdp-day_button]:text-[var(--text-primary)]",
-              "[&_.rdp-day_button:hover]:bg-[rgba(0,212,170,0.15)]",
+              "[&_.rdp-day_button:hover]:bg-primary/15",
               "[&_.rdp-day_button:hover]:text-[var(--color-primary)]",
               "[&_[data-selected=true]_.rdp-day_button]:bg-[var(--color-primary)]",
               "[&_[data-selected=true]_.rdp-day_button]:text-[var(--bg-dark)]",
-              "[&_[data-range-middle=true]_.rdp-day_button]:bg-[rgba(0,212,170,0.15)]",
+              "[&_[data-range-middle=true]_.rdp-day_button]:bg-primary/15",
               "[&_[data-range-middle=true]_.rdp-day_button]:text-[var(--color-primary)]",
               "[&_.rdp-weekday]:text-[var(--text-tertiary)]",
               "[&_.rdp-caption_label]:text-[var(--text-primary)]",
               "[&_.rdp-nav_button]:text-[var(--text-secondary)]",
-              "[&_.rdp-nav_button:hover]:bg-[rgba(0,212,170,0.15)]"
+              "[&_.rdp-nav_button:hover]:bg-primary/15"
             )}
           />
         </PopoverContent>

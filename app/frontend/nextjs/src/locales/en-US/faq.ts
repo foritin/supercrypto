@@ -19,12 +19,12 @@ const faq = {
     },
 
     general: {
-      q1: "What is SlimCrypto?",
+      q1: "What is SuperCrypto?",
       a1:
-        "SlimCrypto is an institutional-grade RWA (Real World Asset) investment platform that allows users to invest in tokenized real-world assets with transparent returns. We bridge traditional finance with DeFi innovation.",
-      q2: "Who can use SlimCrypto?",
+        "SuperCrypto is an institutional-grade RWA (Real World Asset) investment platform that allows users to invest in tokenized real-world assets with transparent returns. We bridge traditional finance with DeFi innovation.",
+      q2: "Who can use SuperCrypto?",
       a2:
-        "Anyone who is at least 18 years old and completes our KYC verification process can use SlimCrypto. We support users from most countries, with some restrictions based on local regulations.",
+        "Anyone who is at least 18 years old and completes our KYC verification process can use SuperCrypto. We support users from most countries, with some restrictions based on local regulations.",
       q3: "What are the fees?",
       a3:
         "We charge a small management fee on investments, which varies by asset type. All fees are transparently displayed before you invest. There are no hidden charges or withdrawal fees.",
@@ -51,7 +51,7 @@ const faq = {
         "We support MetaMask, WalletConnect, and other major Ethereum-compatible wallets. You need to connect a wallet to invest and receive returns.",
       q2: "Is my wallet secure?",
       a2:
-        "We never store your private keys. All transactions require your explicit approval through your wallet. Always ensure you're on the official slimcrypto.com domain.",
+        "We never store your private keys. All transactions require your explicit approval through your wallet. Always ensure you're on the official supercrypto.com domain.",
       q3: "What networks do you support?",
       a3:
         "Currently, we support Ethereum mainnet and Polygon for lower transaction fees. We plan to add more networks based on user demand.",
@@ -82,9 +82,9 @@ const faq = {
     },
 
     legal: {
-      q1: "Is SlimCrypto regulated?",
+      q1: "Is SuperCrypto regulated?",
       a1:
-        "SlimCrypto operates in compliance with applicable laws and regulations. We are registered as a virtual asset service provider (VASP) in multiple jurisdictions.",
+        "SuperCrypto operates in compliance with applicable laws and regulations. We are registered as a virtual asset service provider (VASP) in multiple jurisdictions.",
       q2: "What are the tax implications?",
       a2:
         "Tax implications vary by jurisdiction. We recommend consulting with a local tax professional. We provide transaction history exports to assist with tax reporting.",

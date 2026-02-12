@@ -38,6 +38,11 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/kyc",
 }));
 
+// Mock wagmi
+vi.mock("wagmi", () => ({
+  useChainId: () => 1,
+}));
+
 
 // ============================================================================
 // Test Data Factories

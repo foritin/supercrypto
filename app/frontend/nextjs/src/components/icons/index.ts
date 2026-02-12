@@ -7,18 +7,18 @@
  */
 
 // Custom Icons
-export { WalletIcon, StakingIcon, PortfolioIcon } from './CustomIcons';
+export { WalletIcon, StakingIcon, PortfolioIcon } from './custom-icons';
 
 // Empty State Illustrations
 export {
   NoAssetsIllustration,
   NoTransactionsIllustration,
   NoStakingIllustration,
-} from '../illustrations/EmptyStates';
+} from '../illustrations/empty-states';
 
 // Error Illustrations
 export {
   Error404Illustration,
   Error500Illustration,
   NetworkErrorIllustration,
-} from '../illustrations/ErrorIllustrations';
+} from '../illustrations/error-illustrations';

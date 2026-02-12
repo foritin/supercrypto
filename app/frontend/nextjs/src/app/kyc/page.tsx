@@ -89,9 +89,9 @@ function KycContent() {
   // Show loading state while fetching backend status
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0F0D] flex items-center justify-center">
+      <div className="min-h-screen bg-bg-dark flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-[#00D4AA]/30 border-t-[#00D4AA] animate-spin" />
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
           <p className="text-white/60">Loading...</p>
         </div>
       </div>
@@ -101,7 +101,7 @@ function KycContent() {
   // Show status panel for submitted/approved/rejected states
   if (status === 'submitted' || status === 'pending_review' || status === 'approved' || status === 'rejected') {
     return (
-      <div className="min-h-screen bg-[#0A0F0D] py-8 px-4">
+      <div className="min-h-screen bg-bg-dark py-8 px-4">
         <div className="max-w-3xl mx-auto">
           <KycStatusPanel />
         </div>
@@ -112,7 +112,7 @@ function KycContent() {
   // Show landing page
   if (showLanding) {
     return (
-      <div className="min-h-screen bg-[#0A0F0D] py-8 px-4">
+      <div className="min-h-screen bg-bg-dark py-8 px-4">
         <div className="max-w-4xl mx-auto">
           <KycLanding />
         </div>
@@ -123,7 +123,7 @@ function KycContent() {
   const message = statusMessages[status];
 
   return (
-    <div className="min-h-screen bg-[#0A0F0D] py-8 px-4">
+    <div className="min-h-screen bg-bg-dark py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -151,7 +151,7 @@ function KycContent() {
             {t('kyc.subtitle', message.description)}
           </p>
           {lastSaved && (
-            <p className="text-sm text-[#00D4AA] mt-2 text-center">
+            <p className="text-sm text-primary mt-2 text-center">
               {t('kyc.draftSaved', 'Draft saved {{time}}', {
                 time: new Date(lastSaved).toLocaleTimeString(),
               })}
@@ -160,7 +160,7 @@ function KycContent() {
         </div>
 
         {/* Step Indicator */}
-        <Card className="p-6 mb-6 glass border-[#00D4AA]/20">
+        <Card className="p-6 mb-6 glass border-primary/20">
           <StepIndicator
             steps={steps.map((s, i) => ({
               id: s.id,

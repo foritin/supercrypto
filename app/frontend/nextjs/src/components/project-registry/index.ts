@@ -2,10 +2,10 @@
  * 项目注册表组件导出
  */
 
-export { ProjectCard } from './ProjectCard';
-export { ProjectStatusBadge, ContractStatusBadge } from './ProjectStatusBadge';
-export { ContractList } from './ContractList';
-export { DeploymentPlan } from './DeploymentPlan';
-export { DependencyGraph } from './DependencyGraph';
-export { ContractNode } from './ContractNode';
-export { DependencyEdge } from './DependencyEdge';
+export { ProjectCard } from './project-card';
+export { ProjectStatusBadge, ContractStatusBadge } from './project-status-badge';
+export { ContractList } from './contract-list';
+export { DeploymentPlan } from './deployment-plan';
+export { DependencyGraph } from './dependency-graph';
+export { ContractNode } from './contract-node';
+export { DependencyEdge } from './dependency-edge';

@@ -21,7 +21,7 @@ from src.models.contracts.provider_registry import (
 from src.shared.common.adapters import get_async_minio_adapter, get_async_web3_adapter
 from src.shared.schemas.enums import ContractStatus
 
-logger = get_logger("contract.registry_service")
+logger = get_logger("business.contract.registry")
 
 # set_address 函数 ABI
 SET_ADDRESS_ABI = [{
@@ -35,7 +35,7 @@ class ContractRegistryService:
     """Provider 注册服务"""
 
     def __init__(self, network: Optional[str] = None):
-        self.network = network or SETTINGS.NETWORK
+        self.network = network or SETTINGS.network
 
     async def _get_provider_contract(self) -> ContractDeployment:
         """获取 AddressProvider 合约"""
@@ -60,11 +60,11 @@ class ContractRegistryService:
         """
         准备注册调用参数 (前端钱包签名模式)
 
-        Args:
+        参数:
             contract_name: 合约名称
             provider_key: Provider Key (可选，不传则从 ContractConfig 获取)
 
-        Returns:
+        返回:
             调用参数 dict
         """
         config, key = await self._get_config_and_key(contract_name, provider_key)
@@ -91,12 +91,12 @@ class ContractRegistryService:
 
         如果合约之前被 unregister (soft delete)，重新注册时会恢复
 
-        Args:
+        参数:
             contract_name: 合约名称
             provider_key: Provider Key
             tx_hash: 交易哈希
 
-        Returns:
+        返回:
             确认结果
         """
         contract = await ContractDeployment.filter(name=contract_name, network=self.network).first()
@@ -148,11 +148,11 @@ class ContractRegistryService:
         """
         准备解除注册调用参数 (前端钱包签名模式)
 
-        Args:
+        参数:
             contract_name: 合约名称
             provider_key: Provider Key (可选)
 
-        Returns:
+        返回:
             调用参数 dict (target_address 为零地址)
         """
         config, key = await self._get_config_and_key(contract_name, provider_key)
@@ -177,12 +177,12 @@ class ContractRegistryService:
         """
         确认解除注册完成，更新数据库缓存
 
-        Args:
+        参数:
             contract_name: 合约名称
             provider_key: Provider Key
             tx_hash: 交易哈希
 
-        Returns:
+        返回:
             确认结果
         """
         provider = await self._get_provider_contract()
@@ -215,7 +215,7 @@ class ContractRegistryService:
         """
         从链上 Provider 同步状态到 ProviderRegistry
 
-        Returns:
+        返回:
             同步结果统计 {updated, created, total}
         """
         provider = await self._get_provider_contract()

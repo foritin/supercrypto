@@ -6,7 +6,7 @@
 
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 
 class ConstantItem(BaseModel):
@@ -32,14 +32,13 @@ class ConstantItem(BaseModel):
         default=None, description="额外元数据 (如颜色、图标)"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "value": "real_estate",
                 "labels": {"zh": "房地产", "en": "Real Estate"},
                 "metadata": {"icon": "building"},
             }
-        }
+        })
 
 
 class ConstantGroup(BaseModel):
@@ -63,8 +62,7 @@ class ConstantGroup(BaseModel):
     group: str = Field(description="分组名称")
     items: list[ConstantItem] = Field(description="常量项列表")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "group": "asset_type",
                 "items": [
@@ -80,4 +78,4 @@ class ConstantGroup(BaseModel):
                     },
                 ],
             }
-        }
+        })

@@ -8,7 +8,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import ConfigDict, BaseModel, Field, field_validator, model_validator
 
 from src.shared.schemas.enums import IdType, KycStatus, OnChainSyncStatus
 from src.shared.schemas.mixins import IDMixin, TimestampMixin
@@ -28,13 +28,21 @@ class KycStatusResponse(BaseModel):
     reject_reason: Optional[str] = Field(None, description="拒绝原因")
     country_code: Optional[str] = Field(None, description="国家代码")
     is_accredited: bool = Field(False, description="是否为合格投资者")
+    on_chain_sync_status: Optional[str] = Field(None, description="链上同步状态")
+
+
+class UpdateKycStatusRequest(BaseModel):
+    """用户更新 KYC 状态请求
+
+    用户仅可在 rejected 状态下将状态重置为 not_started（重新提交）
+    """
+
+    target_status: str = Field(..., description="目标状态: not_started")
     on_chain_sync_status: Optional[OnChainSyncStatus] = Field(
         None, description="链上同步状态"
     )
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(from_attributes=True, json_schema_extra={
             "example": {
                 "wallet_address": "0x742d35cc6634c0532925a3b844bc9e7595f0beb",
                 "status": "pending",
@@ -45,7 +53,7 @@ class KycStatusResponse(BaseModel):
                 "is_accredited": False,
                 "on_chain_sync_status": "pending",
             }
-        }
+        })
 
 
 # ========== 多证件支持 (2026-02-01) ==========
@@ -244,8 +252,7 @@ class KycApplyRequest(BaseModel):
             raise ValueError("不能提交重复类型的证件")
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "country_code": "CN",
                 "full_name": "张三",
@@ -278,7 +285,7 @@ class KycApplyRequest(BaseModel):
                 "face_image_url": "kyc/0x742d35.../face_abc123.jpg",
                 "liveness_video_url": "kyc/0x742d35.../liveness_video_abc123.webm",
             }
-        }
+        })
 
 
 # ========== 响应 Schema ==========
@@ -293,8 +300,7 @@ class KycDocumentResponse(BaseModel):
     has_front: bool = Field(False, description="是否上传正面")
     has_back: bool = Field(False, description="是否上传背面")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class KycFullResponse(KycStatusResponse, IDMixin, TimestampMixin):
@@ -339,8 +345,7 @@ class KycFullResponse(KycStatusResponse, IDMixin, TimestampMixin):
     )
     on_chain_tx_hash: Optional[str] = Field(None, description="链上交易哈希")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ========== Story 2.9: 拒绝原因预设 ==========
@@ -430,10 +435,9 @@ class KycReviewRequest(BaseModel):
                 raise ValueError("Reject reason is required when rejecting")
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {"approved": True, "reject_reason": None, "is_accredited": True}
-        }
+        })
 
 
 class KycListQuery(BaseModel):
@@ -453,13 +457,12 @@ class KycUploadResponse(BaseModel):
     file_path: str = Field(..., description="文件路径 (MinIO 对象名)")
     document_type: str = Field(..., description="文档类型")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "file_path": "kyc/0x742d35.../passport_front_abc123.jpg",
                 "document_type": "passport_front",
             }
-        }
+        })
 
 
 class Base64UploadRequest(BaseModel):
@@ -532,13 +535,12 @@ class Base64UploadRequest(BaseModel):
 
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "image_data": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...",
                 "document_type": "face_image",
             }
-        }
+        })
 
 
 # ========== Story 2.8: 合约状态相关 Schema ==========

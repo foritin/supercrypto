@@ -88,6 +88,7 @@ import {
 import { MediaManager } from './media-manager'
 import { AssetStatusIndicator } from './asset-status-indicator'
 import { CreateAssetWizard } from './create-asset-wizard'
+import { ASSET_STATUS_BADGE } from '@/constants/status-config'
 
 // Asset type options
 const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
@@ -98,13 +99,8 @@ const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
   { value: 'other', label: ASSET_TYPE_NAMES.other },
 ]
 
-// Status badge variant mapping
-const STATUS_BADGE_VARIANTS: Record<AssetStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  active: 'default',
-  paused: 'secondary',
-  sold_out: 'outline',
-  closed: 'destructive',
-}
+// 使用共享状态徽章配置
+const STATUS_BADGE_VARIANTS = ASSET_STATUS_BADGE
 
 interface PaginatedData {
   items: AssetListItem[]

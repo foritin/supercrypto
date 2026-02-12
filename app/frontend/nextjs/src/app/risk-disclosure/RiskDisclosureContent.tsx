@@ -12,7 +12,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 /**
  * ════════════════════════════════════════════════════════════════
@@ -42,7 +42,7 @@ const RiskSection: React.FC<RiskSectionProps> = ({
     <div className="p-6 md:p-8 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.1] transition-colors">
       {/* Header */}
       <div className="flex items-start gap-4 mb-6">
-        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#FFD700]/10 flex items-center justify-center">
+        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center">
           {icon}
         </div>
         <div>
@@ -55,7 +55,7 @@ const RiskSection: React.FC<RiskSectionProps> = ({
       <ul className="space-y-3 mb-6">
         {risks.map((risk, index) => (
           <li key={index} className="flex items-start gap-3">
-            <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-[#FFD700] mt-2" />
+            <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-gold mt-2" />
             <span className="text-white/70 text-sm leading-relaxed">{risk}</span>
           </li>
         ))}
@@ -63,10 +63,10 @@ const RiskSection: React.FC<RiskSectionProps> = ({
 
       {/* Warning Box */}
       {warning && (
-        <div className="p-4 rounded-lg bg-[#FFD700]/5 border border-[#FFD700]/20">
+        <div className="p-4 rounded-lg bg-gold/5 border border-gold/20">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="flex-shrink-0 w-5 h-5 text-[#FFD700] mt-0.5" />
-            <p className="text-[#FFD700]/90 text-sm">{warning}</p>
+            <AlertTriangle className="flex-shrink-0 w-5 h-5 text-gold mt-0.5" />
+            <p className="text-gold/90 text-sm">{warning}</p>
           </div>
         </div>
       )}
@@ -85,11 +85,11 @@ export function RiskDisclosureContent() {
   const conclusionRef = useScrollReveal();
 
   return (
-    <div className="min-h-screen bg-[#0A0F0D]">
+    <div className="min-h-screen bg-bg-dark">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-[#FFD700]/3 rounded-full blur-[150px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#00D4AA]/3 rounded-full blur-[120px]" />
+        <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-gold/3 rounded-full blur-[150px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-primary/3 rounded-full blur-[120px]" />
       </div>
 
       {/* Content */}
@@ -101,9 +101,9 @@ export function RiskDisclosureContent() {
             className="text-center mb-16 scroll-reveal is-visible"
           >
             {/* Alert Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FFD700]/10 border border-[#FFD700]/20 mb-6">
-              <AlertTriangle className="w-4 h-4 text-[#FFD700]" />
-              <span className="text-sm text-[#FFD700] font-medium">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 mb-6">
+              <AlertTriangle className="w-4 h-4 text-gold" />
+              <span className="text-sm text-gold font-medium">
                 {t("riskDisclosure.badge", "Important Notice")}
               </span>
             </div>
@@ -128,9 +128,9 @@ export function RiskDisclosureContent() {
           </section>
 
           {/* Introduction */}
-          <section className="mb-12 p-6 rounded-2xl bg-[#FFD700]/5 border border-[#FFD700]/20">
+          <section className="mb-12 p-6 rounded-2xl bg-gold/5 border border-gold/20">
             <div className="flex items-start gap-4">
-              <FileText className="flex-shrink-0 w-6 h-6 text-[#FFD700] mt-1" />
+              <FileText className="flex-shrink-0 w-6 h-6 text-gold mt-1" />
               <div>
                 <h2 className="text-lg font-semibold text-white mb-3">
                   {t("riskDisclosure.intro.title", "Notice to All Investors")}
@@ -138,7 +138,7 @@ export function RiskDisclosureContent() {
                 <p className="text-white/70 text-sm leading-relaxed mb-4">
                   {t(
                     "riskDisclosure.intro.p1",
-                    "SlimCrypto provides a platform for investing in tokenized real-world assets (RWA). While we strive to offer secure and transparent investment opportunities, all investments carry inherent risks."
+                    "SuperCrypto provides a platform for investing in tokenized real-world assets (RWA). While we strive to offer secure and transparent investment opportunities, all investments carry inherent risks."
                   )}
                 </p>
                 <p className="text-white/70 text-sm leading-relaxed">
@@ -156,7 +156,7 @@ export function RiskDisclosureContent() {
             {/* General Investment Risks */}
             <section ref={generalRef.ref as React.RefObject<HTMLElement>} className="scroll-reveal">
               <RiskSection
-                icon={<TrendingDown className="w-6 h-6 text-[#FFD700]" />}
+                icon={<TrendingDown className="w-6 h-6 text-gold" />}
                 title={t("riskDisclosure.general.title", "General Investment Risks")}
                 description={t(
                   "riskDisclosure.general.description",
@@ -190,7 +190,7 @@ export function RiskDisclosureContent() {
             {/* Cryptocurrency Risks */}
             <section ref={cryptoRef.ref as React.RefObject<HTMLElement>} className="scroll-reveal">
               <RiskSection
-                icon={<ShieldAlert className="w-6 h-6 text-[#FFD700]" />}
+                icon={<ShieldAlert className="w-6 h-6 text-gold" />}
                 title={t("riskDisclosure.crypto.title", "Cryptocurrency-Specific Risks")}
                 description={t(
                   "riskDisclosure.crypto.description",
@@ -228,7 +228,7 @@ export function RiskDisclosureContent() {
             {/* RWA Tokenization Risks */}
             <section ref={rwaRef.ref as React.RefObject<HTMLElement>} className="scroll-reveal">
               <RiskSection
-                icon={<Globe className="w-6 h-6 text-[#FFD700]" />}
+                icon={<Globe className="w-6 h-6 text-gold" />}
                 title={t("riskDisclosure.rwa.title", "RWA Tokenization Risks")}
                 description={t(
                   "riskDisclosure.rwa.description",
@@ -266,7 +266,7 @@ export function RiskDisclosureContent() {
             {/* Regulatory Risks */}
             <section ref={regulatoryRef.ref as React.RefObject<HTMLElement>} className="scroll-reveal">
               <RiskSection
-                icon={<Scale className="w-6 h-6 text-[#FFD700]" />}
+                icon={<Scale className="w-6 h-6 text-gold" />}
                 title={t("riskDisclosure.regulatory.title", "Regulatory & Legal Risks")}
                 description={t(
                   "riskDisclosure.regulatory.description",
@@ -300,7 +300,7 @@ export function RiskDisclosureContent() {
             {/* Technical Risks */}
             <section ref={technicalRef.ref as React.RefObject<HTMLElement>} className="scroll-reveal">
               <RiskSection
-                icon={<Cpu className="w-6 h-6 text-[#FFD700]" />}
+                icon={<Cpu className="w-6 h-6 text-gold" />}
                 title={t("riskDisclosure.technical.title", "Technical Risks")}
                 description={t(
                   "riskDisclosure.technical.description",
@@ -339,45 +339,45 @@ export function RiskDisclosureContent() {
           {/* Conclusion */}
           <section
             ref={conclusionRef.ref as React.RefObject<HTMLElement>}
-            className="mt-12 p-8 rounded-2xl bg-gradient-to-br from-[#00D4AA]/10 to-[#00D4AA]/5 border border-[#00D4AA]/20 scroll-reveal"
+            className="mt-12 p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 scroll-reveal"
           >
             <div className="flex items-start gap-4">
-              <Clock className="flex-shrink-0 w-6 h-6 text-[#00D4AA] mt-1" />
+              <Clock className="flex-shrink-0 w-6 h-6 text-primary mt-1" />
               <div>
                 <h2 className="text-lg font-semibold text-white mb-4">
                   {t("riskDisclosure.conclusion.title", "Before You Invest")}
                 </h2>
                 <ul className="space-y-3 text-white/70 text-sm">
                   <li className="flex items-start gap-2">
-                    <span className="text-[#00D4AA]">•</span>
+                    <span className="text-primary">•</span>
                     {t(
                       "riskDisclosure.conclusion.point1",
                       "Consider your investment objectives, financial situation, and risk tolerance carefully"
                     )}
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-[#00D4AA]">•</span>
+                    <span className="text-primary">•</span>
                     {t(
                       "riskDisclosure.conclusion.point2",
                       "Seek independent financial, legal, and tax advice if you are uncertain"
                     )}
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-[#00D4AA]">•</span>
+                    <span className="text-primary">•</span>
                     {t(
                       "riskDisclosure.conclusion.point3",
                       "Start with small amounts until you understand the risks involved"
                     )}
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-[#00D4AA]">•</span>
+                    <span className="text-primary">•</span>
                     {t(
                       "riskDisclosure.conclusion.point4",
                       "Never invest more than you can afford to lose entirely"
                     )}
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-[#00D4AA]">•</span>
+                    <span className="text-primary">•</span>
                     {t(
                       "riskDisclosure.conclusion.point5",
                       "Regularly review this disclosure as risks may change over time"

@@ -64,9 +64,9 @@ function KycRequiredMessage({
 
   return (
     <div className="flex flex-col items-center justify-center py-8 px-4">
-      <div className="w-16 h-16 rounded-full bg-[#FFD700]/20 flex items-center justify-center mb-6">
+      <div className="w-16 h-16 rounded-full bg-gold/20 flex items-center justify-center mb-6">
         <ShieldAlert 
-          className="w-10 h-10 text-[#FFD700]" 
+          className="w-10 h-10 text-gold" 
           aria-hidden="true" 
         />
       </div>

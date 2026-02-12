@@ -24,15 +24,15 @@ from src.shared.common.chain_logger import ChainLogger
 from src.shared.common.exceptions import BusinessException
 from src.shared.schemas.enums import KycAuditAction, KycStatus, OnChainSyncStatus
 
-logger = get_logger("kyc.service")
-chain_log = ChainLogger("kyc.service")
+logger = get_logger("business.kyc.service")
+chain_log = ChainLogger("business.kyc.service")
 
 
 class KycService:
     """KYC 服务"""
 
     @property
-    def environment(self) -> str:
+    def network(self) -> str:
         """获取当前网络（用于 DB 查询和环境判断）"""
         return SETTINGS.network
 
@@ -40,15 +40,15 @@ class KycService:
         """
         获取钱包的 KYC 状态
 
-        Args:
+        参数:
             wallet_address: 钱包地址
 
-        Returns:
+        返回:
             KYC 状态响应
         """
         address = wallet_address.lower()
 
-        kyc = await AccountKyc.filter(address=address, network=self.environment).first()
+        kyc = await AccountKyc.filter(address=address, network=self.network).first()
 
         if not kyc:
             # 返回默认状态 (not_started)
@@ -83,10 +83,10 @@ class KycService:
         将 Router 层的数据库和合约查询逻辑封装到 Service 层，
         遵循分层架构原则。
 
-        Args:
+        参数:
             wallet_address: 钱包地址
 
-        Returns:
+        返回:
             KycContractComparisonResponse 或 None (如果数据库中不存在记录)
         """
         from src.services.kyc.contract_service import KycContractService
@@ -94,7 +94,7 @@ class KycService:
         address = wallet_address.lower()
 
         # 获取数据库状态
-        kyc = await AccountKyc.filter(address=address, network=self.environment).first()
+        kyc = await AccountKyc.filter(address=address, network=self.network).first()
 
         if not kyc:
             return None
@@ -137,13 +137,13 @@ class KycService:
         """
         发起 KYC 申请 (多证件版本)
 
-        Args:
+        参数:
             data: 申请数据 (包含多个证件信息)
 
-        Returns:
+        返回:
             KYC 完整响应
 
-        Raises:
+        异常:
             BusinessException: 如果已经申请过
         """
         address = data.wallet_address.lower()
@@ -260,10 +260,10 @@ class KycService:
         """
         根据 ID 获取 KYC 记录
 
-        Args:
+        参数:
             kyc_id: KYC ID
 
-        Returns:
+        返回:
             KYC 完整响应或 None
         """
         kyc = await AccountKyc.filter(id=kyc_id).first()
@@ -279,12 +279,12 @@ class KycService:
         """
         获取 KYC 列表 (管理员用)
 
-        Args:
+        参数:
             status: 状态筛选
             page: 页码
             page_size: 每页数量
 
-        Returns:
+        返回:
             (列表, 总数, 总页数)
         """
         query = AccountKyc.all()
@@ -317,13 +317,13 @@ class KycService:
         将审核员的当前步骤进度持久化到 AccountKyc.review_progress JSON 字段，
         确保审核员关闭浏览器后重新打开仍能恢复进度。
 
-        Args:
+        参数:
             kyc_id: KYC 记录 ID
             current_step: 当前步骤索引 (0-3)
             confirmed_steps: 各步骤确认状态 (长度为4的布尔数组)
             reviewer_address: 审核员钱包地址
 
-        Raises:
+        异常:
             BusinessException: 如果 KYC 不存在或状态不是 pending
 
         Requirements Reference: 8.2, 8.5
@@ -361,15 +361,15 @@ class KycService:
         管理员通过浏览器钱包发起 addInvestor() 交易成功后，
         前端调用此方法记录交易哈希并更新链上同步状态。
 
-        Args:
+        参数:
             kyc_id: KYC 记录 ID
             tx_hash: 链上交易哈希
             admin_address: 管理员钱包地址
 
-        Returns:
+        返回:
             更新后的 KYC 完整响应
 
-        Raises:
+        异常:
             BusinessException: KYC 不存在、状态不是 APPROVED、或已经 SYNCED
 
         Requirements: 2.5, 2.7, 6.2, 6.5
@@ -450,16 +450,16 @@ class KycService:
         管理员通过浏览器钱包发起 removeInvestor() 交易成功后，
         前端调用此方法记录交易哈希并更新链上同步状态。
 
-        Args:
+        参数:
             kyc_id: KYC 记录 ID
             tx_hash: 链上交易哈希
             admin_address: 管理员钱包地址
             reason: 解除准入原因
 
-        Returns:
+        返回:
             更新后的 KYC 完整响应
 
-        Raises:
+        异常:
             BusinessException: KYC 不存在、或链上状态不是 SYNCED
 
         Requirements: 4.5, 6.3, 6.5
@@ -514,10 +514,10 @@ class KycService:
         通过 scope=global + contract_type=kyc 唯一标识查找，
         用于前端验证管理员钱包是否为合约部署者。
 
-        Returns:
+        返回:
             dict: {"contract_address": str, "deployer_address": str}
 
-        Raises:
+        异常:
             BusinessException: 合约未部署
 
         Requirements: 6.1
@@ -529,7 +529,7 @@ class KycService:
         contract = await ContractDeployment.filter(
             scope=ContractScope.GLOBAL,
             contract_type=ContractType.KYC,
-            network=SETTINGS.NETWORK,
+            network=SETTINGS.network,
             status=ContractStatus.ACTIVE,
         ).first()
 
@@ -553,15 +553,15 @@ class KycService:
         审核通过后设置 on_chain_sync_status = PENDING，
         等待管理员通过浏览器钱包手动发起链上准入交易。
 
-        Args:
+        参数:
             kyc_id: KYC ID
             data: 审核数据
             reviewer_address: 审核人钱包地址
 
-        Returns:
+        返回:
             更新后的 KYC 响应
 
-        Raises:
+        异常:
             BusinessException: 如果 KYC 不存在或状态不是 pending
         """
         kyc = await AccountKyc.filter(id=kyc_id).first()
@@ -628,16 +628,16 @@ class KycService:
         """
         快速通过 KYC (开发工具，仅 local/test 环境)
 
-        Args:
+        参数:
             wallet_address: 钱包地址
 
-        Returns:
+        返回:
             KYC 响应
 
-        Raises:
+        异常:
             BusinessException: 如果不是 hardhat/sepolia 环境
         """
-        if self.environment not in ("hardhat", "sepolia"):
+        if self.network not in ("hardhat", "sepolia"):
             raise BusinessException(
                 code=403,
                 message="Quick KYC approval only allowed in hardhat/sepolia environment",
@@ -670,16 +670,16 @@ class KycService:
         """
         重置 KYC 状态 (开发工具，仅 hardhat 环境)
 
-        Args:
+        参数:
             wallet_address: 钱包地址
 
-        Returns:
+        返回:
             是否成功
 
-        Raises:
+        异常:
             BusinessException: 如果不是 hardhat 环境
         """
-        if self.environment != "hardhat":
+        if self.network != "hardhat":
             raise BusinessException(
                 code=403, message="KYC reset only allowed in hardhat environment"
             )
@@ -687,7 +687,7 @@ class KycService:
         address = wallet_address.lower()
 
         deleted = await AccountKyc.filter(
-            address=address, network=self.environment
+            address=address, network=self.network
         ).delete()
 
         return deleted > 0
@@ -699,14 +699,14 @@ class KycService:
         用户只能在以下情况下更新状态：
         - 当前状态为 rejected 时，可以设置为 not_started（重新提交）
 
-        Args:
+        参数:
             wallet_address: 钱包地址
             target_status: 目标状态
 
-        Returns:
+        返回:
             更新后的状态
 
-        Raises:
+        异常:
             BusinessException: 如果状态转换不允许
         """
         address = wallet_address.lower()
@@ -718,7 +718,7 @@ class KycService:
                 message=f"不支持的目标状态: {target_status}",
             )
 
-        kyc = await AccountKyc.filter(address=address, network=self.environment).first()
+        kyc = await AccountKyc.filter(address=address, network=self.network).first()
 
         if not kyc:
             # 没有记录，直接返回 not_started
@@ -767,7 +767,7 @@ class KycService:
         return KycFullResponse(
             id=kyc.id,
             wallet_address=kyc.address,
-            environment=self.environment,
+            environment=self.network,
             status=kyc.status,
             submitted_at=kyc.submitted_at,
             reviewed_at=kyc.reviewed_at,

@@ -80,8 +80,8 @@ export function KycStatusPanel() {
       case 'approved':
         return (
           <div className="text-center py-12">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#00D4AA]/20 flex items-center justify-center">
-              <CheckCircle className="h-10 w-10 text-[#00D4AA]" />
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/20 flex items-center justify-center">
+              <CheckCircle className="h-10 w-10 text-primary" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">
               {t('kyc.status.approved.title', 'KYC Approved!')}
@@ -153,7 +153,7 @@ export function KycStatusPanel() {
   };
 
   return (
-    <Card className="glass border-[#00D4AA]/20">
+    <Card className="glass border-primary/20">
       {renderStatusContent()}
     </Card>
   );

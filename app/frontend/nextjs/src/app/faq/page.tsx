@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { FaqContent } from "./FaqContent";
 
 export const metadata: Metadata = {
-  title: "FAQ | SlimCrypto",
+  title: "FAQ | SuperCrypto",
   description:
-    "Find answers to frequently asked questions about SlimCrypto platform, RWA investments, KYC verification, and more.",
+    "Find answers to frequently asked questions about SuperCrypto platform, RWA investments, KYC verification, and more.",
 };
 
 export default function FaqPage() {

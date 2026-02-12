@@ -685,7 +685,7 @@ export function LivenessStep() {
   const getFrameColor = () => {
     if (!faceDetected) return 'border-white/50';
     if (!faceInFrame) return 'border-amber-400';
-    return 'border-[#00D4AA]';
+    return 'border-primary';
   };
 
   // 三个步骤都完成了 (包括上传成功) (Task 7.4: 更新完成条件)
@@ -709,7 +709,7 @@ export function LivenessStep() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-8 glass border-[#00D4AA]/20">
+      <Card className="p-8 glass border-primary/20">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={showLandingPage} className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors" title={t('kyc.backToOverview')}>
             <ChevronLeft className="h-5 w-5" />
@@ -732,7 +732,7 @@ export function LivenessStep() {
                   : capturedImage && uploadStatus === 'uploading'
                     ? 'border-amber-500/50 bg-amber-500/10'
                     : activeMode === 'photo' 
-                      ? 'border-[#00D4AA] bg-[#00D4AA]/10' 
+                      ? 'border-primary bg-primary/10' 
                       : 'border-white/20 bg-white/5 hover:border-white/40'
             }`}
             onClick={() => {
@@ -751,9 +751,9 @@ export function LivenessStep() {
                 <img src={capturedImage} alt="" className="w-14 h-14 rounded-lg object-cover" />
               ) : (
                 <div className={`w-14 h-14 rounded-lg flex items-center justify-center ${
-                  activeMode === 'photo' ? 'bg-[#00D4AA]/20' : 'bg-white/10'
+                  activeMode === 'photo' ? 'bg-primary/20' : 'bg-white/10'
                 }`}>
-                  <Camera className={`h-6 w-6 ${activeMode === 'photo' ? 'text-[#00D4AA]' : 'text-white/60'}`} />
+                  <Camera className={`h-6 w-6 ${activeMode === 'photo' ? 'text-primary' : 'text-white/60'}`} />
                 </div>
               )}
               <div className="flex-1">
@@ -807,7 +807,7 @@ export function LivenessStep() {
                   : livenessVerified && videoUploadStatus === 'uploading'
                     ? 'border-amber-500/50 bg-amber-500/10'
                     : activeMode === 'liveness' 
-                      ? 'border-[#00D4AA] bg-[#00D4AA]/10' 
+                      ? 'border-primary bg-primary/10' 
                       : 'border-white/20 bg-white/5 hover:border-white/40'
             }`}
             onClick={() => {
@@ -825,7 +825,7 @@ export function LivenessStep() {
                 livenessVerified 
                   ? 'bg-green-500/20' 
                   : activeMode === 'liveness' 
-                    ? 'bg-[#00D4AA]/20' 
+                    ? 'bg-primary/20' 
                     : 'bg-white/10'
               }`}>
                 {livenessVerified ? (
@@ -833,7 +833,7 @@ export function LivenessStep() {
                 ) : videoUploadStatus === 'recording' ? (
                   <Video className="h-6 w-6 text-red-400 animate-pulse" />
                 ) : (
-                  <Shield className={`h-6 w-6 ${activeMode === 'liveness' ? 'text-[#00D4AA]' : 'text-white/60'}`} />
+                  <Shield className={`h-6 w-6 ${activeMode === 'liveness' ? 'text-primary' : 'text-white/60'}`} />
                 )}
               </div>
               <div className="flex-1">
@@ -888,7 +888,7 @@ export function LivenessStep() {
                   : selfieImage && selfieUploadStatus === 'uploading'
                     ? 'border-amber-500/50 bg-amber-500/10'
                     : activeMode === 'selfie' 
-                      ? 'border-[#00D4AA] bg-[#00D4AA]/10' 
+                      ? 'border-primary bg-primary/10' 
                       : 'border-white/20 bg-white/5 hover:border-white/40'
             }`}
             onClick={() => {
@@ -907,9 +907,9 @@ export function LivenessStep() {
                 <img src={selfieImage} alt="" className="w-14 h-14 rounded-lg object-cover" />
               ) : (
                 <div className={`w-14 h-14 rounded-lg flex items-center justify-center ${
-                  activeMode === 'selfie' ? 'bg-[#00D4AA]/20' : 'bg-white/10'
+                  activeMode === 'selfie' ? 'bg-primary/20' : 'bg-white/10'
                 }`}>
-                  <Camera className={`h-6 w-6 ${activeMode === 'selfie' ? 'text-[#00D4AA]' : 'text-white/60'}`} />
+                  <Camera className={`h-6 w-6 ${activeMode === 'selfie' ? 'text-primary' : 'text-white/60'}`} />
                 </div>
               )}
               <div className="flex-1">
@@ -971,15 +971,15 @@ export function LivenessStep() {
                   <div className={`relative w-48 h-64 rounded-[50%] border-2 transition-colors duration-300 ${getFrameColor()}`} style={{ borderStyle: canCapture ? 'solid' : 'dashed' }}>
                     {canCapture && (
                       <>
-                        <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-[#00D4AA] rounded-tl-full" />
-                        <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-[#00D4AA] rounded-tr-full" />
-                        <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-[#00D4AA] rounded-bl-full" />
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-[#00D4AA] rounded-br-full" />
+                        <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-primary rounded-tl-full" />
+                        <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-primary rounded-tr-full" />
+                        <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-primary rounded-bl-full" />
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-primary rounded-br-full" />
                       </>
                     )}
                   </div>
                   <div className="absolute bottom-20 left-0 right-0 text-center">
-                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm ${canCapture ? 'bg-[#00D4AA]/20 text-[#00D4AA]' : faceDetected ? 'bg-amber-500/20 text-amber-400' : 'bg-white/10 text-white/80'}`}>
+                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm ${canCapture ? 'bg-primary/20 text-primary' : faceDetected ? 'bg-amber-500/20 text-amber-400' : 'bg-white/10 text-white/80'}`}>
                       {faceDetectionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                       <p className="text-sm font-medium">{getInstructionText()}</p>
                     </div>
@@ -989,7 +989,7 @@ export function LivenessStep() {
                   <button 
                     onClick={handleManualCapture} 
                     disabled={!canCapture} 
-                    className={`relative w-16 h-16 rounded-full transition-all flex items-center justify-center shadow-lg ${canCapture ? 'bg-[#00D4AA] hover:bg-[#00B896] shadow-[#00D4AA]/30 cursor-pointer' : 'bg-white/30 cursor-not-allowed'}`}
+                    className={`relative w-16 h-16 rounded-full transition-all flex items-center justify-center shadow-lg ${canCapture ? 'bg-primary hover:bg-primary-dark shadow-primary/30 cursor-pointer' : 'bg-white/30 cursor-not-allowed'}`}
                   >
                     {autoCountdown > 0 && (
                       <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 64 64">
@@ -997,7 +997,7 @@ export function LivenessStep() {
                         <circle cx="32" cy="32" r="30" fill="none" stroke="#0A0F0D" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 30}`} strokeDashoffset={`${2 * Math.PI * 30 * (1 - countdownProgress / 100)}`} className="transition-all duration-100" />
                       </svg>
                     )}
-                    {autoCountdown > 0 ? <span className="text-[#0A0F0D] text-xl font-bold z-10">{autoCountdown}</span> : <div className={`w-12 h-12 rounded-full border-2 ${canCapture ? 'border-[#0A0F0D]' : 'border-white/50'}`} />}
+                    {autoCountdown > 0 ? <span className="text-bg-dark text-xl font-bold z-10">{autoCountdown}</span> : <div className={`w-12 h-12 rounded-full border-2 ${canCapture ? 'border-bg-dark' : 'border-white/50'}`} />}
                   </button>
                 </div>
               </div>
@@ -1025,8 +1025,8 @@ export function LivenessStep() {
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="text-center">
                       <div className="text-6xl mb-4">{getActionIcon(livenessState.currentAction)}</div>
-                      <div className="px-6 py-3 rounded-full bg-[#00D4AA]/20 backdrop-blur-sm">
-                        <p className="text-[#00D4AA] text-lg font-semibold">{getActionName(livenessState.currentAction)}</p>
+                      <div className="px-6 py-3 rounded-full bg-primary/20 backdrop-blur-sm">
+                        <p className="text-primary text-lg font-semibold">{getActionName(livenessState.currentAction)}</p>
                       </div>
                     </div>
                   </div>
@@ -1034,7 +1034,7 @@ export function LivenessStep() {
                 {(livenessLoading || !livenessState.isReady) && !livenessState.allCompleted && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                     <div className="text-center">
-                      <Loader2 className="h-8 w-8 animate-spin text-[#00D4AA] mx-auto mb-2" />
+                      <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
                       <p className="text-white/80">{t('kyc.liveness.preparing', '准备中...')}</p>
                     </div>
                   </div>
@@ -1050,19 +1050,19 @@ export function LivenessStep() {
                     const isCompleted = result?.completed;
                     const isFailed = (result?.progress ?? 0) >= 100 && !result?.completed;
                     return (
-                      <div key={action.type} className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${isCurrent ? 'bg-[#00D4AA]/10 border border-[#00D4AA]/30' : isCompleted ? 'bg-green-500/10 border border-green-500/30' : isFailed ? 'bg-red-500/10 border border-red-500/30' : 'bg-white/5 border border-white/10'}`}>
+                      <div key={action.type} className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${isCurrent ? 'bg-primary/10 border border-primary/30' : isCompleted ? 'bg-green-500/10 border border-green-500/30' : isFailed ? 'bg-red-500/10 border border-red-500/30' : 'bg-white/5 border border-white/10'}`}>
                         <span className="text-2xl">{getActionIcon(action.type)}</span>
                         <div className="flex-1">
-                          <p className={`text-sm font-medium ${isCurrent ? 'text-[#00D4AA]' : isCompleted ? 'text-green-400' : isFailed ? 'text-red-400' : 'text-white/60'}`}>{getActionName(action.type)}</p>
+                          <p className={`text-sm font-medium ${isCurrent ? 'text-primary' : isCompleted ? 'text-green-400' : isFailed ? 'text-red-400' : 'text-white/60'}`}>{getActionName(action.type)}</p>
                           {isCurrent && result && (
                             <div className="mt-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                              <div className="h-full bg-[#00D4AA] transition-all duration-100" style={{ width: `${result.progress ?? 0}%` }} />
+                              <div className="h-full bg-primary transition-all duration-100" style={{ width: `${result.progress ?? 0}%` }} />
                             </div>
                           )}
                         </div>
                         {isCompleted && <CheckCircle2 className="h-5 w-5 text-green-400" />}
                         {isFailed && <XCircle className="h-5 w-5 text-red-400" />}
-                        {isCurrent && !isCompleted && !isFailed && <Loader2 className="h-5 w-5 text-[#00D4AA] animate-spin" />}
+                        {isCurrent && !isCompleted && !isFailed && <Loader2 className="h-5 w-5 text-primary animate-spin" />}
                       </div>
                     );
                   })}
@@ -1082,13 +1082,13 @@ export function LivenessStep() {
           {activeMode === 'selfie' && (
             <div className="space-y-4">
               {/* 拍摄指引 */}
-              <div className="p-4 rounded-xl bg-[#00D4AA]/10 border border-[#00D4AA]/30 mb-4">
+              <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 mb-4">
                 <div className="flex items-start gap-3">
-                  <Camera className="h-5 w-5 text-[#00D4AA] shrink-0 mt-0.5" />
-                  <div className="text-sm text-[#00D4AA]/90">
-                    <p className="font-medium text-[#00D4AA] mb-1">{t('kyc.liveness.selfieGuide.title', '拍摄指引')}:</p>
+                  <Camera className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <div className="text-sm text-primary/90">
+                    <p className="font-medium text-primary mb-1">{t('kyc.liveness.selfieGuide.title', '拍摄指引')}:</p>
                     <p>{t('kyc.liveness.selfieGuide.instruction', '请手持证件拍摄照片')}</p>
-                    <ul className="mt-2 space-y-1 list-disc list-inside text-[#00D4AA]/70">
+                    <ul className="mt-2 space-y-1 list-disc list-inside text-primary/70">
                       <li>{t('kyc.liveness.selfieGuide.tip1', '将证件正面朝向摄像头')}</li>
                       <li>{t('kyc.liveness.selfieGuide.tip2', '确保证件和面部都清晰可见')}</li>
                       <li>{t('kyc.liveness.selfieGuide.tip3', '避免遮挡证件上的信息')}</li>
@@ -1108,10 +1108,10 @@ export function LivenessStep() {
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   {/* 手持证照框架 - 更大的矩形框 */}
                   <div className="relative w-72 h-56 rounded-xl border-2 border-dashed border-white/50">
-                    <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-[#00D4AA] rounded-tl-lg" />
-                    <div className="absolute -top-1 -right-1 w-6 h-6 border-t-2 border-r-2 border-[#00D4AA] rounded-tr-lg" />
-                    <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-2 border-l-2 border-[#00D4AA] rounded-bl-lg" />
-                    <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-2 border-r-2 border-[#00D4AA] rounded-br-lg" />
+                    <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-primary rounded-tl-lg" />
+                    <div className="absolute -top-1 -right-1 w-6 h-6 border-t-2 border-r-2 border-primary rounded-tr-lg" />
+                    <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-2 border-l-2 border-primary rounded-bl-lg" />
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-2 border-r-2 border-primary rounded-br-lg" />
                   </div>
                   <div className="absolute bottom-20 left-0 right-0 text-center">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm bg-white/10 text-white/80">
@@ -1122,9 +1122,9 @@ export function LivenessStep() {
                 <div className="absolute bottom-4 left-0 right-0 flex justify-center">
                   <button 
                     onClick={handleCaptureSelfie} 
-                    className="relative w-16 h-16 rounded-full transition-all flex items-center justify-center shadow-lg bg-[#00D4AA] hover:bg-[#00B896] shadow-[#00D4AA]/30 cursor-pointer"
+                    className="relative w-16 h-16 rounded-full transition-all flex items-center justify-center shadow-lg bg-primary hover:bg-primary-dark shadow-primary/30 cursor-pointer"
                   >
-                    <div className="w-12 h-12 rounded-full border-2 border-[#0A0F0D]" />
+                    <div className="w-12 h-12 rounded-full border-2 border-bg-dark" />
                   </button>
                 </div>
               </div>

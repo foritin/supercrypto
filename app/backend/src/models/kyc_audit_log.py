@@ -39,10 +39,12 @@ class KycAuditLog(AbstractModel, TimestampMixin):
     action = fields.CharEnumField(
         KycAuditAction,
         max_length=20,
+        index=True,
         description="操作类型",
     )
     actor_address = fields.CharField(
         max_length=42,
+        index=True,
         description="操作者地址",
     )
     actor_role = fields.CharField(
@@ -58,6 +60,9 @@ class KycAuditLog(AbstractModel, TimestampMixin):
         table = "kyc_audit_log"
         table_description = "KYC 审核日志表"
         ordering = ["-created_at"]
+        indexes = [
+            ("kyc_id", "created_at"),
+        ]
 
     def __str__(self):
         return f"KycAuditLog(id={self.id}, kyc_id={self.kyc_id}, action={self.action}, actor={self.actor_address[:10]}...)"

@@ -223,14 +223,14 @@ function AutoSaveIndicator({ visible, className }: AutoSaveIndicatorProps) {
       className={cn(
         "fixed bottom-4 left-1/2 -translate-x-1/2 z-50",
         "px-4 py-2 rounded-full",
-        "bg-[#111916] border border-white/10",
+        "bg-bg-card border border-white/10",
         "text-sm text-white/60 flex items-center gap-2",
         "animate-fade-in",
         "backdrop-blur-sm",
         className
       )}
     >
-      <Check className="w-4 h-4 text-[#00D4AA]" />
+      <Check className="w-4 h-4 text-primary" />
       {t('kyc.autoSaved')}
     </div>
   )
@@ -605,8 +605,8 @@ export function KycWizard({
           className
         )}
       >
-        <div className="p-3 sm:p-4 rounded-full bg-[#00D4AA]/20 mb-4 sm:mb-6">
-          <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-[#00D4AA]" />
+        <div className="p-3 sm:p-4 rounded-full bg-primary/20 mb-4 sm:mb-6">
+          <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
         </div>
         <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2">{t('kyc.submitSuccess.title')}</h2>
         <p className="text-sm sm:text-base text-white/60 text-center max-w-sm px-4">
@@ -702,7 +702,7 @@ export function KycWizard({
                 disabled={!canSubmit}
                 className={cn(
                   'gap-2 min-w-[140px] h-10 px-6',
-                  'bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-[#0a0f0d] font-medium',
+                  'bg-primary hover:bg-primary/90 text-bg-dark font-medium',
                   'disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
                 aria-label={isSubmitting ? t('kyc.navigation.submittingAriaLabel') : t('kyc.navigation.submitAriaLabel')}
@@ -727,7 +727,7 @@ export function KycWizard({
                 disabled={!canGoNext}
                 className={cn(
                   'gap-2 min-w-[140px] h-10 px-6',
-                  'bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-[#0a0f0d] font-medium',
+                  'bg-primary hover:bg-primary/90 text-bg-dark font-medium',
                   'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30'
                 )}
                 aria-label={t('kyc.navigation.continueAriaLabel', 'Continue to next step')}

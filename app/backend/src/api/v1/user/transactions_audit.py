@@ -13,8 +13,11 @@ from typing import Optional
 
 from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field
 
+from src.services.audit.schemas import (
+    RecordTransactionRequest,
+    UpdateTransactionStatusRequest,
+)
 from src.services.audit.transaction_service import (
     TransactionAuditService,
     transaction_audit_service,
@@ -22,51 +25,6 @@ from src.services.audit.transaction_service import (
 from src.shared.schemas.enums.audit import TransactionAuditStatus, TransactionAuditType
 
 router = APIRouter()
-
-
-# ============ Schemas ============
-
-
-class RecordTransactionRequest(BaseModel):
-    """记录交易请求"""
-
-    tx_hash: str = Field(..., description="交易哈希")
-    chain_id: int = Field(..., description="链ID")
-    network: str = Field(..., description="网络名称")
-    from_address: str = Field(..., description="发送方地址")
-    to_address: Optional[str] = Field(None, description="接收方地址")
-    value: str = Field("0", description="交易金额(Wei字符串)")
-    tx_type: TransactionAuditType = Field(..., description="交易类型")
-
-    # Token 信息
-    token_address: Optional[str] = Field(None, description="Token合约地址")
-    token_symbol: Optional[str] = Field(None, description="Token符号")
-    token_decimals: Optional[int] = Field(None, description="Token精度")
-    token_amount: Optional[str] = Field(None, description="Token数量")
-
-    # 合约调用信息
-    contract_name: Optional[str] = Field(None, description="合约名称")
-    function_name: Optional[str] = Field(None, description="函数名")
-    function_args: Optional[dict] = Field(None, description="函数参数")
-
-    # Gas 信息
-    gas_price: Optional[str] = Field(None, description="Gas价格")
-    gas_limit: Optional[int] = Field(None, description="Gas限制")
-    nonce: Optional[int] = Field(None, description="Nonce")
-
-    # 其他
-    description: Optional[str] = Field(None, description="描述")
-    extra_data: Optional[dict] = Field(None, description="额外数据")
-
-
-class UpdateStatusRequest(BaseModel):
-    """更新交易状态请求"""
-
-    status: TransactionAuditStatus = Field(..., description="交易状态")
-    block_number: Optional[int] = Field(None, description="区块号")
-    gas_used: Optional[int] = Field(None, description="Gas使用量")
-    effective_gas_price: Optional[str] = Field(None, description="实际Gas价格")
-    error_message: Optional[str] = Field(None, description="错误信息")
 
 
 # ============ 依赖注入 ============
@@ -162,7 +120,7 @@ async def record_transaction(
 )
 async def update_transaction_status(
     tx_hash: str,
-    data: UpdateStatusRequest,
+    data: UpdateTransactionStatusRequest,
     request: Request,
     service: TransactionAuditService = Depends(get_transaction_audit_service),
 ):

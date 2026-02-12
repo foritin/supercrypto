@@ -66,6 +66,7 @@ import { notification } from '@/lib/notification'
 import { useKycById, useKycReview } from '@/hooks/use-kyc-admin'
 import { KycStatus } from '@/services/kyc'
 import { truncateAddress } from '@/utils/format'
+import { KYC_STATUS_BADGE } from '@/constants/status-config'
 
 // ============================================================================
 // Types
@@ -89,13 +90,8 @@ const ID_TYPE_LABELS: Record<string, string> = {
   driver_license: '驾驶证',
 }
 
-// Status badge variant mapping
-const STATUS_BADGE_VARIANTS: Record<KycStatus, 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning'> = {
-  [KycStatus.NOT_STARTED]: 'outline',
-  [KycStatus.PENDING]: 'warning',
-  [KycStatus.APPROVED]: 'success',
-  [KycStatus.REJECTED]: 'destructive',
-}
+// 使用共享状态徽章配置
+const STATUS_BADGE_VARIANTS = KYC_STATUS_BADGE
 
 // ============================================================================
 // Helper Components
@@ -415,12 +411,12 @@ export function KycDetailModal({
                   <InfoRow
                     icon={User}
                     label="姓名"
-                    value={(kycData as any).full_name || '-'}
+                    value={kycData.full_name || '-'}
                   />
                   <InfoRow
                     icon={Calendar}
                     label="出生日期"
-                    value={(kycData as any).date_of_birth || '-'}
+                    value={kycData.date_of_birth || '-'}
                   />
                   <InfoRow
                     icon={Globe}
@@ -430,7 +426,7 @@ export function KycDetailModal({
                   <InfoRow
                     icon={MapPin}
                     label="居住地址"
-                    value={(kycData as any).address || '-'}
+                    value={kycData.address || '-'}
                     className="sm:col-span-2"
                   />
                 </div>
@@ -449,22 +445,22 @@ export function KycDetailModal({
                     <InfoRow
                       icon={CreditCard}
                       label="证件类型"
-                      value={ID_TYPE_LABELS[(kycData as any).id_type] || (kycData as any).id_type || '-'}
+                      value={ID_TYPE_LABELS[kycData.id_type ?? ''] || kycData.id_type || '-'}
                     />
                     <InfoRow
                       icon={CreditCard}
                       label="证件号码"
-                      value={(kycData as any).id_number ? `****${(kycData as any).id_number.slice(-4)}` : '-'}
+                      value={kycData.id_number ? `****${kycData.id_number.slice(-4)}` : '-'}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <DocumentImage
-                      src={(kycData as any).id_front_url}
+                      src={kycData.id_front_url}
                       alt="证件正面"
                       label="证件正面"
                     />
                     <DocumentImage
-                      src={(kycData as any).id_back_url}
+                      src={kycData.id_back_url}
                       alt="证件背面"
                       label="证件背面"
                     />
@@ -484,7 +480,7 @@ export function KycDetailModal({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="max-w-[200px]">
                       <DocumentImage
-                        src={(kycData as any).selfie_url}
+                        src={kycData.selfie_url}
                         alt="自拍照"
                         label="自拍照"
                       />
@@ -492,7 +488,7 @@ export function KycDetailModal({
                     <div className="flex flex-col justify-center space-y-3">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">活体检测:</span>
-                        {(kycData as any).liveness_verified ? (
+                        {kycData.liveness_verified ? (
                           <Badge variant="success" className="flex items-center gap-1">
                             <CheckCircle className="h-3 w-3" />
                             已通过
@@ -533,8 +529,8 @@ export function KycDetailModal({
                   <Separator />
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>审核时间: {formatDate(kycData.reviewed_at)}</span>
-                    {(kycData as any).reviewer_address && (
-                      <span>审核人: {truncateAddress((kycData as any).reviewer_address)}</span>
+                    {kycData.reviewer_address && (
+                      <span>审核人: {truncateAddress(kycData.reviewer_address)}</span>
                     )}
                   </div>
                 </>

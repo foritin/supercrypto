@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { PrivacyContent } from "./PrivacyContent";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | SlimCrypto",
+  title: "Privacy Policy | SuperCrypto",
   description:
-    "Learn how SlimCrypto collects, uses, and protects your personal information. Your privacy is important to us.",
+    "Learn how SuperCrypto collects, uses, and protects your personal information. Your privacy is important to us.",
 };
 
 export default function PrivacyPage() {

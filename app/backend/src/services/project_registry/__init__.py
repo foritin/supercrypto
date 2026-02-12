@@ -16,12 +16,7 @@ from .config_loader import (
                            ProjectConfigLoader,
                            get_config_loader,
 )
-from .deployment_order import (
-                           DeploymentOrderCalculator,
-                           DeploymentPlan,
-                           DeploymentStep,
-                           get_deployment_calculator,
-)
+
 from .readiness_checker import (
                            ContractReadinessInfo,
                            ProjectReadinessChecker,
@@ -41,11 +36,6 @@ __all__ = [
     "get_config_loader",
     "ConfigLoadError",
     "CyclicDependencyError",
-    # Deployment Order
-    "DeploymentOrderCalculator",
-    "get_deployment_calculator",
-    "DeploymentPlan",
-    "DeploymentStep",
     # Readiness Checker
     "ProjectReadinessChecker",
     "get_readiness_checker",

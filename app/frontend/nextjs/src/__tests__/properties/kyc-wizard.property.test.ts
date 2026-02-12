@@ -77,6 +77,7 @@ function createInitialState(
     validateStep2({
       idType: formData.idType,
       idNumber: formData.idNumber,
+      documentExpiry: formData.documentExpiry,
       idFrontUrl: formData.idFrontUrl,
       idBackUrl: formData.idBackUrl,
     }).success,
@@ -201,6 +202,7 @@ function updateFormData(
     validateStep2({
       idType: newFormData.idType,
       idNumber: newFormData.idNumber,
+      documentExpiry: newFormData.documentExpiry,
       idFrontUrl: newFormData.idFrontUrl,
       idBackUrl: newFormData.idBackUrl,
     }).success,
@@ -258,7 +260,10 @@ const validStep1DataArb = fc.record({
  */
 const validStep2DataArb = fc.record({
   idType: fc.constantFrom<KycIdType>('passport', 'id_card', 'driver_license'),
-  idNumber: fc.string({ minLength: 1, maxLength: 50 }),
+  idNumber: fc.stringMatching(/^[A-Za-z0-9]{1,50}$/),
+  documentExpiry: fc.constant(
+    `${new Date().getFullYear() + 2}-06-15`
+  ),
   idFrontUrl: fc.webUrl(),
   idBackUrl: fc.webUrl(),
 })

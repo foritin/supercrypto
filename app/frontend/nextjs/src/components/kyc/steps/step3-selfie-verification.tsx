@@ -79,15 +79,15 @@ function PhotoTips({ className }: { className?: string }) {
   return (
     <ul className={cn('space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-white/60', className)} aria-label={t('kyc.liveness.tips.title')}>
       <li className="flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA] flex-shrink-0" aria-hidden="true" />
+        <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" aria-hidden="true" />
         {t('kyc.liveness.tips.lighting')}
       </li>
       <li className="flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA] flex-shrink-0" aria-hidden="true" />
+        <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" aria-hidden="true" />
         {t('kyc.liveness.tips.face')}
       </li>
       <li className="flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA] flex-shrink-0" aria-hidden="true" />
+        <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" aria-hidden="true" />
         {t('kyc.liveness.tips.noObstruction')}
       </li>
     </ul>
@@ -120,7 +120,7 @@ function SuccessPreview({
       {/* 自拍照预览 - 响应式尺寸 */}
       <div className="relative">
         {/* 预览图片 - Mobile: 较小尺寸 */}
-        <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-[#00D4AA] shadow-[0_0_30px_rgba(0,212,170,0.3)]">
+        <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_30px_rgba(0,212,170,0.3)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={selfieUrl}
@@ -130,14 +130,14 @@ function SuccessPreview({
         </div>
 
         {/* 成功徽章 */}
-        <div className="absolute -bottom-2 -right-2 p-1.5 sm:p-2 rounded-full bg-[#00D4AA] shadow-lg" aria-hidden="true">
-          <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#0a0f0d]" />
+        <div className="absolute -bottom-2 -right-2 p-1.5 sm:p-2 rounded-full bg-primary shadow-lg" aria-hidden="true">
+          <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-bg-dark" />
         </div>
       </div>
 
       {/* 状态信息 */}
       <div className="text-center" role="status" aria-live="polite">
-        <div className="flex items-center justify-center gap-2 text-[#00D4AA] mb-1 sm:mb-2">
+        <div className="flex items-center justify-center gap-2 text-primary mb-1 sm:mb-2">
           <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
           <span className="text-base sm:text-lg font-semibold">{t('kyc.liveness.selfieUploaded')}</span>
         </div>
@@ -193,8 +193,8 @@ function InitState({ onStartDetection, onManualUpload, disabled }: InitStateProp
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-6 py-4 sm:py-6" role="region" aria-label={t('kyc.liveness.title')}>
       {/* 图标 - 响应式尺寸 */}
-      <div className="p-4 sm:p-6 rounded-full bg-[#00D4AA]/10 border border-[#00D4AA]/20" aria-hidden="true">
-        <Camera className="w-10 h-10 sm:w-12 sm:h-12 text-[#00D4AA]" />
+      <div className="p-4 sm:p-6 rounded-full bg-primary/10 border border-primary/20" aria-hidden="true">
+        <Camera className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
       </div>
 
       {/* 标题和说明 */}
@@ -416,8 +416,8 @@ export function Step3SelfieVerification({
     >
       {/* 步骤标题 */}
       <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-        <div className="p-1.5 sm:p-2 rounded-lg bg-[#00D4AA]/10">
-          <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-[#00D4AA]" />
+        <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+          <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
         </div>
         <div>
           <h2 className="text-base sm:text-lg font-semibold text-white">{t('kyc.liveness.title')}</h2>
@@ -513,7 +513,7 @@ export function Step3SelfieVerification({
 
         {/* 只有在成功状态且有 selfieUrl 时才显示下一步按钮 */}
         {phase === 'success' && selfieUrl && (
-          <div className="flex items-center justify-center sm:justify-end gap-2 text-[#00D4AA]">
+          <div className="flex items-center justify-center sm:justify-end gap-2 text-primary">
             <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="text-xs sm:text-sm font-medium">{t('kyc.navigation.complete')}</span>
           </div>

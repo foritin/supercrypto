@@ -5,7 +5,7 @@
 """
 
 from fastapi import APIRouter, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from src.models.chain import Chain
 
@@ -26,8 +26,7 @@ class ChainResponse(BaseModel):
     is_testnet: bool
     icon: str | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChainsListResponse(BaseModel):

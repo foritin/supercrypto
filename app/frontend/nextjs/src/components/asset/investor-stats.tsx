@@ -51,8 +51,8 @@ export function InvestorStats({
     >
       {/* 左侧：投资者数量 */}
       <div className="flex items-center gap-2.5">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#00D4AA]/10">
-          <Users className="h-4 w-4 text-[#00D4AA]" />
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
+          <Users className="h-4 w-4 text-primary" />
         </div>
         <div className="flex items-baseline gap-1.5">
           <span className="text-lg font-semibold text-white tabular-nums">
@@ -73,7 +73,7 @@ export function InvestorStats({
               className={cn(
                 "relative w-6 h-6 rounded-full flex items-center justify-center",
                 "bg-gradient-to-br",
-                "ring-2 ring-[#0a0f0d]",
+                "ring-2 ring-bg-dark",
                 "text-[9px] font-bold text-white/90",
                 getAvatarGradient(investor.wallet_address),
                 "hover:scale-110 hover:z-10 transition-transform duration-200 cursor-pointer"

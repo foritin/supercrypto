@@ -25,12 +25,14 @@ import { cn } from '@/lib/utils'
 import { notification } from '@/lib/notification'
 import {
   subscriptionService,
-  type SubscriptionPreviewResponse,
-  type TokenType,
-  type LockPeriod,
   TOKEN_TYPE_OPTIONS,
   LOCK_PERIOD_OPTIONS,
 } from '@/services/subscription'
+import type {
+  SubscriptionPreviewResponse,
+  TokenType,
+  LockPeriod,
+} from '@/types/subscription'
 import type { AssetDetail } from '@/services/asset'
 import { useSubscriptionContract } from '@/hooks'
 

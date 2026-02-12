@@ -89,6 +89,57 @@ const portfolio = {
     exportFailed: "Export failed",
     filterByType: "Filter by type",
     
+    // Page header
+    myPortfolio: "My Portfolio",
+    
+    // Stat card titles
+    totalInvestedLabel: "Total Invested",
+    currentValueLabel: "Current Value",
+    totalEarningsLabel: "Total Earnings",
+    activeInvestmentsLabel: "Active Investments",
+    
+    // Tab labels
+    myInvestments: "My Investments",
+    transactionHistory: "Transaction History",
+    
+    // Empty states
+    noInvestmentsYet: "No investments yet. Start exploring RWA assets!",
+    noTransactionsYet: "No transactions yet",
+
+    // Dev mode
+    mockDataBanner: "Dev Mode - Using Mock Data",
+    
+    // Filter
+    filterByTypeLabel: "Filter by type",
+    allTypes: "All Types",
+    subscribe: "Subscribe",
+    redeemType: "Redeem",
+    claimRewards: "Claim Rewards",
+    exportLabel: "Export",
+    
+    // Table cell labels
+    daysLeftLabel: "{{days}} days left",
+    monthsLabel: "{{months}} months",
+    detailsButton: "Details",
+    
+    // Detail modal
+    investmentDetails: "Investment Details",
+    investedAmount: "Invested Amount",
+    expectedReturnLabel: "Expected Return",
+    lockProgress: "Lock Progress",
+    daysRemaining: "{{days}} days remaining",
+    closeButton: "Close",
+    redeemNow: "Redeem Now",
+
+    // Transaction types
+    txTypes: {
+      subscribe: "Subscribe",
+      redeem: "Redeem",
+      stake: "Stake",
+      unstake: "Unstake",
+      claim: "Claim",
+    },
+
     // Legacy flat structure (keep for compatibility)
     totalInvested: "Total Invested",
     totalValue: "Current Value",
@@ -102,7 +153,6 @@ const portfolio = {
     months: "months",
     expectedReturn: "Expected Return",
     maturityDate: "Maturity Date",
-    daysRemaining: "days left",
     actions: "Actions",
     redeemed: "Redeemed",
     locked: "Locked",

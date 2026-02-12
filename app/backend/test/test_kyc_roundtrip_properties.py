@@ -245,7 +245,7 @@ class TestProperty1KycDataRoundTripConsistency:
         
         # 创建 KycService 实例
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         # 创建有效的证件信息
@@ -428,7 +428,7 @@ class TestProperty1KycDataRoundTripConsistency:
         
         # 创建 KycService 实例
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         # 创建有效的证件信息
@@ -546,7 +546,7 @@ class TestProperty1KycDataRoundTripConsistency:
         
         # 创建 KycService 实例
         with patch("src.services.kyc.service.SETTINGS") as mock_settings:
-            mock_settings.environment = "hardhat"
+            mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         # 创建有效的证件信息

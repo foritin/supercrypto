@@ -15,7 +15,7 @@ import {
   useDeploymentOrder,
   syncProjectConfig,
   syncProjectBindings,
-} from '@/hooks/useProjectStatus';
+} from '@/hooks/use-project-status';
 import {
   ProjectStatusBadge,
   ContractList,
@@ -199,10 +199,10 @@ export default function ProjectDetailPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-[#00D4AA]" />
+              <CheckCircle className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm text-muted-foreground">已激活</p>
-                <p className="text-2xl font-bold text-[#00D4AA]">{status.statistics.active_count}</p>
+                <p className="text-2xl font-bold text-primary">{status.statistics.active_count}</p>
               </div>
             </div>
           </CardContent>
@@ -274,10 +274,10 @@ export default function ProjectDetailPage() {
 
           {/* Deployable Contracts */}
           {status.deployable_contracts.length > 0 && (
-            <Card className="border-[#00D4AA]/50">
+            <Card className="border-primary/50">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <CheckCircle className="h-4 w-4 text-[#00D4AA]" />
+                  <CheckCircle className="h-4 w-4 text-primary" />
                   可部署合约
                 </CardTitle>
               </CardHeader>
@@ -285,7 +285,7 @@ export default function ProjectDetailPage() {
                 {status.deployable_contracts.map((contractName) => (
                   <div
                     key={contractName}
-                    className="px-3 py-2 rounded-md bg-[#00D4AA]/10 font-mono text-sm"
+                    className="px-3 py-2 rounded-md bg-primary/10 font-mono text-sm"
                   >
                     {contractName}
                   </div>

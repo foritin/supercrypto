@@ -23,7 +23,7 @@ def get_admin_service() -> AdminService:
 
 
 @router.get(
-    "/",
+    "",
     summary="获取平台统计汇总",
     description="获取平台所有统计数据，包括 TVL、用户、质押等",
 )

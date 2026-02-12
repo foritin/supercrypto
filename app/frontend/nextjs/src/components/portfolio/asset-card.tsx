@@ -69,14 +69,14 @@ export function AssetCard({
 
   return (
     <Card className={cn(
-      'glass border overflow-hidden group transition-all duration-300 hover:border-[#00D4AA]/30',
+      'glass border overflow-hidden group transition-all duration-300 hover:border-primary/30',
       className
     )}>
       {/* Status indicator line */}
       <div className={cn(
         'h-1 w-full bg-gradient-to-r',
         status === 'active' && 'from-blue-500 to-blue-500/50',
-        status === 'matured' && 'from-[#00D4AA] to-[#00D4AA]/50',
+        status === 'matured' && 'from-primary to-primary/50',
         status === 'redeemed' && 'from-white/30 to-white/10',
       )} />
       
@@ -84,8 +84,8 @@ export function AssetCard({
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00D4AA]/20 to-[#00D4AA]/5 flex items-center justify-center border border-[#00D4AA]/20">
-              <span className="text-[#00D4AA] font-bold text-sm">{symbol.slice(0, 2)}</span>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
+              <span className="text-primary font-bold text-sm">{symbol.slice(0, 2)}</span>
             </div>
             <div>
               <h3 className="font-semibold text-white text-lg leading-tight">{name}</h3>
@@ -99,7 +99,7 @@ export function AssetCard({
           </div>
           
           <div className="text-right">
-            <div className="flex items-center gap-1 text-[#00D4AA]">
+            <div className="flex items-center gap-1 text-primary">
               <TrendingUp className="h-4 w-4" />
               <span className="font-bold text-lg">{apy}%</span>
             </div>
@@ -113,9 +113,9 @@ export function AssetCard({
             <p className="text-white/50 text-xs mb-1">Invested</p>
             <p className="text-white font-semibold text-lg">${amount.toLocaleString()}</p>
           </div>
-          <div className="p-3 rounded-lg bg-[#00D4AA]/5 border border-[#00D4AA]/10">
+          <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
             <p className="text-white/50 text-xs mb-1">Expected Return</p>
-            <p className="text-[#00D4AA] font-semibold text-lg">+${expectedInterest.toLocaleString()}</p>
+            <p className="text-primary font-semibold text-lg">+${expectedInterest.toLocaleString()}</p>
           </div>
         </div>
 
@@ -158,7 +158,7 @@ export function AssetCard({
               variant="ghost"
               size="sm"
               onClick={() => onViewDetail?.(id)}
-              className="text-white/60 hover:text-[#00D4AA] hover:bg-[#00D4AA]/10"
+              className="text-white/60 hover:text-primary hover:bg-primary/10"
             >
               Details
               <ChevronRight className="h-4 w-4 ml-1" />
@@ -167,7 +167,7 @@ export function AssetCard({
               <Button
                 size="sm"
                 onClick={() => onRedeem?.(id)}
-                className="bg-[#00D4AA] hover:bg-[#00B896] text-[#0A0F0D]"
+                className="bg-primary hover:bg-primary-dark text-bg-dark"
               >
                 Redeem
               </Button>
@@ -193,20 +193,20 @@ export function AssetCardCompact({
     <Card 
       className={cn(
         'glass border p-4 cursor-pointer transition-all duration-300',
-        'hover:border-[#00D4AA]/30 hover:bg-white/5',
+        'hover:border-primary/30 hover:bg-white/5',
         className
       )}
       onClick={onViewDetail}
     >
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#00D4AA]/20 to-[#00D4AA]/5 flex items-center justify-center border border-[#00D4AA]/20 shrink-0">
-          <span className="text-[#00D4AA] font-bold text-xs">{symbol.slice(0, 2)}</span>
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20 shrink-0">
+          <span className="text-primary font-bold text-xs">{symbol.slice(0, 2)}</span>
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="font-medium text-white truncate">{name}</h4>
           <div className="flex items-center gap-2">
             <span className="text-white/40 text-xs">{symbol}</span>
-            <Badge variant="outline" className="text-[10px] bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30 px-1.5 py-0">
+            <Badge variant="outline" className="text-[10px] bg-primary/20 text-primary border-primary/30 px-1.5 py-0">
               {apy}% APY
             </Badge>
           </div>

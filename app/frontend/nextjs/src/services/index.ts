@@ -18,6 +18,11 @@ export {
 } from "./admin";
 export {
   auditService,
+  exportAuditLogs,
+} from "./audit";
+
+// 类型从 types/ 目录集中导出
+export {
   AuditCategory,
   AuditAction,
   AuditStatus,
@@ -29,4 +34,4 @@ export {
   type TransactionStats,
   type AuditLogQueryParams,
   type TransactionAuditQueryParams,
-} from "./audit";
+} from "@/types/audit";

@@ -23,6 +23,7 @@ import {
   calculateAge,
   validateStep1,
   validateStep2,
+  KYC_MIN_AGE,
 } from '@/lib/validations/kyc-wizard'
 
 // Feature: kyc-page, Property 4: Step1 表单验证规则正确
@@ -105,10 +106,10 @@ describe('Property 4: Step1 表单验证规则正确', () => {
    */
   describe('出生日期验证 (dateOfBirth)', () => {
     /**
-     * 生成有效的出生日期 (年龄 >= 18 岁)
+     * 生成有效的出生日期 (年龄 >= KYC_MIN_AGE)
      */
     const validDateOfBirthArb = fc
-      .integer({ min: 18, max: 100 })
+      .integer({ min: KYC_MIN_AGE, max: 100 })
       .map((age) => {
         const today = new Date()
         const birthYear = today.getFullYear() - age
@@ -119,10 +120,10 @@ describe('Property 4: Step1 表单验证规则正确', () => {
       })
 
     /**
-     * 生成无效的出生日期 (年龄 < 18 岁)
+     * 生成无效的出生日期 (年龄 < KYC_MIN_AGE)
      */
     const invalidDateOfBirthArb = fc
-      .integer({ min: 0, max: 17 })
+      .integer({ min: 0, max: KYC_MIN_AGE - 1 })
       .map((age) => {
         const today = new Date()
         const birthYear = today.getFullYear() - age
@@ -132,7 +133,7 @@ describe('Property 4: Step1 表单验证规则正确', () => {
         return `${birthYear}-${birthMonth}-${birthDay}`
       })
 
-    it('property: 年龄 >= 18 岁的出生日期应该验证通过', () => {
+    it('property: 年龄 >= KYC_MIN_AGE 的出生日期应该验证通过', () => {
       fc.assert(
         fc.property(validDateOfBirthArb, (validDate) => {
           const result = step1Schema.shape.dateOfBirth.safeParse(validDate)
@@ -142,13 +143,13 @@ describe('Property 4: Step1 表单验证规则正确', () => {
       )
     })
 
-    it('property: 年龄 < 18 岁的出生日期应该验证失败', () => {
+    it('property: 年龄 < KYC_MIN_AGE 的出生日期应该验证失败', () => {
       fc.assert(
         fc.property(invalidDateOfBirthArb, (invalidDate) => {
           const result = step1Schema.shape.dateOfBirth.safeParse(invalidDate)
           expect(result.success).toBe(false)
           if (!result.success) {
-            expect(result.error.issues[0].message).toContain('18')
+            expect(result.error.issues[0].message).toContain(String(KYC_MIN_AGE))
           }
         }),
         { numRuns: 100 }
@@ -192,18 +193,18 @@ describe('Property 4: Step1 表单验证规则正确', () => {
       )
     })
 
-    it('property: 年龄边界值测试 (18 岁)', () => {
+    it(`property: 年龄边界值测试 (${KYC_MIN_AGE} 岁)`, () => {
       const today = new Date()
 
-      // 刚好 18 岁 (今天生日)
-      const exactly18 = `${today.getFullYear() - 18}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-      expect(step1Schema.shape.dateOfBirth.safeParse(exactly18).success).toBe(true)
+      // 刚好达到最低年龄 (今天生日)
+      const exactlyMinAge = `${today.getFullYear() - KYC_MIN_AGE}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+      expect(step1Schema.shape.dateOfBirth.safeParse(exactlyMinAge).success).toBe(true)
 
-      // 差一天满 18 岁 (明天生日)
+      // 差一天满最低年龄 (明天生日)
       const tomorrow = new Date(today)
       tomorrow.setDate(tomorrow.getDate() + 1)
-      const almostEighteen = `${today.getFullYear() - 18}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
-      expect(step1Schema.shape.dateOfBirth.safeParse(almostEighteen).success).toBe(false)
+      const almostMinAge = `${today.getFullYear() - KYC_MIN_AGE}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+      expect(step1Schema.shape.dateOfBirth.safeParse(almostMinAge).success).toBe(false)
     })
   })
 
@@ -377,7 +378,10 @@ describe('Property 4: Step1 表单验证规则正确', () => {
      */
     const validStep2DataArb = fc.record({
       idType: fc.constantFrom('passport', 'id_card', 'driver_license'),
-      idNumber: fc.string({ minLength: 1, maxLength: 50 }),
+      idNumber: fc.stringMatching(/^[A-Za-z0-9]{1,50}$/),
+      documentExpiry: fc.constant(
+        `${new Date().getFullYear() + 2}-06-15`
+      ),
       idFrontUrl: fc.webUrl(),
       idBackUrl: fc.webUrl(),
     })

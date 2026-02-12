@@ -4,6 +4,7 @@
  */
 import { api } from "@/services/api";
 import { API_PATHS } from "@/constants/api-paths";
+import { getExplorerUrl as getExplorerUrlByChainId } from "@/lib/utils";
 
 // 交易状态
 export type TransactionStatus = "pending" | "confirmed" | "failed";
@@ -220,20 +221,18 @@ export const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
   failed: "error",
 };
 
-// 获取区块链浏览器链接
+// 获取区块链浏览器链接（基于网络名称的兼容接口）
 export function getExplorerUrl(
   txHash: string,
   network: string = "hardhat"
 ): string | null {
-  switch (network) {
-    case "mainnet":
-    case "main":
-      return `https://etherscan.io/tx/${txHash}`;
-    case "sepolia":
-    case "test":
-      return `https://sepolia.etherscan.io/tx/${txHash}`;
-    case "hardhat":
-    default:
-      return null; // 本地环境无浏览器
+  const networkToChainId: Record<string, number> = {
+    mainnet: 1,
+    main: 1,
+    sepolia: 11155111,
+    test: 11155111,
   }
+  const chainId = networkToChainId[network]
+  if (!chainId) return null
+  return getExplorerUrlByChainId(chainId, 'tx', txHash)
 }

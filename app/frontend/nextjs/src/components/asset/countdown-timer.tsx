@@ -155,14 +155,14 @@ export function CountdownTimer({ startTime, endTime, className = "" }: Countdown
     if (countdownState.type === "upcoming") {
       return "bg-blue-500/10 border-blue-500/20";
     }
-    return "bg-[#00D4AA]/10 border-[#00D4AA]/20";
+    return "bg-primary/10 border-primary/20";
   };
 
   const getTextColor = () => {
     if (isCritical) return "text-red-400";
     if (isUrgent) return "text-orange-400";
     if (countdownState.type === "upcoming") return "text-blue-400";
-    return "text-[#00D4AA]";
+    return "text-primary";
   };
 
   const getIcon = () => {

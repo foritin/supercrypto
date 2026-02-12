@@ -37,7 +37,7 @@ export function Footer() {
           
           {/* 品牌区域 */}
           <div className="flex flex-col gap-3">
-            <h3 className="text-lg font-semibold text-white">SlimCrypto</h3>
+            <h3 className="text-lg font-semibold text-white">SuperCrypto</h3>
             <p className="text-sm text-muted-foreground">
               {t('footer.tagline', 'Institutional-grade RWA investment platform')}
             </p>
@@ -47,7 +47,7 @@ export function Footer() {
                 href="https://github.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-[#00D4AA] transition-colors"
+                className="text-muted-foreground hover:text-primary transition-colors"
                 aria-label="GitHub"
               >
                 <Github className="w-5 h-5" aria-hidden="true" />
@@ -56,14 +56,14 @@ export function Footer() {
                 href="https://twitter.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-[#00D4AA] transition-colors"
+                className="text-muted-foreground hover:text-primary transition-colors"
                 aria-label="Twitter"
               >
                 <Twitter className="w-5 h-5" aria-hidden="true" />
               </Link>
               <Link
                 href="/"
-                className="text-muted-foreground hover:text-[#00D4AA] transition-colors"
+                className="text-muted-foreground hover:text-primary transition-colors"
                 aria-label="网站首页"
               >
                 <Globe className="w-5 h-5" aria-hidden="true" />
@@ -79,19 +79,19 @@ export function Footer() {
             <div className="flex flex-col gap-2">
               <Link 
                 href="/assets" 
-                className="text-sm text-muted-foreground hover:text-[#00D4AA] transition-colors"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 {t('footer.assets', 'Assets')}
               </Link>
               <Link 
                 href="/portfolio" 
-                className="text-sm text-muted-foreground hover:text-[#00D4AA] transition-colors"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 {t('footer.portfolio', 'Portfolio')}
               </Link>
               <Link 
                 href="/partners" 
-                className="text-sm text-muted-foreground hover:text-[#00D4AA] transition-colors"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 {t('footer.partners', 'Partners')}
               </Link>
@@ -106,19 +106,19 @@ export function Footer() {
             <div className="flex flex-col gap-2">
               <Link 
                 href="/risk-disclosure" 
-                className="text-sm text-muted-foreground hover:text-[#FFD700] transition-colors"
+                className="text-sm text-muted-foreground hover:text-gold transition-colors"
               >
                 {t('footer.riskDisclosure', 'Risk Disclosure')}
               </Link>
               <Link 
                 href="/terms" 
-                className="text-sm text-muted-foreground hover:text-[#00D4AA] transition-colors"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 {t('footer.terms', 'Terms of Service')}
               </Link>
               <Link 
                 href="/privacy" 
-                className="text-sm text-muted-foreground hover:text-[#00D4AA] transition-colors"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 {t('footer.privacy', 'Privacy Policy')}
               </Link>
@@ -131,16 +131,16 @@ export function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             {/* 版权信息 */}
             <p className="text-xs text-muted-foreground">
-              © {currentYear ?? '2026'} SlimCrypto. {t('footer.rights', 'All rights reserved.')}
+              © {currentYear ?? '2026'} SuperCrypto. {t('footer.rights', 'All rights reserved.')}
             </p>
             
             {/* 额外链接 */}
             <div className="flex items-center gap-4">
               <Link 
                 href="/risk-disclosure" 
-                className="text-xs text-[#FFD700]/70 hover:text-[#FFD700] transition-colors flex items-center gap-1"
+                className="text-xs text-gold/70 hover:text-gold transition-colors flex items-center gap-1"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FFD700]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-gold" />
                 {t('footer.investmentRisk', 'Investment involves risk')}
               </Link>
               <CookieSettingsButton variant="ghost" size="sm" className="text-xs text-white/40 hover:text-white/60" />

@@ -127,22 +127,22 @@ export { GlassCard, glassCardVariants } from './glass-card';
 export type { GlassCardProps } from './glass-card';
 
 // Section Card
-export { SectionCard } from './SectionCard';
-export type { SectionCardProps } from './SectionCard';
+export { SectionCard } from './section-card';
+export type { SectionCardProps } from './section-card';
 
 // Info Row
-export { InfoRow } from './InfoRow';
-export type { InfoRowProps } from './InfoRow';
+export { InfoRow } from './info-row';
+export type { InfoRowProps } from './info-row';
 
 // Close Button
-export { CloseButton } from './CloseButton';
-export type { CloseButtonProps } from './CloseButton';
+export { CloseButton } from './close-button';
+export type { CloseButtonProps } from './close-button';
 
 // Ripple Button
-export { RippleButton } from './RippleButton';
+export { RippleButton } from './ripple-button';
 
 // Enhanced Toast
-export { EnhancedToast } from './EnhancedToast';
+export { EnhancedToast } from './enhanced-toast';
 
 // File Upload
 export { FileUpload, validateFileType, validateFileSize } from './file-upload';

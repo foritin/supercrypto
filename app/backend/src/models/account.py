@@ -10,7 +10,7 @@ from src.models.base import (
     SoftDeleteMixin,
     TimestampMixin,
 )
-from src.shared.schemas.enums import NetWork
+from src.shared.schemas.enums import Network
 
 
 class Account(AbstractModel, TimestampMixin, BlockableMixin, SoftDeleteMixin):
@@ -31,7 +31,7 @@ class Account(AbstractModel, TimestampMixin, BlockableMixin, SoftDeleteMixin):
     private_key = fields.CharField(max_length=256, description="私钥")
     tag = fields.CharField(max_length=255, null=True, description="标签")
     network = fields.CharEnumField(
-        NetWork, max_length=20, default=NetWork.HARDHAT, description="网络类型"
+        Network, max_length=20, default=Network.HARDHAT, description="网络类型"
     )
     last_login_dt = fields.DatetimeField(null=True, description="最后登录时间(UTC)")
 

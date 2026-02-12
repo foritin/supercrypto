@@ -70,7 +70,7 @@ describe('InstallMetaMaskModal', () => {
   it('should display official website link', () => {
     render(<InstallMetaMaskModal open={true} onClose={mockOnClose} />)
     
-    expect(screen.getByText(/official website/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/official website/i).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByRole('link', { name: /metamask\.io/i })).toHaveAttribute(
       'href',
       'https://metamask.io'

@@ -1,5 +1,5 @@
 """
-Admin Domain - Business Service
+管理员领域 - 业务服务层
 """
 
 from datetime import datetime, timedelta, timezone
@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import List, Optional, Tuple
 
 from falib.utils.config import SETTINGS
+from falib.utils.log import get_logger
 from tortoise.functions import Sum
 
 from src.models.asset import Asset
@@ -35,14 +36,16 @@ from src.shared.schemas.enums import (
 PLT_TOTAL_SUPPLY = Decimal("100000000")
 PLT_STAKING_POOL = Decimal("40000000")
 
+logger = get_logger("business.admin.service")
+
 
 class AdminService:
     """管理员服务"""
 
     @property
-    def environment(self) -> str:
-        """获取当前环境"""
-        return SETTINGS.environment
+    def network(self) -> str:
+        """获取当前网络"""
+        return SETTINGS.network
 
     # ============ 平台统计 ============
 
@@ -55,15 +58,15 @@ class AdminService:
         # 认购统计
         active_subs = await Subscription.filter(
             status__in=[SubscriptionStatus.ACTIVE, SubscriptionStatus.MATURED],
-            environment=self.environment,
+            environment=self.network,
         ).count()
 
-        total_subs = await Subscription.filter(environment=self.environment).count()
+        total_subs = await Subscription.filter(environment=self.network).count()
 
         # 资产数量
         total_assets = await Asset.filter(
             status__in=[AssetStatus.ACTIVE, AssetStatus.PAUSED],
-            environment=self.environment,
+            environment=self.network,
         ).count()
 
         return PlatformStatsResponse(
@@ -80,7 +83,7 @@ class AdminService:
         # 查询所有活跃认购
         subscriptions = await Subscription.filter(
             status__in=[SubscriptionStatus.ACTIVE, SubscriptionStatus.MATURED],
-            environment=self.environment,
+            environment=self.network,
         ).prefetch_related("asset")
 
         # 按资产分组计算
@@ -122,18 +125,18 @@ class AdminService:
         """获取用户统计"""
         # KYC 状态统计
         kyc_approved = await AccountKyc.filter(
-            status=KycStatus.APPROVED, network=self.environment
+            status=KycStatus.APPROVED, network=self.network
         ).count()
 
         kyc_pending = await AccountKyc.filter(
-            status=KycStatus.PENDING, network=self.environment
+            status=KycStatus.PENDING, network=self.network
         ).count()
 
         kyc_rejected = await AccountKyc.filter(
-            status=KycStatus.REJECTED, network=self.environment
+            status=KycStatus.REJECTED, network=self.network
         ).count()
 
-        total_users = await AccountKyc.filter(network=self.environment).count()
+        total_users = await AccountKyc.filter(network=self.network).count()
 
         # 新增用户统计
         now = datetime.now(timezone.utc)
@@ -141,11 +144,11 @@ class AdminService:
         week_ago = now - timedelta(days=7)
 
         new_24h = await AccountKyc.filter(
-            created_at__gte=day_ago, network=self.environment
+            created_at__gte=day_ago, network=self.network
         ).count()
 
         new_7d = await AccountKyc.filter(
-            created_at__gte=week_ago, network=self.environment
+            created_at__gte=week_ago, network=self.network
         ).count()
 
         # KYC 转化率
@@ -166,7 +169,7 @@ class AdminService:
         # 活跃质押
         active_stakings = await StakingRecord.filter(
             status__in=[StakingStatus.ACTIVE, StakingStatus.MATURED],
-            environment=self.environment,
+            environment=self.network,
         )
 
         total_staked = Decimal(0)
@@ -184,7 +187,7 @@ class AdminService:
 
         # 已分发奖励
         distributed_result = (
-            await RewardClaim.filter(environment=self.environment)
+            await RewardClaim.filter(environment=self.network)
             .annotate(total=Sum("amount"))
             .values_list("total", flat=True)
         )
@@ -229,7 +232,7 @@ class AdminService:
             tx_hash=tx_hash,
             ip_address=ip_address,
             user_agent=user_agent,
-            environment=self.environment,
+            environment=self.network,
         )
         return log
 
@@ -237,7 +240,7 @@ class AdminService:
         self, query: AuditLogListQuery
     ) -> Tuple[List[AuditLogResponse], int, int]:
         """查询审计日志"""
-        filters = {"environment": self.environment}
+        filters = {"environment": self.network}
 
         if query.action:
             filters["action"] = query.action
@@ -268,7 +271,7 @@ class AdminService:
 
     async def get_audit_log(self, log_id: int) -> Optional[AuditLogResponse]:
         """获取审计日志详情"""
-        log = await AuditLog.filter(id=log_id, environment=self.environment).first()
+        log = await AuditLog.filter(id=log_id, environment=self.network).first()
 
         if not log:
             return None

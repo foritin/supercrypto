@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { use } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import {
   ArrowLeft,
   Home,
@@ -39,6 +39,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getExplorerUrl } from "@/lib/utils";
 
 // 资产类型图标
 const ASSET_TYPE_ICONS: Record<AssetType, React.ReactNode> = {
@@ -62,6 +63,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
   const { t } = useTranslation();
   const router = useRouter();
   const { isConnected } = useAccount();
+  const chainId = useChainId();
   const { isApproved: isKycApproved } = useKycStatus();
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -171,7 +173,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">{asset.location || asset.name}</h1>
               <div className="flex items-center gap-4">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[rgba(0,212,170,0.1)] border border-[rgba(0,212,170,0.2)] rounded-md text-[#00D4AA] text-xs">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-md text-primary text-xs">
                   {ASSET_TYPE_ICONS[asset.asset_type as AssetType]}
                   {t(`assets.type.${asset.asset_type}`)}
                 </span>
@@ -203,25 +205,25 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 <TabsList className="w-full justify-start bg-transparent border-b border-white/10 rounded-none h-auto p-0 gap-0">
                   <TabsTrigger
                     value="highlights"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
                   >
                     {t("assets.tabs.highlights")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="investment"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
                   >
                     {t("assets.tabs.investment")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="details"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
                   >
                     {t("assets.tabs.details")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="blockchain"
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#00D4AA] data-[state=active]:text-[#00D4AA] data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent bg-transparent text-white/50 font-semibold text-xs tracking-wide px-4 py-3 uppercase"
                   >
                     {t("assets.tabs.blockchain")}
                   </TabsTrigger>
@@ -256,7 +258,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                         <div className="flex flex-col gap-1">
                           <span className="text-white/50 text-xs">{t("assets.financials.apy12m")}</span>
-                          <span className="text-[#00D4AA] text-xl font-semibold">{asset.apy_12m.toFixed(1)}%</span>
+                          <span className="text-primary text-xl font-semibold">{asset.apy_12m.toFixed(1)}%</span>
                         </div>
                         <div className="flex flex-col gap-1">
                           <span className="text-white/50 text-xs">{t("assets.financials.minInvestment")}</span>
@@ -284,9 +286,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                     
                     const getDocIcon = (type: string) => {
                       switch (type) {
-                        case "valuation": return <FileSpreadsheet className="h-5 w-5 text-[#00D4AA]" />;
-                        case "legal": return <Scale className="h-5 w-5 text-[#00D4AA]" />;
-                        default: return <FileText className="h-5 w-5 text-[#00D4AA]" />;
+                        case "valuation": return <FileSpreadsheet className="h-5 w-5 text-primary" />;
+                        case "legal": return <Scale className="h-5 w-5 text-primary" />;
+                        default: return <FileText className="h-5 w-5 text-primary" />;
                       }
                     };
                     
@@ -312,7 +314,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   download
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgba(0,212,170,0.1)] hover:bg-[rgba(0,212,170,0.2)] border border-[rgba(0,212,170,0.2)] rounded-md text-[#00D4AA] text-xs font-medium transition-colors shrink-0"
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-md text-primary text-xs font-medium transition-colors shrink-0"
                                 >
                                   <Download className="h-3.5 w-3.5" />
                                   {t("assets.documents.download")}
@@ -331,7 +333,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                       const isWalletIssue = !isConnected;
                       
                       return (
-                        <div className="absolute inset-0 bg-[#0a0f0d]/90 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center z-10">
+                        <div className="absolute inset-0 bg-bg-dark/90 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center z-10">
                           <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
                             <Lock className="h-6 w-6 text-white/40" />
                           </div>
@@ -352,7 +354,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                               size="sm"
                               variant="outline"
                               onClick={() => router.push("/kyc")}
-                              className="border-[#00D4AA]/30 text-[#00D4AA] hover:bg-[#00D4AA]/10"
+                              className="border-primary/30 text-primary hover:bg-primary/10"
                             >
                               {t("assets.documents.goToKyc")}
                             </Button>
@@ -393,7 +395,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                       <Card className="bg-white/[0.02] border-white/[0.06]">
                         <CardContent className="p-6">
                           <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-[#00D4AA]" />
+                            <MapPin className="h-4 w-4 text-primary" />
                             <span className="text-white">{asset.location}</span>
                           </div>
                         </CardContent>
@@ -422,7 +424,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                     className="h-8 w-8"
                                     onClick={() => copyAddress(asset.contract_address!)}
                                   >
-                                    {copied ? <Check className="h-4 w-4 text-[#00D4AA]" /> : <Copy className="h-4 w-4" />}
+                                    {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -432,10 +434,10 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                             </div>
                           </div>
                           <a
-                            href={`https://etherscan.io/address/${asset.contract_address}`}
+                            href={getExplorerUrl(chainId, 'address', asset.contract_address) || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-[#00D4AA] hover:underline text-sm"
+                            className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
                           >
                             {t("assets.detail.viewSmartContracts")}
                             <ExternalLink className="h-3 w-3" />

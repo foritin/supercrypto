@@ -1,0 +1,42 @@
+"use client";
+
+import { useEffect } from "react";
+import { CircleAlert, RotateCcw } from "lucide-react";
+
+/**
+ * 投资页面错误边界
+ */
+export default function InvestError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    console.error("投资页面错误:", error);
+  }, [error]);
+
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center px-4">
+      <div className="max-w-sm w-full text-center rounded-2xl border border-white/10 bg-bg-card/80 backdrop-blur-xl p-8 shadow-lg">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10">
+          <CircleAlert className="h-7 w-7 text-red-400" />
+        </div>
+        <h2 className="mb-2 text-lg font-semibold text-white">
+          投资操作异常
+        </h2>
+        <p className="mb-5 text-sm text-white/60">
+          投资流程遇到问题，请检查网络连接后重试。
+        </p>
+        <button
+          onClick={reset}
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-bg-dark transition-all hover:shadow-[0_0_20px_theme(colors.primary-glow)]"
+        >
+          <RotateCcw className="h-4 w-4" />
+          重试
+        </button>
+      </div>
+    </div>
+  );
+}

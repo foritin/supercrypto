@@ -25,6 +25,11 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+// Mock wagmi
+vi.mock("wagmi", () => ({
+  useChainId: () => 1,
+}));
+
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
   useRouter: () => ({

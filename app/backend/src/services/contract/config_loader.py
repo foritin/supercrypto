@@ -1,5 +1,4 @@
 """
-Contract Config Loader
 合约配置加载服务
 
 从 YAML 文件加载合约配置，支持：
@@ -7,7 +6,7 @@ Contract Config Loader
 - 配置验证 (Pydantic)
 - 缓存加载
 
-Usage:
+用法:
     from src.services.contract.config_loader import (
         get_provider_keys,
         get_contract_dependencies,
@@ -28,7 +27,7 @@ from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
 from pydantic import BaseModel, Field
 
-logger = get_logger("contract.config")
+logger = get_logger("business.contract.config")
 
 
 # =============================================================================
@@ -86,10 +85,10 @@ def get_config_path() -> Path:
     1. contracts.{environment}.yaml (如 contracts.hardhat.yaml)
     2. contracts.yaml (默认)
 
-    Returns:
+    返回:
         配置文件 Path
 
-    Raises:
+    异常:
         FileNotFoundError: 如果配置文件不存在
     """
     config_dir = _get_config_dir()
@@ -118,7 +117,7 @@ def load_contract_config() -> ContractConfig:
     配置文件仅在首次调用时加载，之后从缓存返回。
     如需重新加载，调用 reload_config()。
 
-    Returns:
+    返回:
         ContractConfig 实例
     """
     config_path = get_config_path()
@@ -141,7 +140,7 @@ def reload_config() -> ContractConfig:
     """
     重新加载配置（清除缓存）
 
-    Returns:
+    返回:
         新加载的 ContractConfig 实例
     """
     load_contract_config.cache_clear()
@@ -157,7 +156,7 @@ def get_provider_keys() -> dict[str, dict[str, str]]:
     """
     获取 Provider Keys 配置
 
-    Returns:
+    返回:
         {key_name: {"category": ..., "contract": ..., "description": ...}}
     """
     config = load_contract_config()
@@ -168,7 +167,7 @@ def get_contract_dependencies() -> dict[str, list[str]]:
     """
     获取合约依赖配置
 
-    Returns:
+    返回:
         {contract_name: [dep_key1, dep_key2, ...]}
     """
     return load_contract_config().contract_dependencies
@@ -178,7 +177,7 @@ def get_project_configs() -> dict[str, dict[str, Any]]:
     """
     获取项目配置
 
-    Returns:
+    返回:
         {project_name: {"label": ..., "color": ..., ...}}
     """
     config = load_contract_config()
@@ -189,7 +188,7 @@ def get_dependency_set_functions() -> dict[str, str]:
     """
     获取依赖设置函数映射
 
-    Returns:
+    返回:
         {provider_key: setter_function_name}
     """
     return load_contract_config().dependency_set_functions
@@ -199,10 +198,10 @@ def get_keys_by_category(category: str) -> list[str]:
     """
     获取指定分类的所有 Key
 
-    Args:
+    参数:
         category: 分类名称 (common/stablecoin/vanke 等)
 
-    Returns:
+    返回:
         Provider Key 名称列表
     """
     config = load_contract_config()
@@ -213,10 +212,10 @@ def get_contract_category(contract_name: str) -> str | None:
     """
     获取合约所属分类
 
-    Args:
+    参数:
         contract_name: 合约名称
 
-    Returns:
+    返回:
         分类名称，如果未找到则返回 None
     """
     config = load_contract_config()
@@ -238,10 +237,10 @@ def get_provider_key_for_contract(contract_name: str) -> str | None:
     """
     获取合约对应的 Provider Key
 
-    Args:
+    参数:
         contract_name: 合约名称
 
-    Returns:
+    返回:
         Provider Key 名称，如果未找到则返回 None
     """
     config = load_contract_config()
@@ -260,7 +259,7 @@ def validate_config() -> list[str]:
     """
     验证配置完整性
 
-    Returns:
+    返回:
         错误消息列表（空列表表示无错误）
     """
     errors = []

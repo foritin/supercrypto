@@ -81,7 +81,7 @@ function hasContractBinding(asset: AssetListItem | AssetDetail): boolean {
 function getStatusIcon(status: StatusType) {
   switch (status) {
     case 'success':
-      return <CheckCircle className="h-3.5 w-3.5 text-[#00D4AA]" />
+      return <CheckCircle className="h-3.5 w-3.5 text-primary" />
     case 'error':
       return <XCircle className="h-3.5 w-3.5 text-destructive" />
     case 'warning':
@@ -109,7 +109,7 @@ function getBadgeVariant(status: StatusType): 'default' | 'destructive' | 'secon
 function getBadgeClassName(status: StatusType): string {
   switch (status) {
     case 'success':
-      return 'bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30 hover:bg-[#00D4AA]/30'
+      return 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30'
     case 'error':
       return 'bg-destructive/20 text-destructive border-destructive/30 hover:bg-destructive/30'
     case 'warning':
@@ -200,10 +200,10 @@ export function AssetStatusIndicator({
               {computedVisibility ? (
                 <>
                   <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full rounded-full bg-[#00D4AA] opacity-75 animate-ping" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00D4AA]" />
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
                   </span>
-                  <Eye className="h-4 w-4 text-[#00D4AA]" />
+                  <Eye className="h-4 w-4 text-primary" />
                 </>
               ) : (
                 <>
@@ -271,7 +271,7 @@ export function AssetStatusIndicator({
                 className={cn(
                   'cursor-default gap-1.5 justify-start',
                   computedVisibility
-                    ? 'bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30 hover:bg-[#00D4AA]/30'
+                    ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30'
                     : 'bg-destructive/20 text-destructive border-destructive/30 hover:bg-destructive/30'
                 )}
               >

@@ -22,12 +22,12 @@ import { useConnection, useWalletClient, usePublicClient } from 'wagmi'
 import { parseAbi } from 'viem'
 import {
   ShieldCheck,
-  ShieldSlash,
+  ShieldOff,
   Globe,
   Calendar,
   Snowflake,
-  ArrowsClockwise,
-} from '@phosphor-icons/react'
+  RefreshCw,
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -45,7 +45,7 @@ import { useTransactionTimeout } from '@/hooks/use-tx-timeout'
 import { notification } from '@/lib/notification'
 import { recordRevocation } from '@/services/admin-kyc'
 import type { KycDetail } from '@/services/admin-kyc'
-import { KYC_MANAGER_ABI } from './kyc-manager-abi'
+import { KYC_MANAGER_ABI } from '@/constants/abis/kyc-manager-abi'
 import { savePendingTx, clearPendingTx, getPendingTx } from './tx-recovery'
 
 // ============ Types ============
@@ -414,7 +414,7 @@ export function OnChainStatusPanel({
       >
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center">
-            <ArrowsClockwise weight="bold" className="w-5 h-5 text-teal-400 animate-spin" />
+            <RefreshCw className="w-5 h-5 text-teal-400 animate-spin" />
           </div>
           <div>
             <h3 className="text-base font-semibold text-white">
@@ -448,7 +448,7 @@ export function OnChainStatusPanel({
       >
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-            <ShieldSlash weight="fill" className="w-5 h-5 text-red-400" />
+            <ShieldOff className="w-5 h-5 text-red-400" />
           </div>
           <div>
             <h3 className="text-base font-semibold text-white">
@@ -464,7 +464,7 @@ export function OnChainStatusPanel({
           className="mt-4 bg-white/5 border-white/10 hover:bg-white/10"
           onClick={fetchInvestorInfo}
         >
-          <ArrowsClockwise weight="bold" className="w-4 h-4 mr-2" />
+          <RefreshCw className="w-4 h-4 mr-2" />
           {t('admin.kyc.onchain.retry')}
         </Button>
       </div>
@@ -496,9 +496,9 @@ export function OnChainStatusPanel({
                 }`}
               >
                 {investorInfo.verified ? (
-                  <ShieldCheck weight="fill" className="w-5 h-5 text-emerald-400" />
+                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
                 ) : (
-                  <ShieldSlash weight="fill" className="w-5 h-5 text-red-400" />
+                  <ShieldOff className="w-5 h-5 text-red-400" />
                 )}
               </div>
               <div>
@@ -517,7 +517,7 @@ export function OnChainStatusPanel({
               className="text-white/40 hover:text-white hover:bg-white/5"
               onClick={fetchInvestorInfo}
             >
-              <ArrowsClockwise weight="bold" className="w-4 h-4" />
+              <RefreshCw className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -536,7 +536,7 @@ export function OnChainStatusPanel({
           {/* country */}
           <InfoRow label={t('admin.kyc.onchain.country')}>
             <span className="flex items-center gap-1.5 text-white">
-              <Globe weight="fill" className="w-3.5 h-3.5 text-white/40" />
+              <Globe className="w-3.5 h-3.5 text-white/40" />
               {investorInfo.country || '-'}
             </span>
           </InfoRow>
@@ -555,7 +555,7 @@ export function OnChainStatusPanel({
           {/* addedTime */}
           <InfoRow label={t('admin.kyc.onchain.addedTime')}>
             <span className="flex items-center gap-1.5 text-white/80 font-mono text-xs">
-              <Calendar weight="fill" className="w-3.5 h-3.5 text-white/40" />
+              <Calendar className="w-3.5 h-3.5 text-white/40" />
               {formatTimestamp(investorInfo.addedTime)}
             </span>
           </InfoRow>
@@ -563,7 +563,7 @@ export function OnChainStatusPanel({
           {/* verificationTime */}
           <InfoRow label={t('admin.kyc.onchain.verificationTime')}>
             <span className="flex items-center gap-1.5 text-white/80 font-mono text-xs">
-              <Calendar weight="fill" className="w-3.5 h-3.5 text-white/40" />
+              <Calendar className="w-3.5 h-3.5 text-white/40" />
               {formatTimestamp(investorInfo.verificationTime)}
             </span>
           </InfoRow>
@@ -571,7 +571,7 @@ export function OnChainStatusPanel({
           {/* expiryTime */}
           <InfoRow label={t('admin.kyc.onchain.expiryTime')}>
             <span className="flex items-center gap-1.5 text-white/80 font-mono text-xs">
-              <Calendar weight="fill" className="w-3.5 h-3.5 text-white/40" />
+              <Calendar className="w-3.5 h-3.5 text-white/40" />
               {investorInfo.expiryTime === 0n
                 ? t('admin.kyc.onchain.noExpiry')
                 : formatTimestamp(investorInfo.expiryTime)}
@@ -582,7 +582,7 @@ export function OnChainStatusPanel({
           <InfoRow label={t('admin.kyc.onchain.frozen')} showBorder={false}>
             <span className="flex items-center gap-1.5">
               {investorInfo.frozen && (
-                <Snowflake weight="fill" className="w-3.5 h-3.5 text-blue-400" />
+                <Snowflake className="w-3.5 h-3.5 text-blue-400" />
               )}
               <StatusBadge
                 value={!investorInfo.frozen}
@@ -617,7 +617,7 @@ export function OnChainStatusPanel({
               </span>
             ) : (
               <span className="flex items-center gap-2">
-                <ShieldSlash weight="fill" className="w-4 h-4" />
+                <ShieldOff className="w-4 h-4" />
                 {t('admin.kyc.admission.revoke')}
               </span>
             )}

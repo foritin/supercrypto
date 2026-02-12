@@ -15,7 +15,7 @@ from starlette.responses import Response
 
 from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
 
-logger = get_logger("audit.middleware")
+logger = get_logger("system.middleware.audit")
 
 
 class AuditMiddleware(BaseHTTPMiddleware):

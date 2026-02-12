@@ -11,6 +11,7 @@ Architecture Decision:
 """
 
 from typing import Callable
+from urllib.parse import unquote
 
 from falib.utils.log import get_logger
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -23,7 +24,7 @@ from src.shared.security.exceptions import (
 )
 from src.shared.security.jwt import verify_token
 
-logger = get_logger("auth.middleware")
+logger = get_logger("system.middleware.auth")
 
 
 # 无需解析 JWT 的路径前缀
@@ -78,8 +79,12 @@ class AuthStateMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
     def _is_public_path(self, path: str) -> bool:
-        """检查是否为公开路径"""
-        return any(path.startswith(prefix) for prefix in PUBLIC_PATH_PREFIXES)
+        """检查是否为公开路径（含路径规范化防遍历）"""
+        import posixpath
+
+        # 路径规范化：解码 URL 编码后使用 posixpath.normpath 解析 .. 段
+        normalized = posixpath.normpath(unquote(path))
+        return any(normalized.startswith(prefix) for prefix in PUBLIC_PATH_PREFIXES)
 
     def _parse_token(self, request: Request, token: str) -> None:
         """解析 JWT token 并注入到 request.state"""

@@ -58,7 +58,7 @@ const glassCardVariants = cva(
        */
       hover: {
         true: [
-          'hover:border-[rgba(0,212,170,0.3)]',
+          'hover:border-primary/30',
           'hover:shadow-[0_0_40px_rgba(0,212,170,0.12)]',
           'hover:before:from-[rgba(0,212,170,0.3)] hover:before:via-white/10',
         ],

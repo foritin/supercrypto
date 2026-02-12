@@ -18,7 +18,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.services.contract.service import ContractService
-from src.shared.schemas.enums import ContractScope, ContractStatus, NetWork, ErrorCode
+from src.shared.schemas.enums import ContractScope, ContractStatus, Network, ErrorCode
 from src.shared.common.exceptions import BusinessException
 
 
@@ -39,7 +39,7 @@ class TestContractServiceSetPrimary:
     def contract_service(self):
         """创建 ContractService 实例"""
         with patch("src.services.contract.service.SETTINGS") as mock_settings:
-            mock_settings.NETWORK = NetWork.HARDHAT
+            mock_settings.NETWORK = Network.HARDHAT
             service = ContractService()
             return service
 
@@ -203,7 +203,7 @@ class TestContractServiceUnsetPrimary:
     def contract_service(self):
         """创建 ContractService 实例"""
         with patch("src.services.contract.service.SETTINGS") as mock_settings:
-            mock_settings.NETWORK = NetWork.HARDHAT
+            mock_settings.NETWORK = Network.HARDHAT
             service = ContractService()
             return service
 
@@ -315,7 +315,7 @@ class TestContractServiceGetProjectPrimaryContract:
     def contract_service(self):
         """创建 ContractService 实例"""
         with patch("src.services.contract.service.SETTINGS") as mock_settings:
-            mock_settings.NETWORK = NetWork.HARDHAT
+            mock_settings.NETWORK = Network.HARDHAT
             service = ContractService()
             return service
 

@@ -20,7 +20,7 @@ from src.shared.schemas.enums.contract import (
 
 from .config_loader import get_config_loader
 
-logger = get_logger("contract.readiness")
+logger = get_logger("business.contract.readiness")
 
 
 @dataclass
@@ -95,11 +95,11 @@ class ProjectReadinessChecker:
         """
         获取项目完整状态报告
 
-        Args:
+        参数:
             project_name: 项目名称
             network: 网络名称，默认使用初始化时的网络
 
-        Returns:
+        返回:
             ProjectStatusReport: 完整状态报告
         """
         network = network or self.network
@@ -328,12 +328,12 @@ class ProjectReadinessChecker:
         """
         检查项目是否就绪
 
-        Args:
+        参数:
             project_name: 项目名称
             network: 网络
             min_level: 最低就绪级别
 
-        Returns:
+        返回:
             是否达到最低就绪级别
         """
         report = await self.get_project_status(project_name, network)
@@ -355,7 +355,7 @@ class ProjectReadinessChecker:
         """
         获取缺失依赖
 
-        Returns:
+        返回:
             {contract_name: [missing_dep1, missing_dep2, ...]}
         """
         report = await self.get_project_status(project_name, network)
@@ -384,7 +384,7 @@ class ProjectReadinessChecker:
         """
         获取阻塞合约及原因
 
-        Returns:
+        返回:
             [(contract_name, blocking_reason), ...]
         """
         report = await self.get_project_status(project_name, network)

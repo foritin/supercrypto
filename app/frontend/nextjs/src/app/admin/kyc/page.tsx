@@ -59,7 +59,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { notification } from "@/lib/notification";
 import { RequireAuth } from "@/components/auth";
-import { V6Background } from "@/components/layout/V6Background";
+import { V6Background } from "@/components/layout/v6-background";
 
 import { KycStatsPanel } from "@/components/admin-kyc/kyc-stats-panel";
 import { ReviewStepperModal } from "@/components/admin-kyc/review-stepper-modal";

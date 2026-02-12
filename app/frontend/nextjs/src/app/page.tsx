@@ -4,12 +4,12 @@ import React from "react";
 import { Rocket } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
-import { useMouseParallax } from "@/hooks/useMouseParallax";
-import { useCountUp } from "@/hooks/useCountUp";
-import { useMagneticButton } from "@/hooks/useMagneticButton";
-import { useTypewriter } from "@/hooks/useTypewriter";
-import { RippleButton } from "@/components/ui/RippleButton";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { useMouseParallax } from "@/hooks/use-mouse-parallax";
+import { useCountUp } from "@/hooks/use-count-up";
+import { useMagneticButton } from "@/hooks/use-magnetic-button";
+import { useTypewriter } from "@/hooks/use-typewriter";
+import { RippleButton } from "@/components/ui/ripple-button";
 import { PartnersMarquee, INSTITUTION_PARTNERS, ROW1_PROVIDERS, ROW2_PROVIDERS } from "@/components/partners";
 import { StatsBar, FeaturedAssets, BentoFeatures, CalculatorSection, InfiniteMarquee, HowItWorks } from "@/components/home";
 import { cn } from "@/lib/utils";
@@ -96,7 +96,7 @@ export default function HomePage() {
                 <span
                   className="inline-flex items-center gap-2 py-2 px-5 bg-white/[0.06] backdrop-blur-sm rounded-lg text-[13px] font-medium tracking-[1.5px] uppercase text-white/70"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA] animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                   {t("home.badge")}
                 </span>
               </div>
@@ -112,13 +112,13 @@ export default function HomePage() {
                     {t('home.heroTitle.unlock')}{' '}
                     <span
                       key={animationKey}
-                      className="inline-block min-w-[280px] bg-gradient-to-r from-[#FFD700] via-[#FFA500] to-[#FFD700] bg-clip-text text-transparent typewriter-text"
+                      className="inline-block min-w-[280px] bg-gradient-to-r from-gold via-[#FFA500] to-gold bg-clip-text text-transparent typewriter-text"
                     >
                       {dynamicText}
                     </span>
                   </span>
                   {/* Line 2: to DeFi Yields - 青色渐变 */}
-                  <span className="block bg-gradient-to-r from-[#00D4AA] via-[#00E5BB] to-[#00D4AA] bg-clip-text text-transparent">
+                  <span className="block bg-gradient-to-r from-primary via-[#00E5BB] to-primary bg-clip-text text-transparent">
                     {t('home.heroTitle.onWeb3')}
                   </span>
                 </h1>
@@ -136,7 +136,7 @@ export default function HomePage() {
                 <br />
                 <span className="mt-2 inline-block">
                   Earn up to{" "}
-                  <span className="bg-gradient-to-r from-[#FFD700] to-[#FFA500] bg-clip-text text-transparent font-semibold">
+                  <span className="bg-gradient-to-r from-gold to-[#FFA500] bg-clip-text text-transparent font-semibold">
                     15% APY
                   </span>
                   {" "}backed by tokenized real-world assets.
@@ -157,7 +157,7 @@ export default function HomePage() {
                 >
                   {/* Shine overlay */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                  <span className="relative z-10 flex items-center justify-center gap-3 text-[16px] font-semibold text-[#0a0f0d]">
+                  <span className="relative z-10 flex items-center justify-center gap-3 text-[16px] font-semibold text-bg-dark">
                     <Rocket className="w-5 h-5" />
                     {t("home.cta.primary")}
                   </span>
@@ -216,7 +216,7 @@ export default function HomePage() {
       >
         <div className="w-full max-w-[1200px] relative">
           <div className="text-center mb-[72px] fade-in-stagger">
-            <span className="text-[#00D4AA] text-sm font-semibold uppercase tracking-[2px]">
+            <span className="text-primary text-sm font-semibold uppercase tracking-[2px]">
               Features
             </span>
             <h2 className="mt-4 mb-6 text-3xl md:text-4xl font-bold text-white">
@@ -242,7 +242,7 @@ export default function HomePage() {
       >
         <div className="w-full max-w-[1200px]">
           <div className="text-center mb-[72px] fade-in-stagger">
-            <span className="text-[#FFD700] text-sm font-semibold uppercase tracking-[2px]">
+            <span className="text-gold text-sm font-semibold uppercase tracking-[2px]">
               How It Works
             </span>
             <h2 className="mt-4 mb-4 text-3xl md:text-4xl font-bold text-white">

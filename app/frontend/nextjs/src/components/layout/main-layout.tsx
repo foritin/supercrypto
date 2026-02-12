@@ -7,7 +7,7 @@ import { Footer } from "./footer";
 import { ContentWrapper } from "./content-wrapper";
 import { PageSkeleton } from "./page-skeleton";
 import { Web3Background } from "./web3-background";
-import { TriggeredLightFlow } from "./TriggeredLightFlow";
+import { TriggeredLightFlow } from "./triggered-light-flow";
 import type { ReactNode } from "react";
 
 /**
