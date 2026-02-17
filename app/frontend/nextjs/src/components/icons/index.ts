@@ -9,6 +9,9 @@
 // Custom Icons
 export { WalletIcon, StakingIcon, PortfolioIcon } from './custom-icons';
 
+// Token Icons
+export { UsdtIcon, UsdcIcon } from './token-icons';
+
 // Empty State Illustrations
 export {
   NoAssetsIllustration,

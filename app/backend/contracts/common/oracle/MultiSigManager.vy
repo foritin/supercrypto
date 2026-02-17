@@ -7,6 +7,8 @@
 @dev 支持签名者管理、提案投票、执行验证
 """
 
+# ============ 接口定义 ============
+
 # 合约迁移接口
 interface IMigration:
     def owner() -> address: view
@@ -20,9 +22,7 @@ interface IMigration:
     def receive_migration(oldContract: address): nonpayable
     def is_migrated() -> bool: view
 
-# ============================================
-# 事件定义
-# ============================================
+# ============ 事件定义 ============
 
 event SignerAdded:
     signer: indexed(address)
@@ -61,9 +61,7 @@ event Migrated:
     newContract: indexed(address)
     timestamp: uint256
 
-# ============================================
-# 数据结构
-# ============================================
+# ============ 数据结构 ============
 
 flag ProposalStatus:
     PENDING      # 待签名
@@ -79,9 +77,7 @@ struct Proposal:
     created_at: uint256         # 创建时间
     executed_at: uint256        # 执行时间
 
-# ============================================
-# 状态变量
-# ============================================
+# ============ 存储变量 ============
 
 # 合约所有者
 owner: public(address)
@@ -107,15 +103,13 @@ migrated: public(bool)  # 迁移标志
 # 合约暂停状态
 paused: public(bool)
 
-# ============================================
-# 构造函数
-# ============================================
+# ============ 构造函数 ============
 
 @deploy
 def __init__(initial_signers: DynArray[address, 20]):
     """
     @notice 初始化多签管理合约
-    @param initial_signers 初始签名者列表（可为空，后续通过batch_add_initial_signers添加）
+    @param initial_signers 初始签名者列表（可为空，后续通过admin_batch_add_initial_signers添加）
     """
     self.owner = msg.sender
     self.paused = False
@@ -142,40 +136,38 @@ def __init__(initial_signers: DynArray[address, 20]):
         # 如果没有签名者，暂时设置为0
         self.required_signatures = 0
 
-# ============================================
-# 修饰器辅助函数
-# ============================================
-
-@internal
-@view
-def _only_owner():
-    """仅所有者可调用"""
-    assert msg.sender == self.owner, "Only owner"
-
-@internal
-@view
-def _only_signer():
-    """仅签名者可调用"""
-    assert self.signers[msg.sender], "Only signer"
-
-@internal
-@view
-def _require_initialized():
-    """要求合约已初始化（有签名者）"""
-    assert self.signer_count > 0, "Contract not initialized - add signers first"
-
-@internal
-@view
-def _when_not_paused():
-    """仅在未暂停时可调用"""
-    assert not self.paused, "Contract is paused"
-
-# ============================================
-# 签名者管理
-# ============================================
+# ============ Owner 函数 ============
 
 @external
-def batch_add_initial_signers(new_signers: DynArray[address, 20]):
+def owner_pause():
+    """
+    @notice 暂停合约（仅所有者）
+    """
+    self._only_owner()
+    self.paused = True
+
+@external
+def owner_unpause():
+    """
+    @notice 恢复合约（仅所有者）
+    """
+    self._only_owner()
+    self.paused = False
+
+@external
+def owner_transfer_ownership(new_owner: address):
+    """
+    @notice 转移所有权
+    @param new_owner 新所有者地址
+    """
+    self._only_owner()
+    assert new_owner != empty(address), "Invalid owner"
+    self.owner = new_owner
+
+# ============ Admin 函数 ============
+
+@external
+def admin_batch_add_initial_signers(new_signers: DynArray[address, 20]):
     """
     @notice 批量添加初始签名者（仅在签名者数量为0时可用，由所有者调用）
     @param new_signers 新签名者地址数组（至少3个）
@@ -201,7 +193,7 @@ def batch_add_initial_signers(new_signers: DynArray[address, 20]):
     self.required_signatures = self.signer_count - 1  # n-1规则，至少需要n-1个签名
 
 @external
-def add_signer(new_signer: address, proposal_id: uint256):
+def admin_add_signer(new_signer: address, proposal_id: uint256):
     """
     @notice 添加新签名者（需要现有多签批准）
     @param new_signer 新签名者地址
@@ -233,7 +225,7 @@ def add_signer(new_signer: address, proposal_id: uint256):
     log ProposalExecuted(proposal_id, msg.sender)
 
 @external
-def remove_signer(signer: address, proposal_id: uint256):
+def admin_remove_signer(signer: address, proposal_id: uint256):
     """
     @notice 移除签名者（需要多签批准）
     @param signer 要移除的签名者地址
@@ -269,9 +261,34 @@ def remove_signer(signer: address, proposal_id: uint256):
     log SignerRemoved(signer, msg.sender)
     log ProposalExecuted(proposal_id, msg.sender)
 
-# ============================================
-# 提案管理
-# ============================================
+@external
+def admin_set_required_signatures(new_required: uint256, proposal_id: uint256):
+    """
+    @notice 修改所需签名数（需要多签批准）
+    @param new_required 新的所需签名数
+    @param proposal_id 提案ID
+    """
+    self._only_owner()
+    
+    assert new_required >= 2, "Min 2 signatures required"
+    assert new_required <= self.signer_count, "Required exceeds signer count"
+    
+    # 验证提案
+    proposal: Proposal = self.proposals[proposal_id]
+    assert proposal.status == ProposalStatus.PENDING, "Invalid proposal"
+    assert proposal.signature_count >= self.required_signatures, "Not enough signatures"
+    
+    old_required: uint256 = self.required_signatures
+    self.required_signatures = new_required
+    
+    # 标记提案已执行
+    self.proposals[proposal_id].status = ProposalStatus.EXECUTED
+    self.proposals[proposal_id].executed_at = block.timestamp
+    
+    log RequiredSignaturesChanged(old_required, new_required)
+    log ProposalExecuted(proposal_id, msg.sender)
+
+# ============ 核心业务函数 ============
 
 @external
 def create_proposal(target: address, data_hash: bytes32) -> uint256:
@@ -344,9 +361,22 @@ def cancel_proposal(proposal_id: uint256):
     
     log ProposalCancelled(proposal_id, msg.sender)
 
-# ============================================
-# 验证函数
-# ============================================
+@external
+def mark_proposal_executed(proposal_id: uint256):
+    """
+    @notice 标记提案为已执行（由目标合约调用）
+    @param proposal_id 提案ID
+    """
+    proposal: Proposal = self.proposals[proposal_id]
+    assert proposal.status == ProposalStatus.PENDING, "Not pending"
+    assert msg.sender == proposal.target, "Only target can execute"
+    
+    self.proposals[proposal_id].status = ProposalStatus.EXECUTED
+    self.proposals[proposal_id].executed_at = block.timestamp
+    
+    log ProposalExecuted(proposal_id, msg.sender)
+
+# ============ 查询函数 ============
 
 @external
 @view
@@ -418,80 +448,33 @@ def get_signer_list() -> DynArray[address, 20]:
     """
     return self.signer_list
 
-# ============================================
-# 管理函数
-# ============================================
+# ============ 内部辅助函数 ============
 
-@external
-def mark_proposal_executed(proposal_id: uint256):
-    """
-    @notice 标记提案为已执行（由目标合约调用）
-    @param proposal_id 提案ID
-    """
-    proposal: Proposal = self.proposals[proposal_id]
-    assert proposal.status == ProposalStatus.PENDING, "Not pending"
-    assert msg.sender == proposal.target, "Only target can execute"
-    
-    self.proposals[proposal_id].status = ProposalStatus.EXECUTED
-    self.proposals[proposal_id].executed_at = block.timestamp
-    
-    log ProposalExecuted(proposal_id, msg.sender)
+@internal
+@view
+def _only_owner():
+    """仅所有者可调用"""
+    assert msg.sender == self.owner, "Only owner"
 
-@external
-def set_required_signatures(new_required: uint256, proposal_id: uint256):
-    """
-    @notice 修改所需签名数（需要多签批准）
-    @param new_required 新的所需签名数
-    @param proposal_id 提案ID
-    """
-    self._only_owner()
-    
-    assert new_required >= 2, "Min 2 signatures required"
-    assert new_required <= self.signer_count, "Required exceeds signer count"
-    
-    # 验证提案
-    proposal: Proposal = self.proposals[proposal_id]
-    assert proposal.status == ProposalStatus.PENDING, "Invalid proposal"
-    assert proposal.signature_count >= self.required_signatures, "Not enough signatures"
-    
-    old_required: uint256 = self.required_signatures
-    self.required_signatures = new_required
-    
-    # 标记提案已执行
-    self.proposals[proposal_id].status = ProposalStatus.EXECUTED
-    self.proposals[proposal_id].executed_at = block.timestamp
-    
-    log RequiredSignaturesChanged(old_required, new_required)
-    log ProposalExecuted(proposal_id, msg.sender)
+@internal
+@view
+def _only_signer():
+    """仅签名者可调用"""
+    assert self.signers[msg.sender], "Only signer"
 
-@external
-def pause():
-    """
-    @notice 暂停合约（仅所有者）
-    """
-    self._only_owner()
-    self.paused = True
+@internal
+@view
+def _require_initialized():
+    """要求合约已初始化（有签名者）"""
+    assert self.signer_count > 0, "Contract not initialized - add signers first"
 
-@external
-def unpause():
-    """
-    @notice 恢复合约（仅所有者）
-    """
-    self._only_owner()
-    self.paused = False
+@internal
+@view
+def _when_not_paused():
+    """仅在未暂停时可调用"""
+    assert not self.paused, "Contract is paused"
 
-@external
-def transfer_ownership(new_owner: address):
-    """
-    @notice 转移所有权
-    @param new_owner 新所有者地址
-    """
-    self._only_owner()
-    assert new_owner != empty(address), "Invalid owner"
-    self.owner = new_owner
-
-
-# ==================== 依赖查询功能 ====================
+# ============ 依赖查询功能 ============
 
 @external
 @view
@@ -507,11 +490,10 @@ def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], D
     unbound_optional: DynArray[String[50], 10] = []
     return unbound_required, bound_all, unbound_optional
 
-
-# ==================== 合约迁移功能 ====================
+# ============ 合约迁移功能 ============
 
 @external
-def migrate(new_contract: address):
+def owner_migrate(new_contract: address):
     """
     @notice 迁移所有状态到新合约
     @param new_contract 新合约地址（必须实现 receive_migration 接口）
@@ -590,4 +572,3 @@ def receive_migration(old_contract: address):
                 self.proposal_signatures[i][signer] = True
 
         i += 1
-

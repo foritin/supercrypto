@@ -23,3 +23,5 @@ export {
 } from './use-subscription-contract'
 
 export { useAssets } from './use-assets'
+
+export { useTokenBalance, useNativeBalance } from './use-balance'

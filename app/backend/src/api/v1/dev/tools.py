@@ -5,12 +5,14 @@
 路由前缀: /api/v1/dev
 """
 
-from falib.utils.handlers import create_error_response, create_success_response
+from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.services.dev.schemas import DataResetRequest
-from src.services.dev.service import DevToolsService
-from src.shared.security import require_admin
+from src.common.exceptions import ValidationException
+from src.schemas.dev import DataResetRequest
+from src.schemas.enums import ErrorCode
+from src.security import require_admin
+from src.services import DevToolsService
 
 router = APIRouter()
 
@@ -43,50 +45,30 @@ async def get_reset_info():
 
 @router.post("/reset")
 async def reset_data(request: DataResetRequest):
-    """
-    重置测试数据
-
-    注意：此操作不可逆，请谨慎使用
-
-    Args:
-        request: 重置请求，包含确认文字和要重置的数据类型
-
-    Returns:
-        重置结果
-    """
+    """重置测试数据 — 此操作不可逆，需输入 'RESET' 确认"""
     service = get_service()
 
-    # 检查环境
     if not service.is_reset_allowed():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Data reset is not allowed in this environment",
         )
 
-    # 验证确认文字
     if request.confirmation != "RESET":
-        return create_error_response(
-            code=status.HTTP_400_BAD_REQUEST,
-            msg="Invalid confirmation. Please type 'RESET' to confirm.",
+        raise ValidationException(
+            message="Invalid confirmation. Please type 'RESET' to confirm.",
+            error_code=ErrorCode.VALIDATION_ERROR,
         )
 
-    # 执行重置
-    try:
-        reset_counts = await service.reset_data(request.data_types)
-
-        return create_success_response(
-            object_data={
-                "success": True,
-                "message": "Data reset successfully",
-                "reset_counts": reset_counts,
-                "environment": service.get_environment(),
-            }
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reset data: {str(e)}",
-        )
+    reset_counts = await service.reset_data(request.data_types)
+    return create_success_response(
+        object_data={
+            "success": True,
+            "message": "Data reset successfully",
+            "reset_counts": reset_counts,
+            "environment": service.get_environment(),
+        }
+    )
 
 
 @router.get("/environment")

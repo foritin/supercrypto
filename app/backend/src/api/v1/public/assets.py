@@ -11,25 +11,20 @@
 
 from typing import Optional
 
-from falib.utils.handlers import create_success_response
+from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from src.services.asset.service import AssetService
-from src.services.asset.media_service import MediaService, get_media_service
-from src.shared.schemas.enums import AssetStatus, AssetType, MediaType
+from src.common.dependencies import get_asset_service
+from src.schemas.enums import AssetStatus, AssetType, MediaType
+from src.services import AssetService
 
 router = APIRouter()
 
 
-def get_asset_service() -> AssetService:
-    """依赖注入：获取资产服务"""
-    return AssetService()
-
-
 @router.get(
     "",
-    summary="获取资产列表",
-    description="获取所有可见的 RWA 资产列表（自动过滤不完整资产）",
+    summary="List Assets",
+    description="List all visible RWA assets (automatically filters incomplete assets)",
 )
 async def list_assets(
     asset_type: Optional[AssetType] = Query(None, description="类型筛选"),
@@ -57,19 +52,19 @@ async def list_assets(
 
     return create_success_response(
         list_data=[item.model_dump(mode="json") for item in items],
-        pagination={
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": total_pages,
-        },
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        ),
     )
 
 
 @router.get(
     "/{asset_id}",
-    summary="获取资产详情",
-    description="根据ID获取资产的详细信息（不可见资产返回404）",
+    summary="Get Asset Detail",
+    description="Get detailed asset information by ID (invisible assets return 404)",
 )
 async def get_asset(asset_id: int, service: AssetService = Depends(get_asset_service)):
     """
@@ -91,8 +86,8 @@ async def get_asset(asset_id: int, service: AssetService = Depends(get_asset_ser
 
 @router.get(
     "/symbol/{symbol}",
-    summary="根据符号获取资产",
-    description="根据代币符号获取资产详情（不可见资产返回404）",
+    summary="Get Asset by Symbol",
+    description="Get asset detail by token symbol (invisible assets return 404)",
 )
 async def get_asset_by_symbol(
     symbol: str, service: AssetService = Depends(get_asset_service)
@@ -117,8 +112,8 @@ async def get_asset_by_symbol(
 
 @router.get(
     "/{asset_id}/price-history",
-    summary="获取价格历史",
-    description="获取资产的价格更新历史记录",
+    summary="Get Price History",
+    description="Get asset price update history",
 )
 async def get_price_history(
     asset_id: int,
@@ -140,55 +135,21 @@ async def get_price_history(
 
 @router.get(
     "/{asset_id}/media",
-    summary="获取资产媒体列表",
-    description="获取资产的所有媒体文件（图片、文档等），URL 为预签名临时访问链接",
+    summary="Get Asset Media List",
+    description="Get all media files for an asset (images, documents, etc.), URLs are presigned temporary access links",
 )
 async def get_asset_media(
     asset_id: int,
     media_type: Optional[MediaType] = Query(None, description="按类型筛选"),
-    media_service: MediaService = Depends(get_media_service),
+    media_service: AssetService = Depends(get_asset_service),
     asset_service: AssetService = Depends(get_asset_service),
 ):
-    """
-    获取资产媒体列表（Public API）
-
-    - **asset_id**: 资产ID
-    - **media_type**: 可选，按类型筛选 (cover, gallery, valuation, legal, financial, floor_plan, video)
-
-    返回的 URL 为 MinIO 预签名临时访问链接，有效期 1 小时
-    """
-    # 先检查资产是否存在且可见
+    """获取资产媒体列表 — URL 为 MinIO 预签名临时访问链接，有效期 1 小时"""
     asset = await asset_service.get_asset(asset_id, public_only=True)
     if not asset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found"
         )
 
-    # 获取媒体列表
-    media_list = await media_service.list_media(asset_id, media_type)
-
-    # 收集所有需要转换的 URL
-    file_paths = [m.url for m in media_list if m.url]
-
-    # 批量获取预签名 URL（复用连接）
-    presigned_urls = (
-        await media_service.get_presigned_urls_batch(file_paths) if file_paths else {}
-    )
-
-    # 转换为响应格式
-    result = []
-    for m in media_list:
-        data = {
-            "id": m.id,
-            "media_type": m.media_type.value if hasattr(m.media_type, "value") else m.media_type,
-            "title": m.title,
-            "description": m.description,
-            "url": presigned_urls.get(m.url, m.url) if m.url else None,
-            "thumbnail_url": m.thumbnail_url,
-            "file_name": m.file_name,
-            "sort_order": m.sort_order,
-            "is_primary": m.is_primary,
-        }
-        result.append(data)
-
+    result = await media_service.list_media_with_urls(asset_id, media_type)
     return create_success_response(list_data=result)

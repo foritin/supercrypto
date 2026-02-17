@@ -754,6 +754,16 @@ const admin = {
       confirmResume: "Are you sure you want to resume this asset?",
       pauseDescription: "Pausing \"{{name}}\" will hide it from users. You can resume it later.",
       resumeDescription: "Resuming \"{{name}}\" will make it visible to users again.",
+      delete: "Delete",
+      deleteConfirmTitle: "Confirm Delete Asset",
+      deleteConfirmDescription: "You are about to permanently delete asset \"{{name}}\" ({{symbol}}). This action cannot be undone.",
+      deleteWarning: "⚠️ The following data will be permanently deleted:",
+      deleteWarningMedia: "All associated media files (MinIO storage)",
+      deleteWarningHistory: "All price history records",
+      deleteWarningBindings: "All contract bindings",
+      deleteTypeConfirm: "Type \"{{name}}\" to confirm deletion",
+      deleteConfirmButton: "Permanently Delete",
+      deleteSuccess: "Successfully deleted asset \"{{name}}\", cleaned up {{files}} files and {{media}} media records",
       createSuccess: "Asset created successfully",
       createAndBindSuccess: "Asset created and bound contracts from {{count}} project(s)",
       updateSuccess: "Asset updated successfully",
@@ -840,6 +850,18 @@ const admin = {
         totalSupplyNonNegative: "Total supply cannot be negative",
         minSubscriptionNonNegative: "Min subscription cannot be negative",
         priceNonNegative: "Price cannot be negative",
+        // Frame style
+        frameStyle: {
+          label: "Logo Frame Style",
+          hint: "Choose the color theme for the logo frame",
+          green: "Emerald",
+          blue: "Sapphire",
+          gold: "Gold",
+          purple: "Amethyst",
+          gray: "Silver",
+          saved: "Frame style saved",
+          saveFailed: "Failed to save frame style",
+        },
       },
       // Section titles
       section: {
@@ -1236,6 +1258,7 @@ const admin = {
         valuation: "Valuation Report",
         legal: "Legal Documents",
         financial: "Financial Documents",
+        logo: "Logo",
       },
       // Upload area
       upload: {

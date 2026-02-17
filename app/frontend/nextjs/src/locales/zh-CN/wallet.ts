@@ -35,6 +35,7 @@ const wallet = {
       authenticated: "已认证",
       notAuthenticated: "未认证",
       completeKycToInvest: "完成 KYC 解锁投资",
+      viewKycStatus: "查看 KYC 状态",
       detailsTitle: "详细信息",
       ens: "ENS",
       walletLabel: "钱包",

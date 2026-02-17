@@ -6,31 +6,27 @@
 
 from typing import Optional
 
-from falib.utils.handlers import create_success_response
+from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from src.services.staking.schemas import (
+from src.common.dependencies import get_staking_service
+from src.schemas.enums import StakingStatus
+from src.schemas.staking import (
     ClaimRewardsRequest,
     StakingCreateRequest,
     StakingPreviewRequest,
     UnstakeRequest,
 )
-from src.services.staking.service import StakingService
-from src.shared.schemas.enums import StakingStatus
-from src.shared.security import require_user
+from src.security import require_user
+from src.services import StakingService
 
 router = APIRouter()
 
 
-def get_staking_service() -> StakingService:
-    """依赖注入：获取质押服务"""
-    return StakingService()
-
-
 @router.post(
     "/preview",
-    summary="预览质押收益",
-    description="计算质押的预期 PLT 奖励",
+    summary="Preview Staking Rewards",
+    description="Calculate expected PLT rewards for staking",
 )
 async def preview_staking(
     data: StakingPreviewRequest,
@@ -51,8 +47,8 @@ async def preview_staking(
 
 @router.post(
     "",
-    summary="创建质押",
-    description="质押 RWA Token 参与挖矿",
+    summary="Create Staking",
+    description="Stake RWA Token to participate in mining",
 )
 async def create_staking(
     data: StakingCreateRequest,
@@ -75,11 +71,13 @@ async def create_staking(
 
 @router.get(
     "",
-    summary="获取质押列表",
-    description="获取用户的质押记录列表",
+    summary="List Stakings",
+    description="Get the user's staking records",
 )
 async def list_stakings(
-    staking_status: Optional[StakingStatus] = Query(None, alias="status", description="状态筛选"),
+    staking_status: Optional[StakingStatus] = Query(
+        None, alias="status", description="状态筛选"
+    ),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     wallet_address: str = Depends(require_user),
@@ -93,24 +91,27 @@ async def list_stakings(
     - 支持分页
     """
     items, total, total_pages = await service.list_stakings(
-        wallet_address=wallet_address, status=staking_status, page=page, page_size=page_size
+        wallet_address=wallet_address,
+        status=staking_status,
+        page=page,
+        page_size=page_size,
     )
 
     return create_success_response(
         list_data=[item.model_dump(mode="json") for item in items],
-        pagination={
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": total_pages,
-        },
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        ),
     )
 
 
 @router.get(
     "/stats",
-    summary="获取用户质押统计",
-    description="获取用户的质押统计数据",
+    summary="Get User Staking Stats",
+    description="Get the user's staking statistics",
 )
 async def get_user_stats(
     wallet_address: str = Depends(require_user),
@@ -132,8 +133,8 @@ async def get_user_stats(
 
 @router.get(
     "/{staking_id}",
-    summary="获取质押详情",
-    description="根据ID获取质押的详细信息",
+    summary="Get Staking Detail",
+    description="Get detailed staking information by ID",
 )
 async def get_staking(
     staking_id: int,
@@ -158,8 +159,8 @@ async def get_staking(
 
 @router.post(
     "/{staking_id}/unstake",
-    summary="解除质押",
-    description="解除已到期的质押",
+    summary="Unstake",
+    description="Unstake a matured staking position",
 )
 async def unstake(
     staking_id: int,
@@ -183,8 +184,8 @@ async def unstake(
 
 @router.post(
     "/{staking_id}/claim",
-    summary="领取奖励",
-    description="领取质押产生的 PLT 奖励",
+    summary="Claim Rewards",
+    description="Claim PLT rewards from staking",
 )
 async def claim_rewards(
     staking_id: int,
@@ -203,4 +204,3 @@ async def claim_rewards(
     return create_success_response(
         object_data=result.model_dump(mode="json"), msg="Rewards claimed successfully"
     )
-

@@ -3,6 +3,7 @@
 
 路由前缀: /api/v1/admin/audit-logs
 """
+
 from datetime import datetime
 from typing import Optional
 
@@ -10,26 +11,21 @@ from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
-from src.services.audit.service import AuditService, audit_service
-from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-from src.shared.security import require_admin
+from src.common.dependencies import get_audit_service
+from src.schemas.enums import AuditAction, AuditCategory, AuditStatus
+from src.security import require_admin
+from src.services import AuditService
 
 router = APIRouter()
 
 
-# ============ 依赖注入 ============
-
-def get_audit_service() -> AuditService:
-    """获取审计服务实例"""
-    return audit_service
-
-
 # ============ Endpoints ============
+
 
 @router.get(
     "",
-    summary="查询审计日志",
-    description="分页查询审计日志，支持多条件过滤",
+    summary="Query Audit Logs",
+    description="Query audit logs with pagination and multi-condition filtering",
 )
 async def query_audit_logs(
     category: Optional[AuditCategory] = Query(None, description="审计类别"),
@@ -48,21 +44,7 @@ async def query_audit_logs(
     service: AuditService = Depends(get_audit_service),
     _admin=Depends(require_admin),
 ):
-    """
-    查询审计日志
-
-    支持的过滤条件：
-    - category: 审计类别 (account/permission/contract/asset/auth/system/kyc/staking)
-    - action: 操作类型
-    - operator_id: 操作者ID
-    - operator_type: 操作者类型 (user/admin/system)
-    - target_type: 目标类型
-    - target_id: 目标ID
-    - status: 操作状态 (success/failed/pending/reverted)
-    - start_time/end_time: 时间范围
-    - tx_hash: 交易哈希
-    - ip_address: IP地址
-    """
+    """查询审计日志 — 支持按 category/action/operator/target/status/时间范围等多条件过滤"""
     logs, total, total_pages = await service.query(
         category=category,
         action=action,
@@ -79,20 +61,21 @@ async def query_audit_logs(
         page_size=page_size,
     )
 
-    pagination = PaginationInfo(
-        total=total, page=page, page_size=page_size, total_pages=total_pages
-    )
-
     return create_success_response(
         list_data=logs,
-        pagination=pagination,
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        ),
     )
 
 
 @router.get(
     "/stats",
-    summary="获取审计统计",
-    description="获取审计日志统计数据",
+    summary="Get Audit Statistics",
+    description="Get audit log statistics",
 )
 async def get_audit_stats(
     start_time: Optional[datetime] = Query(None, description="开始时间"),
@@ -120,8 +103,8 @@ async def get_audit_stats(
 
 @router.get(
     "/export",
-    summary="导出审计日志",
-    description="导出审计日志为 CSV 格式",
+    summary="Export Audit Logs",
+    description="Export audit logs in CSV format",
 )
 async def export_audit_logs(
     category: Optional[AuditCategory] = Query(None, description="审计类别"),
@@ -138,75 +121,28 @@ async def export_audit_logs(
 
     最多导出 10000 条记录
     """
-    import csv
-    import io
-
-    # 限制导出数量
-    MAX_EXPORT = 10000
-
-    logs, total, _ = await service.query(
+    csv_content = await service.export_to_csv(
         category=category,
         action=action,
         operator_id=operator_id,
         status=status,
         start_time=start_time,
         end_time=end_time,
-        page=1,
-        page_size=MAX_EXPORT,
     )
 
-    # 生成 CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    # 写入表头
-    writer.writerow([
-        "ID", "时间", "类别", "操作", "状态",
-        "操作者ID", "操作者地址", "操作者类型",
-        "目标类型", "目标ID", "目标地址",
-        "描述", "原因", "IP地址", "交易哈希",
-        "耗时(ms)", "错误码", "错误信息"
-    ])
-
-    # 写入数据
-    for log in logs:
-        writer.writerow([
-            log.id,
-            log.operated_at.isoformat() if log.operated_at else "",
-            log.category.value if log.category else "",
-            log.action.value if log.action else "",
-            log.status.value if log.status else "",
-            log.operator_id or "",
-            log.operator_address or "",
-            log.operator_type or "",
-            log.target_type or "",
-            log.target_id or "",
-            log.target_address or "",
-            log.description or "",
-            log.reason or "",
-            log.ip_address or "",
-            log.tx_hash or "",
-            log.duration_ms or "",
-            log.error_code or "",
-            log.error_message or "",
-        ])
-
-    output.seek(0)
-
-    # 返回 CSV 文件
     return StreamingResponse(
-        iter([output.getvalue()]),
+        iter([csv_content]),
         media_type="text/csv",
         headers={
             "Content-Disposition": f"attachment; filename=audit_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        }
+        },
     )
 
 
 @router.get(
     "/operator/{operator_id}",
-    summary="获取操作者历史",
-    description="获取指定操作者的审计历史",
+    summary="Get Operator History",
+    description="Get audit history for a specific operator",
 )
 async def get_operator_history(
     operator_id: int,
@@ -226,8 +162,8 @@ async def get_operator_history(
 
 @router.get(
     "/target/{target_type}/{target_id}",
-    summary="获取目标对象历史",
-    description="获取指定目标对象的审计历史",
+    summary="Get Target History",
+    description="Get audit history for a specific target object",
 )
 async def get_target_history(
     target_type: str,
@@ -249,8 +185,8 @@ async def get_target_history(
 
 @router.get(
     "/{log_id}",
-    summary="获取审计日志详情",
-    description="获取单条审计日志详情",
+    summary="Get Audit Log Detail",
+    description="Get a single audit log entry detail",
 )
 async def get_audit_log(
     log_id: int,

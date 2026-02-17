@@ -16,17 +16,19 @@ import type {
 } from "@/types/contract";
 // API.ResponseData 类型已在 types/api.d.ts 中全局声明
 
-// 合约地址响应
+// 单个合约信息（来自后端 contract_deployment 表）
+export interface ContractAddressItem {
+  name: string;
+  address: string;
+  symbol: string | null;
+  scope: string | null;
+  project_name: string;
+}
+
+// 合约地址响应 - 按 contract_type 分组
 export interface ContractAddresses {
-  mock_usdt: string | null;
-  mock_usdc: string | null;
-  kyc_manager: string | null;
-  rwa_token: string | null;
-  platform_token: string | null;
-  subscription: string | null;
-  staking: string | null;
-  liquidity_mining: string | null;
   network: string;
+  contracts: Record<string, ContractAddressItem[]>;
 }
 
 // 认购合约参数
@@ -95,18 +97,19 @@ export const contractService = {
 };
 
 // Subscription 合约 ABI (关键函数 - 活期模式)
+// 注意: Vyper 合约使用 snake_case 命名，与 Solidity 的 camelCase 不同
 export const SUBSCRIPTION_ABI = [
-  // 读取函数
-  "function minInvestment() view returns (uint256)",
-  "function maxInvestment() view returns (uint256)",
-  "function requireAccredited() view returns (bool)",
+  // 读取函数 (Vyper snake_case)
+  "function min_investment() view returns (uint256)",
+  "function max_investment() view returns (uint256)",
+  "function require_accredited() view returns (bool)",
   "function paused() view returns (bool)",
-  "function lockPeriodAPY(uint256 lockPeriod) view returns (uint256)",
+  "function lock_period_apy(uint256 period) view returns (uint256)",
   "function subscriptionCount(address user) view returns (uint256)",
-  "function getSubscription(address user, uint256 subscriptionId) view returns ((uint256 principal, uint256 lockPeriod, uint256 subscribeTime, uint256 redeemTime, uint256 apy, bool redeemed))",
-  "function calculateInterest(uint256 principal, uint256 lockPeriod, uint256 apy) view returns (uint256)",
-  "function getPendingReward(address user, uint256 subscriptionId) view returns (uint256)",
-  "function getLockPeriods() view returns (uint256[4])",
+  "function get_subscription(address user, uint256 subscriptionId) view returns ((uint256 principal, uint256 lockPeriod, uint256 subscribeTime, uint256 redeemTime, uint256 apy, bool redeemed))",
+  "function calculate_interest(uint256 principal, uint256 lockPeriod, uint256 apy) view returns (uint256)",
+  "function get_pending_reward(address user, uint256 subscriptionId) view returns (uint256)",
+  "function get_lock_periods() view returns (uint256[4])",
 
   // 写入函数 (活期模式: lockPeriod 参数可选，默认0)
   "function subscribe(uint256 amount)",

@@ -10,8 +10,9 @@ import { PUBLIC_PATHS, ADMIN_PATHS } from '@/constants/api-paths'
 
 export type AssetStatus = 'active' | 'paused' | 'sold_out' | 'closed'
 export type AssetType = 'real_estate' | 'bond' | 'commodity' | 'equity' | 'other'
+export type FrameStyle = 'green' | 'blue' | 'gold' | 'purple' | 'gray'
 // MVP 媒体类型 - 与后端 MediaType 枚举同步
-export type MediaType = 'cover' | 'gallery' | 'valuation' | 'legal' | 'financial' | 'floor_plan' | 'video' | 'other'
+export type MediaType = 'cover' | 'gallery' | 'valuation' | 'legal' | 'financial' | 'floor_plan' | 'video' | 'other' | 'logo'
 
 export interface AssetMediaItem {
   id: number
@@ -81,6 +82,8 @@ export interface AssetListItem {
   asset_type: AssetType
   image_url: string | null
   cover_image_url: string | null  // 封面图预签名 URL（从 AssetMedia 获取）
+  logo_url: string | null  // Logo 预签名 URL（从 AssetMedia 获取）
+  frame_style: FrameStyle | null  // Logo 边框样式
   current_price: number
   apy_3m: number
   apy_6m: number
@@ -127,6 +130,8 @@ export interface AssetDetail {
   project: string | null
   bound_contracts: ContractBindingItem[] | null
   contract_address: string | null
+  logo_url: string | null  // Logo 预签名 URL（从 AssetMedia 获取）
+  frame_style: FrameStyle | null  // Logo 边框样式
   status: AssetStatus
   is_available: boolean
   environment: string
@@ -176,6 +181,7 @@ export interface AssetCreateRequest {
   apy_6m?: number
   apy_12m?: number
   contract_address?: string
+  frame_style?: FrameStyle
 }
 export interface AssetUpdateRequest {
   name?: string
@@ -192,6 +198,7 @@ export interface AssetUpdateRequest {
   apy_6m?: number
   apy_12m?: number
   contract_address?: string
+  frame_style?: FrameStyle
 }
 
 export const assetService = {
@@ -279,6 +286,18 @@ export const assetService = {
     return (
       await api.patch<API.ResponseData<AssetDetail>>(ADMIN_PATHS.ASSET_STATUS(id), { status })
     ).object_data as AssetDetail
+  },
+
+  /**
+   * 永久删除资产 (管理员危险操作)
+   * 会清理所有关联数据和 MinIO 文件
+   */
+  async deleteAsset(id: number): Promise<{ id: number; name: string; symbol: string; deleted_files: number; deleted_media: number }> {
+    return (
+      await api.delete<API.ResponseData<{ id: number; name: string; symbol: string; deleted_files: number; deleted_media: number }>>(
+        ADMIN_PATHS.ASSET_DETAIL(id)
+      )
+    ).object_data as { id: number; name: string; symbol: string; deleted_files: number; deleted_media: number }
   },
 
   async updateAssetPrice(id: number, price: number, source = 'manual'): Promise<AssetDetail> {
@@ -462,6 +481,7 @@ export const MEDIA_TYPE_NAMES: Record<MediaType, string> = {
   floor_plan: 'Floor Plan',
   video: 'Video',
   other: 'Other Documents',
+  logo: 'Logo',
 }
 export const PROPERTY_TYPE_NAMES: Record<string, string> = {
   single_family: 'Single Family',

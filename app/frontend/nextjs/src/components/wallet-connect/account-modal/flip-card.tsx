@@ -261,13 +261,20 @@ export function FlipCardModal({
                       : `⚠ ${t('wallet.accountModal.notAuthenticated')}`}
                   </span>
                   {isKycVerified && (
-                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-primary/15 text-primary">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onOpenChange(false)
+                        router.push('/kyc')
+                      }}
+                      className="px-2.5 py-1 rounded-full text-xs font-medium bg-primary/15 text-primary hover:bg-primary/25 transition-colors cursor-pointer"
+                    >
                       ✓ KYC
-                    </span>
+                    </button>
                   )}
                 </div>
 
-                {/* KYC 引导 */}
+                {/* KYC 引导 - 未验证时显示 */}
                 {needsKyc && (
                   <button
                     onClick={(e) => {
@@ -284,6 +291,26 @@ export function FlipCardModal({
                   >
                     <span>{t('wallet.accountModal.completeKycToInvest')}</span>
                     <span>→</span>
+                  </button>
+                )}
+
+                {/* 查看 KYC 状态 - 已验证时显示 */}
+                {isKycVerified && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onOpenChange(false)
+                      router.push('/kyc')
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl mb-2",
+                      "bg-primary/10 border border-primary/20",
+                      "text-primary text-sm",
+                      "hover:bg-primary/15 transition-colors"
+                    )}
+                  >
+                    <span>{t('wallet.accountModal.viewKycStatus', 'View KYC Status')}</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
                   </button>
                 )}
 

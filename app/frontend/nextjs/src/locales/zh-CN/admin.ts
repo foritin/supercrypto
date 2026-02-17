@@ -754,6 +754,16 @@ const admin = {
       confirmResume: "确定要恢复此资产吗？",
       pauseDescription: "暂停 \"{{name}}\" 后，用户将无法看到该资产。您可以稍后恢复。",
       resumeDescription: "恢复 \"{{name}}\" 后，用户将可以再次看到该资产。",
+      delete: "删除",
+      deleteConfirmTitle: "确认删除资产",
+      deleteConfirmDescription: "您即将永久删除资产 \"{{name}}\"（{{symbol}}）。此操作不可撤消。",
+      deleteWarning: "⚠️ 以下数据将被永久删除：",
+      deleteWarningMedia: "所有关联的媒体文件（MinIO 存储）",
+      deleteWarningHistory: "所有价格历史记录",
+      deleteWarningBindings: "所有合约绑定关系",
+      deleteTypeConfirm: "请输入 \"{{name}}\" 以确认删除",
+      deleteConfirmButton: "永久删除",
+      deleteSuccess: "已成功删除资产 \"{{name}}\"，清理了 {{files}} 个文件和 {{media}} 条媒体记录",
       createSuccess: "资产创建成功",
       createAndBindSuccess: "资产创建成功，已绑定 {{count}} 个项目的合约",
       updateSuccess: "资产更新成功",
@@ -836,6 +846,18 @@ const admin = {
         uploadCover: "上传封面",
         addImages: "添加图片",
         fileSizeError: "文件大小不能超过 {{size}}MB",
+        // 边框样式
+        frameStyle: {
+          label: "Logo 边框样式",
+          hint: "选择 Logo 装饰框的颜色主题",
+          green: "翡翠绿",
+          blue: "宝石蓝",
+          gold: "黄金",
+          purple: "紫晶",
+          gray: "银灰",
+          saved: "边框样式已保存",
+          saveFailed: "边框样式保存失败",
+        },
       },
       // 分区标题
       section: {
@@ -1235,6 +1257,7 @@ const admin = {
         valuation: "估值报告",
         legal: "法律文件",
         financial: "财务文件",
+        logo: "Logo",
       },
       // 上传区域
       upload: {

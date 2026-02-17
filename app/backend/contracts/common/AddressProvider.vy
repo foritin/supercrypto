@@ -7,16 +7,31 @@
      更新公共合约只需 1 次交易，所有依赖合约自动生效
 """
 
-# ============ 常量定义 - 公共合约 Key ============
+# ============ 事件定义 ============
 
+event AddressUpdated:
+    id: indexed(bytes32)
+    old_address: address
+    new_address: address
+
+event OwnershipTransferStarted:
+    previous_owner: indexed(address)
+    new_owner: indexed(address)
+
+event OwnershipTransferred:
+    previous_owner: indexed(address)
+    new_owner: indexed(address)
+
+# ============ 常量定义 ============
+
+# 公共合约 Key
 KYC_MANAGER: constant(bytes32) = keccak256("KYC_MANAGER")
 USDT: constant(bytes32) = keccak256("USDT")
 USDC: constant(bytes32) = keccak256("USDC")
 TIMELOCK: constant(bytes32) = keccak256("TIMELOCK")
 MULTI_SIG: constant(bytes32) = keccak256("MULTI_SIG")
 
-# ============ 常量定义 - Vanke 项目合约 Key ============
-
+# Vanke 项目合约 Key
 VANKE_RWA_TOKEN: constant(bytes32) = keccak256("VANKE_RWA_TOKEN")
 VANKE_PLATFORM_TOKEN: constant(bytes32) = keccak256("VANKE_PLATFORM_TOKEN")
 VANKE_SUBSCRIPTION: constant(bytes32) = keccak256("VANKE_SUBSCRIPTION")
@@ -33,21 +48,6 @@ addresses: HashMap[bytes32, address]  # 类型标识 => 合约地址
 registered_types: DynArray[bytes32, 50]
 type_registered: HashMap[bytes32, bool]
 
-# ============ 事件 ============
-
-event AddressUpdated:
-    id: indexed(bytes32)
-    old_address: address
-    new_address: address
-
-event OwnershipTransferStarted:
-    previous_owner: indexed(address)
-    new_owner: indexed(address)
-
-event OwnershipTransferred:
-    previous_owner: indexed(address)
-    new_owner: indexed(address)
-
 # ============ 构造函数 ============
 
 @deploy
@@ -58,10 +58,50 @@ def __init__():
     """
     self.owner = msg.sender
 
-# ============ 核心函数 ============
+# ============ Owner 函数 ============
 
 @external
-def set_address(_id: bytes32, _addr: address):
+def owner_transfer_ownership(_new_owner: address):
+    """
+    @notice 开始所有权转移（两步转移）
+    @param _new_owner 新 owner 地址
+    @dev 需要新 owner 调用 owner_accept_ownership 确认
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _new_owner != empty(address), "Invalid address"
+    
+    self.pending_owner = _new_owner
+    log OwnershipTransferStarted(self.owner, _new_owner)
+
+@external
+def owner_accept_ownership():
+    """
+    @notice 接受所有权转移
+    @dev 仅 pending_owner 可调用
+    """
+    assert msg.sender == self.pending_owner, "Only pending owner"
+    
+    old_owner: address = self.owner
+    self.owner = self.pending_owner
+    self.pending_owner = empty(address)
+    
+    log OwnershipTransferred(old_owner, self.owner)
+
+@external
+def owner_renounce_ownership():
+    """
+    @notice 放弃所有权
+    @dev 危险操作，将使合约不可更新
+    """
+    assert msg.sender == self.owner, "Only owner"
+    
+    log OwnershipTransferred(self.owner, empty(address))
+    self.owner = empty(address)
+
+# ============ Admin 函数 ============
+
+@external
+def admin_set_address(_id: bytes32, _addr: address):
     """
     @notice 设置或更新合约地址
     @param _id 合约类型标识 (KYC_MANAGER, USDT, etc.)
@@ -81,7 +121,7 @@ def set_address(_id: bytes32, _addr: address):
     log AddressUpdated(_id, old_addr, _addr)
 
 @external
-def batch_set_addresses(_ids: DynArray[bytes32, 20], _addrs: DynArray[address, 20]):
+def admin_batch_set_addresses(_ids: DynArray[bytes32, 20], _addrs: DynArray[address, 20]):
     """
     @notice 批量设置合约地址
     @param _ids 合约类型标识数组
@@ -146,8 +186,6 @@ def get_multi_sig() -> address:
     """@notice 获取多签钱包地址"""
     return self.addresses[MULTI_SIG]
 
-# ============ Vanke 项目合约 Getter ============
-
 @view
 @external
 def get_vanke_rwa_token() -> address:
@@ -178,8 +216,6 @@ def get_vanke_liquidity_mining() -> address:
     """@notice 获取 Vanke LiquidityMining 地址"""
     return self.addresses[VANKE_LIQUIDITY_MINING]
 
-# ============ 注册信息查询 ============
-
 @view
 @external
 def get_registered_types() -> DynArray[bytes32, 50]:
@@ -200,43 +236,3 @@ def get_all_addresses() -> (DynArray[bytes32, 50], DynArray[address, 50]):
     for t: bytes32 in self.registered_types:
         addrs.append(self.addresses[t])
     return (self.registered_types, addrs)
-
-# ============ 所有权管理 ============
-
-@external
-def transfer_ownership(_new_owner: address):
-    """
-    @notice 开始所有权转移（两步转移）
-    @param _new_owner 新 owner 地址
-    @dev 需要新 owner 调用 accept_ownership 确认
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_owner != empty(address), "Invalid address"
-    
-    self.pending_owner = _new_owner
-    log OwnershipTransferStarted(self.owner, _new_owner)
-
-@external
-def accept_ownership():
-    """
-    @notice 接受所有权转移
-    @dev 仅 pending_owner 可调用
-    """
-    assert msg.sender == self.pending_owner, "Only pending owner"
-    
-    old_owner: address = self.owner
-    self.owner = self.pending_owner
-    self.pending_owner = empty(address)
-    
-    log OwnershipTransferred(old_owner, self.owner)
-
-@external
-def renounce_ownership():
-    """
-    @notice 放弃所有权
-    @dev 危险操作，将使合约不可更新
-    """
-    assert msg.sender == self.owner, "Only owner"
-    
-    log OwnershipTransferred(self.owner, empty(address))
-    self.owner = empty(address)

@@ -12,12 +12,12 @@ from datetime import date, timedelta
 from typing import Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-from hypothesis import given, strategies as st, settings, HealthCheck, assume
+from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import strategies as st
 
-from src.services.kyc.service import KycService
-from src.services.kyc.schemas import KycApplyRequest, KycDocumentInfo, KycFullResponse
-from src.shared.schemas.enums import IdType, KycStatus, OnChainSyncStatus
+from src.schemas.enums import IdType, KycStatus, OnChainSyncStatus
+from src.schemas.kyc import KycApplyRequest, KycDocumentInfo
+from src.services.kyc_service import KycService
 
 
 def run_async(coro):
@@ -34,47 +34,44 @@ def run_async(coro):
 # 有效邮箱生成器 - 使用符合 schema 验证的正则表达式
 # Schema 使用: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
 valid_emails = st.from_regex(
-    r'[a-zA-Z0-9][a-zA-Z0-9._%+-]{0,20}@[a-zA-Z0-9][a-zA-Z0-9.-]{0,20}\.[a-zA-Z]{2,4}',
-    fullmatch=True
+    r"[a-zA-Z0-9][a-zA-Z0-9._%+-]{0,20}@[a-zA-Z0-9][a-zA-Z0-9.-]{0,20}\.[a-zA-Z]{2,4}",
+    fullmatch=True,
 )
 
 # E.164 电话号码生成器
 # 格式: +[1-9][0-9]{1,14}
-valid_phones = st.from_regex(r'\+[1-9][0-9]{6,14}', fullmatch=True)
+valid_phones = st.from_regex(r"\+[1-9][0-9]{6,14}", fullmatch=True)
 
 # 地址字段生成器 - 使用字母、数字、空格和常见标点
 address_line = st.text(
     min_size=1,
     max_size=100,
     alphabet=st.characters(
-        whitelist_categories=('L', 'N', 'Zs'),
-        whitelist_characters='-,.#/'
-    )
+        whitelist_categories=("L", "N", "Zs"), whitelist_characters="-,.#/"
+    ),
 ).filter(lambda x: len(x.strip()) > 0)
 
 # 城市名称生成器
 city_name = st.text(
-    min_size=1,
-    max_size=50,
-    alphabet=st.characters(whitelist_categories=('L', 'Zs'))
+    min_size=1, max_size=50, alphabet=st.characters(whitelist_categories=("L", "Zs"))
 ).filter(lambda x: len(x.strip()) > 0)
 
 # 州/省名称生成器
 state_name = st.text(
-    min_size=1,
-    max_size=50,
-    alphabet=st.characters(whitelist_categories=('L', 'Zs'))
+    min_size=1, max_size=50, alphabet=st.characters(whitelist_categories=("L", "Zs"))
 ).filter(lambda x: len(x.strip()) > 0)
 
 # 邮政编码生成器
 postal_code = st.text(
     min_size=3,
     max_size=10,
-    alphabet=st.characters(whitelist_categories=('L', 'N'), whitelist_characters='-')
+    alphabet=st.characters(whitelist_categories=("L", "N"), whitelist_characters="-"),
 ).filter(lambda x: len(x.strip()) > 0)
 
 # ISO 3166-1 alpha-2 国家代码
-country_codes = st.sampled_from(['US', 'CN', 'GB', 'JP', 'DE', 'FR', 'CA', 'AU', 'KR', 'SG'])
+country_codes = st.sampled_from(
+    ["US", "CN", "GB", "JP", "DE", "FR", "CA", "AU", "KR", "SG"]
+)
 
 # 钱包地址生成器 (以太坊地址格式)
 wallet_address_strategy = st.text(
@@ -85,10 +82,9 @@ wallet_address_strategy = st.text(
 
 # 全名生成器
 full_name_strategy = st.text(
-    min_size=2,
-    max_size=50,
-    alphabet=st.characters(whitelist_categories=('L', 'Zs'))
+    min_size=2, max_size=50, alphabet=st.characters(whitelist_categories=("L", "Zs"))
 ).filter(lambda x: len(x.strip()) >= 2)
+
 
 # 出生日期生成器 (18-100 岁)
 def generate_valid_dob():
@@ -98,21 +94,22 @@ def generate_valid_dob():
     max_age = 100
     return st.dates(
         min_value=date(today.year - max_age, 1, 1),
-        max_value=date(today.year - min_age, today.month, today.day)
+        max_value=date(today.year - min_age, today.month, today.day),
     )
+
 
 # 证件号码生成器
 id_number_strategy = st.text(
-    min_size=6,
-    max_size=20,
-    alphabet=st.characters(whitelist_categories=('Lu', 'N'))
+    min_size=6, max_size=20, alphabet=st.characters(whitelist_categories=("Lu", "N"))
 ).filter(lambda x: len(x) >= 6)
 
 # MinIO 路径生成器
 minio_path_strategy = st.text(
     min_size=10,
     max_size=100,
-    alphabet=st.characters(whitelist_categories=('Ll', 'N'), whitelist_characters='/_-.')
+    alphabet=st.characters(
+        whitelist_categories=("Ll", "N"), whitelist_characters="/_-."
+    ),
 ).map(lambda x: f"kyc/{x}.jpg")
 
 
@@ -152,7 +149,7 @@ def create_mock_kyc_record(
     kyc.updated_at = None
     kyc.on_chain_sync_status = OnChainSyncStatus.PENDING
     kyc.on_chain_tx_hash = None
-    
+
     # 新增字段
     kyc.email = email
     kyc.phone = phone
@@ -164,7 +161,7 @@ def create_mock_kyc_record(
     kyc.residence_country = residence_country
     kyc.liveness_verified = liveness_verified
     kyc.face_image_url = face_image_url
-    
+
     kyc.save = AsyncMock()
     return kyc
 
@@ -200,7 +197,10 @@ class TestProperty1KycDataRoundTripConsistency:
     @settings(
         max_examples=100,
         deadline=None,
-        suppress_health_check=[HealthCheck.function_scoped_fixture, HealthCheck.too_slow],
+        suppress_health_check=[
+            HealthCheck.function_scoped_fixture,
+            HealthCheck.too_slow,
+        ],
     )
     def test_property_kyc_data_roundtrip_consistency(
         self,
@@ -239,12 +239,12 @@ class TestProperty1KycDataRoundTripConsistency:
         state = state.strip() if state else None
         postal_code_val = postal_code_val.strip() if postal_code_val else None
         full_name = full_name.strip()
-        
+
         # 确保 full_name 有效
         assume(len(full_name) >= 2)
-        
+
         # 创建 KycService 实例
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             kyc_service = KycService()
 
@@ -302,9 +302,12 @@ class TestProperty1KycDataRoundTripConsistency:
             )
             return created_kyc
 
-        with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc, \
-             patch("src.services.kyc.service.AccountKycDocument") as MockAccountKycDocument:
-
+        with (
+            patch("src.services.kyc_service.AccountKyc") as MockAccountKyc,
+            patch(
+                "src.services.kyc_service.AccountKycDocument"
+            ) as MockAccountKycDocument,
+        ):
             # 模拟不存在现有 KYC 记录
             MockAccountKyc.filter.return_value.first = AsyncMock(return_value=None)
             MockAccountKyc.create = mock_create
@@ -318,7 +321,7 @@ class TestProperty1KycDataRoundTripConsistency:
 
         # 验证属性：返回的数据应该与提交的数据一致
         assert response is not None, "应该返回 KycFullResponse"
-        
+
         # 验证联系信息字段 (Requirements 1.3)
         # 注意：email 会被转换为小写
         expected_email = email.lower() if email else None
@@ -346,7 +349,9 @@ class TestProperty1KycDataRoundTripConsistency:
             f"postal_code 不一致: 提交 '{postal_code_val}', 返回 '{response.postal_code}'"
         )
         # 注意：residence_country 会被转换为大写
-        expected_residence_country = residence_country.upper() if residence_country else None
+        expected_residence_country = (
+            residence_country.upper() if residence_country else None
+        )
         assert response.residence_country == expected_residence_country, (
             f"residence_country 不一致: 提交 '{residence_country}' (期望 '{expected_residence_country}'), 返回 '{response.residence_country}'"
         )
@@ -379,7 +384,10 @@ class TestProperty1KycDataRoundTripConsistency:
     @settings(
         max_examples=50,
         deadline=None,
-        suppress_health_check=[HealthCheck.function_scoped_fixture, HealthCheck.too_slow],
+        suppress_health_check=[
+            HealthCheck.function_scoped_fixture,
+            HealthCheck.too_slow,
+        ],
     )
     def test_property_kyc_data_roundtrip_all_fields_populated(
         self,
@@ -416,7 +424,7 @@ class TestProperty1KycDataRoundTripConsistency:
         state = state.strip()
         postal_code_val = postal_code_val.strip()
         full_name = full_name.strip()
-        
+
         # 确保所有字段有效
         assume(len(email) > 0)
         assume(len(phone) > 0)
@@ -425,9 +433,9 @@ class TestProperty1KycDataRoundTripConsistency:
         assume(len(state) > 0)
         assume(len(postal_code_val) > 0)
         assume(len(full_name) >= 2)
-        
+
         # 创建 KycService 实例
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             kyc_service = KycService()
 
@@ -485,9 +493,12 @@ class TestProperty1KycDataRoundTripConsistency:
             )
             return created_kyc
 
-        with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc, \
-             patch("src.services.kyc.service.AccountKycDocument") as MockAccountKycDocument:
-
+        with (
+            patch("src.services.kyc_service.AccountKyc") as MockAccountKyc,
+            patch(
+                "src.services.kyc_service.AccountKycDocument"
+            ) as MockAccountKycDocument,
+        ):
             MockAccountKyc.filter.return_value.first = AsyncMock(return_value=None)
             MockAccountKyc.create = mock_create
 
@@ -498,21 +509,25 @@ class TestProperty1KycDataRoundTripConsistency:
 
         # 验证所有字段都正确返回
         assert response is not None, "应该返回 KycFullResponse"
-        
+
         # 联系信息
-        assert response.email == email.lower(), f"email 不一致"
-        assert response.phone == phone, f"phone 不一致"
-        
+        assert response.email == email.lower(), "email 不一致"
+        assert response.phone == phone, "phone 不一致"
+
         # 地址信息
-        assert response.address_line1 == address_line1, f"address_line1 不一致"
-        assert response.city == city, f"city 不一致"
-        assert response.state == state, f"state 不一致"
-        assert response.postal_code == postal_code_val, f"postal_code 不一致"
-        assert response.residence_country == residence_country.upper(), f"residence_country 不一致"
-        
+        assert response.address_line1 == address_line1, "address_line1 不一致"
+        assert response.city == city, "city 不一致"
+        assert response.state == state, "state 不一致"
+        assert response.postal_code == postal_code_val, "postal_code 不一致"
+        assert response.residence_country == residence_country.upper(), (
+            "residence_country 不一致"
+        )
+
         # 活体检测
-        assert response.liveness_verified == liveness_verified, f"liveness_verified 不一致"
-        assert response.has_face_image == True, f"has_face_image 应该为 True"
+        assert response.liveness_verified == liveness_verified, (
+            "liveness_verified 不一致"
+        )
+        assert response.has_face_image == True, "has_face_image 应该为 True"
 
     @given(
         wallet_address=wallet_address_strategy,
@@ -522,7 +537,10 @@ class TestProperty1KycDataRoundTripConsistency:
     @settings(
         max_examples=30,
         deadline=None,
-        suppress_health_check=[HealthCheck.function_scoped_fixture, HealthCheck.too_slow],
+        suppress_health_check=[
+            HealthCheck.function_scoped_fixture,
+            HealthCheck.too_slow,
+        ],
     )
     def test_property_kyc_data_roundtrip_optional_fields_none(
         self,
@@ -543,9 +561,9 @@ class TestProperty1KycDataRoundTripConsistency:
         """
         full_name = full_name.strip()
         assume(len(full_name) >= 2)
-        
+
         # 创建 KycService 实例
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             kyc_service = KycService()
 
@@ -603,9 +621,12 @@ class TestProperty1KycDataRoundTripConsistency:
             )
             return created_kyc
 
-        with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc, \
-             patch("src.services.kyc.service.AccountKycDocument") as MockAccountKycDocument:
-
+        with (
+            patch("src.services.kyc_service.AccountKyc") as MockAccountKyc,
+            patch(
+                "src.services.kyc_service.AccountKycDocument"
+            ) as MockAccountKycDocument,
+        ):
             MockAccountKyc.filter.return_value.first = AsyncMock(return_value=None)
             MockAccountKyc.create = mock_create
 
@@ -616,19 +637,19 @@ class TestProperty1KycDataRoundTripConsistency:
 
         # 验证所有可选字段返回 None 或默认值
         assert response is not None, "应该返回 KycFullResponse"
-        
+
         # 联系信息应该为 None
         assert response.email is None, f"email 应该为 None, 实际为 '{response.email}'"
         assert response.phone is None, f"phone 应该为 None, 实际为 '{response.phone}'"
-        
+
         # 地址信息应该为 None
-        assert response.address_line1 is None, f"address_line1 应该为 None"
-        assert response.address_line2 is None, f"address_line2 应该为 None"
-        assert response.city is None, f"city 应该为 None"
-        assert response.state is None, f"state 应该为 None"
-        assert response.postal_code is None, f"postal_code 应该为 None"
-        assert response.residence_country is None, f"residence_country 应该为 None"
-        
+        assert response.address_line1 is None, "address_line1 应该为 None"
+        assert response.address_line2 is None, "address_line2 应该为 None"
+        assert response.city is None, "city 应该为 None"
+        assert response.state is None, "state 应该为 None"
+        assert response.postal_code is None, "postal_code 应该为 None"
+        assert response.residence_country is None, "residence_country 应该为 None"
+
         # 活体检测默认值
-        assert response.liveness_verified == False, f"liveness_verified 应该为 False"
-        assert response.has_face_image == False, f"has_face_image 应该为 False"
+        assert response.liveness_verified == False, "liveness_verified 应该为 False"
+        assert response.has_face_image == False, "has_face_image 应该为 False"

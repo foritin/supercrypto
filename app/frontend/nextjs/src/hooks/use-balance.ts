@@ -64,12 +64,15 @@ export function useTokenBalance(tokenAddress: `0x${string}` | undefined) {
     },
   });
 
+  // decimals 和 symbol 是 ERC20 常量，只需读取一次，永不过期
   const { data: decimals } = useReadContract({
     address: tokenAddress,
     abi: erc20Abi,
     functionName: 'decimals',
     query: {
       enabled: !!tokenAddress,
+      staleTime: Infinity,
+      gcTime: Infinity,
     },
   });
 
@@ -79,6 +82,8 @@ export function useTokenBalance(tokenAddress: `0x${string}` | undefined) {
     functionName: 'symbol',
     query: {
       enabled: !!tokenAddress,
+      staleTime: Infinity,
+      gcTime: Infinity,
     },
   });
 

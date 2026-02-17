@@ -11,8 +11,10 @@ import asyncio
 from datetime import datetime
 
 from falib.utils.log import get_logger
-from tortoise import Tortoise
 
+from src.common.adapters import get_async_web3_adapter
+from src.common.utils import is_db_available
+from src.infra.lock_service import DistributedLockService, LockAcquireError
 from src.models.contracts.contract_config import ContractConfig
 from src.models.contracts.contract_deployment import ContractDeployment
 from src.models.contracts.provider_registry import (
@@ -20,25 +22,10 @@ from src.models.contracts.provider_registry import (
     ProviderRegistry,
     compute_key_hash,
 )
-from src.shared.common.adapters import get_async_minio_adapter, get_async_web3_adapter
-from src.shared.schemas.enums import ChainID, ContractStatus
-from src.shared.services.lock_service import DistributedLockService, LockAcquireError
+from src.schemas.enums import ChainID, ContractStatus
+from src.services.storage_service import StorageService
 
 schedule_logger = get_logger("scheduler.contract_sync")
-
-
-def _is_db_available() -> bool:
-    """检查 Tortoise ORM 连接池是否可用 (未关闭)"""
-    try:
-        conn = Tortoise.get_connection("default")
-        pool = getattr(conn, "_pool", None)
-        if pool is None:
-            return False
-        if getattr(pool, "_closing", False) or getattr(pool, "_closed", False):
-            return False
-        return True
-    except Exception:
-        return False
 
 
 async def get_network_chain() -> tuple[str, int]:
@@ -49,7 +36,9 @@ async def get_network_chain() -> tuple[str, int]:
         return str(network), chain_id
 
 
-async def get_provider_contract(network: str, chain_id: int) -> ContractDeployment | None:
+async def get_provider_contract(
+    network: str, chain_id: int
+) -> ContractDeployment | None:
     """
     获取 AddressProvider 合约实例
 
@@ -91,13 +80,15 @@ async def sync_provider_registry_from_chain(
     configs = await ContractConfig.filter(provider_key__not_isnull=True)
 
     if not configs:
-        schedule_logger.warning("No contracts with provider_key found in ContractConfig")
+        schedule_logger.warning(
+            "No contracts with provider_key found in ContractConfig"
+        )
         return results
 
     async with get_async_web3_adapter() as adapter:
         # 注册合约到 adapter
         adapter.register_contract(provider_address, provider_abi)
-        
+
         for config in configs:
             key = config.provider_key
             key_hash = compute_key_hash(key)
@@ -208,15 +199,19 @@ async def async_sync_provider_registry():
     使用分布式锁防止并发执行。
     """
     # 检查连接池是否可用 (热重载/关闭期间跳过)
-    if not _is_db_available():
-        schedule_logger.debug("DB pool not available, skipping async_sync_provider_registry")
+    if not is_db_available():
+        schedule_logger.debug(
+            "DB pool not available, skipping async_sync_provider_registry"
+        )
         return
 
     # 获取分布式锁，防止并发执行
     try:
         lock_service = await DistributedLockService.get_instance()
     except Exception as e:
-        schedule_logger.warning(f"Failed to get lock service, executing without lock: {e}")
+        schedule_logger.warning(
+            f"Failed to get lock service, executing without lock: {e}"
+        )
         return await _do_sync_provider_registry()
 
     try:
@@ -246,8 +241,8 @@ async def _do_sync_provider_registry():
     # 加载 ABI (优先从 MinIO，失败则从本地)
     provider_abi = None
     try:
-        async with get_async_minio_adapter() as minio:
-            provider_abi = await minio.get_json(provider_contract.abi_path)
+        storage = StorageService()
+        provider_abi = await storage.get_json(provider_contract.abi_path)
     except Exception as e:
         schedule_logger.warning(f"Failed to load ABI from MinIO: {e}")
 
@@ -256,13 +251,20 @@ async def _do_sync_provider_registry():
         import json
         from pathlib import Path
 
-        local_abi_path = Path(__file__).parent.parent.parent / ".build" / "abi" / "AddressProvider.json"
+        local_abi_path = (
+            Path(__file__).parent.parent.parent
+            / ".build"
+            / "abi"
+            / "AddressProvider.json"
+        )
         if local_abi_path.exists():
             schedule_logger.info(f"Loading ABI from local: {local_abi_path}")
             with open(local_abi_path) as f:
                 provider_abi = json.load(f)
         else:
-            schedule_logger.error(f"ABI not found: MinIO path={provider_contract.abi_path}, local={local_abi_path}")
+            schedule_logger.error(
+                f"ABI not found: MinIO path={provider_contract.abi_path}, local={local_abi_path}"
+            )
             return
 
     # 同步注册状态

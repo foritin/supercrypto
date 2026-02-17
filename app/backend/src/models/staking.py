@@ -8,18 +8,7 @@ from decimal import Decimal
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-from src.shared.schemas.enums import StakingPeriod, StakingStatus
-
-# 质押周期对应的奖励倍数
-STAKING_MULTIPLIERS = {
-    StakingPeriod.DAYS_15: Decimal("1.0"),
-    StakingPeriod.DAYS_30: Decimal("2.5"),
-    StakingPeriod.DAYS_45: Decimal("4.5"),
-    StakingPeriod.DAYS_60: Decimal("7.0"),
-}
-
-# 基础日产出率 (每天每个 RWA Token 产出的 PLT)
-BASE_DAILY_RATE = Decimal("0.01")  # 可配置
+from src.schemas.enums import StakingStatus
 
 
 class StakingRecord(AbstractModel, TimestampMixin):
@@ -114,36 +103,6 @@ class StakingRecord(AbstractModel, TimestampMixin):
     def pending_rewards(self) -> Decimal:
         """待领取的奖励"""
         return self.expected_rewards - self.claimed_rewards
-
-    @property
-    def current_rewards(self) -> Decimal:
-        """
-        当前累积的奖励（基于已质押时间）
-
-        公式: 基础产出 × 金额 × 已质押天数 × 倍数
-        """
-        if self.status == StakingStatus.UNSTAKED:
-            return self.expected_rewards
-
-        now = datetime.now(timezone.utc)
-        if now < self.start_date:
-            return Decimal(0)
-
-        # 计算已质押天数
-        staked_days = (min(now, self.end_date) - self.start_date).days
-        if staked_days <= 0:
-            return Decimal(0)
-
-        return BASE_DAILY_RATE * self.amount * staked_days * self.multiplier
-
-    @staticmethod
-    def calculate_rewards(amount: Decimal, period: int, multiplier: Decimal) -> Decimal:
-        """
-        计算预期奖励
-
-        公式: 基础产出 × 金额 × 天数 × 倍数
-        """
-        return BASE_DAILY_RATE * amount * period * multiplier
 
     @staticmethod
     def calculate_end_date(start_date: datetime, period: int) -> datetime:

@@ -8,16 +8,14 @@ Contracts Models Package
 - ProviderRegistry: Provider 注册状态
 """
 
-from src.shared.schemas.enums import ContractStatus, NetWork, Network
 from src.models.contracts.contract_config import ContractConfig
 from src.models.contracts.contract_deployment import ContractDeployment
 from src.models.contracts.provider_registry import (
     ZERO_ADDRESS,
     ProviderRegistry,
-    check_project_ready,
     compute_key_hash,
-    sync_provider_registry,
 )
+from src.schemas.enums import ContractStatus, NetWork, Network
 
 __all__ = [
     # 模型
@@ -33,6 +31,4 @@ __all__ = [
     "ZERO_ADDRESS",
     # Functions
     "compute_key_hash",
-    "sync_provider_registry",
-    "check_project_ready",
 ]

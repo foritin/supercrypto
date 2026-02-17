@@ -10,8 +10,8 @@ Requirements: 2.1
 from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends
 
-from src.services.project_registry import get_config_loader
-from src.shared.security import require_admin
+from src.common.dependencies import get_project_registry_service
+from src.security import require_admin
 
 router = APIRouter()
 
@@ -21,8 +21,8 @@ router = APIRouter()
 
 @router.get(
     "/registry/projects",
-    summary="获取可用项目列表",
-    description="获取配置文件中定义的所有项目",
+    summary="List Available Projects",
+    description="Get all projects defined in the configuration file",
 )
 async def list_registry_projects(
     _admin=Depends(require_admin),
@@ -32,6 +32,6 @@ async def list_registry_projects(
 
     从 config.yaml 中读取 project_registry.projects 配置
     """
-    loader = get_config_loader()
+    loader = get_project_registry_service()
     projects = loader.list_projects()
     return create_success_response(list_data=projects)

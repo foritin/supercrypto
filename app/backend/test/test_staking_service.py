@@ -15,24 +15,16 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
-from tortoise import Tortoise
 
+from src.common.exceptions import BusinessException
+from src.constants.definitions.staking import BASE_DAILY_RATE, STAKING_MULTIPLIERS
 from src.models.asset import Asset
 from src.models.staking import (
-    BASE_DAILY_RATE,
-    STAKING_MULTIPLIERS,
     RewardClaim,
-    StakingLimit,
     StakingRecord,
 )
 from src.models.subscription import Subscription
-from src.services.staking.service import (
-    DEFAULT_DAILY_LIMIT,
-    MIN_STAKE_AMOUNT,
-    StakingService,
-)
-from src.shared.common.exceptions import BusinessException
-from src.shared.schemas.enums import (
+from src.schemas.enums import (
     AssetStatus,
     AssetType,
     StakingPeriod,
@@ -40,7 +32,11 @@ from src.shared.schemas.enums import (
     SubscriptionStatus,
     TokenType,
 )
-
+from src.services.staking_service import (
+    DEFAULT_DAILY_LIMIT,
+    MIN_STAKE_AMOUNT,
+    StakingService,
+)
 
 # ============================================================
 # 异步运行器 (与 conftest.py 保持一致)
@@ -150,7 +146,7 @@ class TestCreateStakingSuccess:
             )
 
             # 创建质押限额 (服务内部会自动创建，但需要确保环境一致)
-            from src.services.staking.schemas import StakingCreateRequest
+            from src.schemas.staking import StakingCreateRequest
 
             request = StakingCreateRequest(
                 subscription_id=subscription.id,
@@ -164,14 +160,21 @@ class TestCreateStakingSuccess:
             # 验证返回结果
             assert result.amount == 1000.0
             assert result.period == 15
-            assert result.multiplier == float(STAKING_MULTIPLIERS[StakingPeriod.DAYS_15])
+            assert result.multiplier == float(
+                STAKING_MULTIPLIERS[StakingPeriod.DAYS_15]
+            )
             assert result.status == StakingStatus.ACTIVE
             assert result.wallet_address == wallet.lower()
             assert result.subscription_id == subscription.id
             assert result.stake_tx_hash == "0x" + "c" * 64
 
             # 验证预期奖励计算
-            expected = BASE_DAILY_RATE * Decimal("1000") * 15 * STAKING_MULTIPLIERS[StakingPeriod.DAYS_15]
+            expected = (
+                BASE_DAILY_RATE
+                * Decimal("1000")
+                * 15
+                * STAKING_MULTIPLIERS[StakingPeriod.DAYS_15]
+            )
             assert result.expected_rewards == float(expected)
 
             # 验证数据库记录
@@ -194,7 +197,7 @@ class TestCreateStakingSuccess:
                 asset=asset, wallet_address=wallet
             )
 
-            from src.services.staking.schemas import StakingCreateRequest
+            from src.schemas.staking import StakingCreateRequest
 
             request = StakingCreateRequest(
                 subscription_id=subscription.id,
@@ -206,9 +209,16 @@ class TestCreateStakingSuccess:
             result = await service.create_staking(wallet, request)
 
             assert result.period == 30
-            assert result.multiplier == float(STAKING_MULTIPLIERS[StakingPeriod.DAYS_30])
+            assert result.multiplier == float(
+                STAKING_MULTIPLIERS[StakingPeriod.DAYS_30]
+            )
 
-            expected = BASE_DAILY_RATE * Decimal("2000") * 30 * STAKING_MULTIPLIERS[StakingPeriod.DAYS_30]
+            expected = (
+                BASE_DAILY_RATE
+                * Decimal("2000")
+                * 30
+                * STAKING_MULTIPLIERS[StakingPeriod.DAYS_30]
+            )
             assert result.expected_rewards == float(expected)
 
         run_async(_test())
@@ -225,7 +235,7 @@ class TestCreateStakingSuccess:
                 asset=asset, wallet_address=wallet
             )
 
-            from src.services.staking.schemas import StakingCreateRequest
+            from src.schemas.staking import StakingCreateRequest
 
             request = StakingCreateRequest(
                 subscription_id=subscription.id,
@@ -237,7 +247,9 @@ class TestCreateStakingSuccess:
             result = await service.create_staking(wallet, request)
 
             assert result.period == 60
-            assert result.multiplier == float(STAKING_MULTIPLIERS[StakingPeriod.DAYS_60])
+            assert result.multiplier == float(
+                STAKING_MULTIPLIERS[StakingPeriod.DAYS_60]
+            )
 
             # 60 天 7.0x 倍数
             expected = BASE_DAILY_RATE * Decimal("5000") * 60 * Decimal("7.0")
@@ -257,7 +269,7 @@ class TestCreateStakingSuccess:
                 asset=asset, wallet_address=wallet
             )
 
-            from src.services.staking.schemas import StakingCreateRequest
+            from src.schemas.staking import StakingCreateRequest
 
             request = StakingCreateRequest(
                 subscription_id=subscription.id,
@@ -271,7 +283,9 @@ class TestCreateStakingSuccess:
             # 验证限额已更新
             limit_resp = await service.get_today_limit()
             assert float(limit_resp.used_limit) == 1000.0
-            assert float(limit_resp.remaining_limit) == float(DEFAULT_DAILY_LIMIT) - 1000.0
+            assert (
+                float(limit_resp.remaining_limit) == float(DEFAULT_DAILY_LIMIT) - 1000.0
+            )
 
         run_async(_test())
 
@@ -288,7 +302,7 @@ class TestCreateStakingSuccess:
             )
             original_end = subscription.end_date
 
-            from src.services.staking.schemas import StakingCreateRequest
+            from src.schemas.staking import StakingCreateRequest
 
             request = StakingCreateRequest(
                 subscription_id=subscription.id,
@@ -322,7 +336,7 @@ class TestStakingRewardCalculation:
         period = 15
         multiplier = STAKING_MULTIPLIERS[StakingPeriod.DAYS_15]  # 1.0x
 
-        reward = StakingRecord.calculate_rewards(amount, period, multiplier)
+        reward = StakingService.calculate_rewards(amount, period, multiplier)
 
         # 0.01 * 1000 * 15 * 1.0 = 150
         expected = BASE_DAILY_RATE * amount * period * multiplier
@@ -335,7 +349,7 @@ class TestStakingRewardCalculation:
         period = 30
         multiplier = STAKING_MULTIPLIERS[StakingPeriod.DAYS_30]  # 2.5x
 
-        reward = StakingRecord.calculate_rewards(amount, period, multiplier)
+        reward = StakingService.calculate_rewards(amount, period, multiplier)
 
         # 0.01 * 1000 * 30 * 2.5 = 750
         expected = BASE_DAILY_RATE * amount * period * multiplier
@@ -348,7 +362,7 @@ class TestStakingRewardCalculation:
         period = 45
         multiplier = STAKING_MULTIPLIERS[StakingPeriod.DAYS_45]  # 4.5x
 
-        reward = StakingRecord.calculate_rewards(amount, period, multiplier)
+        reward = StakingService.calculate_rewards(amount, period, multiplier)
 
         # 0.01 * 2000 * 45 * 4.5 = 4050
         expected = BASE_DAILY_RATE * amount * period * multiplier
@@ -361,7 +375,7 @@ class TestStakingRewardCalculation:
         period = 60
         multiplier = STAKING_MULTIPLIERS[StakingPeriod.DAYS_60]  # 7.0x
 
-        reward = StakingRecord.calculate_rewards(amount, period, multiplier)
+        reward = StakingService.calculate_rewards(amount, period, multiplier)
 
         # 0.01 * 5000 * 60 * 7.0 = 21000
         expected = BASE_DAILY_RATE * amount * period * multiplier
@@ -374,7 +388,7 @@ class TestStakingRewardCalculation:
         period = 15
         multiplier = STAKING_MULTIPLIERS[StakingPeriod.DAYS_15]
 
-        reward = StakingRecord.calculate_rewards(amount, period, multiplier)
+        reward = StakingService.calculate_rewards(amount, period, multiplier)
 
         # 0.01 * 100 * 15 * 1.0 = 15
         assert reward == Decimal("15")
@@ -385,7 +399,7 @@ class TestStakingRewardCalculation:
         period = 60
         multiplier = STAKING_MULTIPLIERS[StakingPeriod.DAYS_60]
 
-        reward = StakingRecord.calculate_rewards(amount, period, multiplier)
+        reward = StakingService.calculate_rewards(amount, period, multiplier)
 
         # 0.01 * 100000 * 60 * 7.0 = 420000
         assert reward == Decimal("420000")
@@ -395,8 +409,12 @@ class TestStakingRewardCalculation:
         period = 30
         multiplier = STAKING_MULTIPLIERS[StakingPeriod.DAYS_30]
 
-        reward_1000 = StakingRecord.calculate_rewards(Decimal("1000"), period, multiplier)
-        reward_2000 = StakingRecord.calculate_rewards(Decimal("2000"), period, multiplier)
+        reward_1000 = StakingService.calculate_rewards(
+            Decimal("1000"), period, multiplier
+        )
+        reward_2000 = StakingService.calculate_rewards(
+            Decimal("2000"), period, multiplier
+        )
 
         assert reward_2000 == reward_1000 * 2
 
@@ -405,8 +423,8 @@ class TestStakingRewardCalculation:
         amount = Decimal("1000")
         multiplier = Decimal("1.0")
 
-        reward_15 = StakingRecord.calculate_rewards(amount, 15, multiplier)
-        reward_30 = StakingRecord.calculate_rewards(amount, 30, multiplier)
+        reward_15 = StakingService.calculate_rewards(amount, 15, multiplier)
+        reward_30 = StakingService.calculate_rewards(amount, 30, multiplier)
 
         assert reward_30 == reward_15 * 2
 
@@ -428,9 +446,18 @@ class TestStakingRewardCalculation:
 
     def test_multiplier_increases_with_period(self):
         """更长周期应有更高倍数"""
-        assert STAKING_MULTIPLIERS[StakingPeriod.DAYS_15] < STAKING_MULTIPLIERS[StakingPeriod.DAYS_30]
-        assert STAKING_MULTIPLIERS[StakingPeriod.DAYS_30] < STAKING_MULTIPLIERS[StakingPeriod.DAYS_45]
-        assert STAKING_MULTIPLIERS[StakingPeriod.DAYS_45] < STAKING_MULTIPLIERS[StakingPeriod.DAYS_60]
+        assert (
+            STAKING_MULTIPLIERS[StakingPeriod.DAYS_15]
+            < STAKING_MULTIPLIERS[StakingPeriod.DAYS_30]
+        )
+        assert (
+            STAKING_MULTIPLIERS[StakingPeriod.DAYS_30]
+            < STAKING_MULTIPLIERS[StakingPeriod.DAYS_45]
+        )
+        assert (
+            STAKING_MULTIPLIERS[StakingPeriod.DAYS_45]
+            < STAKING_MULTIPLIERS[StakingPeriod.DAYS_60]
+        )
 
 
 # ============================================================
@@ -699,7 +726,7 @@ class TestStakingPeriodValidation:
                 asset=asset, wallet_address=wallet
             )
 
-            from src.services.staking.schemas import StakingCreateRequest
+            from src.schemas.staking import StakingCreateRequest
 
             request = StakingCreateRequest(
                 subscription_id=subscription.id,
@@ -728,7 +755,7 @@ class TestStakingPeriodValidation:
                 asset=asset, wallet_address=wallet
             )
 
-            from src.services.staking.schemas import StakingCreateRequest
+            from src.schemas.staking import StakingCreateRequest
 
             request = StakingCreateRequest(
                 subscription_id=subscription.id,
@@ -759,7 +786,7 @@ class TestStakingPeriodValidation:
                 rwa_token_amount=Decimal("200000"),
             )
 
-            from src.services.staking.schemas import StakingCreateRequest
+            from src.schemas.staking import StakingCreateRequest
 
             # 尝试质押超过每日限额 (DEFAULT_DAILY_LIMIT = 100000)
             request = StakingCreateRequest(
@@ -784,7 +811,7 @@ class TestStakingPeriodValidation:
             service = StakingService()
             wallet = "0x" + "a" * 40
 
-            from src.services.staking.schemas import StakingCreateRequest
+            from src.schemas.staking import StakingCreateRequest
 
             request = StakingCreateRequest(
                 subscription_id=99999,
@@ -807,12 +834,14 @@ class TestStakingPeriodValidation:
 
         for period_enum in StakingPeriod:
             multiplier = STAKING_MULTIPLIERS[period_enum]
-            reward = StakingRecord.calculate_rewards(amount, period_enum.value, multiplier)
+            reward = StakingService.calculate_rewards(
+                amount, period_enum.value, multiplier
+            )
             rewards.append(reward)
 
         # 奖励应严格递增: 15天 < 30天 < 45天 < 60天
         for i in range(len(rewards) - 1):
             assert rewards[i] < rewards[i + 1], (
                 f"周期 {list(StakingPeriod)[i].value} 天的奖励 ({rewards[i]}) "
-                f"应小于 {list(StakingPeriod)[i+1].value} 天的奖励 ({rewards[i+1]})"
+                f"应小于 {list(StakingPeriod)[i + 1].value} 天的奖励 ({rewards[i + 1]})"
             )

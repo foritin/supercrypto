@@ -7,7 +7,7 @@ from decimal import Decimal
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-from src.shared.schemas.enums import AssetStatus, AssetType
+from src.schemas.enums import AssetStatus, AssetType
 
 
 class Asset(AbstractModel, TimestampMixin):
@@ -62,13 +62,22 @@ class Asset(AbstractModel, TimestampMixin):
     project = fields.CharField(
         max_length=50, null=True, description="关联的项目标识 (deploy_info.project)"
     )
-    # 主合约地址 - 已废弃，请使用 primary_contract_address property
-    # 保留字段用于向后兼容，将在后续版本删除
+    # [DEPRECATED] 主合约地址缓存字段
+    # 此字段仍被 asset_service.py 中的 create_asset / bind_project / unbind_project 写入，
+    # 以及 primary_contract_address property 读取。
+    # 迁移计划: 待所有消费方切换到 AssetContractBinding (is_primary=True) 查询后移除。
     # @deprecated: 使用 AssetContractBinding (is_primary=True) 查询
     contract_address = fields.CharField(
         max_length=128,
         null=True,
-        description="[DEPRECATED] 主 RWA Token 合约地址，请使用 primary_contract_address",
+        description="[DEPRECATED] 主 RWA Token 合约地址，请使用 AssetContractBinding",
+    )
+
+    # Logo 边框样式 (管理员自选，与资产类型解耦)
+    frame_style = fields.CharField(
+        max_length=20,
+        null=True,
+        description="Logo 边框样式 (green/blue/gold/purple/gray)",
     )
 
     # 状态

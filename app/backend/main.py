@@ -18,17 +18,23 @@ from fastapi import Depends
 
 from src.api.v1.router import api_router
 from src.models import Account
-from src.shared.aerich_redirect import TORTOISE_ORM
-from src.shared.common.adapters import close_async_redis_adapter
-from src.shared.common.exceptions import BusinessException
-from src.shared.common.metrics import chain_metrics
-from src.shared.middleware import AuditMiddleware, AuthStateMiddleware
-from src.shared.security import require_admin
+from src.aerich_redirect import TORTOISE_ORM
+from src.common.adapters import close_async_redis_adapter
+from src.common.exceptions import BusinessException
+from src.common.metrics import chain_metrics
+from src.middleware import (
+    AuditMiddleware,
+    AuthStateMiddleware,
+    RequestLoggingMiddleware,
+)
+from src.security import require_admin
 from src.tasks.contract_task import async_sync_provider_registry
 from src.tasks.kyc_sync_task import reconcile_chain_events, retry_failed_kyc_syncs
 
 settings = SETTINGS
 logger = get_logger("api.main")
+
+APP_VERSION = "1.0.0"
 
 
 @asynccontextmanager
@@ -86,7 +92,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="SuperCrypto API",
     description="Web3加密货币管理API - 支持账户、钱包、交易管理",
-    version="1.0.0",
+    version=APP_VERSION,
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -102,9 +108,7 @@ _PRODUCTION_ORIGINS = [
 ]
 
 # 根据环境动态配置 CORS allow_origins
-_cors_origins = (
-    _PRODUCTION_ORIGINS if settings.environment == "production" else ["*"]
-)
+_cors_origins = _PRODUCTION_ORIGINS if settings.environment == "production" else ["*"]
 
 # 配置CORS
 app.add_middleware(
@@ -122,6 +126,14 @@ app.add_middleware(AuthStateMiddleware)
 
 # 审计中间件 - 自动记录需要审计的 API 请求
 app.add_middleware(AuditMiddleware)
+
+# 请求日志中间件 - 最后添加 = 最先执行，确保 request_id 对所有内层中间件可用
+app.add_middleware(RequestLoggingMiddleware)
+
+
+def _get_request_id(request: Request) -> str:
+    """从 request.state 获取 request_id，不可用时返回 '-'"""
+    return getattr(request.state, "request_id", "-")
 
 
 # 全局异常处理
@@ -151,7 +163,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             )
         errors.append(safe_err)
 
-    logger.warning(f"Validation error: {request.method} {request.url.path} - {errors}")
+    request_id = _get_request_id(request)
+    logger.warning(
+        f"[{request_id}] Validation error: {request.method} {request.url.path} - {errors}"
+    )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={
@@ -179,8 +194,9 @@ async def business_exception_handler(request: Request, exc: BusinessException):
         # 将 {} 转义为 {{}} 避免 loguru 格式化
         detail_escaped = str(exc.detail).replace("{", "{{").replace("}", "}}")
         detail_str = f" | detail: {detail_escaped}"
+    request_id = _get_request_id(request)
     logger.warning(
-        f"Business exception: {request.method} {request.url.path} - "
+        f"[{request_id}] Business exception: {request.method} {request.url.path} - "
         f"[HTTP {exc.code}] [{error_code_str}] {exc.message}{detail_str}"
     )
     return JSONResponse(
@@ -202,8 +218,9 @@ async def global_exception_handler(request: Request, exc: Exception):
 
     捕获未处理的异常
     """
+    request_id = _get_request_id(request)
     logger.exception(
-        f"Unhandled exception: {request.method} {request.url.path} - {exc}"
+        f"[{request_id}] Unhandled exception: {request.method} {request.url.path} - {exc}"
     )
 
     return JSONResponse(
@@ -239,7 +256,7 @@ async def health():
 
     return {
         "status": "ok",
-        "version": "1.0.0",
+        "version": APP_VERSION,
         "database": db_status,
         "environment": settings.environment,
     }
@@ -259,5 +276,10 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "main:app", host="0.0.0.0", port=8000, reload=settings.debug, log_level="info"
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=settings.debug,
+        log_level="info",
+        access_log=False,
     )

@@ -42,10 +42,17 @@ class TestCaseCompatibility:
     def test_ai_providers_config_compatibility(self, settings):
         """验证 AI 配置大小写兼容"""
         # Assert — 注意: 复合属性名使用下划线分隔的大写形式 (api_key → API_KEY)
-        assert settings.ai_providers.openai.api_key == settings.AI_PROVIDERS.OPENAI.API_KEY
-        assert settings.ai_providers.openai.base_url == settings.AI_PROVIDERS.OPENAI.BASE_URL
+        assert (
+            settings.ai_providers.openai.api_key == settings.AI_PROVIDERS.OPENAI.API_KEY
+        )
+        assert (
+            settings.ai_providers.openai.base_url
+            == settings.AI_PROVIDERS.OPENAI.BASE_URL
+        )
         assert settings.ai_providers.openai.model == settings.AI_PROVIDERS.OPENAI.MODEL
-        assert settings.ai_providers.deepseek.model == settings.AI_PROVIDERS.DEEPSEEK.MODEL
+        assert (
+            settings.ai_providers.deepseek.model == settings.AI_PROVIDERS.DEEPSEEK.MODEL
+        )
 
     def test_rustfs_config_compatibility(self, settings):
         """验证 RustFS 配置大小写兼容"""

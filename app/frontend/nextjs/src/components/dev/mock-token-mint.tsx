@@ -100,7 +100,7 @@ export function MockTokenMint() {
     }
   }, [isAdmin]);
 
-  // Read admin balance with auto-refresh
+  // Read admin balance (手动 refetch，不再自动轮询)
   const {
     data: adminBalance,
     isLoading: isBalanceLoading,
@@ -112,11 +112,10 @@ export function MockTokenMint() {
     args: address ? [address] : undefined,
     query: {
       enabled: !!address,
-      refetchInterval: 5000,
     },
   });
 
-  // Read recipient balance
+  // Read recipient balance (手动 refetch，不再自动轮询)
   const { data: recipientBalance, refetch: refetchRecipientBalance } =
     useReadContract({
       address: tokenAddress as `0x${string}`,
@@ -127,7 +126,6 @@ export function MockTokenMint() {
         : undefined,
       query: {
         enabled: !!selectedRecipient,
-        refetchInterval: 5000,
       },
     });
 

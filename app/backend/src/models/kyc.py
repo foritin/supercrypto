@@ -14,7 +14,7 @@ KYC 认证模型
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-from src.shared.schemas.enums import (
+from src.schemas.enums import (
     IdType,
     KycStatus,
     Network,
@@ -198,5 +198,16 @@ class AccountKyc(AbstractModel, TimestampMixin):
         return f"AccountKyc(id={self.id}, address={self.address[:10]}..., network={self.network}, status={self.status})"
 
 
-# 向后兼容别名 (deprecated, 将在未来版本移除)
-UserKyc = AccountKyc
+import warnings
+
+
+def __getattr__(name: str):
+    if name == "UserKyc":
+        warnings.warn(
+            "UserKyc 是 AccountKyc 的废弃别名，请迁移到 AccountKyc。"
+            "将在 v2.0 版本移除。",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return AccountKyc
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

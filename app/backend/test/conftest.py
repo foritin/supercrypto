@@ -30,14 +30,13 @@ from hypothesis import strategies as st
 from tortoise import Tortoise
 
 from src.models.kyc import AccountKyc
-from src.shared.schemas.enums import (
+from src.schemas.enums import (
     KycStatus,
     Network,
     OnChainSyncStatus,
     ReviewPriority,
     RiskLevel,
 )
-
 
 # ============================================================
 # 异步测试运行器

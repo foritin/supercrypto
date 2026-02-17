@@ -10,13 +10,13 @@
 
 from fastapi import APIRouter, Depends
 
-from src.api.v1.dev.deps import require_dev_environment
 from src.api.v1.dev import kyc, tools
+from src.api.v1.dev.deps import require_dev_environment
 
 router = APIRouter(dependencies=[Depends(require_dev_environment)])
 
 # 通用开发工具
-router.include_router(tools.router, tags=["开发者工具"])
+router.include_router(tools.router, tags=["Dev Tools"])
 
 # KYC 开发工具
-router.include_router(kyc.router, prefix="/kyc", tags=["KYC 开发工具"])
+router.include_router(kyc.router, prefix="/kyc", tags=["Dev KYC Tools"])

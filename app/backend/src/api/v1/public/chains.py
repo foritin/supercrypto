@@ -5,38 +5,14 @@
 """
 
 from fastapi import APIRouter, Query
-from pydantic import BaseModel, ConfigDict
 
-from src.models.chain import Chain
+from src.common.dependencies import chain_service
+from src.schemas.chain import ChainResponse, ChainsListResponse
 
 router = APIRouter()
 
 
-class ChainResponse(BaseModel):
-    """网络配置响应"""
-
-    chain_id: int
-    name: str
-    display_name: str
-    symbol: str
-    decimals: int
-    rpc_url: str
-    rpc_url_backup: str | None
-    block_explorer: str | None
-    is_testnet: bool
-    icon: str | None
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class ChainsListResponse(BaseModel):
-    """网络列表响应"""
-
-    chains: list[ChainResponse]
-    count: int
-
-
-@router.get("", response_model=ChainsListResponse, summary="获取可用网络列表")
+@router.get("", response_model=ChainsListResponse, summary="List Available Networks")
 async def get_chains(
     environment: str | None = Query(
         None, description="环境筛选: development / production，为空返回所有启用的网络"
@@ -49,14 +25,16 @@ async def get_chains(
     - **production**: 返回生产环境网络 (Ethereum, Arbitrum)
     - **不传**: 返回所有启用的网络
     """
-    chains = await Chain.get_enabled_chains(environment)
+    chains = await chain_service.get_enabled_chains(environment)
     return ChainsListResponse(
         chains=[ChainResponse.model_validate(c) for c in chains], count=len(chains)
     )
 
 
 @router.get(
-    "/{chain_id}", response_model=ChainResponse | None, summary="获取指定网络配置"
+    "/{chain_id}",
+    response_model=ChainResponse | None,
+    summary="Get Network Config by Chain ID",
 )
 async def get_chain_by_id(chain_id: int):
     """
@@ -64,7 +42,7 @@ async def get_chain_by_id(chain_id: int):
 
     - **chain_id**: 链 ID，如 1 (Ethereum), 31337 (Hardhat)
     """
-    chain = await Chain.get_by_chain_id(chain_id)
+    chain = await chain_service.get_by_chain_id(chain_id)
     if not chain:
         return None
     return ChainResponse.model_validate(chain)

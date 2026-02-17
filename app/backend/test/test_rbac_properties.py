@@ -11,8 +11,8 @@ Feature: full-stack-review-fixes
 from dataclasses import dataclass
 from typing import Optional
 
-from hypothesis import given, settings, strategies as st
-
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 # ============================================================
 # 钱包地址生成策略 — 符合以太坊地址格式 (0x + 40 hex chars)
@@ -56,9 +56,7 @@ class TestKycIsolationProperties:
         address_a=wallet_address_strategy,
         address_b=wallet_address_strategy,
     )
-    def test_property_3_kyc_query_isolation(
-        self, address_a: str, address_b: str
-    ):
+    def test_property_3_kyc_query_isolation(self, address_a: str, address_b: str):
         """Property 3: KYC 状态查询隔离
 
         **Validates: Requirements 1.4**
@@ -128,19 +126,21 @@ def check_admin_access(account: Optional[AccountStub]) -> bool:
 
 
 # 角色值策略 — 包含 "admin" 和各种非 admin 值
-role_strategy = st.sampled_from([
-    "admin",
-    "user",
-    "moderator",
-    "viewer",
-    "operator",
-    "superadmin",
-    "Admin",       # 大小写敏感测试
-    "ADMIN",       # 全大写
-    " admin",      # 前导空格
-    "admin ",      # 尾部空格
-    "",            # 空字符串
-])
+role_strategy = st.sampled_from(
+    [
+        "admin",
+        "user",
+        "moderator",
+        "viewer",
+        "operator",
+        "superadmin",
+        "Admin",  # 大小写敏感测试
+        "ADMIN",  # 全大写
+        " admin",  # 前导空格
+        "admin ",  # 尾部空格
+        "",  # 空字符串
+    ]
+)
 
 
 class TestRbacProperties:

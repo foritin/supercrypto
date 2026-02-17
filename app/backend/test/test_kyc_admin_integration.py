@@ -15,8 +15,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.models.kyc import AccountKyc
-from src.services.admin.kyc_service import AdminKycService
-from src.shared.schemas.enums import KycStatus, Network
+from src.schemas.enums import KycStatus, Network
+from src.services.kyc_service import KycService
 
 # ============ Helper Functions ============
 
@@ -103,7 +103,7 @@ class TestKycDetailIntegration:
     **Validates: Requirements 1.1, 1.2, 7.3**
     """
 
-    def test_get_document_presigned_urls_with_face_image(
+    def testget_document_presigned_urls_with_face_image(
         self, mock_kyc_record, mock_minio_service
     ):
         """
@@ -115,11 +115,11 @@ class TestKycDetailIntegration:
         face_image_path = "kyc/0xaaa/face_image_123.jpg"
         kyc = mock_kyc_record(face_image_url=face_image_path)
 
-        service = AdminKycService()
+        service = KycService()
         service.storage = mock_minio_service
 
         # Act
-        documents = run_async(service._get_document_presigned_urls(kyc))
+        documents = run_async(service.get_document_presigned_urls(kyc))
 
         # Assert
         assert documents["face_image"] is not None
@@ -127,7 +127,7 @@ class TestKycDetailIntegration:
         assert face_image_path in documents["face_image"]
         mock_minio_service.get_presigned_url.assert_any_call(face_image_path)
 
-    def test_get_document_presigned_urls_with_liveness_video(
+    def testget_document_presigned_urls_with_liveness_video(
         self, mock_kyc_record, mock_minio_service
     ):
         """
@@ -139,11 +139,11 @@ class TestKycDetailIntegration:
         liveness_video_path = "kyc/0xaaa/liveness_video_123.webm"
         kyc = mock_kyc_record(liveness_video_url=liveness_video_path)
 
-        service = AdminKycService()
+        service = KycService()
         service.storage = mock_minio_service
 
         # Act
-        documents = run_async(service._get_document_presigned_urls(kyc))
+        documents = run_async(service.get_document_presigned_urls(kyc))
 
         # Assert
         assert documents["liveness_video"] is not None
@@ -151,7 +151,7 @@ class TestKycDetailIntegration:
         assert liveness_video_path in documents["liveness_video"]
         mock_minio_service.get_presigned_url.assert_any_call(liveness_video_path)
 
-    def test_get_document_presigned_urls_with_all_media(
+    def testget_document_presigned_urls_with_all_media(
         self, mock_kyc_record, mock_minio_service
     ):
         """
@@ -170,11 +170,11 @@ class TestKycDetailIntegration:
             selfie_url=selfie_path,
         )
 
-        service = AdminKycService()
+        service = KycService()
         service.storage = mock_minio_service
 
         # Act
-        documents = run_async(service._get_document_presigned_urls(kyc))
+        documents = run_async(service.get_document_presigned_urls(kyc))
 
         # Assert
         assert documents["face_image"] is not None
@@ -192,7 +192,7 @@ class TestKycDetailIntegration:
         for key in required_keys:
             assert key in documents
 
-    def test_get_document_presigned_urls_with_null_values(
+    def testget_document_presigned_urls_with_null_values(
         self, mock_kyc_record, mock_minio_service
     ):
         """
@@ -207,18 +207,18 @@ class TestKycDetailIntegration:
             selfie_url=None,
         )
 
-        service = AdminKycService()
+        service = KycService()
         service.storage = mock_minio_service
 
         # Act
-        documents = run_async(service._get_document_presigned_urls(kyc))
+        documents = run_async(service.get_document_presigned_urls(kyc))
 
         # Assert
         assert documents["face_image"] is None
         assert documents["liveness_video"] is None
         assert documents["selfie"] is None
 
-    def test_get_document_presigned_urls_partial_media(
+    def testget_document_presigned_urls_partial_media(
         self, mock_kyc_record, mock_minio_service
     ):
         """
@@ -233,17 +233,17 @@ class TestKycDetailIntegration:
             liveness_video_url=None,
         )
 
-        service = AdminKycService()
+        service = KycService()
         service.storage = mock_minio_service
 
         # Act
-        documents = run_async(service._get_document_presigned_urls(kyc))
+        documents = run_async(service.get_document_presigned_urls(kyc))
 
         # Assert
         assert documents["face_image"] is not None
         assert documents["liveness_video"] is None
 
-    def test_get_document_presigned_urls_minio_error_face_image(self, mock_kyc_record):
+    def testget_document_presigned_urls_minio_error_face_image(self, mock_kyc_record):
         """
         **Validates: Requirements 1.3, 1.4**
 
@@ -259,16 +259,16 @@ class TestKycDetailIntegration:
             side_effect=Exception("MinIO connection failed")
         )
 
-        service = AdminKycService()
+        service = KycService()
         service.storage = mock_minio
 
         # Act
-        documents = run_async(service._get_document_presigned_urls(kyc))
+        documents = run_async(service.get_document_presigned_urls(kyc))
 
         # Assert - 应该返回 null 而不是抛出异常
         assert documents["face_image"] is None
 
-    def test_get_document_presigned_urls_minio_error_liveness_video(
+    def testget_document_presigned_urls_minio_error_liveness_video(
         self, mock_kyc_record
     ):
         """
@@ -286,16 +286,16 @@ class TestKycDetailIntegration:
             side_effect=Exception("MinIO connection failed")
         )
 
-        service = AdminKycService()
+        service = KycService()
         service.storage = mock_minio
 
         # Act
-        documents = run_async(service._get_document_presigned_urls(kyc))
+        documents = run_async(service.get_document_presigned_urls(kyc))
 
         # Assert - 应该返回 null 而不是抛出异常
         assert documents["liveness_video"] is None
 
-    def test_get_document_presigned_urls_independent_error_handling(
+    def testget_document_presigned_urls_independent_error_handling(
         self, mock_kyc_record
     ):
         """
@@ -320,11 +320,11 @@ class TestKycDetailIntegration:
         mock_minio = AsyncMock()
         mock_minio.get_presigned_url = AsyncMock(side_effect=selective_failure)
 
-        service = AdminKycService()
+        service = KycService()
         service.storage = mock_minio
 
         # Act
-        documents = run_async(service._get_document_presigned_urls(kyc))
+        documents = run_async(service.get_document_presigned_urls(kyc))
 
         # Assert - face_image 失败不应影响 liveness_video
         assert documents["face_image"] is None
@@ -347,11 +347,11 @@ class TestKycDetailResponseStructure:
         # Arrange
         kyc = mock_kyc_record()
 
-        service = AdminKycService()
+        service = KycService()
         service.storage = mock_minio_service
 
         # Act
-        documents = run_async(service._get_document_presigned_urls(kyc))
+        documents = run_async(service.get_document_presigned_urls(kyc))
 
         # Assert
         expected_keys = {
@@ -373,11 +373,11 @@ class TestKycDetailResponseStructure:
         face_image_path = "kyc/0xaaa/face_image_123.jpg"
         kyc = mock_kyc_record(face_image_url=face_image_path)
 
-        service = AdminKycService()
+        service = KycService()
         service.storage = mock_minio_service
 
         # Act
-        documents = run_async(service._get_document_presigned_urls(kyc))
+        documents = run_async(service.get_document_presigned_urls(kyc))
 
         # Assert
         url = documents["face_image"]

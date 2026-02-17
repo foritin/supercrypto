@@ -7,22 +7,18 @@
 from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, Query, status
 
-from src.services.account.schemas import AccountCreate, AccountListQuery, AccountUpdate
-from src.services.account.service import AccountService
+from src.common.dependencies import get_account_service
+from src.schemas.account import AccountCreate, AccountListQuery, AccountUpdate
+from src.services import AccountService
 
 router = APIRouter()
-
-
-def get_account_service() -> AccountService:
-    """依赖注入：获取账户服务"""
-    return AccountService()
 
 
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    summary="创建账户",
-    description="创建新的账户，需要提供钱包地址和私钥",
+    summary="Create Account",
+    description="Create a new account with wallet address and private key",
 )
 async def create_account(
     data: AccountCreate,
@@ -46,8 +42,8 @@ async def create_account(
 
 @router.get(
     "/address/{address}",
-    summary="根据地址获取账户",
-    description="根据钱包地址获取账户详细信息",
+    summary="Get Account by Address",
+    description="Get detailed account information by wallet address",
 )
 async def get_account_by_address(
     address: str,
@@ -66,8 +62,8 @@ async def get_account_by_address(
 
 @router.get(
     "",
-    summary="查询账户列表",
-    description="查询账户列表，支持分页和过滤",
+    summary="List Accounts",
+    description="List accounts with pagination and filtering",
 )
 async def list_accounts(
     tag: str = Query(None, description="标签过滤（模糊搜索）"),
@@ -87,9 +83,7 @@ async def list_accounts(
 
     返回分页的账户列表
     """
-    query = AccountListQuery(
-        tag=tag, address=address, page=page, page_size=page_size
-    )
+    query = AccountListQuery(tag=tag, address=address, page=page, page_size=page_size)
 
     accounts, total, total_pages = await service.list(query)
 
@@ -104,8 +98,8 @@ async def list_accounts(
 
 @router.put(
     "/address/{address}",
-    summary="更新账户",
-    description="根据地址更新账户信息",
+    summary="Update Account",
+    description="Update account information by address",
 )
 async def update_account(
     address: str,
@@ -128,8 +122,8 @@ async def update_account(
 
 @router.delete(
     "/address/{address}",
-    summary="删除账户",
-    description="根据地址删除账户",
+    summary="Delete Account",
+    description="Delete an account by address",
 )
 async def delete_account(
     address: str,

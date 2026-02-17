@@ -14,14 +14,14 @@ KYC 审核日志模型
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-from src.shared.schemas.enums import KycAuditAction
+from src.schemas.enums import KycAuditAction
 
 
 class KycAuditLog(AbstractModel, TimestampMixin):
     """KYC 审核日志表
-    
+
     记录 KYC 申请的所有状态变更和操作历史，用于审计追踪。
-    
+
     Attributes:
         kyc: 关联的 KYC 记录
         action: 操作类型 (submit/review/approve/reject/resubmit/sync/reset)

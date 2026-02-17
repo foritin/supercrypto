@@ -11,8 +11,8 @@
 
 import pytest
 
-from src.shared.constants.registry import ConstantsRegistry, get_registry
-from src.shared.constants.schemas import ConstantItem
+from src.constants.registry import ConstantsRegistry, get_registry
+from src.constants.types import ConstantItem
 
 
 class TestConstantsRegistry:
@@ -52,7 +52,9 @@ class TestConstantsRegistry:
         """测试注册单个常量分组"""
         registry = ConstantsRegistry.get_instance()
         items = [
-            ConstantItem(value="real_estate", labels={"zh": "房地产", "en": "Real Estate"}),
+            ConstantItem(
+                value="real_estate", labels={"zh": "房地产", "en": "Real Estate"}
+            ),
             ConstantItem(value="bond", labels={"zh": "债券", "en": "Bond"}),
         ]
         registry.register("asset_type", items)
@@ -68,7 +70,9 @@ class TestConstantsRegistry:
         registry = ConstantsRegistry.get_instance()
 
         asset_types = [
-            ConstantItem(value="real_estate", labels={"zh": "房地产", "en": "Real Estate"}),
+            ConstantItem(
+                value="real_estate", labels={"zh": "房地产", "en": "Real Estate"}
+            ),
         ]
         asset_statuses = [
             ConstantItem(
@@ -334,9 +338,13 @@ class TestConstantItemIntegration:
 
         # 注册资产类型
         asset_types = [
-            ConstantItem(value="real_estate", labels={"zh": "房地产", "en": "Real Estate"}),
+            ConstantItem(
+                value="real_estate", labels={"zh": "房地产", "en": "Real Estate"}
+            ),
             ConstantItem(value="bond", labels={"zh": "债券", "en": "Bond"}),
-            ConstantItem(value="commodity", labels={"zh": "大宗商品", "en": "Commodity"}),
+            ConstantItem(
+                value="commodity", labels={"zh": "大宗商品", "en": "Commodity"}
+            ),
         ]
         registry.register("asset_type", asset_types)
 

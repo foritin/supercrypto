@@ -9,42 +9,36 @@ from typing import Literal, Optional
 
 from falib.utils.handlers import (
     PaginationInfo,
-    create_error_response,
     create_success_response,
 )
-from falib.utils.log import get_logger
 from fastapi import APIRouter, Depends, Query
 
-from src.services.admin.kyc_schemas import BatchReviewRequest, KycListQuery
-from src.services.admin.kyc_service import AdminKycService
-from src.services.kyc.schemas import (
+from src.common.dependencies import audit_service, get_kyc_service
+from src.common.exceptions import NotFoundException
+from src.middleware.rate_limit import (
+    require_batch_rate_limit,
+    require_chain_rate_limit,
+)
+from src.schemas.admin_kyc import BatchReviewRequest, KycListQuery
+from src.schemas.enums import (
+    AuditAction,
+    AuditCategory,
+    AuditStatus,
+    ErrorCode,
+    KycStatus,
+    ReviewPriority,
+    RiskLevel,
+)
+from src.schemas.kyc import (
     KycReviewRequest,
     RecordAdmissionRequest,
     RecordRevocationRequest,
     ReviewProgressRequest,
 )
-from src.services.kyc.service import KycService
-from src.shared.common.exceptions import BusinessException
-from src.shared.middleware.rate_limit import (
-    require_batch_rate_limit,
-    require_chain_rate_limit,
-)
-from src.shared.schemas.enums import KycStatus, ReviewPriority, RiskLevel
-from src.shared.security import require_admin
-
-logger = get_logger("business.api.admin.kyc")
+from src.security import require_admin
+from src.services import KycService
 
 router = APIRouter()
-
-
-def get_kyc_service() -> KycService:
-    """依赖注入：获取 KYC 服务"""
-    return KycService()
-
-
-def get_admin_kyc_service() -> AdminKycService:
-    """依赖注入：获取 Admin KYC 服务"""
-    return AdminKycService()
 
 
 @router.get(
@@ -53,7 +47,7 @@ def get_admin_kyc_service() -> AdminKycService:
     description="Get comprehensive KYC statistics including processing times and trends (admin only)",
 )
 async def get_kyc_stats(
-    admin_service: AdminKycService = Depends(get_admin_kyc_service),
+    admin_service: KycService = Depends(get_kyc_service),
 ):
     """
     获取 KYC 扩展统计 (管理员用)
@@ -83,7 +77,7 @@ async def batch_review_kyc(
     request: BatchReviewRequest,
     _rate: None = Depends(require_batch_rate_limit),
     admin_address: str = Depends(require_admin),
-    admin_service: AdminKycService = Depends(get_admin_kyc_service),
+    admin_service: KycService = Depends(get_kyc_service),
 ):
     """
     批量审核 KYC 申请 (管理员用)
@@ -125,7 +119,7 @@ async def get_reject_reasons():
     - 需要管理员权限
     - 支持国际化 (zh/en)
     """
-    from src.shared.constants import get_registry
+    from src.constants import get_registry
 
     registry = get_registry()
     items = registry.get_group("kyc_reject_reason")
@@ -155,11 +149,8 @@ async def get_contract_info(
 
     Requirements Reference: 6.1
     """
-    try:
-        info = await service.get_contract_info()
-        return create_success_response(object_data=info)
-    except BusinessException as e:
-        return create_error_response(code=e.code, msg=e.message)
+    info = await service.get_contract_info()
+    return create_success_response(object_data=info)
 
 
 @router.get(
@@ -168,7 +159,7 @@ async def get_contract_info(
     description="Get audit logs for a specific KYC record (admin only)",
 )
 async def get_kyc_audit_logs(
-    kyc_id: int, admin_service: AdminKycService = Depends(get_admin_kyc_service)
+    kyc_id: int, admin_service: KycService = Depends(get_kyc_service)
 ):
     """
     获取 KYC 审核日志 (管理员用)
@@ -181,13 +172,10 @@ async def get_kyc_audit_logs(
 
     Requirements Reference: 7.1, 7.2, 7.3
     """
-    try:
-        logs = await admin_service.get_audit_logs(kyc_id)
-        return create_success_response(
-            list_data=[log.model_dump(mode="json") for log in logs]
-        )
-    except ValueError as e:
-        return create_error_response(code=404, msg=str(e))
+    logs = await admin_service.get_audit_logs(kyc_id)
+    return create_success_response(
+        list_data=[log.model_dump(mode="json") for log in logs]
+    )
 
 
 @router.get(
@@ -196,7 +184,7 @@ async def get_kyc_audit_logs(
     description="Get detailed KYC record by ID including documents and audit logs (admin only)",
 )
 async def get_kyc_by_id(
-    kyc_id: int, admin_service: AdminKycService = Depends(get_admin_kyc_service)
+    kyc_id: int, admin_service: KycService = Depends(get_kyc_service)
 ):
     """
     获取 KYC 详情 (管理员用)
@@ -214,7 +202,10 @@ async def get_kyc_by_id(
     """
     result = await admin_service.get_detail(kyc_id)
     if not result:
-        return create_error_response(code=404, msg="KYC record not found")
+        raise NotFoundException(
+            message="KYC record not found",
+            error_code=ErrorCode.KYC_NOT_FOUND,
+        )
     return create_success_response(object_data=result.model_dump(mode="json"))
 
 
@@ -241,27 +232,9 @@ async def list_kyc(
     ),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
-    admin_service: AdminKycService = Depends(get_admin_kyc_service),
+    admin_service: KycService = Depends(get_kyc_service),
 ):
-    """
-    获取 KYC 列表 (管理员用) - 支持高级筛选和排序
-
-    - 需要管理员权限
-    - **status**: 按状态筛选 (not_started/pending/approved/rejected)
-    - **risk_level**: 按风险等级筛选 (low/medium/high/critical)
-    - **priority**: 按优先级筛选 (low/normal/high/urgent)
-    - **country_code**: 按国家代码筛选
-    - **date_from**: 开始日期 (提交时间)
-    - **date_to**: 结束日期 (提交时间)
-    - **search_query**: 搜索钱包地址或姓名
-    - **sort_by**: 排序字段 (submitted_at/risk_score/priority)
-    - **sort_order**: 排序方向 (asc/desc)
-    - **page**: 页码
-    - **page_size**: 每页数量
-
-    Requirements Reference: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7
-    """
-    # 构建查询参数对象
+    """获取 KYC 列表 (管理员用) — 支持高级筛选和排序"""
     query_params = KycListQuery(
         status=status,
         risk_level=risk_level,
@@ -275,8 +248,6 @@ async def list_kyc(
         page=page,
         page_size=page_size,
     )
-
-    # 调用 AdminKycService.list_kyc()
     items, total, total_pages = await admin_service.list_kyc(query_params)
 
     return create_success_response(
@@ -314,16 +285,13 @@ async def update_review_progress(
 
     Requirements Reference: 8.2, 8.3
     """
-    try:
-        await service.update_review_progress(
-            kyc_id=kyc_id,
-            current_step=data.current_step,
-            confirmed_steps=data.confirmed_steps,
-            reviewer_address=admin_address,
-        )
-        return create_success_response(msg="Review progress updated successfully")
-    except BusinessException as e:
-        return create_error_response(code=e.code, msg=e.message)
+    await service.update_review_progress(
+        kyc_id=kyc_id,
+        current_step=data.current_step,
+        confirmed_steps=data.confirmed_steps,
+        reviewer_address=admin_address,
+    )
+    return create_success_response(msg="Review progress updated successfully")
 
 
 @router.post(
@@ -337,27 +305,11 @@ async def review_kyc(
     admin_address: str = Depends(require_admin),
     service: KycService = Depends(get_kyc_service),
 ):
-    """
-    审核 KYC 申请 (管理员用)
-
-    - 需要管理员权限
-    - **kyc_id**: KYC ID
-    - **approved**: 是否通过
-    - **reject_reason**: 拒绝原因 (拒绝时必填)
-    - **is_accredited**: 是否为合格投资者
-
-    Updates the KYC status and optionally updates on-chain KYC status.
-    """
-    from src.services.audit.service import audit_service
-    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-
-    # 使用管理员地址作为 reviewer 标识
+    """审核 KYC 申请 — 通过或拒绝，同步更新链上状态"""
     result = await service.review(kyc_id, data, reviewer_address=admin_address)
-
     action = "approved" if data.approved else "rejected"
-
-    # 记录详细的审计日志
     audit_action = AuditAction.KYC_APPROVE if data.approved else AuditAction.KYC_REJECT
+
     await audit_service.log_async(
         category=AuditCategory.KYC,
         action=audit_action,
@@ -396,51 +348,30 @@ async def record_admission(
     admin_address: str = Depends(require_admin),
     service: KycService = Depends(get_kyc_service),
 ):
-    """
-    记录链上准入结果
+    """记录链上准入结果 — 前端调用 addInvestor() 成功后记录 tx_hash"""
+    result = await service.record_admission(
+        kyc_id=kyc_id,
+        tx_hash=data.tx_hash,
+        admin_address=admin_address,
+    )
 
-    管理员通过浏览器钱包发起 addInvestor() 交易成功后，
-    前端调用此端点记录交易哈希并更新链上同步状态为 SYNCED。
+    await audit_service.log_async(
+        category=AuditCategory.KYC,
+        action=AuditAction.KYC_ADMIT,
+        operator_address=admin_address,
+        operator_type="admin",
+        target_type="kyc",
+        target_id=kyc_id,
+        target_address=result.wallet_address,
+        status=AuditStatus.SUCCESS,
+        description=f"KYC #{kyc_id} admitted on-chain",
+        new_value={"on_chain_sync_status": "synced", "tx_hash": data.tx_hash},
+    )
 
-    - 需要管理员权限
-    - **kyc_id**: KYC ID
-    - **tx_hash**: 链上交易哈希
-
-    Requirements Reference: 2.7, 6.2
-    """
-    from src.services.audit.service import audit_service
-    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-
-    try:
-        result = await service.record_admission(
-            kyc_id=kyc_id,
-            tx_hash=data.tx_hash,
-            admin_address=admin_address,
-        )
-
-        # 记录审计日志
-        await audit_service.log_async(
-            category=AuditCategory.KYC,
-            action=AuditAction.KYC_ADMIT,
-            operator_address=admin_address,
-            operator_type="admin",
-            target_type="kyc",
-            target_id=kyc_id,
-            target_address=result.wallet_address,
-            status=AuditStatus.SUCCESS,
-            description=f"KYC #{kyc_id} admitted on-chain",
-            new_value={
-                "on_chain_sync_status": "synced",
-                "tx_hash": data.tx_hash,
-            },
-        )
-
-        return create_success_response(
-            object_data=result.model_dump(mode="json"),
-            msg="On-chain admission recorded successfully",
-        )
-    except BusinessException as e:
-        return create_error_response(code=e.code, msg=e.message)
+    return create_success_response(
+        object_data=result.model_dump(mode="json"),
+        msg="On-chain admission recorded successfully",
+    )
 
 
 @router.post(
@@ -455,55 +386,36 @@ async def record_revocation(
     admin_address: str = Depends(require_admin),
     service: KycService = Depends(get_kyc_service),
 ):
-    """
-    记录链上解除准入结果
+    """记录链上解除准入结果 — 前端调用 removeInvestor() 成功后记录 tx_hash"""
+    result = await service.record_revocation(
+        kyc_id=kyc_id,
+        tx_hash=data.tx_hash,
+        admin_address=admin_address,
+        reason=data.reason,
+    )
 
-    管理员通过浏览器钱包发起 removeInvestor() 交易成功后，
-    前端调用此端点记录交易哈希并更新链上同步状态为 PENDING。
+    await audit_service.log_async(
+        category=AuditCategory.KYC,
+        action=AuditAction.KYC_REVOKE,
+        operator_address=admin_address,
+        operator_type="admin",
+        target_type="kyc",
+        target_id=kyc_id,
+        target_address=result.wallet_address,
+        status=AuditStatus.SUCCESS,
+        description=f"KYC #{kyc_id} revoked on-chain",
+        reason=data.reason,
+        new_value={
+            "on_chain_sync_status": "pending",
+            "tx_hash": data.tx_hash,
+            "reason": data.reason,
+        },
+    )
 
-    - 需要管理员权限
-    - **kyc_id**: KYC ID
-    - **tx_hash**: 链上交易哈希
-    - **reason**: 解除准入原因
-
-    Requirements Reference: 4.5, 6.3
-    """
-    from src.services.audit.service import audit_service
-    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-
-    try:
-        result = await service.record_revocation(
-            kyc_id=kyc_id,
-            tx_hash=data.tx_hash,
-            admin_address=admin_address,
-            reason=data.reason,
-        )
-
-        # 记录审计日志
-        await audit_service.log_async(
-            category=AuditCategory.KYC,
-            action=AuditAction.KYC_REVOKE,
-            operator_address=admin_address,
-            operator_type="admin",
-            target_type="kyc",
-            target_id=kyc_id,
-            target_address=result.wallet_address,
-            status=AuditStatus.SUCCESS,
-            description=f"KYC #{kyc_id} revoked on-chain",
-            reason=data.reason,
-            new_value={
-                "on_chain_sync_status": "pending",
-                "tx_hash": data.tx_hash,
-                "reason": data.reason,
-            },
-        )
-
-        return create_success_response(
-            object_data=result.model_dump(mode="json"),
-            msg="On-chain revocation recorded successfully",
-        )
-    except BusinessException as e:
-        return create_error_response(code=e.code, msg=e.message)
+    return create_success_response(
+        object_data=result.model_dump(mode="json"),
+        msg="On-chain revocation recorded successfully",
+    )
 
 
 @router.get(
@@ -523,9 +435,13 @@ async def get_contract_kyc_status(
 
     返回数据库状态和合约状态的对比，帮助管理员排查同步问题。
     """
+    # KycService 内部自动查询链上数据（含降级处理）
     result = await service.get_contract_comparison(wallet_address)
 
     if not result:
-        return create_error_response(code=404, msg="KYC record not found in database")
+        raise NotFoundException(
+            message="KYC record not found in database",
+            error_code=ErrorCode.KYC_NOT_FOUND,
+        )
 
     return create_success_response(object_data=result.model_dump(mode="json"))

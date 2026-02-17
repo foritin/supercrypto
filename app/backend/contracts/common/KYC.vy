@@ -5,6 +5,8 @@
 @dev STO合规的核心组件 - 符合证券法要求
 """
 
+# ============ 接口定义 ============
+
 # 合约迁移接口（统一使用 IMigration）
 interface IMigration:
     def owner() -> address: view
@@ -21,7 +23,8 @@ interface IMigration:
     def receive_migration(oldContract: address): nonpayable
     def is_migrated() -> bool: view
 
-# 事件
+# ============ 事件定义 ============
+
 event InvestorAdded:
     investor: indexed(address)
     country: String[2]
@@ -57,6 +60,8 @@ event Migrated:
     newContract: indexed(address)
     timestamp: uint256
 
+# ============ 数据结构 ============
+
 # 投资者信息结构
 struct InvestorInfo:
     verified: bool                  # KYC是否通过
@@ -67,7 +72,12 @@ struct InvestorInfo:
     expiryTime: uint256            # 过期时间（0表示永久）
     frozen: bool                    # 账户是否冻结
 
-# 状态变量
+# ============ 常量定义 ============
+
+MAX_INVESTOR_LIMIT: constant(uint256) = 2000  # 最大投资者上限
+
+# ============ 存储变量 ============
+
 owner: public(address)
 transferAgent: public(address)      # 转让代理（监管角色）
 
@@ -95,9 +105,7 @@ blockedCountriesList: public(DynArray[String[2], 300])
 maxInvestors: public(uint256)       # 最大投资者数量（Reg D限制：500人）
 kycExpiryPeriod: public(uint256)   # KYC有效期（秒，0=永久）
 
-# 常量
-MAX_INVESTOR_LIMIT: constant(uint256) = 2000  # 最大投资者上限
-
+# ============ 构造函数 ============
 
 @deploy
 def __init__():
@@ -117,9 +125,22 @@ def __init__():
     self.blockedCountries["IR"] = True  # 伊朗
     self.blockedCountries["SY"] = True  # 叙利亚
 
+# ============ Owner 函数 ============
 
 @external
-def setVerifier(_verifier: address, _enabled: bool):
+def owner_transfer_ownership(_newOwner: address):
+    """
+    @notice 转移所有权
+    @param _newOwner 新所有者地址
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _newOwner != empty(address), "Invalid address"
+    self.owner = _newOwner
+
+# ============ Admin 函数 ============
+
+@external
+def admin_set_verifier(_verifier: address, _enabled: bool):
     """
     @notice 设置KYC验证者权限
     @param _verifier 验证者地址
@@ -131,7 +152,7 @@ def setVerifier(_verifier: address, _enabled: bool):
 
 
 @external
-def setTransferAgent(_agent: address):
+def admin_set_transfer_agent(_agent: address):
     """
     @notice 设置转让代理
     @param _agent 转让代理地址
@@ -142,7 +163,7 @@ def setTransferAgent(_agent: address):
 
 
 @external
-def setMaxInvestors(_max: uint256):
+def admin_set_max_investors(_max: uint256):
     """
     @notice 设置最大投资者数量
     @param _max 最大投资者数（必须<=2000）
@@ -153,7 +174,7 @@ def setMaxInvestors(_max: uint256):
 
 
 @external
-def setKYCExpiryPeriod(_period: uint256):
+def admin_set_kyc_expiry_period(_period: uint256):
     """
     @notice 设置KYC有效期
     @param _period 有效期（秒，0=永久）
@@ -163,7 +184,7 @@ def setKYCExpiryPeriod(_period: uint256):
 
 
 @external
-def setBlockedCountry(_country: String[2], _blocked: bool):
+def admin_set_blocked_country(_country: String[2], _blocked: bool):
     """
     @notice 设置国家黑名单
     @param _country 国家代码
@@ -185,7 +206,7 @@ def setBlockedCountry(_country: String[2], _blocked: bool):
 
 
 @external
-def addInvestor(
+def admin_add_investor(
     _investor: address,
     _country: String[2],
     _accreditedInvestor: bool
@@ -237,7 +258,7 @@ def addInvestor(
 
 
 @external
-def updateInvestorVerification(_investor: address, _verified: bool):
+def admin_update_investor_verification(_investor: address, _verified: bool):
     """
     @notice 更新投资者验证状态
     @param _investor 投资者地址
@@ -259,7 +280,7 @@ def updateInvestorVerification(_investor: address, _verified: bool):
 
 
 @external
-def removeInvestor(_investor: address, _reason: String[100]):
+def admin_remove_investor(_investor: address, _reason: String[100]):
     """
     @notice 移除投资者（撤销KYC）
     @param _investor 投资者地址
@@ -283,7 +304,7 @@ def removeInvestor(_investor: address, _reason: String[100]):
 
 
 @external
-def freezeInvestor(_investor: address, _freeze: bool, _reason: String[100]):
+def admin_freeze_investor(_investor: address, _freeze: bool, _reason: String[100]):
     """
     @notice 冻结/解冻投资者账户（监管功能）
     @param _investor 投资者地址
@@ -299,10 +320,91 @@ def freezeInvestor(_investor: address, _freeze: bool, _reason: String[100]):
     
     log InvestorFrozen(_investor, _freeze, _reason)
 
+# ============ 查询函数 ============
+
+@view
+@external
+def is_verified(_investor: address) -> bool:
+    """
+    @notice 检查投资者是否通过KYC验证
+    @param _investor 投资者地址
+    @return 是否验证
+    """
+    return self._is_verified(_investor)
+
+
+@view
+@external
+def is_accredited(_investor: address) -> bool:
+    """
+    @notice 检查是否为合格投资者
+    @param _investor 投资者地址
+    @return 是否合格投资者
+    """
+    return self.investors[_investor].accreditedInvestor and self._is_verified(_investor)
+
+
+@view
+@external
+def is_frozen(_investor: address) -> bool:
+    """
+    @notice 检查账户是否冻结
+    @param _investor 投资者地址
+    @return 是否冻结
+    """
+    return self.investors[_investor].frozen
+
+
+@view
+@external
+def get_investor_info(_investor: address) -> InvestorInfo:
+    """
+    @notice 获取投资者完整信息
+    @param _investor 投资者地址
+    @return 投资者信息
+    """
+    return self.investors[_investor]
+
+
+@view
+@external
+def can_invest(_investor: address, _amount: uint256) -> bool:
+    """
+    @notice 检查投资者是否可以投资
+    @param _investor 投资者地址
+    @param _amount 投资金额（用于未来扩展，当前未使用）
+    @return 是否可以投资
+    """
+    return self._is_verified(_investor)
+
+
+@view
+@external
+def is_country_allowed(_country: String[2]) -> bool:
+    """
+    @notice 检查国家是否允许
+    @param _country 国家代码
+    @return 是否允许
+    """
+    return not self.blockedCountries[_country]
+
+
+@view
+@external
+def get_remaining_slots() -> uint256:
+    """
+    @notice 获取剩余投资者名额
+    @return 剩余名额
+    """
+    if self.investorCount >= self.maxInvestors:
+        return 0
+    return self.maxInvestors - self.investorCount
+
+# ============ 内部辅助函数 ============
 
 @view
 @internal
-def _isVerified(_investor: address) -> bool:
+def _is_verified(_investor: address) -> bool:
     """
     @notice 内部函数：检查投资者是否通过KYC验证
     @param _investor 投资者地址
@@ -323,98 +425,7 @@ def _isVerified(_investor: address) -> bool:
     
     return True
 
-
-@view
-@external
-def isVerified(_investor: address) -> bool:
-    """
-    @notice 检查投资者是否通过KYC验证
-    @param _investor 投资者地址
-    @return 是否验证
-    """
-    return self._isVerified(_investor)
-
-
-@view
-@external
-def isAccredited(_investor: address) -> bool:
-    """
-    @notice 检查是否为合格投资者
-    @param _investor 投资者地址
-    @return 是否合格投资者
-    """
-    return self.investors[_investor].accreditedInvestor and self._isVerified(_investor)
-
-
-@view
-@external
-def isFrozen(_investor: address) -> bool:
-    """
-    @notice 检查账户是否冻结
-    @param _investor 投资者地址
-    @return 是否冻结
-    """
-    return self.investors[_investor].frozen
-
-
-@view
-@external
-def getInvestorInfo(_investor: address) -> InvestorInfo:
-    """
-    @notice 获取投资者完整信息
-    @param _investor 投资者地址
-    @return 投资者信息
-    """
-    return self.investors[_investor]
-
-
-@view
-@external
-def canInvest(_investor: address, _amount: uint256) -> bool:
-    """
-    @notice 检查投资者是否可以投资
-    @param _investor 投资者地址
-    @param _amount 投资金额（用于未来扩展，当前未使用）
-    @return 是否可以投资
-    """
-    return self._isVerified(_investor)
-
-
-@view
-@external
-def isCountryAllowed(_country: String[2]) -> bool:
-    """
-    @notice 检查国家是否允许
-    @param _country 国家代码
-    @return 是否允许
-    """
-    return not self.blockedCountries[_country]
-
-
-@view
-@external
-def getRemainingSlots() -> uint256:
-    """
-    @notice 获取剩余投资者名额
-    @return 剩余名额
-    """
-    if self.investorCount >= self.maxInvestors:
-        return 0
-    return self.maxInvestors - self.investorCount
-
-
-@external
-def transferOwnership(_newOwner: address):
-    """
-    @notice 转移所有权
-    @param _newOwner 新所有者地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _newOwner != empty(address), "Invalid address"
-    self.owner = _newOwner
-
-
-# ==================== 依赖查询功能 ====================
+# ============ 依赖查询功能 ============
 
 @external
 @view
@@ -431,10 +442,10 @@ def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], D
     return unbound_required, bound_all, unbound_optional
 
 
-# ==================== 合约迁移功能 ====================
+# ============ 合约迁移功能 ============
 
 @external
-def migrate(newContract: address):
+def owner_migrate(newContract: address):
     """
     @notice 迁移所有状态到新合约
     @param newContract 新合约地址（必须实现 receiveMigration 接口）
@@ -451,16 +462,6 @@ def migrate(newContract: address):
     extcall IMigration(newContract).receive_migration(self)
 
     log Migrated(self, newContract, block.timestamp)
-
-
-@external
-@view
-def is_migrated() -> bool:
-    """
-    @notice 检查合约是否已迁移
-    @return True 如果已迁移到新合约
-    """
-    return self.migrated
 
 
 @external
@@ -497,6 +498,16 @@ def receive_migration(oldContract: address):
         country: String[2] = staticcall old.get_blocked_country_at(i)
         self.blockedCountries[country] = True
         self.blockedCountriesList.append(country)
+
+
+@external
+@view
+def is_migrated() -> bool:
+    """
+    @notice 检查合约是否已迁移
+    @return True 如果已迁移到新合约
+    """
+    return self.migrated
 
 
 @external
@@ -540,4 +551,3 @@ def is_country_blocked(_country: String[2]) -> bool:
     @return 是否被阻止
     """
     return self.blockedCountries[_country]
-

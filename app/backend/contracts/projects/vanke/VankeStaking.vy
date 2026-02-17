@@ -7,7 +7,8 @@
      使用 AddressProvider 模式获取依赖地址
 """
 
-# 接口定义
+# ============ 接口定义 ============
+
 interface IERC20:
     def transfer(_to: address, _amount: uint256) -> bool: nonpayable
     def transferFrom(_from: address, _to: address, _amount: uint256) -> bool: nonpayable
@@ -21,7 +22,7 @@ interface ISubscription:
     def subscriptionCount(_user: address) -> uint256: view
 
 interface IKYCManager:
-    def isVerified(_investor: address) -> bool: view
+    def is_verified(_investor: address) -> bool: view
 
 interface IAddressProvider:
     def get_kyc_manager() -> address: view
@@ -43,26 +44,8 @@ interface IMigration:
     def receive_migration(oldContract: address): nonpayable
     def is_migrated() -> bool: view
 
-# 订阅信息结构（需要与Subscription.vy保持一致）
-struct SubscriptionInfo:
-    principal: uint256
-    lockPeriod: uint256
-    subscribeTime: uint256
-    redeemTime: uint256
-    apy: uint256
-    redeemed: bool
+# ============ 事件定义 ============
 
-# 质押信息
-struct StakeInfo:
-    amount: uint256              # 质押数量
-    stakeTime: uint256           # 质押时间
-    lastRewardTime: uint256      # 上次领取奖励时间
-    subscriptionId: uint256      # 关联的认购ID
-    originalRedeemTime: uint256  # 原始赎回时间
-    stakeDuration: uint256       # 质押时长（用于顺延赎回期）
-    unstaked: bool               # 是否已解除质押
-
-# 事件
 event Stake:
     user: indexed(address)
     amount: uint256
@@ -82,13 +65,40 @@ event DailyEmissionUpdated:
     oldEmission: uint256
     newEmission: uint256
 
-# 迁移事件
 event Migrated:
     oldContract: indexed(address)
     newContract: indexed(address)
     timestamp: uint256
 
-# 状态变量
+# ============ 数据结构 ============
+
+# 订阅信息结构（需要与Subscription.vy保持一致）
+struct SubscriptionInfo:
+    principal: uint256
+    lockPeriod: uint256
+    subscribeTime: uint256
+    redeemTime: uint256
+    apy: uint256
+    redeemed: bool
+
+# 质押信息
+struct StakeInfo:
+    amount: uint256              # 质押数量
+    stakeTime: uint256           # 质押时间
+    lastRewardTime: uint256      # 上次领取奖励时间
+    subscriptionId: uint256      # 关联的认购ID
+    originalRedeemTime: uint256  # 原始赎回时间
+    stakeDuration: uint256       # 质押时长（用于顺延赎回期）
+    unstaked: bool               # 是否已解除质押
+
+# ============ 常量定义 ============
+
+BASIS_POINTS: constant(uint256) = 10000
+SECONDS_PER_YEAR: constant(uint256) = 365 * 24 * 3600
+SECONDS_PER_DAY: constant(uint256) = 24 * 3600
+
+# ============ 存储变量 ============
+
 owner: public(address)
 paused: public(bool)
 
@@ -110,17 +120,13 @@ userList: public(DynArray[address, 1000])
 stakingAPY: public(uint256)         # 质押APY（基点，10000 = 100%）
 dailyEmission: public(uint256)      # 每日固定释放量（18位精度）
 
-# 常量
-BASIS_POINTS: constant(uint256) = 10000
-SECONDS_PER_YEAR: constant(uint256) = 365 * 24 * 3600
-SECONDS_PER_DAY: constant(uint256) = 24 * 3600
-
+# ============ 构造函数 ============
 
 @deploy
 def __init__():
     """
     @notice 初始化质押合约
-    @dev 部署后需要通过 setAddressProvider 设置 Provider 地址
+    @dev 部署后需要通过 admin_set_address_provider 设置 Provider 地址
     """
     self.owner = msg.sender
     self.paused = False
@@ -129,9 +135,40 @@ def __init__():
     self.stakingAPY = 3000  # 30% APY
     self.dailyEmission = 10_000 * 10 ** 18  # 每日释放10000个平台代币
 
+# ============ Owner 函数 ============
 
 @external
-def setAddressProvider(_address_provider: address):
+def owner_pause():
+    """
+    @notice 暂停合约
+    """
+    assert msg.sender == self.owner, "Only owner"
+    self.paused = True
+
+
+@external
+def owner_unpause():
+    """
+    @notice 恢复合约
+    """
+    assert msg.sender == self.owner, "Only owner"
+    self.paused = False
+
+
+@external
+def owner_transfer_ownership(_new_owner: address):
+    """
+    @notice 转移所有权
+    @param _new_owner 新所有者地址
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _new_owner != empty(address), "Invalid address"
+    self.owner = _new_owner
+
+# ============ Admin 函数 ============
+
+@external
+def admin_set_address_provider(_address_provider: address):
     """
     @notice 设置 AddressProvider 地址
     @param _address_provider AddressProvider 合约地址
@@ -142,56 +179,8 @@ def setAddressProvider(_address_provider: address):
     self.ADDRESS_PROVIDER = _address_provider
 
 
-# ==================== Provider 查询 ====================
-
-@view
-@internal
-def _get_kyc_manager() -> address:
-    """@notice 从 AddressProvider 获取 KYC 管理合约地址"""
-    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_kyc_manager()
-
-
-@view
-@internal
-def _get_rwa_token() -> address:
-    """@notice 从 AddressProvider 获取 Vanke RWA Token 地址"""
-    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_rwa_token()
-
-
-@view
-@internal
-def _get_platform_token() -> address:
-    """@notice 从 AddressProvider 获取 Vanke Platform Token 地址"""
-    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_platform_token()
-
-
-@view
-@internal
-def _get_subscription() -> address:
-    """@notice 从 AddressProvider 获取 Vanke Subscription 地址"""
-    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_subscription()
-
-
 @external
-def pause():
-    """
-    @notice 暂停合约
-    """
-    assert msg.sender == self.owner, "Only owner"
-    self.paused = True
-
-
-@external
-def unpause():
-    """
-    @notice 恢复合约
-    """
-    assert msg.sender == self.owner, "Only owner"
-    self.paused = False
-
-
-@external
-def set_staking_apy(_apy: uint256):
+def admin_set_staking_apy(_apy: uint256):
     """
     @notice 设置质押APY
     @param _apy APY（基点）
@@ -202,7 +191,7 @@ def set_staking_apy(_apy: uint256):
 
 
 @external
-def set_daily_emission(_emission: uint256):
+def admin_set_daily_emission(_emission: uint256):
     """
     @notice 设置每日释放量
     @param _emission 每日释放量
@@ -212,9 +201,7 @@ def set_daily_emission(_emission: uint256):
     self.dailyEmission = _emission
     log DailyEmissionUpdated(oldEmission, _emission)
 
-
-# 注意: set_kyc_manager, set_rwa_token, set_platform_token, set_subscription 已移除 - 纯 Provider 模式
-
+# ============ 核心业务函数 ============
 
 @external
 def stake(_amount: uint256, _subscriptionId: uint256):
@@ -233,7 +220,7 @@ def stake(_amount: uint256, _subscriptionId: uint256):
     rwa_token: address = self._get_rwa_token()
 
     # STO合规：KYC验证
-    assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(kyc).is_verified(msg.sender), "KYC verification required"
 
     # 验证认购信息
     subCount: uint256 = staticcall ISubscription(subscription).subscriptionCount(msg.sender)
@@ -284,7 +271,7 @@ def unstake(_stakeId: uint256):
     rwa_token: address = self._get_rwa_token()
 
     # STO合规：KYC验证
-    assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(kyc).is_verified(msg.sender), "KYC verification required"
 
     stakeInfo: StakeInfo = self.stakes[msg.sender][_stakeId]
     assert not stakeInfo.unstaked, "Already unstaked"
@@ -319,9 +306,83 @@ def claim_reward(_stakeId: uint256):
 
     # STO合规：KYC验证
     kyc: address = self._get_kyc_manager()
-    assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(kyc).is_verified(msg.sender), "KYC verification required"
 
     self._claim_reward(msg.sender, _stakeId)
+
+# ============ 查询函数 ============
+
+@view
+@external
+def calculate_reward(_user: address, _stakeId: uint256) -> uint256:
+    """
+    @notice 计算奖励（外部调用）
+    @param _user 用户地址
+    @param _stakeId 质押ID
+    @return 奖励数量
+    """
+    return self._calculate_reward(_user, _stakeId)
+
+
+@view
+@external
+def get_stake(_user: address, _stakeId: uint256) -> StakeInfo:
+    """
+    @notice 获取质押信息
+    @param _user 用户地址
+    @param _stakeId 质押ID
+    @return 质押信息
+    """
+    return self.stakes[_user][_stakeId]
+
+
+@view
+@external
+def get_new_redeem_time(_user: address, _stakeId: uint256) -> uint256:
+    """
+    @notice 获取顺延后的赎回时间
+    @param _user 用户地址
+    @param _stakeId 质押ID
+    @return 新赎回时间
+    """
+    stakeInfo: StakeInfo = self.stakes[_user][_stakeId]
+
+    if stakeInfo.unstaked:
+        # 已解除质押，赎回时间 = 原始赎回时间 + 质押时长
+        return stakeInfo.originalRedeemTime + stakeInfo.stakeDuration
+    else:
+        # 未解除质押，赎回时间 = 原始赎回时间 + 当前质押时长
+        currentStakeDuration: uint256 = block.timestamp - stakeInfo.stakeTime
+        return stakeInfo.originalRedeemTime + currentStakeDuration
+
+# ============ 内部辅助函数 ============
+
+@view
+@internal
+def _get_kyc_manager() -> address:
+    """@notice 从 AddressProvider 获取 KYC 管理合约地址"""
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_kyc_manager()
+
+
+@view
+@internal
+def _get_rwa_token() -> address:
+    """@notice 从 AddressProvider 获取 Vanke RWA Token 地址"""
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_rwa_token()
+
+
+@view
+@internal
+def _get_platform_token() -> address:
+    """@notice 从 AddressProvider 获取 Vanke Platform Token 地址"""
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_platform_token()
+
+
+@view
+@internal
+def _get_subscription() -> address:
+    """@notice 从 AddressProvider 获取 Vanke Subscription 地址"""
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_subscription()
 
 
 @internal
@@ -379,63 +440,7 @@ def _calculate_reward(_user: address, _stakeId: uint256) -> uint256:
 
     return apyReward + dailyReward
 
-
-@view
-@external
-def calculate_reward(_user: address, _stakeId: uint256) -> uint256:
-    """
-    @notice 计算奖励（外部调用）
-    @param _user 用户地址
-    @param _stakeId 质押ID
-    @return 奖励数量
-    """
-    return self._calculate_reward(_user, _stakeId)
-
-
-@view
-@external
-def get_stake(_user: address, _stakeId: uint256) -> StakeInfo:
-    """
-    @notice 获取质押信息
-    @param _user 用户地址
-    @param _stakeId 质押ID
-    @return 质押信息
-    """
-    return self.stakes[_user][_stakeId]
-
-
-@view
-@external
-def get_new_redeem_time(_user: address, _stakeId: uint256) -> uint256:
-    """
-    @notice 获取顺延后的赎回时间
-    @param _user 用户地址
-    @param _stakeId 质押ID
-    @return 新赎回时间
-    """
-    stakeInfo: StakeInfo = self.stakes[_user][_stakeId]
-
-    if stakeInfo.unstaked:
-        # 已解除质押，赎回时间 = 原始赎回时间 + 质押时长
-        return stakeInfo.originalRedeemTime + stakeInfo.stakeDuration
-    else:
-        # 未解除质押，赎回时间 = 原始赎回时间 + 当前质押时长
-        currentStakeDuration: uint256 = block.timestamp - stakeInfo.stakeTime
-        return stakeInfo.originalRedeemTime + currentStakeDuration
-
-
-@external
-def transfer_ownership(_new_owner: address):
-    """
-    @notice 转移所有权
-    @param _new_owner 新所有者地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_owner != empty(address), "Invalid address"
-    self.owner = _new_owner
-
-
-# ==================== 依赖查询功能 ====================
+# ============ 依赖查询功能 ============
 
 @external
 @view
@@ -487,11 +492,10 @@ def get_address_provider() -> address:
     """
     return self.ADDRESS_PROVIDER
 
-
-# ==================== 合约迁移功能 ====================
+# ============ 合约迁移功能 ============
 
 @external
-def migrate(newContract: address):
+def owner_migrate(newContract: address):
     """
     @notice 迁移所有状态到新合约
     @param newContract 新合约地址（必须实现 receive_migration 接口）
@@ -508,16 +512,6 @@ def migrate(newContract: address):
     extcall IMigration(newContract).receive_migration(self)
 
     log Migrated(self, newContract, block.timestamp)
-
-
-@external
-@view
-def is_migrated() -> bool:
-    """
-    @notice 检查合约是否已迁移
-    @return True 如果已迁移到新合约
-    """
-    return self.migrated
 
 
 @external
@@ -553,6 +547,16 @@ def receive_migration(oldContract: address):
 
         # 添加到用户列表
         self.userList.append(user)
+
+
+@external
+@view
+def is_migrated() -> bool:
+    """
+    @notice 检查合约是否已迁移
+    @return True 如果已迁移到新合约
+    """
+    return self.migrated
 
 
 @external

@@ -17,7 +17,7 @@ from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
 from src.models.transaction_audit import TransactionAudit
-from src.shared.schemas.enums.audit import TransactionAuditStatus, TransactionAuditType
+from src.schemas.enums.audit import TransactionAuditStatus, TransactionAuditType
 
 # ==================== 策略定义 ====================
 

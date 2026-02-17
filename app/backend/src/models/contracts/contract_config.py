@@ -21,7 +21,7 @@ from typing import Optional, Sequence
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-from src.shared.schemas.enums.contract import DependencyType
+from src.schemas.enums.contract import DependencyType
 
 
 class ContractConfig(AbstractModel, TimestampMixin):

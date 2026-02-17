@@ -71,7 +71,7 @@ const IS_DEV = process.env.NODE_ENV === 'development'
  * 使用函数形式以支持国际化
  * @validates Requirements 3.2, 3.3
  */
-export const createBasicInfoSchema = (t: (key: string, params?: Record<string, unknown>) => string) => z.object({
+export const createBasicInfoSchema = (t: (key: string, params?: Record<string, unknown> | undefined) => string) => z.object({
   name: z
     .string()
     .min(2, t('admin.assets.wizard.validation.nameMin'))
@@ -133,7 +133,7 @@ export function BasicInfoStep({ onNext, onPrev }: StepComponentProps) {
   const firstInputRef = useRef<HTMLInputElement>(null)
   
   // 创建带国际化的验证 schema
-  const basicInfoSchema = useMemo(() => createBasicInfoSchema(t), [t])
+  const basicInfoSchema = useMemo(() => createBasicInfoSchema(t as unknown as (key: string, params?: Record<string, unknown> | undefined) => string), [t])
 
   // 初始化表单
   const form = useForm<BasicInfoFormValues>({

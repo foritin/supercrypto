@@ -20,19 +20,19 @@ from ape.cli import ConnectedProviderCommand
 def cli(network, address: str):
     """检查合约是否已部署到指定地址"""
     provider = networks.active_provider
-    
+
     print(f"🔍 检查合约: {address}")
     print(f"   网络: {provider.network.name}")
     print(f"   RPC: {provider.uri}")
     print("-" * 60)
-    
+
     # 获取合约代码
     code = provider.get_code(address)
-    
+
     if code and len(code) > 0:
         print(f"✅ 合约已部署")
         print(f"   代码长度: {len(code)} bytes")
-        
+
         # 尝试获取余额
         balance = provider.get_balance(address)
         print(f"   余额: {balance / 10**18:.6f} ETH")

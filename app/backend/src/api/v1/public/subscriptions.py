@@ -9,19 +9,17 @@ from decimal import Decimal
 from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends, Query
 
-from src.services.subscription.schemas import SubscriptionPreviewRequest
-from src.services.subscription.service import SubscriptionService
+from src.common.dependencies import get_subscription_service
+from src.schemas.subscription import SubscriptionPreviewRequest
+from src.services import SubscriptionService
 
 router = APIRouter()
 
 
-def get_subscription_service() -> SubscriptionService:
-    """依赖注入：获取认购服务"""
-    return SubscriptionService()
-
-
 @router.get(
-    "/preview", summary="预览认购收益", description="计算认购的预期收益和到期日期"
+    "/preview",
+    summary="Preview Subscription Returns",
+    description="Calculate expected returns and maturity date for a subscription",
 )
 async def preview_subscription(
     asset_id: int = Query(..., description="资产ID"),
@@ -46,4 +44,3 @@ async def preview_subscription(
     )
     result = await service.preview_subscription(data)
     return create_success_response(object_data=result.model_dump(mode="json"))
-

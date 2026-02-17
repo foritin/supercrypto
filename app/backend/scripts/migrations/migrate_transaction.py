@@ -44,8 +44,8 @@ from tortoise import Tortoise
 from scripts.migrations.base import MigrationBase, MigrationResult, MigrationStatus
 from src.models.transaction import Transaction
 from src.models.transaction_audit import TransactionAudit
-from src.shared.schemas.enums import TransactionStatus, TransactionType
-from src.shared.schemas.enums.audit import TransactionAuditStatus, TransactionAuditType
+from src.schemas.enums import TransactionStatus, TransactionType
+from src.schemas.enums.audit import TransactionAuditStatus, TransactionAuditType
 
 
 logger = get_logger("supercrypto.migration.transaction")

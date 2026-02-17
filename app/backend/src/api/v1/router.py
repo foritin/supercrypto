@@ -13,7 +13,7 @@ from falib.utils.config import SETTINGS
 from fastapi import APIRouter, Depends
 
 from src.api.v1 import admin, dev, public, user
-from src.shared.security import require_admin, require_user
+from src.security import require_admin, require_user
 
 # ============================================================================
 # 创建主路由器

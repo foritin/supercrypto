@@ -7,20 +7,16 @@
 from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends
 
-from src.services.staking.service import StakingService
+from src.common.dependencies import get_staking_service
+from src.services import StakingService
 
 router = APIRouter()
 
 
-def get_staking_service() -> StakingService:
-    """依赖注入：获取质押服务"""
-    return StakingService()
-
-
 @router.get(
     "/config",
-    summary="获取质押配置",
-    description="获取质押周期、倍数等配置信息",
+    summary="Get Staking Config",
+    description="Get staking period, multiplier and other configuration",
 )
 async def get_staking_config(service: StakingService = Depends(get_staking_service)):
     """
@@ -38,8 +34,8 @@ async def get_staking_config(service: StakingService = Depends(get_staking_servi
 
 @router.get(
     "/limit",
-    summary="获取今日质押限额",
-    description="获取当日的质押限额信息",
+    summary="Get Today's Staking Limit",
+    description="Get the staking limit information for today",
 )
 async def get_today_limit(service: StakingService = Depends(get_staking_service)):
     """
@@ -57,8 +53,8 @@ async def get_today_limit(service: StakingService = Depends(get_staking_service)
 
 @router.get(
     "/plt-token",
-    summary="获取 PLT 代币信息",
-    description="获取 PLT 代币的完整信息，包括总量、分配、质押池状态等",
+    summary="Get PLT Token Info",
+    description="Get complete PLT token information including supply, allocation, staking pool status, etc.",
 )
 async def get_plt_token_info(service: StakingService = Depends(get_staking_service)):
     """
@@ -73,4 +69,3 @@ async def get_plt_token_info(service: StakingService = Depends(get_staking_servi
     """
     result = await service.get_plt_token_info()
     return create_success_response(object_data=result.model_dump(mode="json"))
-

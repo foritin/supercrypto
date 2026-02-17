@@ -5,7 +5,8 @@
 @dev 标准ERC20实现，任何人都可以铸造（仅用于测试）
 """
 
-# ERC20 事件
+# ============ 事件定义 ============
+
 event Transfer:
     sender: indexed(address)
     receiver: indexed(address)
@@ -16,7 +17,8 @@ event Approval:
     spender: indexed(address)
     value: uint256
 
-# ERC20 状态变量
+# ============ 存储变量 ============
+
 name: public(String[32])
 symbol: public(String[8])
 decimals: public(uint8)
@@ -25,6 +27,7 @@ totalSupply: public(uint256)
 balanceOf: public(HashMap[address, uint256])
 allowance: public(HashMap[address, HashMap[address, uint256]])
 
+# ============ 构造函数 ============
 
 @deploy
 def __init__():
@@ -36,6 +39,7 @@ def __init__():
     self.decimals = 6  # USDT使用6位小数
     self.totalSupply = 0
 
+# ============ 核心业务函数 ============
 
 @external
 def mint(_to: address, _amount: uint256):
@@ -112,8 +116,7 @@ def burn(_amount: uint256):
 
     log Transfer(msg.sender, empty(address), _amount)
 
-
-# ==================== 依赖查询功能 ====================
+# ============ 依赖查询功能 ============
 
 @external
 @view
@@ -129,6 +132,7 @@ def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], D
     unbound_optional: DynArray[String[50], 10] = []
     return unbound_required, bound_all, unbound_optional
 
+# ============ 合约迁移功能 ============
 
 @external
 @view
@@ -139,4 +143,3 @@ def is_migrated() -> bool:
     @dev 这是测试合约，不支持迁移功能
     """
     return False
-

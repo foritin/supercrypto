@@ -18,14 +18,14 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from src.common.exceptions import BusinessException
 from src.models.kyc import AccountKyc
-from src.services.kyc.service import KycService
-from src.shared.common.exceptions import BusinessException
-from src.shared.schemas.enums import (
+from src.schemas.enums import (
     KycStatus,
     Network,
     OnChainSyncStatus,
 )
+from src.services.kyc_service import KycService
 
 
 def run_async(coro):
@@ -135,24 +135,21 @@ class TestB02RecordAdmissionChainVerify:
             on_chain_sync_status=OnChainSyncStatus.PENDING,
         )
 
-        mock_contract_service = MagicMock()
-        mock_contract_service.is_verified = AsyncMock(return_value=False)
-
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             service = KycService()
 
         with (
-            patch("src.services.kyc.service.AccountKyc") as MockKyc,
-            patch(
-                "src.services.kyc.contract_service.KycContractService",
-                return_value=mock_contract_service,
-            ),
+            patch("src.services.kyc_service.AccountKyc") as MockKyc,
         ):
             MockKyc.filter.return_value.first = AsyncMock(return_value=mock_kyc)
 
             with pytest.raises(BusinessException, match="verification failed"):
-                run_async(service.record_admission(1, tx_hash, "0x" + "b" * 40))
+                run_async(
+                    service.record_admission(
+                        1, tx_hash, "0x" + "b" * 40, chain_verified=False
+                    )
+                )
 
     @given(tx_hash=tx_hash_strategy)
     @settings(
@@ -170,24 +167,23 @@ class TestB02RecordAdmissionChainVerify:
             on_chain_sync_status=OnChainSyncStatus.PENDING,
         )
 
-        mock_contract_service = MagicMock()
-        mock_contract_service.is_verified = AsyncMock(return_value=True)
-
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             service = KycService()
 
         with (
-            patch("src.services.kyc.service.AccountKyc") as MockKyc,
-            patch("src.services.kyc.service.KycAuditLog") as MockAuditLog,
-            patch("src.services.kyc.service.AccountKycDocument") as MockDoc,
-            patch(
-                "src.services.kyc.contract_service.KycContractService",
-                return_value=mock_contract_service,
+            patch("src.services.kyc_service.AccountKyc") as MockKyc,
+            patch("src.services.kyc_service.KycAuditLog") as MockAuditLog,
+            patch("src.services.kyc_service.AccountKycDocument") as MockDoc,
+            patch.object(
+                service,
+                "is_verified",
+                new_callable=AsyncMock,
+                return_value=True,
             ),
             patch.object(
                 service,
-                "_to_full_response",
+                "to_full_response",
                 new_callable=AsyncMock,
                 return_value=MagicMock(),
             ),
@@ -208,28 +204,25 @@ class TestB02RecordAdmissionChainVerify:
             on_chain_sync_status=OnChainSyncStatus.PENDING,
         )
 
-        mock_contract_service = MagicMock()
-        mock_contract_service.is_verified = AsyncMock(
-            side_effect=ConnectionError("RPC error")
-        )
-
         tx_hash = "0x" + "c" * 64
 
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             service = KycService()
 
         with (
-            patch("src.services.kyc.service.AccountKyc") as MockKyc,
-            patch("src.services.kyc.service.KycAuditLog") as MockAuditLog,
-            patch("src.services.kyc.service.AccountKycDocument") as MockDoc,
-            patch(
-                "src.services.kyc.contract_service.KycContractService",
-                return_value=mock_contract_service,
+            patch("src.services.kyc_service.AccountKyc") as MockKyc,
+            patch("src.services.kyc_service.KycAuditLog") as MockAuditLog,
+            patch("src.services.kyc_service.AccountKycDocument") as MockDoc,
+            patch.object(
+                service,
+                "is_verified",
+                new_callable=AsyncMock,
+                side_effect=BusinessException(message="RPC error"),
             ),
             patch.object(
                 service,
-                "_to_full_response",
+                "to_full_response",
                 new_callable=AsyncMock,
                 return_value=MagicMock(),
             ),
@@ -269,17 +262,17 @@ class TestB04RevocationStatus:
             on_chain_sync_status=OnChainSyncStatus.SYNCED,
         )
 
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             service = KycService()
 
         with (
-            patch("src.services.kyc.service.AccountKyc") as MockKyc,
-            patch("src.services.kyc.service.KycAuditLog") as MockAuditLog,
-            patch("src.services.kyc.service.AccountKycDocument") as MockDoc,
+            patch("src.services.kyc_service.AccountKyc") as MockKyc,
+            patch("src.services.kyc_service.KycAuditLog") as MockAuditLog,
+            patch("src.services.kyc_service.AccountKycDocument") as MockDoc,
             patch.object(
                 service,
-                "_to_full_response",
+                "to_full_response",
                 new_callable=AsyncMock,
                 return_value=MagicMock(),
             ),
@@ -306,11 +299,11 @@ class TestB04RevocationStatus:
                 on_chain_sync_status=status,
             )
 
-            with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+            with patch("src.services.kyc_service.SETTINGS") as mock_settings:
                 mock_settings.network = "hardhat"
                 service = KycService()
 
-            with patch("src.services.kyc.service.AccountKyc") as MockKyc:
+            with patch("src.services.kyc_service.AccountKyc") as MockKyc:
                 MockKyc.filter.return_value.first = AsyncMock(return_value=mock_kyc)
 
                 with pytest.raises(BusinessException, match="not currently admitted"):
@@ -337,12 +330,11 @@ class TestB07BatchReviewApprove:
             on_chain_sync_status=OnChainSyncStatus.NOT_REQUIRED,
         )
 
-        from src.services.admin.kyc_schemas import BatchReviewRequest
-        from src.services.admin.kyc_service import AdminKycService
+        from src.schemas.admin_kyc import BatchReviewRequest
 
-        with patch("src.services.admin.kyc_service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
-            admin_service = AdminKycService()
+            admin_service = KycService()
 
         request = BatchReviewRequest(
             kyc_ids=[1],
@@ -351,11 +343,9 @@ class TestB07BatchReviewApprove:
         )
 
         with (
-            patch("src.services.admin.kyc_service.AccountKyc") as MockKyc,
-            patch(
-                "src.services.admin.kyc_service.create_kyc_audit_log"
-            ) as MockAuditLog,
-            patch("src.services.admin.kyc_service.in_transaction") as MockTransaction,
+            patch("src.services.kyc_service.AccountKyc") as MockKyc,
+            patch("src.services.kyc_service.create_kyc_audit_log") as MockAuditLog,
+            patch("src.services.kyc_service.in_transaction") as MockTransaction,
         ):
             MockKyc.filter.return_value.first = AsyncMock(return_value=mock_kyc)
             MockAuditLog.return_value = AsyncMock()
@@ -382,14 +372,14 @@ class TestC01StatsRevokedCount:
 
     def test_stats_schema_has_revoked_field(self):
         """KycStats schema 应包含 revoked 字段"""
-        from src.services.admin.kyc_schemas import KycStats
+        from src.schemas.admin_kyc import KycStats
 
         stats = KycStats(revoked=5)
         assert stats.revoked == 5
 
     def test_stats_revoked_defaults_to_zero(self):
         """revoked 字段默认值应为 0"""
-        from src.services.admin.kyc_schemas import KycStats
+        from src.schemas.admin_kyc import KycStats
 
         stats = KycStats()
         assert stats.revoked == 0

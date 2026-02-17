@@ -15,20 +15,17 @@ Feature: full-stack-review-fixes
 
 import json
 import uuid
-import warnings
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
-from src.shared.middleware.auth import AuthStateMiddleware, PUBLIC_PATH_PREFIXES
-from src.shared.services.lock_service import DistributedLockService
+from src.middleware.auth import AuthStateMiddleware
 from src.tasks.kyc_sync_task import RECONCILE_BATCH_SIZE, _parse_retry_info
 
 # 抑制 JWT 密钥长度警告 (测试环境使用短密钥)
-pytestmark = pytest.mark.filterwarnings(
-    "ignore::jwt.warnings.InsecureKeyLengthWarning"
-)
+pytestmark = pytest.mark.filterwarnings("ignore::jwt.warnings.InsecureKeyLengthWarning")
 
 
 # ============================================================
@@ -202,7 +199,7 @@ class TestJwtClaimsIntegrity:
         """
         import jwt as pyjwt
 
-        from src.shared.security.jwt import create_access_token
+        from src.security.jwt import create_access_token
 
         token = create_access_token({"address": address, "session_id": session_id})
 
@@ -235,7 +232,7 @@ class TestJwtClaimsIntegrity:
         """
         import jwt as pyjwt
 
-        from src.shared.security.jwt import create_refresh_token
+        from src.security.jwt import create_refresh_token
 
         token = create_refresh_token({"address": address})
 
@@ -260,13 +257,15 @@ class TestPathNormalizationTraversalPrevention:
 
     @settings(max_examples=100)
     @given(
-        admin_path=st.sampled_from([
-            "admin/users",
-            "admin/kyc",
-            "admin/assets",
-            "admin/contracts",
-            "metrics/chain",
-        ]),
+        admin_path=st.sampled_from(
+            [
+                "admin/users",
+                "admin/kyc",
+                "admin/assets",
+                "admin/contracts",
+                "metrics/chain",
+            ]
+        ),
     )
     def test_property_13_traversal_not_public(self, admin_path: str):
         """Property 13: 路径规范化防遍历
@@ -311,7 +310,9 @@ class TestPathNormalizationTraversalPrevention:
         depth=st.integers(min_value=1, max_value=5),
         admin_path=st.sampled_from(["admin/users", "admin/kyc", "metrics/chain"]),
     )
-    def test_property_13_multiple_traversal_sequences(self, depth: int, admin_path: str):
+    def test_property_13_multiple_traversal_sequences(
+        self, depth: int, admin_path: str
+    ):
         """Property 13 补充: 多层 /../ 遍历也应被阻止
 
         **Validates: Requirements 4.6**
@@ -325,9 +326,7 @@ class TestPathNormalizationTraversalPrevention:
 
         result = middleware._is_public_path(traversal_path)
 
-        assert not result, (
-            f"多层遍历路径 '{traversal_path}' 不应被识别为公开路径"
-        )
+        assert not result, f"多层遍历路径 '{traversal_path}' 不应被识别为公开路径"
 
 
 # ============================================================

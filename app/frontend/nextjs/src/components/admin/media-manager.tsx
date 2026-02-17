@@ -55,7 +55,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { notification } from '@/lib/notification'
-import { assetService, type AssetMediaItem, type MediaType, type MediaStats } from '@/services/asset'
+import { assetService, type AssetMediaItem, type MediaType, type MediaStats, type FrameStyle } from '@/services/asset'
+import { AssetLogoFrame, FRAME_STYLE_OPTIONS, FRAME_STYLE_THEMES } from '@/components/asset'
 
 // 媒体类型配置
 const MEDIA_TYPE_CONFIG: Record<
@@ -94,6 +95,12 @@ const MEDIA_TYPE_CONFIG: Record<
     maxSize: 10 * 1024 * 1024,
     maxCount: 10,
   },
+  logo: {
+    labelKey: 'admin.media.types.logo',
+    accept: 'image/png,image/jpeg,image/svg+xml,image/webp',
+    maxSize: 2 * 1024 * 1024, // 2MB
+    maxCount: 1,
+  },
 }
 
 interface MediaManagerProps {
@@ -121,6 +128,10 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
   // 批量选择状态
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  
+  // Logo 边框样式状态
+  const [frameStyle, setFrameStyle] = useState<FrameStyle | null>(null)
+  const [savingFrameStyle, setSavingFrameStyle] = useState(false)
 
   // 加载媒体列表
   const loadMedia = useCallback(async () => {
@@ -140,15 +151,27 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
     }
   }, [assetId, t])
 
+  // 加载资产的 frame_style
+  const loadFrameStyle = useCallback(async () => {
+    if (!assetId) return
+    try {
+      const asset = await assetService.getAssetAdmin(assetId)
+      setFrameStyle(asset.frame_style ?? null)
+    } catch {
+      // 静默失败，不影响媒体管理
+    }
+  }, [assetId])
+
   useEffect(() => {
     if (visible) {
       loadMedia()
+      loadFrameStyle()
     } else {
       // 关闭时重置选择状态
       setSelectionMode(false)
       setSelectedIds(new Set())
     }
-  }, [visible, loadMedia])
+  }, [visible, loadMedia, loadFrameStyle])
 
   // 切换标签页时清除选择
   useEffect(() => {
@@ -282,6 +305,24 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
       onUpdate?.()
     } catch (error) {
       notification.error(t('admin.media.messages.setPrimaryFailed'))
+    }
+  }
+
+  // 保存 Logo 边框样式
+  const handleFrameStyleChange = async (style: FrameStyle) => {
+    const newStyle = frameStyle === style ? null : style
+    setFrameStyle(newStyle)
+    setSavingFrameStyle(true)
+    try {
+      await assetService.updateAsset(assetId, { frame_style: newStyle ?? undefined })
+      notification.success(t('admin.assets.form.frameStyle.saved'))
+      onUpdate?.()
+    } catch {
+      // 回滚
+      setFrameStyle(frameStyle)
+      notification.error(t('admin.assets.form.frameStyle.saveFailed'))
+    } finally {
+      setSavingFrameStyle(false)
     }
   }
 
@@ -499,7 +540,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
   // 渲染上传区域
   const renderUploadArea = () => {
     const config = MEDIA_TYPE_CONFIG[activeTab]
-    const isImageType = activeTab === 'cover' || activeTab === 'gallery'
+    const isImageType = activeTab === 'cover' || activeTab === 'gallery' || activeTab === 'logo'
     const currentCount = mediaList.filter((m) => m.media_type === activeTab).length
     const canUploadMore = currentCount < (config?.maxCount || 1)
     const allowMultiple = (config?.maxCount || 1) > 1
@@ -671,14 +712,51 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
     </div>
   )
 
+  // 渲染 Logo 边框样式选择器
+  const renderFrameStylePicker = () => (
+    <div className="mb-4 p-4 rounded-lg bg-white/5 border border-white/10">
+      <p className="text-sm font-medium mb-1">{t('admin.assets.form.frameStyle.label')}</p>
+      <p className="text-xs text-muted-foreground mb-3">{t('admin.assets.form.frameStyle.hint')}</p>
+      <div className="flex flex-wrap gap-3">
+        {FRAME_STYLE_OPTIONS.map((style) => {
+          const theme = FRAME_STYLE_THEMES[style]
+          const isSelected = frameStyle === style
+          return (
+            <button
+              key={style}
+              type="button"
+              disabled={savingFrameStyle}
+              onClick={() => handleFrameStyleChange(style)}
+              className={cn(
+                'flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200',
+                'hover:bg-white/5',
+                isSelected
+                  ? 'border-white/30 bg-white/[0.06]'
+                  : 'border-white/10 bg-transparent',
+                savingFrameStyle && 'opacity-50 cursor-not-allowed'
+              )}
+              style={isSelected ? { boxShadow: `0 0 12px ${theme.glow}` } : undefined}
+            >
+              <AssetLogoFrame frameStyle={style} size="sm" />
+              <span className="text-xs text-muted-foreground">
+                {t(`admin.assets.form.frameStyle.${style}`)}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+
   // 渲染标签页内容
   const renderTabContent = (tabKey: string) => {
-    const isImageType = tabKey === 'cover' || tabKey === 'gallery'
+    const isImageType = tabKey === 'cover' || tabKey === 'gallery' || tabKey === 'logo'
     const tabMedia = mediaList.filter((m) => m.media_type === tabKey)
 
     return (
       <div>
         {renderUploadArea()}
+        {tabKey === 'logo' && renderFrameStylePicker()}
         {renderBatchToolbar()}
 
         {loading ? (

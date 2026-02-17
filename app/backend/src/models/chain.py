@@ -49,7 +49,9 @@ class Chain(AbstractModel, TimestampMixin):
         description="环境: development / production / all",
     )
     is_testnet = fields.BooleanField(default=False, description="是否为测试网")
-    is_enabled = fields.BooleanField(default=True, db_index=True, description="是否启用")
+    is_enabled = fields.BooleanField(
+        default=True, db_index=True, description="是否启用"
+    )
 
     # 显示配置
     icon = fields.CharField(max_length=64, null=True, description="图标标识")

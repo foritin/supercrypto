@@ -6,7 +6,7 @@
 
 from falib.utils.config import SETTINGS
 
-from src.shared.common.exceptions import ForbiddenException
+from src.common.exceptions import ForbiddenException
 
 
 async def require_dev_environment():

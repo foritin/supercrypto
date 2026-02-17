@@ -9,21 +9,20 @@ Feature: full-stack-review-fixes
 
 import asyncio
 from decimal import Decimal
-from unittest.mock import patch
 
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from tortoise import Tortoise
 from tortoise.transactions import in_transaction
 
 from src.models import Asset, Subscription
-from src.shared.schemas.enums import (
+from src.schemas.enums import (
     AssetStatus,
     AssetType,
     SubscriptionStatus,
     TokenType,
 )
-
 
 # ============================================================
 # 辅助函数 — 异步测试运行器

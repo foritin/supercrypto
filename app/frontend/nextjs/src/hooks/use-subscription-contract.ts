@@ -7,6 +7,11 @@
  * 1. isSubmitting 状态防止重复点击
  * 2. submittedTxHashes 缓存防止重复提交同一交易
  * 3. 后端幂等性保证 (相同 tx_hash 返回已有记录)
+ *
+ * 请求优化:
+ * - 使用 ref 稳定化地址引用，避免 useCallback 依赖变化导致无限循环
+ * - 使用 hasFetched ref 防止 StrictMode 双重执行
+ * - fetchParams 和 fetchUserData 只在地址/网络真正变化时触发
  */
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
@@ -23,12 +28,9 @@ import {
   monthsToSeconds,
   formatUSDTAmount,
   parseUSDTAmount,
-  basisPointsToPercent,
 } from "@/services/contract";
-import {
-  transactionAuditService,
-  TransactionType,
-} from "@/services/transaction-audit";
+import type { ContractAddressItem } from "@/services/contract";
+import { transactionAuditService } from "@/services/transaction-audit";
 
 // 合约地址类型
 interface ContractAddresses {
@@ -39,7 +41,7 @@ interface ContractAddresses {
 
 // 后端网络名称到 chainId 的映射
 const NETWORK_CHAIN_ID_MAP: Record<string, number> = {
-  local: 31337, // Anvil/Hardhat local network
+  local: 31337,
   localhost: 31337,
   anvil: 31337,
   hardhat: 31337,
@@ -48,13 +50,12 @@ const NETWORK_CHAIN_ID_MAP: Record<string, number> = {
   goerli: 5,
 };
 
-// 链上参数类型
+// 链上参数类型（仅保留后端 Asset 表不含的字段）
+// minInvestment / apyByPeriod 已由后端 asset.min_subscription / asset.apy_3m/6m/12m 提供
 interface OnChainParams {
-  minInvestment: number;
   maxInvestment: number;
   requireAccredited: boolean;
   paused: boolean;
-  apyByPeriod: Record<number, number>; // months -> percent
 }
 
 // 认购交易状态
@@ -78,7 +79,6 @@ export function useSubscriptionContract() {
 
   // 防重复提交状态
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // 已提交的 tx_hash 缓存，防止重复提交同一交易
   const submittedTxHashes = useRef(new Set<string>());
 
   // 合约地址状态
@@ -89,33 +89,57 @@ export function useSubscriptionContract() {
   const [backendNetwork, setBackendNetwork] = useState<string | null>(null);
 
   // 链上参数状态
-  const [onChainParams, setOnChainParams] = useState<OnChainParams | null>(
-    null
-  );
+  const [onChainParams, setOnChainParams] = useState<OnChainParams | null>(null);
   const [isLoadingParams, setIsLoadingParams] = useState(false);
 
   // 用户数据状态
   const [usdtBalance, setUsdtBalance] = useState<number>(0);
   const [usdtAllowance, setUsdtAllowance] = useState<number>(0);
 
-  // 记录上一次的 chainId，用于检测链切换
+  // === 用 ref 稳定化，避免 useCallback 依赖变化导致无限循环 ===
+  const addressesRef = useRef<ContractAddresses | null>(null);
+  const backendNetworkRef = useRef<string | null>(null);
   const prevChainIdRef = useRef<number | undefined>(undefined);
+
+  // 防止 StrictMode 双重执行
+  const paramsFetchedForRef = useRef<string | null>(null);
+  const userDataFetchedForRef = useRef<string | null>(null);
+
+  // 同步 ref
+  addressesRef.current = addresses;
+  backendNetworkRef.current = backendNetwork;
 
   // 检查钱包网络是否与后端配置的网络匹配
   const isNetworkMatched = backendNetwork
     ? NETWORK_CHAIN_ID_MAP[backendNetwork.toLowerCase()] === chainId
     : false;
 
-  // 获取合约地址
+  // ========== 获取合约地址 ==========
   const fetchAddresses = useCallback(async () => {
     setIsLoadingAddresses(true);
     try {
       const data = await contractService.getAddresses();
       setBackendNetwork(data.network);
+
+      const contracts = data.contracts;
+
+      const stablecoins: ContractAddressItem[] = contracts["stablecoin"] || [];
+      const usdtContract = stablecoins.find(
+        (c) => c.symbol === "USDT" || c.name.toUpperCase().includes("USDT")
+      );
+      const usdcContract = stablecoins.find(
+        (c) => c.symbol === "USDC" || c.name.toUpperCase().includes("USDC")
+      );
+
+      const defiContracts: ContractAddressItem[] = contracts["defi"] || [];
+      const subscriptionContract = defiContracts.find(
+        (c) => c.name.toLowerCase().includes("subscription")
+      );
+
       setAddresses({
-        subscription: data.subscription as Address | null,
-        usdt: data.mock_usdt as Address | null,
-        usdc: data.mock_usdc as Address | null,
+        subscription: (subscriptionContract?.address ?? null) as Address | null,
+        usdt: (usdtContract?.address ?? null) as Address | null,
+        usdc: (usdcContract?.address ?? null) as Address | null,
       });
     } catch (err) {
       console.error("Failed to fetch addresses:", err);
@@ -124,117 +148,110 @@ export function useSubscriptionContract() {
     }
   }, []);
 
-  // 获取链上参数
+  // ========== 获取链上参数 ==========
+  // 仅读取后端 Asset 表中不存在的字段 (max_investment, paused, require_accredited)
+  // min_investment / APY / lock_periods 已由后端 asset 提供，无需链上读取
   const fetchParams = useCallback(async () => {
-    if (!addresses?.subscription || !publicClient) return;
+    const addrs = addressesRef.current;
+    if (!addrs?.subscription || !publicClient) return;
 
     setIsLoadingParams(true);
     try {
-      const subscriptionAbi = parseAbi(SUBSCRIPTION_ABI);
-      const subscriptionAddr = addresses.subscription;
+      // 先检查合约是否存在
+      const code = await publicClient.getCode({ address: addrs.subscription });
+      if (!code || code === "0x") {
+        console.warn(
+          `Subscription contract not deployed at ${addrs.subscription} on current chain`
+        );
+        return;
+      }
 
-      // 并行读取链上数据
+      const subscriptionAbi = parseAbi(SUBSCRIPTION_ABI);
+      const subscriptionAddr = addrs.subscription;
+
       const [
-        minInvestment,
         maxInvestment,
         requireAccredited,
         paused,
-        lockPeriods,
       ] = await Promise.all([
         publicClient.readContract({
           address: subscriptionAddr,
           abi: subscriptionAbi,
-          functionName: "minInvestment",
+          functionName: "max_investment",
         }) as Promise<bigint>,
         publicClient.readContract({
           address: subscriptionAddr,
           abi: subscriptionAbi,
-          functionName: "maxInvestment",
-        }) as Promise<bigint>,
-        publicClient.readContract({
-          address: subscriptionAddr,
-          abi: subscriptionAbi,
-          functionName: "requireAccredited",
+          functionName: "require_accredited",
         }) as Promise<boolean>,
         publicClient.readContract({
           address: subscriptionAddr,
           abi: subscriptionAbi,
           functionName: "paused",
         }) as Promise<boolean>,
-        publicClient.readContract({
-          address: subscriptionAddr,
-          abi: subscriptionAbi,
-          functionName: "getLockPeriods",
-        }) as Promise<readonly [bigint, bigint, bigint, bigint]>,
       ]);
 
-      // 读取每个锁定期的 APY
-      const apyPromises = lockPeriods.map(
-        (period) =>
-          publicClient.readContract({
-            address: subscriptionAddr,
-            abi: subscriptionAbi,
-            functionName: "lockPeriodAPY",
-            args: [period],
-          }) as Promise<bigint>
-      );
-      const apys = await Promise.all(apyPromises);
-
-      // 构建 APY 映射 (months -> percent)
-      const monthsMapping = [1, 3, 6, 12];
-      const apyByPeriod: Record<number, number> = {};
-      monthsMapping.forEach((months, index) => {
-        apyByPeriod[months] = basisPointsToPercent(Number(apys[index]));
-      });
-
       setOnChainParams({
-        minInvestment: parseUSDTAmount(minInvestment),
         maxInvestment: parseUSDTAmount(maxInvestment),
         requireAccredited,
         paused,
-        apyByPeriod,
       });
     } catch (err) {
       console.error("Failed to read contract params:", err);
     } finally {
       setIsLoadingParams(false);
     }
-  }, [addresses?.subscription, publicClient]);
+  }, [publicClient]); // 只依赖 publicClient，地址从 ref 读取
 
-  // 获取用户余额和授权额度
+  // ========== 获取用户余额和授权额度 ==========
   const fetchUserData = useCallback(async () => {
-    if (!address || !addresses?.usdt || !publicClient) return;
+    const addrs = addressesRef.current;
+    if (!address || !addrs?.usdt || !publicClient) return;
 
     try {
+      // 先检查合约是否存在，避免对空地址调用 balanceOf 导致 decode 错误
+      const code = await publicClient.getCode({ address: addrs.usdt });
+      if (!code || code === "0x") {
+        console.warn(
+          `USDT contract not deployed at ${addrs.usdt} on current chain`
+        );
+        setUsdtBalance(0);
+        setUsdtAllowance(0);
+        return;
+      }
+
+      const erc20Abi = parseAbi(ERC20_ABI);
+
       const balance = (await publicClient.readContract({
-        address: addresses.usdt,
-        abi: parseAbi(ERC20_ABI),
+        address: addrs.usdt,
+        abi: erc20Abi,
         functionName: "balanceOf",
         args: [address],
       })) as bigint;
       setUsdtBalance(parseUSDTAmount(balance));
 
-      if (addresses.subscription) {
+      if (addrs.subscription) {
         const allowance = (await publicClient.readContract({
-          address: addresses.usdt,
-          abi: parseAbi(ERC20_ABI),
+          address: addrs.usdt,
+          abi: erc20Abi,
           functionName: "allowance",
-          args: [address, addresses.subscription],
+          args: [address, addrs.subscription],
         })) as bigint;
         setUsdtAllowance(parseUSDTAmount(allowance));
       }
     } catch (err) {
       console.error("Failed to fetch user data:", err);
     }
-  }, [address, addresses, publicClient]);
+  }, [address, publicClient]); // 只依赖 address 和 publicClient
 
-  // 监听链切换，重置状态并重新获取地址
+  // ========== Effects ==========
+
+  // 监听链切换，重置状态
   useEffect(() => {
     if (
       prevChainIdRef.current !== undefined &&
       prevChainIdRef.current !== chainId
     ) {
-      // 链切换了，重置所有状态
       setAddresses(null);
       setOnChainParams(null);
       setUsdtBalance(0);
@@ -242,66 +259,78 @@ export function useSubscriptionContract() {
       setTxState("idle");
       setTxHash(null);
       setError(null);
+      // 重置 fetch 标记
+      paramsFetchedForRef.current = null;
+      userDataFetchedForRef.current = null;
     }
     prevChainIdRef.current = chainId;
   }, [chainId]);
 
-  // 初始化加载 - 当 chainId 变化时也重新获取
+  // 初始化加载合约地址 (只在 chainId 变化时)
   useEffect(() => {
     if (chainId) {
       fetchAddresses();
     }
   }, [fetchAddresses, chainId]);
 
-  // 只在网络匹配时获取链上参数
+  // 获取链上参数 - 用具体的地址字符串作为依赖，避免对象引用变化
+  const subscriptionAddr = addresses?.subscription ?? null;
   useEffect(() => {
-    // 检查网络是否匹配
     const networkMatched = backendNetwork
       ? NETWORK_CHAIN_ID_MAP[backendNetwork.toLowerCase()] === chainId
       : false;
 
-    if (addresses?.subscription && publicClient && networkMatched) {
-      fetchParams();
-    }
-  }, [
-    addresses?.subscription,
-    fetchParams,
-    publicClient,
-    backendNetwork,
-    chainId,
-  ]);
+    if (!subscriptionAddr || !publicClient || !networkMatched) return;
 
-  // 只在网络匹配时获取用户数据
+    // 防止对同一地址重复请求
+    const fetchKey = `${subscriptionAddr}-${chainId}`;
+    if (paramsFetchedForRef.current === fetchKey) return;
+    paramsFetchedForRef.current = fetchKey;
+
+    fetchParams();
+  }, [subscriptionAddr, publicClient, backendNetwork, chainId, fetchParams]);
+
+  // 获取用户余额 - 用具体的地址字符串作为依赖
+  const usdtAddr = addresses?.usdt ?? null;
   useEffect(() => {
-    // 检查网络是否匹配
     const networkMatched = backendNetwork
       ? NETWORK_CHAIN_ID_MAP[backendNetwork.toLowerCase()] === chainId
       : false;
 
-    if (address && addresses?.usdt && publicClient && networkMatched) {
-      fetchUserData();
-    }
-  }, [
-    address,
-    addresses?.usdt,
-    fetchUserData,
-    publicClient,
-    backendNetwork,
-    chainId,
-  ]);
+    if (!address || !usdtAddr || !publicClient || !networkMatched) return;
 
-  // 刷新方法
-  const refetchParams = fetchParams;
-  const refetchBalance = fetchUserData;
-  const refetchAllowance = fetchUserData;
+    // 防止对同一组合重复请求
+    const fetchKey = `${address}-${usdtAddr}-${chainId}`;
+    if (userDataFetchedForRef.current === fetchKey) return;
+    userDataFetchedForRef.current = fetchKey;
+
+    fetchUserData();
+  }, [address, usdtAddr, publicClient, backendNetwork, chainId, fetchUserData]);
+
+  // 刷新方法 (手动调用时重置 fetch 标记)
+  const refetchParams = useCallback(() => {
+    paramsFetchedForRef.current = null;
+    return fetchParams();
+  }, [fetchParams]);
+
+  const refetchBalance = useCallback(() => {
+    userDataFetchedForRef.current = null;
+    return fetchUserData();
+  }, [fetchUserData]);
+
+  // refetchAllowance 与 refetchBalance 共用同一方法
+  void refetchBalance;
+
+  // ========== 交易操作 ==========
 
   // 授权 USDT
   const approveUSDT = useCallback(
     async (amount: number): Promise<boolean> => {
+      const addrs = addressesRef.current;
       if (
         !walletClient ||
-        !addresses?.usdt ||
-        !addresses?.subscription ||
+        !addrs?.usdt ||
+        !addrs?.subscription ||
         !publicClient ||
         !address
       ) {
@@ -316,32 +345,29 @@ export function useSubscriptionContract() {
         const amountBigInt = formatUSDTAmount(amount);
 
         const hash = await walletClient.writeContract({
-          address: addresses.usdt,
+          address: addrs.usdt,
           abi: parseAbi(ERC20_ABI),
           functionName: "approve",
-          args: [addresses.subscription, amountBigInt],
+          args: [addrs.subscription, amountBigInt],
         });
 
         setTxHash(hash);
 
-        // 记录交易到审计日志
         transactionAuditService.recordTokenApprove({
           txHash: hash,
           chainId: chainId,
-          network: backendNetwork || "hardhat",
+          network: backendNetworkRef.current || "hardhat",
           fromAddress: address,
-          spenderAddress: addresses.subscription,
-          tokenAddress: addresses.usdt,
+          spenderAddress: addrs.subscription,
+          tokenAddress: addrs.usdt,
           tokenSymbol: "USDT",
           tokenDecimals: 6,
           amount: amountBigInt.toString(),
           description: `Approve USDT for subscription`,
         });
 
-        // 等待交易确认
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-        // 更新交易状态
         transactionAuditService.updateStatus(hash, "confirmed", {
           block_number: Number(receipt.blockNumber),
           gas_used: Number(receipt.gasUsed),
@@ -349,6 +375,7 @@ export function useSubscriptionContract() {
         });
 
         // 刷新授权额度
+        userDataFetchedForRef.current = null;
         await fetchUserData();
 
         return true;
@@ -359,7 +386,7 @@ export function useSubscriptionContract() {
         return false;
       }
     },
-    [walletClient, addresses, publicClient, fetchUserData, address, chainId, backendNetwork]
+    [walletClient, publicClient, fetchUserData, address, chainId]
   );
 
   // 执行认购
@@ -368,19 +395,19 @@ export function useSubscriptionContract() {
       amount: number,
       lockPeriodMonths: number
     ): Promise<string | null> => {
-      // 防止重复点击
       if (isSubmitting) {
         console.warn("Subscription already in progress");
         return null;
       }
 
-      if (!walletClient || !addresses?.subscription || !publicClient || !address) {
+      const addrs = addressesRef.current;
+      if (!walletClient || !addrs?.subscription || !publicClient || !address) {
         setError("Wallet not connected");
         return null;
       }
 
       try {
-        setIsSubmitting(true); // 开始提交
+        setIsSubmitting(true);
         setTxState("subscribing");
         setError(null);
 
@@ -388,29 +415,26 @@ export function useSubscriptionContract() {
         const lockPeriodSeconds = BigInt(monthsToSeconds(lockPeriodMonths));
 
         const hash = await walletClient.writeContract({
-          address: addresses.subscription,
+          address: addrs.subscription,
           abi: parseAbi(SUBSCRIPTION_ABI),
           functionName: "subscribe",
           args: [amountBigInt, lockPeriodSeconds],
         });
 
-        // 检查是否已提交过此交易
         if (submittedTxHashes.current.has(hash)) {
           console.warn("Transaction already submitted:", hash);
           setTxState("success");
           return hash;
         }
 
-        // 记录已提交的 tx_hash
         submittedTxHashes.current.add(hash);
 
-        // 记录交易到审计日志
         transactionAuditService.recordSubscription({
           txHash: hash,
           chainId: chainId,
-          network: backendNetwork || "hardhat",
+          network: backendNetworkRef.current || "hardhat",
           fromAddress: address,
-          contractAddress: addresses.subscription,
+          contractAddress: addrs.subscription,
           amount: amountBigInt.toString(),
           lockPeriodMonths: lockPeriodMonths,
           tokenSymbol: "USDT",
@@ -419,10 +443,8 @@ export function useSubscriptionContract() {
         setTxHash(hash);
         setTxState("confirming");
 
-        // 等待交易确认
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-        // 更新交易状态
         transactionAuditService.updateStatus(hash, "confirmed", {
           block_number: Number(receipt.blockNumber),
           gas_used: Number(receipt.gasUsed),
@@ -431,7 +453,7 @@ export function useSubscriptionContract() {
 
         setTxState("success");
 
-        // 刷新数据
+        userDataFetchedForRef.current = null;
         await fetchUserData();
 
         return hash;
@@ -441,38 +463,38 @@ export function useSubscriptionContract() {
         setTxState("error");
         return null;
       } finally {
-        setIsSubmitting(false); // 结束提交
+        setIsSubmitting(false);
       }
     },
-    [walletClient, addresses, publicClient, fetchUserData, isSubmitting, address, chainId, backendNetwork]
+    [walletClient, publicClient, fetchUserData, isSubmitting, address, chainId]
   );
 
   // 执行赎回
   const redeem = useCallback(
     async (subscriptionId: number): Promise<string | null> => {
-      if (!walletClient || !addresses?.subscription || !publicClient || !address) {
+      const addrs = addressesRef.current;
+      if (!walletClient || !addrs?.subscription || !publicClient || !address) {
         setError("Wallet not connected");
         return null;
       }
 
       try {
-        setTxState("subscribing"); // reusing state
+        setTxState("subscribing");
         setError(null);
 
         const hash = await walletClient.writeContract({
-          address: addresses.subscription,
+          address: addrs.subscription,
           abi: parseAbi(SUBSCRIPTION_ABI),
           functionName: "redeem",
           args: [BigInt(subscriptionId)],
         });
 
-        // 记录交易到审计日志
         transactionAuditService.recordContractCall({
           txHash: hash,
           chainId: chainId,
-          network: backendNetwork || "hardhat",
+          network: backendNetworkRef.current || "hardhat",
           fromAddress: address,
-          contractAddress: addresses.subscription,
+          contractAddress: addrs.subscription,
           contractName: "VankeSubscription",
           functionName: "redeem",
           functionArgs: { subscriptionId },
@@ -484,7 +506,6 @@ export function useSubscriptionContract() {
 
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-        // 更新交易状态
         transactionAuditService.updateStatus(hash, "confirmed", {
           block_number: Number(receipt.blockNumber),
           gas_used: Number(receipt.gasUsed),
@@ -492,6 +513,7 @@ export function useSubscriptionContract() {
         });
 
         setTxState("success");
+        userDataFetchedForRef.current = null;
         await fetchUserData();
 
         return hash;
@@ -502,7 +524,7 @@ export function useSubscriptionContract() {
         return null;
       }
     },
-    [walletClient, addresses, publicClient, fetchUserData, address, chainId, backendNetwork]
+    [walletClient, publicClient, fetchUserData, address, chainId]
   );
 
   // 重置状态
@@ -513,36 +535,29 @@ export function useSubscriptionContract() {
   }, []);
 
   return {
-    // 合约地址
     addresses,
     isLoadingAddresses,
 
-    // 链上参数
     onChainParams,
     isLoadingParams,
     refetchParams,
 
-    // 用户数据
     usdtBalance,
     usdtAllowance,
 
-    // 交易状态
     txState,
     txHash,
     error,
-    isSubmitting, // 提交中状态 (用于禁用按钮)
+    isSubmitting,
 
-    // 操作方法
     approveUSDT,
     subscribe,
     redeem,
     reset,
 
-    // 状态
     isConnected,
     isContractReady: !!addresses?.subscription,
 
-    // 网络状态
     isNetworkMatched,
     backendNetwork,
     expectedChainId: backendNetwork

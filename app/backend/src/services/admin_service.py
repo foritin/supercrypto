@@ -1,0 +1,201 @@
+"""
+管理员领域 - 业务服务层
+"""
+
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+
+from falib.utils.config import SETTINGS
+from falib.utils.log import get_logger
+from tortoise.functions import Sum
+
+from src.constants.definitions.staking import PLT_STAKING_POOL
+from src.models.asset import Asset
+from src.models.kyc import AccountKyc
+from src.models.staking import RewardClaim, StakingRecord
+from src.models.subscription import Subscription
+from src.schemas.admin import (
+    PlatformStatsResponse,
+    StakingPoolStatsResponse,
+    TVLBreakdown,
+    TVLStatsResponse,
+    UserStatsResponse,
+)
+from src.schemas.enums import (
+    AssetStatus,
+    KycStatus,
+    StakingStatus,
+    SubscriptionStatus,
+)
+
+logger = get_logger("business.admin.service")
+
+
+class AdminService:
+    """管理员服务"""
+
+    @property
+    def network(self) -> str:
+        """获取当前网络"""
+        return SETTINGS.network
+
+    # ============ 平台统计 ============
+
+    async def get_platform_stats(self) -> PlatformStatsResponse:
+        """获取平台统计汇总"""
+        tvl = await self.get_tvl_stats()
+        users = await self.get_user_stats()
+        staking = await self.get_staking_pool_stats()
+
+        # 认购统计
+        active_subs = await Subscription.filter(
+            status__in=[SubscriptionStatus.ACTIVE, SubscriptionStatus.MATURED],
+            environment=self.network,
+        ).count()
+
+        total_subs = await Subscription.filter(environment=self.network).count()
+
+        # 资产数量
+        total_assets = await Asset.filter(
+            status__in=[AssetStatus.ACTIVE, AssetStatus.PAUSED],
+            environment=self.network,
+        ).count()
+
+        return PlatformStatsResponse(
+            tvl=tvl,
+            users=users,
+            staking=staking,
+            active_subscriptions=active_subs,
+            total_subscriptions=total_subs,
+            total_assets=total_assets,
+        )
+
+    async def get_tvl_stats(self) -> TVLStatsResponse:
+        """获取 TVL 统计"""
+        # 查询所有活跃认购
+        subscriptions = await Subscription.filter(
+            status__in=[SubscriptionStatus.ACTIVE, SubscriptionStatus.MATURED],
+            environment=self.network,
+        ).prefetch_related("asset")
+
+        # 按资产分组计算
+        asset_tvl: dict[int, dict] = {}
+        total = Decimal(0)
+
+        for sub in subscriptions:
+            asset_id = sub.asset_id
+            if asset_id not in asset_tvl:
+                asset_tvl[asset_id] = {
+                    "asset_id": asset_id,
+                    "asset_name": sub.asset.name if sub.asset else f"Asset #{asset_id}",
+                    "amount": Decimal(0),
+                }
+            asset_tvl[asset_id]["amount"] += sub.amount
+            total += sub.amount
+
+        # 计算百分比
+        breakdown = []
+        for data in asset_tvl.values():
+            pct = (data["amount"] / total * 100) if total > 0 else 0
+            breakdown.append(
+                TVLBreakdown(
+                    asset_id=data["asset_id"],
+                    asset_name=data["asset_name"],
+                    amount=float(data["amount"]),
+                    percentage=float(pct),
+                )
+            )
+
+        return TVLStatsResponse(
+            total_tvl=float(total),
+            change_24h=0,  # TODO: 实现历史对比
+            change_7d=0,
+            breakdown=breakdown,
+        )
+
+    async def get_user_stats(self) -> UserStatsResponse:
+        """获取用户统计"""
+        # KYC 状态统计
+        kyc_approved = await AccountKyc.filter(
+            status=KycStatus.APPROVED, network=self.network
+        ).count()
+
+        kyc_pending = await AccountKyc.filter(
+            status=KycStatus.PENDING, network=self.network
+        ).count()
+
+        kyc_rejected = await AccountKyc.filter(
+            status=KycStatus.REJECTED, network=self.network
+        ).count()
+
+        total_users = await AccountKyc.filter(network=self.network).count()
+
+        # 新增用户统计
+        now = datetime.now(timezone.utc)
+        day_ago = now - timedelta(days=1)
+        week_ago = now - timedelta(days=7)
+
+        new_24h = await AccountKyc.filter(
+            created_at__gte=day_ago, network=self.network
+        ).count()
+
+        new_7d = await AccountKyc.filter(
+            created_at__gte=week_ago, network=self.network
+        ).count()
+
+        # KYC 转化率
+        conversion_rate = (kyc_approved / total_users * 100) if total_users > 0 else 0
+
+        return UserStatsResponse(
+            total_users=total_users,
+            kyc_approved=kyc_approved,
+            kyc_pending=kyc_pending,
+            kyc_rejected=kyc_rejected,
+            new_users_24h=new_24h,
+            new_users_7d=new_7d,
+            kyc_conversion_rate=round(conversion_rate, 2),
+        )
+
+    async def get_staking_pool_stats(self) -> StakingPoolStatsResponse:
+        """获取质押池统计"""
+        # 活跃质押
+        active_stakings = await StakingRecord.filter(
+            status__in=[StakingStatus.ACTIVE, StakingStatus.MATURED],
+            environment=self.network,
+        )
+
+        total_staked = Decimal(0)
+        active_count = len(active_stakings)
+        period_dist = {15: 0, 30: 0, 45: 0, 60: 0}
+        total_period = 0
+
+        for s in active_stakings:
+            total_staked += s.amount
+            if s.period in period_dist:
+                period_dist[s.period] += 1
+            total_period += s.period
+
+        avg_period = (total_period / active_count) if active_count > 0 else 0
+
+        # 已分发奖励
+        distributed_result = (
+            await RewardClaim.filter(environment=self.network)
+            .annotate(total=Sum("amount"))
+            .values_list("total", flat=True)
+        )
+
+        distributed = (
+            Decimal(distributed_result[0] or 0) if distributed_result else Decimal(0)
+        )
+
+        return StakingPoolStatsResponse(
+            total_staked=float(total_staked),
+            active_stakes=active_count,
+            total_rewards_distributed=float(distributed),
+            rewards_pool_remaining=float(PLT_STAKING_POOL - distributed),
+            avg_stake_period=round(avg_period, 1),
+            period_distribution=period_dist,
+        )
+
+
+# 全局服务实例

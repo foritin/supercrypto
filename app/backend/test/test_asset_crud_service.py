@@ -12,20 +12,18 @@ _Requirements: 8.4_
 """
 
 import asyncio
-from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
-from tortoise import Tortoise
 
-from src.models.asset import Asset, AssetContractBinding, AssetPriceHistory
-from src.services.asset.schemas import (
+from src.common.exceptions import BusinessException
+from src.models.asset import Asset, AssetPriceHistory
+from src.schemas.asset import (
     AssetCreateRequest,
     AssetUpdateRequest,
 )
-from src.services.asset.service import AssetService
-from src.shared.common.exceptions import BusinessException
-from src.shared.schemas.enums import AssetStatus, AssetType
+from src.schemas.enums import AssetStatus, AssetType
+from src.services.asset_service import AssetService
 
 # 抑制 DeprecationWarning
 pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
@@ -68,9 +66,7 @@ def _make_create_request(**overrides) -> AssetCreateRequest:
     return AssetCreateRequest(**defaults)
 
 
-async def _create_test_asset(
-    service: AssetService, **overrides
-) -> Asset:
+async def _create_test_asset(service: AssetService, **overrides) -> Asset:
     """通过 AssetService.create_asset 创建资产并返回 ORM 对象"""
     request = _make_create_request(**overrides)
     detail = await service.create_asset(request)
@@ -265,7 +261,11 @@ class TestUpdateAsset:
             update = AssetUpdateRequest(current_price=Decimal("20"))
             await service.update_asset(asset.id, update)
 
-            history = await AssetPriceHistory.filter(asset_id=asset.id).order_by("created_at").all()
+            history = (
+                await AssetPriceHistory.filter(asset_id=asset.id)
+                .order_by("created_at")
+                .all()
+            )
             # 初始价格 + 更新价格 = 2 条记录
             assert len(history) == 2
             assert history[0].price == Decimal("10")
@@ -318,9 +318,7 @@ class TestUpdateAsset:
             service = AssetService()
 
             with pytest.raises(BusinessException) as exc_info:
-                await service.update_asset(
-                    99999, AssetUpdateRequest(name="不存在")
-                )
+                await service.update_asset(99999, AssetUpdateRequest(name="不存在"))
 
             assert exc_info.value.code == 404
 
@@ -496,7 +494,9 @@ class TestUpdateAssetPrice:
                 service, symbol="PRC1", current_price=Decimal("10")
             )
 
-            result = await service.update_price(asset.id, Decimal("25"), source="oracle")
+            result = await service.update_price(
+                asset.id, Decimal("25"), source="oracle"
+            )
 
             assert result.current_price == 25.0
             assert result.price_updated_at is not None
@@ -515,7 +515,11 @@ class TestUpdateAssetPrice:
             await service.update_price(asset.id, Decimal("15"), source="oracle")
             await service.update_price(asset.id, Decimal("20"), source="manual")
 
-            history = await AssetPriceHistory.filter(asset_id=asset.id).order_by("created_at").all()
+            history = (
+                await AssetPriceHistory.filter(asset_id=asset.id)
+                .order_by("created_at")
+                .all()
+            )
             # 初始 + 2 次更新 = 3 条
             assert len(history) == 3
             assert history[0].price == Decimal("10")
@@ -623,7 +627,9 @@ class TestAssetSupplyManagement:
                 service, symbol="SUP2", total_supply=Decimal("10000")
             )
 
-            await service.update_subscribed_amount(asset.id, Decimal("2000"), is_add=True)
+            await service.update_subscribed_amount(
+                asset.id, Decimal("2000"), is_add=True
+            )
             result = await service.update_subscribed_amount(
                 asset.id, Decimal("3000"), is_add=True
             )
@@ -661,7 +667,9 @@ class TestAssetSupplyManagement:
                 service, symbol="SUP4", total_supply=Decimal("10000")
             )
 
-            await service.update_subscribed_amount(asset.id, Decimal("10000"), is_add=True)
+            await service.update_subscribed_amount(
+                asset.id, Decimal("10000"), is_add=True
+            )
 
             db_asset = await Asset.get(id=asset.id)
             assert db_asset.status == AssetStatus.SOLD_OUT
@@ -679,7 +687,9 @@ class TestAssetSupplyManagement:
                 service, symbol="SUP5", total_supply=Decimal("10000")
             )
 
-            await service.update_subscribed_amount(asset.id, Decimal("5000"), is_add=True)
+            await service.update_subscribed_amount(
+                asset.id, Decimal("5000"), is_add=True
+            )
             result = await service.update_subscribed_amount(
                 asset.id, Decimal("2000"), is_add=False
             )
@@ -698,7 +708,9 @@ class TestAssetSupplyManagement:
                 service, symbol="SUP6", total_supply=Decimal("10000")
             )
 
-            await service.update_subscribed_amount(asset.id, Decimal("1000"), is_add=True)
+            await service.update_subscribed_amount(
+                asset.id, Decimal("1000"), is_add=True
+            )
             result = await service.update_subscribed_amount(
                 asset.id, Decimal("5000"), is_add=False
             )
@@ -717,12 +729,16 @@ class TestAssetSupplyManagement:
             )
 
             # 先售罄
-            await service.update_subscribed_amount(asset.id, Decimal("10000"), is_add=True)
+            await service.update_subscribed_amount(
+                asset.id, Decimal("10000"), is_add=True
+            )
             db_asset = await Asset.get(id=asset.id)
             assert db_asset.status == AssetStatus.SOLD_OUT
 
             # 赎回部分
-            await service.update_subscribed_amount(asset.id, Decimal("1000"), is_add=False)
+            await service.update_subscribed_amount(
+                asset.id, Decimal("1000"), is_add=False
+            )
             db_asset = await Asset.get(id=asset.id)
             assert db_asset.status == AssetStatus.ACTIVE
             assert db_asset.is_available is True
@@ -751,7 +767,9 @@ class TestAssetSupplyManagement:
                 service, symbol="SUP8", total_supply=Decimal("10000")
             )
 
-            await service.update_subscribed_amount(asset.id, Decimal("2500"), is_add=True)
+            await service.update_subscribed_amount(
+                asset.id, Decimal("2500"), is_add=True
+            )
 
             db_asset = await Asset.get(id=asset.id)
             assert db_asset.subscription_progress == 25.0

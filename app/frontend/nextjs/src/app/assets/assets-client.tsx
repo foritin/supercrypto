@@ -32,6 +32,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets } from "@/hooks/use-assets";
+import { AssetLogoFrame } from "@/components/asset/asset-logo-frame";
 import "./assets.css";
 
 // 资产类型图标映射 - 使用 lucide-react 图标
@@ -235,6 +236,17 @@ export default function AssetsClient() {
             style={{ backgroundImage: `url(${bgImage})` }}
           />
           <div className="asset-card-overlay" />
+
+          {/* Logo 图标 */}
+          <div className="absolute top-3 left-3 z-10">
+            <AssetLogoFrame
+              logoUrl={asset.logo_url}
+              frameStyle={asset.frame_style}
+              assetType={asset.asset_type as AssetType}
+              size="sm"
+              name={asset.name}
+            />
+          </div>
 
           {/* Status Badge */}
           <div

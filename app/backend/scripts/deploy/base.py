@@ -72,7 +72,7 @@ class ContractConfig:
         register_to_provider: 部署后是否注册到 Provider
         provider_key: Provider 中的 key (bytes32)
         description: 合约描述
-        
+
         # 元数据字段 (用于 UI 展示和依赖检查)
         dependency_type: 依赖类型 (primary/required/business/optional)
         is_primary: 是否为项目主合约
@@ -101,7 +101,7 @@ class ContractConfig:
 
     # 元数据
     description: str = ""
-    
+
     # 元数据字段 (用于 UI 展示和依赖检查)
     dependency_type: str = "business"  # primary/required/business/optional
     is_primary: bool = False

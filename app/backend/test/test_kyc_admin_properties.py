@@ -8,25 +8,22 @@ KYC Admin 属性测试
 
 import datetime as dt
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List
 
-import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from src.models.kyc import AccountKyc
-from src.models.kyc_audit_log import KycAuditLog
-from src.services.admin.kyc_service import (
-    AdminKycService,
-    create_kyc_audit_log,
-)
-from src.shared.schemas.enums import (
+from src.schemas.enums import (
     KycAuditAction,
     KycStatus,
     Network,
     ReviewPriority,
     RiskLevel,
 )
-
+from src.services.kyc_service import (
+    KycService,
+)
 
 # ============ Strategies ============
 
@@ -53,7 +50,7 @@ class TestDefaultValuesProperty:
     """
     **Feature: kyc-admin-backend-enhancement, Property 1: Default Values on Creation**
     **Validates: Requirements 1.8**
-    
+
     属性: 新创建的 AccountKyc 记录应具有正确的默认值
     - risk_level = "low"
     - risk_score = 0
@@ -66,7 +63,7 @@ class TestDefaultValuesProperty:
         """
         **Property 1: Default Values on Creation**
         **Validates: Requirements 1.8**
-        
+
         测试新创建的 KYC 记录默认值正确
         """
         # 创建 KYC 记录 (不指定风险相关字段)
@@ -75,11 +72,13 @@ class TestDefaultValuesProperty:
             network=Network.HARDHAT,
             status=KycStatus.NOT_STARTED,
         )
-        
+
         # 验证默认值
         assert kyc.risk_level == RiskLevel.LOW, "risk_level should default to 'low'"
         assert kyc.risk_score == 0, "risk_score should default to 0"
-        assert kyc.priority == ReviewPriority.NORMAL, "priority should default to 'normal'"
+        assert kyc.priority == ReviewPriority.NORMAL, (
+            "priority should default to 'normal'"
+        )
         assert kyc.is_pep is False, "is_pep should default to False"
         assert kyc.is_sanctioned is False, "is_sanctioned should default to False"
 
@@ -88,7 +87,7 @@ class TestProcessingTimeProperty:
     """
     **Feature: kyc-admin-backend-enhancement, Property 5: Processing Time Calculation**
     **Validates: Requirements 3.7**
-    
+
     属性: 处理时间应等于 (reviewed_at - submitted_at) 转换为分钟
     """
 
@@ -100,7 +99,7 @@ class TestProcessingTimeProperty:
         """
         **Property 5: Processing Time Calculation**
         **Validates: Requirements 3.7**
-        
+
         测试处理时间计算正确
         """
         # 确保 reviewed_at >= submitted_at
@@ -108,8 +107,8 @@ class TestProcessingTimeProperty:
             submitted_at, reviewed_at = reviewed_at, submitted_at
 
         # 使用服务方法计算处理时间
-        service = AdminKycService()
-        result = service._calculate_processing_time(submitted_at, reviewed_at)
+        service = KycService()
+        result = service.calculate_processing_time(submitted_at, reviewed_at)
 
         # 计算预期值
         expected_minutes = (reviewed_at - submitted_at).total_seconds() / 60
@@ -125,11 +124,11 @@ class TestProcessingTimeProperty:
         """
         **Property 5: Processing Time Calculation**
         **Validates: Requirements 3.7**
-        
+
         测试 submitted_at 为 None 时返回 None
         """
-        service = AdminKycService()
-        result = service._calculate_processing_time(None, reviewed_at)
+        service = KycService()
+        result = service.calculate_processing_time(None, reviewed_at)
         assert result is None, "Should return None when submitted_at is None"
 
     @given(datetime_strategy)
@@ -138,11 +137,11 @@ class TestProcessingTimeProperty:
         """
         **Property 5: Processing Time Calculation**
         **Validates: Requirements 3.7**
-        
+
         测试 reviewed_at 为 None 时返回 None
         """
-        service = AdminKycService()
-        result = service._calculate_processing_time(submitted_at, None)
+        service = KycService()
+        result = service.calculate_processing_time(submitted_at, None)
         assert result is None, "Should return None when reviewed_at is None"
 
 
@@ -150,7 +149,7 @@ class TestBatchReviewProperty:
     """
     **Feature: kyc-admin-backend-enhancement, Property 7 & 8: Batch Review**
     **Validates: Requirements 5.1, 5.6, 5.7**
-    
+
     属性:
     - 批量审核应处理所有记录
     - 单条记录失败时应继续处理其他记录
@@ -162,17 +161,17 @@ class TestBatchReviewProperty:
         """
         **Property 7: Batch Review Processes All Records**
         **Validates: Requirements 5.1, 5.7**
-        
+
         测试批量审核响应的计数正确
         """
-        from src.services.admin.kyc_schemas import BatchReviewResponse, BatchReviewResult
+        from src.schemas.admin_kyc import BatchReviewResponse, BatchReviewResult
 
         # 模拟批量审核响应
         results = [
             BatchReviewResult(kyc_id=kyc_id, success=True, error=None)
             for kyc_id in kyc_ids
         ]
-        
+
         response = BatchReviewResponse(
             total=len(kyc_ids),
             success=len(kyc_ids),
@@ -200,10 +199,10 @@ class TestBatchReviewProperty:
         """
         **Property 8: Batch Review Continues on Failure**
         **Validates: Requirements 5.6**
-        
+
         测试批量审核在单条失败时继续处理
         """
-        from src.services.admin.kyc_schemas import BatchReviewResponse, BatchReviewResult
+        from src.schemas.admin_kyc import BatchReviewResponse, BatchReviewResult
 
         # 确保 fail_index 在有效范围内
         fail_index = fail_index % len(kyc_ids)
@@ -235,23 +234,19 @@ class TestBatchReviewProperty:
         )
 
         # 验证所有记录都被处理
-        assert len(response.results) == len(kyc_ids), (
-            "All records should be processed"
-        )
+        assert len(response.results) == len(kyc_ids), "All records should be processed"
         assert response.success + response.failed == response.total, (
             "success + failed should equal total"
         )
         assert response.failed == 1, "Should have exactly 1 failure"
-        assert response.success == len(kyc_ids) - 1, (
-            "Should have n-1 successes"
-        )
+        assert response.success == len(kyc_ids) - 1, "Should have n-1 successes"
 
 
 class TestStatsAccuracyProperty:
     """
     **Feature: kyc-admin-backend-enhancement, Property 9: Stats Counts Accuracy**
     **Validates: Requirements 6.2, 6.5**
-    
+
     属性: 统计数据应与实际数据匹配
     """
 
@@ -272,10 +267,10 @@ class TestStatsAccuracyProperty:
         """
         **Property 9: Stats Counts Accuracy**
         **Validates: Requirements 6.2, 6.5**
-        
+
         测试统计总数等于各状态之和
         """
-        from src.services.admin.kyc_schemas import KycStats
+        from src.schemas.admin_kyc import KycStats
 
         # 创建统计对象
         stats = KycStats(
@@ -315,7 +310,7 @@ class TestStatsAccuracyProperty:
         """
         **Property 9: Stats Counts Accuracy**
         **Validates: Requirements 6.5**
-        
+
         测试风险分布之和等于总数
         """
         risk_distribution = {
@@ -337,7 +332,7 @@ class TestApprovalRateProperty:
     """
     **Feature: kyc-admin-backend-enhancement, Property 10: Stats Time Calculations**
     **Validates: Requirements 6.3, 6.4**
-    
+
     属性: approval_rate = (approved / (approved + rejected)) * 100
     """
 
@@ -350,7 +345,7 @@ class TestApprovalRateProperty:
         """
         **Property 10: Stats Time Calculations**
         **Validates: Requirements 6.4**
-        
+
         测试通过率计算正确
         """
         total_reviewed = approved + rejected
@@ -374,7 +369,7 @@ class TestAuditLogProperty:
     """
     **Feature: kyc-admin-backend-enhancement, Property 2 & 11: Audit Log**
     **Validates: Requirements 2.5, 7.1, 7.2, 7.3**
-    
+
     属性:
     - 状态变更时应创建审核日志
     - 审核日志应包含所有必需字段
@@ -395,10 +390,10 @@ class TestAuditLogProperty:
         """
         **Property 11: Audit Log Query Correctness**
         **Validates: Requirements 7.1, 7.2, 7.3**
-        
+
         测试审核日志条目包含所有必需字段
         """
-        from src.services.admin.kyc_schemas import KycAuditLogEntry
+        from src.schemas.admin_kyc import KycAuditLogEntry
 
         # 创建审核日志条目
         entry = KycAuditLogEntry(
@@ -425,10 +420,10 @@ class TestAuditLogProperty:
         """
         **Property 11: Audit Log Query Correctness**
         **Validates: Requirements 7.3**
-        
+
         测试审核日志按 created_at 降序排序
         """
-        from src.services.admin.kyc_schemas import KycAuditLogEntry
+        from src.schemas.admin_kyc import KycAuditLogEntry
 
         # 创建带有不同时间戳的日志条目
         base_time = datetime.now(timezone.utc)

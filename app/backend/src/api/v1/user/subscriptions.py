@@ -4,29 +4,30 @@
 路由前缀: /api/v1/user/subscriptions
 """
 
+from decimal import Decimal
 from typing import Optional
 
-from falib.utils.handlers import create_success_response
+from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from tortoise.transactions import in_transaction
 
-from src.services.subscription.schemas import RedeemRequest, SubscriptionCreateRequest
-from src.services.subscription.service import SubscriptionService
-from src.shared.schemas.enums import SubscriptionStatus
-from src.shared.security import require_user
+from src.common.dependencies import get_asset_service, get_subscription_service
+from src.schemas.enums import SubscriptionStatus
+from src.schemas.subscription import RedeemRequest, SubscriptionCreateRequest
+from src.security import require_user
+from src.services import AssetService, SubscriptionService
 
 router = APIRouter()
 
 
-def get_subscription_service() -> SubscriptionService:
-    """依赖注入：获取认购服务"""
-    return SubscriptionService()
-
-
-@router.post("", summary="创建认购", description="创建新的认购记录")
+@router.post(
+    "", summary="Create Subscription", description="Create a new subscription record"
+)
 async def create_subscription(
     data: SubscriptionCreateRequest,
     wallet_address: str = Depends(require_user),
     service: SubscriptionService = Depends(get_subscription_service),
+    asset_service: AssetService = Depends(get_asset_service),
 ):
     """
     创建认购
@@ -35,16 +36,24 @@ async def create_subscription(
     - 需要 KYC 验证
     - 需要足够的代币余额
     """
-    result = await service.create_subscription(wallet_address, data)
+    async with in_transaction() as conn:
+        result = await service.create_subscription(wallet_address, data, using_db=conn)
+        await asset_service.update_subscribed_amount(
+            result.asset_id, data.amount, is_add=True, using_db=conn
+        )
     return create_success_response(
         object_data=result.model_dump(mode="json"),
         msg="Subscription created successfully",
     )
 
 
-@router.get("", summary="获取认购列表", description="获取用户的认购记录列表")
+@router.get(
+    "", summary="List Subscriptions", description="Get the user's subscription records"
+)
 async def list_subscriptions(
-    subscription_status: Optional[SubscriptionStatus] = Query(None, alias="status", description="状态筛选"),
+    subscription_status: Optional[SubscriptionStatus] = Query(
+        None, alias="status", description="状态筛选"
+    ),
     asset_id: Optional[int] = Query(None, description="资产筛选"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
@@ -68,16 +77,20 @@ async def list_subscriptions(
 
     return create_success_response(
         list_data=[item.model_dump(mode="json") for item in items],
-        pagination={
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": total_pages,
-        },
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        ),
     )
 
 
-@router.get("/stats", summary="获取用户统计", description="获取用户的投资统计数据")
+@router.get(
+    "/stats",
+    summary="Get User Stats",
+    description="Get the user's investment statistics",
+)
 async def get_user_stats(
     wallet_address: str = Depends(require_user),
     service: SubscriptionService = Depends(get_subscription_service),
@@ -96,7 +109,9 @@ async def get_user_stats(
 
 
 @router.get(
-    "/{subscription_id}", summary="获取认购详情", description="根据ID获取认购的详细信息"
+    "/{subscription_id}",
+    summary="Get Subscription Detail",
+    description="Get detailed subscription information by ID",
 )
 async def get_subscription(
     subscription_id: int,
@@ -120,13 +135,16 @@ async def get_subscription(
 
 
 @router.post(
-    "/{subscription_id}/redeem", summary="赎回认购", description="赎回已到期的认购"
+    "/{subscription_id}/redeem",
+    summary="Redeem Subscription",
+    description="Redeem a matured subscription",
 )
 async def redeem_subscription(
     subscription_id: int,
     data: RedeemRequest,
     wallet_address: str = Depends(require_user),
     service: SubscriptionService = Depends(get_subscription_service),
+    asset_service: AssetService = Depends(get_asset_service),
 ):
     """
     赎回认购
@@ -135,11 +153,14 @@ async def redeem_subscription(
     - 只能赎回已到期的认购
     - 需要提供赎回交易哈希
     """
-    result = await service.redeem_subscription(
-        subscription_id, wallet_address, data.tx_hash
-    )
+    async with in_transaction() as conn:
+        result = await service.redeem_subscription(
+            subscription_id, wallet_address, data.tx_hash, using_db=conn
+        )
+        await asset_service.update_subscribed_amount(
+            result.asset_id, Decimal(str(result.amount)), is_add=False, using_db=conn
+        )
     return create_success_response(
         object_data=result.model_dump(mode="json"),
         msg="Subscription redeemed successfully",
     )
-

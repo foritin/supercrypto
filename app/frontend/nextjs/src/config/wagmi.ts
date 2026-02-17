@@ -8,6 +8,7 @@ const IS_PRODUCTION = process.env.NEXT_PUBLIC_ENV === 'production'
 const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://YOUR_RPC_HOST:8545'
 
 // 自定义 Hardhat 链配置
+// 注意: 如需启用 Multicall3 批量调用，需先在 Hardhat 节点部署 Multicall3 合约
 const customHardhat: Chain = {
   id: 31337,
   name: 'Hardhat',
@@ -20,6 +21,11 @@ const customHardhat: Chain = {
     default: { http: [HARDHAT_RPC_URL] },
     public: { http: [HARDHAT_RPC_URL] },
   },
+  // contracts: {
+  //   multicall3: {
+  //     address: '0xcA11bde05977b3631167028862bE2a173976CA11',
+  //   },
+  // },
 }
 
 // 开发环境网络: Hardhat, Sepolia

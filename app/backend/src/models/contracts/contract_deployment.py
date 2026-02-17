@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Optional, Sequence
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-from src.shared.schemas.enums import (
+from src.schemas.enums import (
     ContractScope,
     ContractStatus,
     ContractType,
@@ -56,12 +56,14 @@ class ContractDeployment(AbstractModel, TimestampMixin):
     # === 关联配置 ===
     # 外键字段，关联 ContractConfig 表
     # null=True 允许为空，兼容迁移过程中的数据
-    config: fields.ForeignKeyNullableRelation["ContractConfig"] = fields.ForeignKeyField(
-        "models.ContractConfig",
-        related_name="deployments",
-        on_delete=fields.SET_NULL,
-        null=True,
-        description="关联的合约配置",
+    config: fields.ForeignKeyNullableRelation["ContractConfig"] = (
+        fields.ForeignKeyField(
+            "models.ContractConfig",
+            related_name="deployments",
+            on_delete=fields.SET_NULL,
+            null=True,
+            description="关联的合约配置",
+        )
     )
     # config_id 字段由 Tortoise ORM 自动生成
     config_id: Optional[int]
@@ -91,9 +93,7 @@ class ContractDeployment(AbstractModel, TimestampMixin):
 
     # === 部署详情 (来自 Contract) ===
     tx_hash = fields.CharField(max_length=255, description="部署交易哈希")
-    abi_path = fields.CharField(
-        max_length=255, null=True, description="ABI 文件路径"
-    )
+    abi_path = fields.CharField(max_length=255, null=True, description="ABI 文件路径")
     status = fields.CharEnumField(
         ContractStatus,
         max_length=255,

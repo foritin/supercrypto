@@ -12,7 +12,8 @@ import asyncio
 from decimal import Decimal
 
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from tortoise import Tortoise
 from tortoise.exceptions import IntegrityError
 
@@ -23,7 +24,7 @@ from src.models import (
     ContractDeployment,
     Subscription,
 )
-from src.shared.schemas.enums import (
+from src.schemas.enums import (
     AssetStatus,
     AssetType,
     ContractScope,
@@ -33,7 +34,6 @@ from src.shared.schemas.enums import (
     SubscriptionStatus,
     TokenType,
 )
-
 
 # ============================================================
 # 辅助函数 — 异步测试运行器
@@ -108,7 +108,9 @@ contract_name_strategy = st.text(
 ).map(lambda s: f"Contract_{s}")
 
 # 项目名称策略
-project_name_strategy = st.sampled_from(["common", "fake", "mock", "vanke", "test_proj"])
+project_name_strategy = st.sampled_from(
+    ["common", "fake", "mock", "vanke", "test_proj"]
+)
 
 # 合约地址策略
 contract_address_strategy = st.from_regex(r"0x[0-9a-f]{40}", fullmatch=True)

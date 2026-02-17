@@ -12,18 +12,22 @@ from src.api.v1.user import auth, kyc, staking, subscriptions, transactions_audi
 router = APIRouter()
 
 # 用户信息
-router.include_router(auth.router, prefix="/auth", tags=["认证-用户"])
+router.include_router(auth.router, prefix="/auth", tags=["User Auth"])
 
 # KYC 申请
-router.include_router(kyc.router, prefix="/kyc", tags=["KYC-用户"])
+router.include_router(kyc.router, prefix="/kyc", tags=["User KYC"])
 
 # 质押操作
-router.include_router(staking.router, prefix="/staking", tags=["质押-用户"])
+router.include_router(staking.router, prefix="/staking", tags=["User Staking"])
 
 # 认购操作
-router.include_router(subscriptions.router, prefix="/subscriptions", tags=["认购-用户"])
+router.include_router(
+    subscriptions.router, prefix="/subscriptions", tags=["User Subscriptions"]
+)
 
 # 交易审计
 router.include_router(
-    transactions_audit.router, prefix="/transactions/audit", tags=["交易审计-用户"]
+    transactions_audit.router,
+    prefix="/transactions/audit",
+    tags=["User Transaction Audit"],
 )

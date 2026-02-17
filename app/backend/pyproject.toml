@@ -17,6 +17,7 @@ dependencies = [
     "pyjwt[crypto]>=2.10.1",
     "python-multipart>=0.0.20",
     "ape-hardhat>=0.8.5",
+    "hypothesis>=6.151.9",
 ]
 
 [project.optional-dependencies]

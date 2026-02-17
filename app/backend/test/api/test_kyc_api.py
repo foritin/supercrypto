@@ -14,7 +14,6 @@ import asyncio
 import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from httpx import ASGITransport, AsyncClient
 
 
@@ -34,7 +33,7 @@ def run_async(coro):
 
 def _create_test_token(address: str, session_id: str = "test-session") -> str:
     """创建测试用 JWT access token"""
-    from src.shared.security.jwt import create_access_token
+    from src.security.jwt import create_access_token
 
     return create_access_token(
         {"address": address, "session_id": session_id, "token_version": 1},
@@ -64,9 +63,7 @@ def _mock_session_service():
 def _mock_kyc_service_with_status(status_value: str = "not_started"):
     """创建返回指定状态的 mock KycService"""
     mock_result = MagicMock()
-    mock_result.model_dump = MagicMock(
-        return_value={"status": status_value}
-    )
+    mock_result.model_dump = MagicMock(return_value={"status": status_value})
     mock_service = MagicMock()
     mock_service.get_status = AsyncMock(return_value=mock_result)
     return mock_service
@@ -87,9 +84,7 @@ class TestKycStatusAuthentication:
             app = _get_app()
             mock_ss = _mock_session_service()
 
-            with patch(
-                "src.shared.security.deps.session_service", mock_ss
-            ):
+            with patch("src.security.deps.session_service", mock_ss):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(
                     transport=transport, base_url="http://test"
@@ -111,9 +106,7 @@ class TestKycStatusAuthentication:
             app = _get_app()
             mock_ss = _mock_session_service()
 
-            with patch(
-                "src.shared.security.deps.session_service", mock_ss
-            ):
+            with patch("src.security.deps.session_service", mock_ss):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(
                     transport=transport, base_url="http://test"
@@ -162,16 +155,12 @@ class TestKycStatusIsolation:
                 async with AsyncClient(
                     transport=transport, base_url="http://test"
                 ) as client:
-                    resp_a = await client.get(
-                        f"/api/v1/public/kyc/status/{address_a}"
-                    )
+                    resp_a = await client.get(f"/api/v1/public/kyc/status/{address_a}")
                     assert resp_a.status_code == 200, (
                         f"公开 KYC 状态查询应返回 200，实际: {resp_a.status_code}"
                     )
 
-                    resp_b = await client.get(
-                        f"/api/v1/public/kyc/status/{address_b}"
-                    )
+                    resp_b = await client.get(f"/api/v1/public/kyc/status/{address_b}")
                     assert resp_b.status_code == 200, (
                         f"公开 KYC 状态查询应返回 200，实际: {resp_b.status_code}"
                     )
@@ -203,15 +192,16 @@ class TestKycStatusIsolation:
             )
 
             mock_kyc_service = MagicMock()
-            mock_kyc_service.apply_kyc = AsyncMock(return_value=MagicMock(
-                id=1, status="pending"
-            ))
+            mock_kyc_service.apply_kyc = AsyncMock(
+                return_value=MagicMock(id=1, status="pending")
+            )
 
-            with patch(
-                "src.shared.security.deps.session_service", mock_ss
-            ), patch(
-                "src.api.v1.user.kyc.get_kyc_service",
-                return_value=mock_kyc_service,
+            with (
+                patch("src.security.deps.session_service", mock_ss),
+                patch(
+                    "src.api.v1.user.kyc.get_kyc_service",
+                    return_value=mock_kyc_service,
+                ),
             ):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(
@@ -256,9 +246,7 @@ class TestKycResponseFormat:
                 async with AsyncClient(
                     transport=transport, base_url="http://test"
                 ) as client:
-                    resp = await client.get(
-                        f"/api/v1/public/kyc/status/{address}"
-                    )
+                    resp = await client.get(f"/api/v1/public/kyc/status/{address}")
                     assert resp.status_code == 200
 
                     data = resp.json()

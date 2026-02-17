@@ -61,6 +61,7 @@ export type ProjectReadinessStatus = 'ready' | 'partially_ready' | 'not_ready';
 
 export type {
   ContractAddresses,
+  ContractAddressItem,
   SubscriptionParams,
   SubscriptionContractInfo,
   ContractAddress,

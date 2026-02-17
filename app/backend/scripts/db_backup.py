@@ -56,12 +56,18 @@ def backup_database(output_file: str | None = None) -> str:
     # 构建 pg_dump 命令
     cmd = [
         "pg_dump",
-        "-h", str(config["host"]),
-        "-p", str(config["port"]),
-        "-U", config["user"],
-        "-d", config["database"],
-        "-F", "p",  # plain text format
-        "-f", str(output_path),
+        "-h",
+        str(config["host"]),
+        "-p",
+        str(config["port"]),
+        "-U",
+        config["user"],
+        "-d",
+        config["database"],
+        "-F",
+        "p",  # plain text format
+        "-f",
+        str(output_path),
         "--clean",  # 添加 DROP 语句
         "--if-exists",  # DROP IF EXISTS
     ]

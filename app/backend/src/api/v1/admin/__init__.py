@@ -22,30 +22,34 @@ from src.api.v1.admin import (
 router = APIRouter()
 
 # 会话管理
-router.include_router(auth.router, prefix="/auth", tags=["会话-管理员"])
+router.include_router(auth.router, prefix="/auth", tags=["Admin Auth"])
 
-# 资产管理
-router.include_router(assets.router, prefix="/assets", tags=["资产-管理员"])
+# 资产管理 (子模块自带 tags: Asset Binding, Asset CRUD, Asset Media)
+router.include_router(assets.router, prefix="/assets")
 
-# 合约管理
-router.include_router(contracts.router, prefix="/contracts", tags=["合约-管理员"])
+# 合约管理 (子模块自带 tags: Contract Status, Contract Registry, Contract Validation, Project Config)
+router.include_router(contracts.router, prefix="/contracts")
 
 # KYC 管理
-router.include_router(kyc.router, prefix="/kyc", tags=["KYC-管理员"])
+router.include_router(kyc.router, prefix="/kyc", tags=["Admin KYC"])
 
 # 账户管理
-router.include_router(accounts.router, prefix="/accounts", tags=["账户-管理员"])
+router.include_router(accounts.router, prefix="/accounts", tags=["Admin Accounts"])
 
 # 交易审计 (必须在 transactions 之前注册，避免 /{tx_id} 路由冲突)
 router.include_router(
-    transactions_audit.router, prefix="/transactions/audit", tags=["交易审计-管理员"]
+    transactions_audit.router,
+    prefix="/transactions/audit",
+    tags=["Admin Transaction Audit"],
 )
 
 # 交易管理
-router.include_router(transactions.router, prefix="/transactions", tags=["交易-管理员"])
+router.include_router(
+    transactions.router, prefix="/transactions", tags=["Admin Transactions"]
+)
 
 # 审计日志
-router.include_router(audit.router, prefix="/audit-logs", tags=["审计-管理员"])
+router.include_router(audit.router, prefix="/audit-logs", tags=["Admin Audit Logs"])
 
 # 统计报表 (平台统计、用户统计、TVL 等)
-router.include_router(stats.router, prefix="/stats", tags=["统计-管理员"])
+router.include_router(stats.router, prefix="/stats", tags=["Admin Stats"])

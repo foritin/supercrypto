@@ -7,7 +7,8 @@ Feature: full-stack-review-fixes
 - Property 2: 后门环境限制 — production 环境下后门始终被拒绝
 """
 
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 
 def is_backdoor_allowed(

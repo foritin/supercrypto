@@ -13,7 +13,7 @@ from unittest.mock import patch
 import pytest
 from cryptography.fernet import Fernet
 
-from src.shared.security.encryption import (
+from src.security.encryption import (
     decrypt_private_key,
     encrypt_private_key,
 )
@@ -100,7 +100,11 @@ class TestEncryptDecryptRoundTrip:
         original = "0xdeadbeef"
         encrypted1 = encrypt_private_key(original)
         encrypted2 = encrypt_private_key(original)
-        assert decrypt_private_key(encrypted1) == decrypt_private_key(encrypted2) == original
+        assert (
+            decrypt_private_key(encrypted1)
+            == decrypt_private_key(encrypted2)
+            == original
+        )
 
 
 class TestEncryptionKeyConfig:
@@ -108,34 +112,55 @@ class TestEncryptionKeyConfig:
 
     def test_missing_encryption_key_raises_error(self):
         """未配置 ENCRYPTION_KEY 应抛出 ValueError"""
-        with patch(
-            "src.shared.security.encryption.SETTINGS",
-            spec=[],
-        ) as mock_settings:
-            # spec=[] 使 getattr 返回 None
-            mock_settings.ENCRYPTION_KEY = None
-            with pytest.raises(ValueError, match="ENCRYPTION_KEY 未配置"):
-                encrypt_private_key("0x123")
+        import src.security.encryption as enc_module
+
+        original_instance = enc_module._fernet_instance
+        enc_module._fernet_instance = None
+        try:
+            with patch(
+                "src.security.encryption.SETTINGS",
+                spec=[],
+            ) as mock_settings:
+                # spec=[] 使 getattr 返回 None
+                mock_settings.ENCRYPTION_KEY = None
+                with pytest.raises(ValueError, match="ENCRYPTION_KEY 未配置"):
+                    encrypt_private_key("0x123")
+        finally:
+            enc_module._fernet_instance = original_instance
 
     def test_invalid_encryption_key_raises_error(self):
         """无效的 ENCRYPTION_KEY 应抛出 ValueError"""
-        with patch(
-            "src.shared.security.encryption.SETTINGS",
-        ) as mock_settings:
-            mock_settings.ENCRYPTION_KEY = "not-a-valid-fernet-key"
-            with pytest.raises(ValueError, match="ENCRYPTION_KEY 格式无效"):
-                encrypt_private_key("0x123")
+        import src.security.encryption as enc_module
+
+        original_instance = enc_module._fernet_instance
+        enc_module._fernet_instance = None
+        try:
+            with patch(
+                "src.security.encryption.SETTINGS",
+            ) as mock_settings:
+                mock_settings.ENCRYPTION_KEY = "not-a-valid-fernet-key"
+                with pytest.raises(ValueError, match="ENCRYPTION_KEY 格式无效"):
+                    encrypt_private_key("0x123")
+        finally:
+            enc_module._fernet_instance = original_instance
 
     def test_wrong_key_cannot_decrypt(self):
         """使用不同密钥加密的数据无法解密"""
+        import src.security.encryption as enc_module
+
         # 用当前配置的密钥加密
         encrypted = encrypt_private_key("0xsecret")
 
         # 用另一个密钥尝试解密
         other_key = Fernet.generate_key().decode()
-        with patch(
-            "src.shared.security.encryption.SETTINGS",
-        ) as mock_settings:
-            mock_settings.ENCRYPTION_KEY = other_key
-            with pytest.raises(ValueError, match="解密失败"):
-                decrypt_private_key(encrypted)
+        original_instance = enc_module._fernet_instance
+        enc_module._fernet_instance = None
+        try:
+            with patch(
+                "src.security.encryption.SETTINGS",
+            ) as mock_settings:
+                mock_settings.ENCRYPTION_KEY = other_key
+                with pytest.raises(ValueError, match="解密失败"):
+                    decrypt_private_key(encrypted)
+        finally:
+            enc_module._fernet_instance = original_instance

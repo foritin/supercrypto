@@ -12,15 +12,15 @@ from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, HTTPException, status
 
 # 确保常量已注册
-from src.shared.constants.registry import get_registry
+from src.constants.registry import get_registry
 
 router = APIRouter()
 
 
 @router.get(
     "",
-    summary="获取所有常量分组",
-    description="返回系统中所有已注册的常量分组及其常量项",
+    summary="List All Constant Groups",
+    description="Return all registered constant groups and their items",
 )
 async def get_all_constants():
     """
@@ -46,8 +46,8 @@ async def get_all_constants():
 
 @router.get(
     "/{group}",
-    summary="获取指定分组的常量",
-    description="根据分组名称获取该分组下的所有常量项",
+    summary="Get Constants by Group",
+    description="Get all constant items for a specific group",
 )
 async def get_constants_by_group(group: str):
     """

@@ -6,19 +6,21 @@
 
 from typing import Optional
 
-from falib.utils.handlers import create_success_response
+from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, Query
 
-from src.shared.security import require_admin
-from src.shared.services import session_service
+from src.common.dependencies import audit_service, session_service
+from src.common.utils import calculate_total_pages
+from src.schemas.enums import AuditAction, AuditCategory, AuditStatus
+from src.security import require_admin
 
 router = APIRouter()
 
 
 @router.get(
     "/sessions",
-    summary="获取活跃用户会话列表",
-    description="获取当前所有活跃的用户登录会话（管理员）",
+    summary="List Active Sessions",
+    description="Get all active user login sessions (admin)",
 )
 async def list_active_sessions(
     page: int = Query(1, ge=1, description="页码"),
@@ -38,51 +40,39 @@ async def list_active_sessions(
         search=search,
     )
 
-    total_pages = (total + page_size - 1) // page_size
+    total_pages = calculate_total_pages(total, page_size)
 
     return create_success_response(
         list_data=sessions,
-        pagination={
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": total_pages,
-        },
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        ),
     )
 
 
 @router.post(
     "/sessions/{wallet_address}/revoke",
-    summary="强制下线用户",
-    description="撤销指定用户的所有登录会话（管理员）",
+    summary="Revoke User Sessions",
+    description="Revoke all login sessions for a user (admin)",
 )
 async def revoke_user_sessions(
     wallet_address: str,
     admin_address: str = Depends(require_admin),
 ):
-    """
-    强制下线用户
-
-    - **wallet_address**: 要下线的用户钱包地址
-
-    撤销该用户的所有会话，用户下次请求将收到 401 错误
-    """
-    from src.services.audit.service import audit_service
-    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-
+    """强制下线用户 — 撤销该用户的所有会话，用户下次请求将收到 401 错误"""
     wallet_address = wallet_address.lower()
 
-    # 防止管理员下线自己
     if wallet_address == admin_address:
         return create_success_response(
             object_data={"error": "Cannot blacklist yourself"},
             msg="不能将自己加入黑名单",
         )
 
-    # 加入黑名单
     cleared_count = await session_service.add_to_blacklist(wallet_address)
 
-    # 记录审计日志
     await audit_service.log_async(
         category=AuditCategory.AUTH,
         action=AuditAction.USER_SESSION_REVOKE,
@@ -109,8 +99,8 @@ async def revoke_user_sessions(
 
 @router.get(
     "/sessions/{wallet_address}",
-    summary="获取用户会话列表",
-    description="获取指定用户的所有活跃会话（管理员）",
+    summary="Get User Sessions",
+    description="Get all active sessions for a specific user (admin)",
 )
 async def get_user_sessions(
     wallet_address: str,
@@ -132,34 +122,24 @@ async def get_user_sessions(
 
 @router.delete(
     "/blacklist/{wallet_address}",
-    summary="解除黑名单",
-    description="将用户从黑名单移除，允许重新登录（管理员）",
+    summary="Remove from Blacklist",
+    description="Remove a user from the blacklist to allow re-login (admin)",
 )
 async def remove_user_from_blacklist(
     wallet_address: str,
     admin_address: str = Depends(require_admin),
 ):
-    """
-    解除用户黑名单
-
-    - **wallet_address**: 用户钱包地址
-    """
-    from src.services.audit.service import audit_service
-    from src.shared.schemas.enums import AuditAction, AuditCategory, AuditStatus
-
+    """解除用户黑名单"""
     wallet_address = wallet_address.lower()
 
-    # 检查是否在黑名单
     if not await session_service.is_blacklisted(wallet_address):
         return create_success_response(
             object_data={"wallet_address": wallet_address, "was_blacklisted": False},
             msg="用户不在黑名单中",
         )
 
-    # 解除黑名单
     await session_service.remove_from_blacklist(wallet_address)
 
-    # 记录审计日志
     await audit_service.log_async(
         category=AuditCategory.AUTH,
         action=AuditAction.USER_BLACKLIST_REMOVE,
@@ -183,8 +163,8 @@ async def remove_user_from_blacklist(
 
 @router.get(
     "/blacklist/{wallet_address}",
-    summary="检查黑名单状态",
-    description="检查用户是否在黑名单中（管理员）",
+    summary="Check Blacklist Status",
+    description="Check if a user is blacklisted (admin)",
 )
 async def check_blacklist_status(
     wallet_address: str,

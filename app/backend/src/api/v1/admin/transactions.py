@@ -4,38 +4,32 @@
 路由前缀: /api/v1/admin/transactions
 """
 
-import csv
-import io
 from typing import Optional
 
 from falib.utils.handlers import (
     PaginationInfo,
-    create_error_response,
     create_success_response,
 )
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import StreamingResponse
 
-from src.services.transaction.schemas import (
+from src.common.dependencies import get_transaction_service
+from src.common.exceptions import NotFoundException
+from src.schemas.transaction import (
     TransactionCreate,
     TransactionListQuery,
     TransactionUpdate,
 )
-from src.services.transaction.service import TransactionService
+from src.services import TransactionService
 
 router = APIRouter()
-
-
-def get_transaction_service() -> TransactionService:
-    """依赖注入：获取交易服务"""
-    return TransactionService()
 
 
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    summary="记录交易",
-    description="创建新的交易记录",
+    summary="Record Transaction",
+    description="Create a new transaction record",
 )
 async def record_transaction(
     data: TransactionCreate,
@@ -63,8 +57,8 @@ async def record_transaction(
 
 @router.get(
     "/{tx_id}",
-    summary="获取交易详情",
-    description="根据交易ID获取交易详细信息",
+    summary="Get Transaction Detail",
+    description="Get detailed transaction information by ID",
 )
 async def get_transaction(
     tx_id: int, service: TransactionService = Depends(get_transaction_service)
@@ -84,8 +78,8 @@ async def get_transaction(
 
 @router.get(
     "/hash/{tx_hash}",
-    summary="根据哈希查询交易",
-    description="根据交易哈希查询交易信息",
+    summary="Get Transaction by Hash",
+    description="Get transaction information by transaction hash",
 )
 async def get_transaction_by_hash(
     tx_hash: str, service: TransactionService = Depends(get_transaction_service)
@@ -99,7 +93,7 @@ async def get_transaction_by_hash(
     """
     tx = await service.get_transaction_by_hash(tx_hash)
     if not tx:
-        return create_error_response(code=404, msg="Transaction not found")
+        raise NotFoundException(message="Transaction not found")
     return create_success_response(
         object_data=tx.model_dump(mode="json") if hasattr(tx, "model_dump") else tx
     )
@@ -107,8 +101,8 @@ async def get_transaction_by_hash(
 
 @router.get(
     "",
-    summary="查询交易列表",
-    description="查询交易列表，支持多种过滤条件",
+    summary="List Transactions",
+    description="List transactions with multiple filter conditions",
 )
 async def list_transactions(
     address: Optional[str] = Query(None, description="地址过滤（发送或接收）"),
@@ -122,22 +116,7 @@ async def list_transactions(
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     service: TransactionService = Depends(get_transaction_service),
 ):
-    """
-    查询交易列表
-
-    支持的过滤参数：
-    - **address**: 地址（发送或接收）
-    - **from_address**: 发送地址
-    - **to_address**: 接收地址
-    - **wallet_id**: 钱包ID
-    - **network**: 网络类型
-    - **status**: 交易状态
-    - **tx_type**: 交易类型
-    - **page**: 页码（从1开始）
-    - **page_size**: 每页数量（1-100）
-
-    返回分页的交易列表
-    """
+    """查询交易列表 — 支持按地址/网络/状态/类型等多条件过滤"""
     query = TransactionListQuery(
         address=address,
         from_address=from_address,
@@ -149,7 +128,6 @@ async def list_transactions(
         page=page,
         page_size=page_size,
     )
-
     transactions, total, total_pages = await service.list_transactions(query)
 
     return create_success_response(
@@ -168,8 +146,8 @@ async def list_transactions(
 
 @router.get(
     "/address/{address}/history",
-    summary="查询地址交易历史",
-    description="查询指定地址的所有交易历史",
+    summary="Get Address Transaction History",
+    description="Get all transaction history for a specific address",
 )
 async def get_address_transactions(
     address: str,
@@ -206,8 +184,8 @@ async def get_address_transactions(
 
 @router.get(
     "/wallet/{wallet_id}/history",
-    summary="查询钱包交易历史",
-    description="查询指定钱包的所有交易历史",
+    summary="Get Wallet Transaction History",
+    description="Get all transaction history for a specific wallet",
 )
 async def get_wallet_transactions(
     wallet_id: int,
@@ -244,8 +222,8 @@ async def get_wallet_transactions(
 
 @router.get(
     "/stats",
-    summary="获取交易统计",
-    description="获取交易统计信息",
+    summary="Get Transaction Stats",
+    description="Get transaction statistics",
 )
 async def get_transaction_stats(
     address: Optional[str] = Query(None, description="按地址统计"),
@@ -270,8 +248,8 @@ async def get_transaction_stats(
 
 @router.get(
     "/export",
-    summary="导出交易记录",
-    description="导出交易记录为 CSV 格式",
+    summary="Export Transactions",
+    description="Export transaction records in CSV format",
 )
 async def export_transactions(
     address: Optional[str] = Query(None, description="按地址筛选"),
@@ -290,57 +268,17 @@ async def export_transactions(
 
     返回 CSV 文件
     """
-    # 获取所有交易
     query = TransactionListQuery(
         address=address,
         status=tx_status,
         tx_type=tx_type,
         page=1,
-        page_size=10000,  # 最大导出数量
+        page_size=10000,
     )
-    transactions, _, _ = await service.list_transactions(query)
-
-    # 生成 CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    # 写入表头
-    writer.writerow(
-        [
-            "ID",
-            "Time",
-            "Type",
-            "From",
-            "To",
-            "Amount",
-            "Network",
-            "Status",
-            "Tx Hash",
-            "Block Number",
-        ]
-    )
-
-    # 写入数据
-    for tx in transactions:
-        writer.writerow(
-            [
-                tx.id,
-                tx.created_at.isoformat() if tx.created_at else "",
-                tx.tx_type,
-                tx.from_address,
-                tx.to_address,
-                tx.amount,
-                tx.network,
-                tx.status,
-                tx.tx_hash,
-                tx.block_number or "",
-            ]
-        )
-
-    output.seek(0)
+    csv_content = await service.export_to_csv(query)
 
     return StreamingResponse(
-        iter([output.getvalue()]),
+        iter([csv_content]),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=transactions.csv"},
     )
@@ -348,8 +286,8 @@ async def export_transactions(
 
 @router.put(
     "/{tx_id}",
-    summary="更新交易信息",
-    description="更新交易状态、区块信息等",
+    summary="Update Transaction",
+    description="Update transaction status, block info, etc.",
 )
 async def update_transaction(
     tx_id: int,

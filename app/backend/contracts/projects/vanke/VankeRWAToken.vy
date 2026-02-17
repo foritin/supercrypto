@@ -6,10 +6,11 @@
      使用 AddressProvider 模式获取依赖地址
 """
 
-# 接口定义
+# ============ 接口定义 ============
+
 interface IKYCManager:
-    def isVerified(_investor: address) -> bool: view
-    def isFrozen(_investor: address) -> bool: view
+    def is_verified(_investor: address) -> bool: view
+    def is_frozen(_investor: address) -> bool: view
     def investorCount() -> uint256: view
     def maxInvestors() -> uint256: view
 
@@ -36,6 +37,8 @@ interface IMigration:
     def get_allowance(_owner: address, _spender: address) -> uint256: view
     def receive_migration(oldContract: address): nonpayable
     def is_migrated() -> bool: view
+
+# ============ 事件定义 ============
 
 # ERC20 事件
 event Transfer:
@@ -88,6 +91,14 @@ event TransferRestriction:
     value: uint256
     restrictionCode: uint8
 
+# 迁移事件
+event Migrated:
+    oldContract: indexed(address)
+    newContract: indexed(address)
+    timestamp: uint256
+
+# ============ 存储变量 ============
+
 # ERC20 状态变量
 name: public(String[32])
 symbol: public(String[8])
@@ -125,9 +136,6 @@ documentHashes: public(HashMap[String[32], bytes32]) # 文档名 => 哈希
 # 7 = 余额不足
 # 8 = 发行已完成，禁止铸造
 
-
-# ==================== 合约迁移功能 ====================
-
 # 迁移状态
 migrated: public(bool)
 
@@ -138,62 +146,18 @@ accountList: public(DynArray[address, 5000])
 # 结构: [owner1, spender1, owner2, spender2, ...]
 allowanceList: public(DynArray[address, 10000])
 
-# 迁移事件
-event Migrated:
-    oldContract: indexed(address)
-    newContract: indexed(address)
-    timestamp: uint256
+# 为迁移添加的状态列表（自动生成 public getter）
+minterList: public(DynArray[address, 100])
+burnerList: public(DynArray[address, 100])
+documentList: public(DynArray[String[32], 50])
 
-
-# ==================== 内部辅助函数 ====================
-
-@internal
-def _trackAccount(_account: address):
-    """
-    @notice 内部：将账户添加到追踪列表（如果尚未存在）
-    @param _account 账户地址
-    @dev 用于迁移时追踪所有活跃账户
-    """
-    # 检查账户是否已在列表中
-    for account: address in self.accountList:
-        if account == _account:
-            return
-
-    # 如果余额非零或有授权记录，添加到列表
-    if self.balanceOf[_account] > 0:
-        self.accountList.append(_account)
-
-
-@internal
-def _trackAllowance(_owner: address, _spender: address):
-    """
-    @notice 内部：追踪授权对（用于迁移）
-    @param _owner 所有者地址
-    @param _spender 授权者地址
-    @dev 用于迁移时追踪所有活跃授权
-    """
-    # 检查授权对是否已在列表中
-    found: bool = False
-    idx: uint256 = 0
-    for account: address in self.allowanceList:
-        if idx % 2 == 0 and idx + 1 < len(self.allowanceList):
-            # 这是一个owner位置，检查下一个是否是spender
-            if account == _owner and self.allowanceList[idx + 1] == _spender:
-                found = True
-                break
-        idx += 1
-
-    # 如果未找到，添加新的授权对
-    if not found:
-        self.allowanceList.append(_owner)
-        self.allowanceList.append(_spender)
-
+# ============ 构造函数 ============
 
 @deploy
 def __init__():
     """
     @notice 初始化RWA Security Token
-    @dev 部署后需要通过 setAddressProvider 设置 Provider 地址
+    @dev 部署后需要通过 admin_set_address_provider 设置 Provider 地址
     """
     self.name = "RWA Security Token"
     self.symbol = "RWASTO"
@@ -203,9 +167,32 @@ def __init__():
     self.transfer_agent = msg.sender
     self.issuance_finished = False
 
+# ============ Owner 函数 ============
 
 @external
-def setAddressProvider(_address_provider: address):
+def owner_finish_issuance():
+    """
+    @notice 完成代币发行（之后禁止铸造）
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert not self.issuance_finished, "Already finished"
+    self.issuance_finished = True
+
+
+@external
+def owner_transfer_ownership(_new_owner: address):
+    """
+    @notice 转移所有权
+    @param _new_owner 新所有者地址
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _new_owner != empty(address), "Invalid address"
+    self.owner = _new_owner
+
+# ============ Admin 函数 ============
+
+@external
+def admin_set_address_provider(_address_provider: address):
     """
     @notice 设置 AddressProvider 地址
     @param _address_provider AddressProvider 合约地址
@@ -216,22 +203,8 @@ def setAddressProvider(_address_provider: address):
     self.ADDRESS_PROVIDER = _address_provider
 
 
-# ==================== Provider 查询 ====================
-
-@view
-@internal
-def _get_kyc_manager() -> address:
-    """
-    @notice 从 AddressProvider 获取 KYC 管理合约地址
-    @return KYC 管理合约地址
-    """
-    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_kyc_manager()
-
-
-# ==================== 管理功能 ====================
-
 @external
-def setMinter(_minter: address, _enabled: bool):
+def admin_set_minter(_minter: address, _enabled: bool):
     """
     @notice 设置铸造权限
     @param _minter 铸造者地址
@@ -254,7 +227,7 @@ def setMinter(_minter: address, _enabled: bool):
 
 
 @external
-def setBurner(_burner: address, _enabled: bool):
+def admin_set_burner(_burner: address, _enabled: bool):
     """
     @notice 设置销毁权限
     @param _burner 销毁者地址
@@ -276,11 +249,8 @@ def setBurner(_burner: address, _enabled: bool):
             self.burnerList.append(_burner)
 
 
-# 注意: set_kyc_manager 已移除 - 纯 Provider 模式下通过 AddressProvider 管理
-
-
 @external
-def set_transfer_agent(_new_agent: address):
+def admin_set_transfer_agent(_new_agent: address):
     """
     @notice 设置转让代理
     @param _new_agent 新转让代理地址
@@ -295,7 +265,7 @@ def set_transfer_agent(_new_agent: address):
 
 
 @external
-def set_oracle(_oracle: address):
+def admin_set_oracle(_oracle: address):
     """
     @notice 设置CapitalOracle合约（可选）
     @param _oracle CapitalOracle合约地址（可为零地址）
@@ -309,17 +279,7 @@ def set_oracle(_oracle: address):
 
 
 @external
-def finish_issuance():
-    """
-    @notice 完成代币发行（之后禁止铸造）
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert not self.issuance_finished, "Already finished"
-    self.issuance_finished = True
-
-
-@external
-def set_document(_name: String[32], _uri: String[256], _document_hash: bytes32):
+def admin_set_document(_name: String[32], _uri: String[256], _document_hash: bytes32):
     """
     @notice 设置法律文档（招股书、年报等）
     @param _name 文档名称
@@ -343,144 +303,7 @@ def set_document(_name: String[32], _uri: String[256], _document_hash: bytes32):
 
     log DocumentUpdated(_name, _uri, _document_hash)
 
-
-# ==================== ERC1404 合规检查 ====================
-
-@view
-@internal
-def _detectTransferRestriction(
-    _from: address,
-    _to: address,
-    _value: uint256
-) -> uint8:
-    """
-    @notice 内部函数：检测转账限制（ERC1404核心功能）
-    @param _from 发送方地址
-    @param _to 接收方地址
-    @param _value 转账金额
-    @return 限制代码（0=允许，其他=限制原因）
-    """
-    # 从 Provider 获取 KYC 管理合约地址（缓存避免重复调用）
-    kyc: address = self._get_kyc_manager()
-
-    # 0. 铸造（from = zero address）- 只检查接收方
-    if _from == empty(address):
-        if not staticcall IKYCManager(kyc).isVerified(_to):
-            return 2  # 接收方未通过KYC
-        if staticcall IKYCManager(kyc).isFrozen(_to):
-            return 4  # 接收方账户冻结
-        return 0
-
-    # 1. 销毁（to = zero address）- 只检查发送方
-    if _to == empty(address):
-        if not staticcall IKYCManager(kyc).isVerified(_from):
-            return 1  # 发送方未通过KYC
-        if staticcall IKYCManager(kyc).isFrozen(_from):
-            return 3  # 发送方账户冻结
-        if self.balanceOf[_from] < _value:
-            return 7  # 余额不足
-        return 0
-    
-    # 2. 检查金额
-    if _value == 0:
-        return 6  # 转账金额为零
-
-    # 3. 检查发送方KYC
-    if not staticcall IKYCManager(kyc).isVerified(_from):
-        return 1  # 发送方未通过KYC
-
-    # 4. 检查接收方KYC
-    if not staticcall IKYCManager(kyc).isVerified(_to):
-        return 2  # 接收方未通过KYC
-
-    # 5. 检查发送方是否冻结
-    if staticcall IKYCManager(kyc).isFrozen(_from):
-        return 3  # 发送方账户冻结
-
-    # 6. 检查接收方是否冻结
-    if staticcall IKYCManager(kyc).isFrozen(_to):
-        return 4  # 接收方账户冻结
-
-    # 7. 检查余额
-    if self.balanceOf[_from] < _value:
-        return 7  # 余额不足
-
-    # 8. 检查投资者上限（仅当接收方首次接收时）
-    if self.balanceOf[_to] == 0:
-        investorCount: uint256 = staticcall IKYCManager(kyc).investorCount()
-        maxInvestors: uint256 = staticcall IKYCManager(kyc).maxInvestors()
-        if investorCount >= maxInvestors:
-            return 5  # 超过投资者上限
-    
-    # 允许转账
-    return 0
-
-
-@view
-@external
-def detectTransferRestriction(
-    _from: address,
-    _to: address,
-    _value: uint256
-) -> uint8:
-    """
-    @notice 检测转账限制（ERC1404核心功能）
-    @param _from 发送方地址
-    @param _to 接收方地址
-    @param _value 转账金额
-    @return 限制代码（0=允许，其他=限制原因）
-    """
-    return self._detectTransferRestriction(_from, _to, _value)
-
-
-@view
-@external
-def messageForTransferRestriction(_restrictionCode: uint8) -> String[100]:
-    """
-    @notice 获取限制代码的说明信息
-    @param _restrictionCode 限制代码
-    @return 说明信息
-    """
-    if _restrictionCode == 0:
-        return "Transfer allowed"
-    elif _restrictionCode == 1:
-        return "Sender not KYC verified"
-    elif _restrictionCode == 2:
-        return "Recipient not KYC verified"
-    elif _restrictionCode == 3:
-        return "Sender account frozen"
-    elif _restrictionCode == 4:
-        return "Recipient account frozen"
-    elif _restrictionCode == 5:
-        return "Investor limit reached"
-    elif _restrictionCode == 6:
-        return "Transfer amount is zero"
-    elif _restrictionCode == 7:
-        return "Insufficient balance"
-    elif _restrictionCode == 8:
-        return "Issuance finished, minting disabled"
-    else:
-        return "Unknown restriction"
-
-
-# ==================== 内部转账检查 ====================
-
-@internal
-def _checkTransferRestriction(_from: address, _to: address, _value: uint256):
-    """
-    @notice 内部转账限制检查
-    @param _from 发送方
-    @param _to 接收方
-    @param _value 金额
-    """
-    restrictionCode: uint8 = self._detectTransferRestriction(_from, _to, _value)
-    assert restrictionCode == 0, "Transfer restricted"
-    
-    if restrictionCode != 0:
-        log TransferRestriction(_from, _to, _value, restrictionCode)
-
-
-# ==================== ERC20 核心功能（带合规检查）====================
+# ============ 核心业务函数 ============
 
 @external
 def mint(_to: address, _amount: uint256):
@@ -596,10 +419,8 @@ def transferFrom(_from: address, _to: address, _amount: uint256) -> bool:
     return True
 
 
-# ==================== 监管功能 ====================
-
 @external
-def forceTransfer(
+def force_transfer(
     _from: address,
     _to: address,
     _amount: uint256,
@@ -624,7 +445,7 @@ def forceTransfer(
 
 
 @external
-def forceBurn(_from: address, _amount: uint256, _reason: String[100]):
+def force_burn(_from: address, _amount: uint256, _reason: String[100]):
     """
     @notice 强制销毁（监管机构专用）
     @param _from 地址
@@ -641,7 +462,67 @@ def forceBurn(_from: address, _amount: uint256, _reason: String[100]):
     log ForcedTransfer(_from, empty(address), _amount, _reason)
 
 
-# ==================== 查询功能 ====================
+# ============ 查询函数 ============
+
+@view
+@external
+def detect_transfer_restriction(
+    _from: address,
+    _to: address,
+    _value: uint256
+) -> uint8:
+    """
+    @notice 检测转账限制（ERC1404核心功能）
+    @param _from 发送方地址
+    @param _to 接收方地址
+    @param _value 转账金额
+    @return 限制代码（0=允许，其他=限制原因）
+    """
+    return self._detectTransferRestriction(_from, _to, _value)
+
+
+@view
+@external
+def message_for_transfer_restriction(_restrictionCode: uint8) -> String[100]:
+    """
+    @notice 获取限制代码的说明信息
+    @param _restrictionCode 限制代码
+    @return 说明信息
+    """
+    if _restrictionCode == 0:
+        return "Transfer allowed"
+    elif _restrictionCode == 1:
+        return "Sender not KYC verified"
+    elif _restrictionCode == 2:
+        return "Recipient not KYC verified"
+    elif _restrictionCode == 3:
+        return "Sender account frozen"
+    elif _restrictionCode == 4:
+        return "Recipient account frozen"
+    elif _restrictionCode == 5:
+        return "Investor limit reached"
+    elif _restrictionCode == 6:
+        return "Transfer amount is zero"
+    elif _restrictionCode == 7:
+        return "Insufficient balance"
+    elif _restrictionCode == 8:
+        return "Issuance finished, minting disabled"
+    else:
+        return "Unknown restriction"
+
+
+@view
+@external
+def can_transfer(_from: address, _to: address, _value: uint256) -> bool:
+    """
+    @notice 检查是否可以转账
+    @param _from 发送方
+    @param _to 接收方
+    @param _value 金额
+    @return 是否可以转账
+    """
+    return self._detectTransferRestriction(_from, _to, _value) == 0
+
 
 @view
 @external
@@ -652,19 +533,6 @@ def get_document(_name: String[32]) -> (String[256], bytes32):
     @return (URI, 哈希)
     """
     return (self.documents[_name], self.documentHashes[_name])
-
-
-@view
-@external
-def canTransfer(_from: address, _to: address, _value: uint256) -> bool:
-    """
-    @notice 检查是否可以转账
-    @param _from 发送方
-    @param _to 接收方
-    @param _value 金额
-    @return 是否可以转账
-    """
-    return self._detectTransferRestriction(_from, _to, _value) == 0
 
 
 @view
@@ -690,7 +558,146 @@ def get_address_provider() -> address:
     return self.ADDRESS_PROVIDER
 
 
-# ==================== 依赖查询功能 ====================
+# ============ 内部辅助函数 ============
+
+@view
+@internal
+def _get_kyc_manager() -> address:
+    """
+    @notice 从 AddressProvider 获取 KYC 管理合约地址
+    @return KYC 管理合约地址
+    """
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_kyc_manager()
+
+
+@view
+@internal
+def _detectTransferRestriction(
+    _from: address,
+    _to: address,
+    _value: uint256
+) -> uint8:
+    """
+    @notice 内部函数：检测转账限制（ERC1404核心功能）
+    @param _from 发送方地址
+    @param _to 接收方地址
+    @param _value 转账金额
+    @return 限制代码（0=允许，其他=限制原因）
+    """
+    # 从 Provider 获取 KYC 管理合约地址（缓存避免重复调用）
+    kyc: address = self._get_kyc_manager()
+
+    # 0. 铸造（from = zero address）- 只检查接收方
+    if _from == empty(address):
+        if not staticcall IKYCManager(kyc).is_verified(_to):
+            return 2  # 接收方未通过KYC
+        if staticcall IKYCManager(kyc).is_frozen(_to):
+            return 4  # 接收方账户冻结
+        return 0
+
+    # 1. 销毁（to = zero address）- 只检查发送方
+    if _to == empty(address):
+        if not staticcall IKYCManager(kyc).is_verified(_from):
+            return 1  # 发送方未通过KYC
+        if staticcall IKYCManager(kyc).is_frozen(_from):
+            return 3  # 发送方账户冻结
+        if self.balanceOf[_from] < _value:
+            return 7  # 余额不足
+        return 0
+    
+    # 2. 检查金额
+    if _value == 0:
+        return 6  # 转账金额为零
+
+    # 3. 检查发送方KYC
+    if not staticcall IKYCManager(kyc).is_verified(_from):
+        return 1  # 发送方未通过KYC
+
+    # 4. 检查接收方KYC
+    if not staticcall IKYCManager(kyc).is_verified(_to):
+        return 2  # 接收方未通过KYC
+
+    # 5. 检查发送方是否冻结
+    if staticcall IKYCManager(kyc).is_frozen(_from):
+        return 3  # 发送方账户冻结
+
+    # 6. 检查接收方是否冻结
+    if staticcall IKYCManager(kyc).is_frozen(_to):
+        return 4  # 接收方账户冻结
+
+    # 7. 检查余额
+    if self.balanceOf[_from] < _value:
+        return 7  # 余额不足
+
+    # 8. 检查投资者上限（仅当接收方首次接收时）
+    if self.balanceOf[_to] == 0:
+        investorCount: uint256 = staticcall IKYCManager(kyc).investorCount()
+        maxInvestors: uint256 = staticcall IKYCManager(kyc).maxInvestors()
+        if investorCount >= maxInvestors:
+            return 5  # 超过投资者上限
+    
+    # 允许转账
+    return 0
+
+
+@internal
+def _checkTransferRestriction(_from: address, _to: address, _value: uint256):
+    """
+    @notice 内部转账限制检查
+    @param _from 发送方
+    @param _to 接收方
+    @param _value 金额
+    """
+    restrictionCode: uint8 = self._detectTransferRestriction(_from, _to, _value)
+    assert restrictionCode == 0, "Transfer restricted"
+    
+    if restrictionCode != 0:
+        log TransferRestriction(_from, _to, _value, restrictionCode)
+
+
+@internal
+def _trackAccount(_account: address):
+    """
+    @notice 内部：将账户添加到追踪列表（如果尚未存在）
+    @param _account 账户地址
+    @dev 用于迁移时追踪所有活跃账户
+    """
+    # 检查账户是否已在列表中
+    for account: address in self.accountList:
+        if account == _account:
+            return
+
+    # 如果余额非零或有授权记录，添加到列表
+    if self.balanceOf[_account] > 0:
+        self.accountList.append(_account)
+
+
+@internal
+def _trackAllowance(_owner: address, _spender: address):
+    """
+    @notice 内部：追踪授权对（用于迁移）
+    @param _owner 所有者地址
+    @param _spender 授权者地址
+    @dev 用于迁移时追踪所有活跃授权
+    """
+    # 检查授权对是否已在列表中
+    found: bool = False
+    idx: uint256 = 0
+    for account: address in self.allowanceList:
+        if idx % 2 == 0 and idx + 1 < len(self.allowanceList):
+            # 这是一个owner位置，检查下一个是否是spender
+            if account == _owner and self.allowanceList[idx + 1] == _spender:
+                found = True
+                break
+        idx += 1
+
+    # 如果未找到，添加新的授权对
+    if not found:
+        self.allowanceList.append(_owner)
+        self.allowanceList.append(_spender)
+
+
+# ============ 依赖查询功能 ============
 
 @external
 @view
@@ -720,71 +727,10 @@ def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], D
 
     return unbound_required, bound_all, unbound_optional
 
-
-# ==================== 迁移辅助getter函数 ====================
-
-@external
-@view
-def get_account_list() -> DynArray[address, 5000]:
-    """
-    @notice 获取账户列表（用于迁移）
-    @return 账户地址动态数组
-    @dev 包含所有有余额或授权的账户
-    """
-    return self.accountList
-
+# ============ 合约迁移功能 ============
 
 @external
-@view
-def get_balance_of(_account: address) -> uint256:
-    """
-    @notice 获取账户余额（用于迁移）
-    @param _account 账户地址
-    @return 余额
-    """
-    return self.balanceOf[_account]
-
-
-@external
-@view
-def get_allowance(_owner: address, _spender: address) -> uint256:
-    """
-    @notice 获取授权额度（用于迁移）
-    @param _owner 所有者地址
-    @param _spender 授权者地址
-    @return 授权额度
-    """
-    return self.allowance[_owner][_spender]
-
-
-@external
-@view
-def get_allowance_list() -> DynArray[address, 10000]:
-    """
-    @notice 获取授权对列表（用于迁移）
-    @return 授权对地址动态数组 [owner1, spender1, owner2, spender2, ...]
-    @dev 包含所有有授权的账户对
-    """
-    return self.allowanceList
-
-
-# ==================== 所有权管理 ====================
-
-@external
-def transfer_ownership(_new_owner: address):
-    """
-    @notice 转移所有权
-    @param _new_owner 新所有者地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_owner != empty(address), "Invalid address"
-    self.owner = _new_owner
-
-
-# ==================== 合约迁移功能 ====================
-
-@external
-def migrate(new_contract: address):
+def owner_migrate(new_contract: address):
     """
     @notice 迁移所有状态到新合约
     @param new_contract 新合约地址（必须实现 receive_migration 接口）
@@ -877,9 +823,78 @@ def receive_migration(old_contract: address):
         self.documentHashes[doc_name] = doc_hash
 
 
-# ==================== 迁移 getter 函数 ====================
+# 迁移辅助getter函数
 
-# 为迁移添加的状态列表（自动生成 public getter）
-minterList: public(DynArray[address, 100])
-burnerList: public(DynArray[address, 100])
-documentList: public(DynArray[String[32], 50])
+@external
+@view
+def get_account_list() -> DynArray[address, 5000]:
+    """
+    @notice 获取账户列表（用于迁移）
+    @return 账户地址动态数组
+    @dev 包含所有有余额或授权的账户
+    """
+    return self.accountList
+
+
+@external
+@view
+def get_balance_of(_account: address) -> uint256:
+    """
+    @notice 获取账户余额（用于迁移）
+    @param _account 账户地址
+    @return 余额
+    """
+    return self.balanceOf[_account]
+
+
+@external
+@view
+def get_allowance(_owner: address, _spender: address) -> uint256:
+    """
+    @notice 获取授权额度（用于迁移）
+    @param _owner 所有者地址
+    @param _spender 授权者地址
+    @return 授权额度
+    """
+    return self.allowance[_owner][_spender]
+
+
+@external
+@view
+def get_allowance_list() -> DynArray[address, 10000]:
+    """
+    @notice 获取授权对列表（用于迁移）
+    @return 授权对地址动态数组 [owner1, spender1, owner2, spender2, ...]
+    @dev 包含所有有授权的账户对
+    """
+    return self.allowanceList
+
+
+@external
+@view
+def get_minter_list() -> DynArray[address, 100]:
+    """
+    @notice 获取minter列表（用于迁移）
+    @return minter地址动态数组
+    """
+    return self.minterList
+
+
+@external
+@view
+def get_burner_list() -> DynArray[address, 100]:
+    """
+    @notice 获取burner列表（用于迁移）
+    @return burner地址动态数组
+    """
+    return self.burnerList
+
+
+@external
+@view
+def get_document_list() -> DynArray[String[32], 50]:
+    """
+    @notice 获取文档名称列表（用于迁移）
+    @return 文档名称动态数组
+    """
+    return self.documentList

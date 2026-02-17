@@ -98,7 +98,7 @@ export function KycStatusPanel() {
               <Button variant="outline" onClick={() => window.location.href = '/portfolio'}>
                 View Portfolio
               </Button>
-              <Button variant="primary" onClick={() => window.location.href = '/invest'}>
+              <Button variant="primary" onClick={() => window.location.href = '/assets'}>
                 Start Investing
               </Button>
             </div>

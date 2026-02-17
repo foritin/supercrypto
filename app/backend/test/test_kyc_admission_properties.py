@@ -16,16 +16,16 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from src.common.exceptions import BusinessException
 from src.models.kyc import AccountKyc
-from src.services.kyc.schemas import KycReviewRequest
-from src.services.kyc.service import KycService
-from src.shared.common.exceptions import BusinessException
-from src.shared.schemas.enums import (
+from src.schemas.enums import (
     KycAuditAction,
     KycStatus,
     Network,
     OnChainSyncStatus,
 )
+from src.schemas.kyc import KycReviewRequest
+from src.services.kyc_service import KycService
 
 
 def run_async(coro):
@@ -167,15 +167,15 @@ class TestReviewApprovalStateTransition:
         )
 
         # 创建 KycService 实例
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         # Mock 数据库操作
         with (
-            patch("src.services.kyc.service.AccountKyc") as MockAccountKyc,
-            patch("src.services.kyc.service.KycAuditLog") as MockAuditLog,
-            patch("src.services.kyc.service.AccountKycDocument") as MockDoc,
+            patch("src.services.kyc_service.AccountKyc") as MockAccountKyc,
+            patch("src.services.kyc_service.KycAuditLog") as MockAuditLog,
+            patch("src.services.kyc_service.AccountKycDocument") as MockDoc,
         ):
             MockAccountKyc.filter.return_value.first = AsyncMock(return_value=mock_kyc)
             MockAuditLog.create = AsyncMock()
@@ -266,14 +266,20 @@ class TestAdmissionRecordingStateAndAudit:
             on_chain_sync_status=OnChainSyncStatus.PENDING,
         )
 
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         with (
-            patch("src.services.kyc.service.AccountKyc") as MockAccountKyc,
-            patch("src.services.kyc.service.KycAuditLog") as MockAuditLog,
-            patch("src.services.kyc.service.AccountKycDocument") as MockDoc,
+            patch("src.services.kyc_service.AccountKyc") as MockAccountKyc,
+            patch("src.services.kyc_service.KycAuditLog") as MockAuditLog,
+            patch("src.services.kyc_service.AccountKycDocument") as MockDoc,
+            patch.object(
+                kyc_service,
+                "is_verified",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             MockAccountKyc.filter.return_value.first = AsyncMock(return_value=mock_kyc)
             MockAuditLog.create = AsyncMock()
@@ -368,14 +374,14 @@ class TestRevocationRecordingStateAndAudit:
             on_chain_synced_at=datetime.now(timezone.utc),
         )
 
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             kyc_service = KycService()
 
         with (
-            patch("src.services.kyc.service.AccountKyc") as MockAccountKyc,
-            patch("src.services.kyc.service.KycAuditLog") as MockAuditLog,
-            patch("src.services.kyc.service.AccountKycDocument") as MockDoc,
+            patch("src.services.kyc_service.AccountKyc") as MockAccountKyc,
+            patch("src.services.kyc_service.KycAuditLog") as MockAuditLog,
+            patch("src.services.kyc_service.AccountKycDocument") as MockDoc,
         ):
             MockAccountKyc.filter.return_value.first = AsyncMock(return_value=mock_kyc)
             MockAuditLog.create = AsyncMock()
@@ -472,11 +478,11 @@ class TestStateValidationRejectsInvalidTransitions:
             on_chain_sync_status=OnChainSyncStatus.PENDING,
         )
 
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             kyc_service = KycService()
 
-        with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc:
+        with patch("src.services.kyc_service.AccountKyc") as MockAccountKyc:
             MockAccountKyc.filter.return_value.first = AsyncMock(return_value=mock_kyc)
 
             with pytest.raises(BusinessException) as exc_info:
@@ -516,11 +522,11 @@ class TestStateValidationRejectsInvalidTransitions:
             on_chain_sync_status=OnChainSyncStatus.SYNCED,
         )
 
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             kyc_service = KycService()
 
-        with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc:
+        with patch("src.services.kyc_service.AccountKyc") as MockAccountKyc:
             MockAccountKyc.filter.return_value.first = AsyncMock(return_value=mock_kyc)
 
             with pytest.raises(BusinessException) as exc_info:
@@ -570,11 +576,11 @@ class TestStateValidationRejectsInvalidTransitions:
             on_chain_sync_status=invalid_sync_status,
         )
 
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             kyc_service = KycService()
 
-        with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc:
+        with patch("src.services.kyc_service.AccountKyc") as MockAccountKyc:
             MockAccountKyc.filter.return_value.first = AsyncMock(return_value=mock_kyc)
 
             with pytest.raises(BusinessException) as exc_info:
@@ -612,11 +618,11 @@ class TestStateValidationRejectsInvalidTransitions:
 
         record_admission() 在 KYC 不存在时应抛出 BusinessException (404)。
         """
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             kyc_service = KycService()
 
-        with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc:
+        with patch("src.services.kyc_service.AccountKyc") as MockAccountKyc:
             MockAccountKyc.filter.return_value.first = AsyncMock(return_value=None)
 
             with pytest.raises(BusinessException) as exc_info:
@@ -651,11 +657,11 @@ class TestStateValidationRejectsInvalidTransitions:
 
         record_revocation() 在 KYC 不存在时应抛出 BusinessException (404)。
         """
-        with patch("src.services.kyc.service.SETTINGS") as mock_settings:
+        with patch("src.services.kyc_service.SETTINGS") as mock_settings:
             mock_settings.network = "hardhat"
             kyc_service = KycService()
 
-        with patch("src.services.kyc.service.AccountKyc") as MockAccountKyc:
+        with patch("src.services.kyc_service.AccountKyc") as MockAccountKyc:
             MockAccountKyc.filter.return_value.first = AsyncMock(return_value=None)
 
             with pytest.raises(BusinessException) as exc_info:

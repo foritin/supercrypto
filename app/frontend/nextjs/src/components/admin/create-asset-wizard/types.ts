@@ -5,7 +5,7 @@
  * @validates Requirements 1, 7
  */
 
-import type { AssetType, ProjectContractInfo } from '@/services/asset'
+import type { AssetType, FrameStyle, ProjectContractInfo } from '@/services/asset'
 
 // ============ 步骤配置 ============
 
@@ -53,8 +53,9 @@ export interface CreateAssetFormData {
   name: string
   symbol: string
   asset_type: AssetType
-  location?: string
-  description?: string
+  frame_style?: FrameStyle | undefined
+  location?: string | undefined
+  description?: string | undefined
   
   // Step 2: 财务设置
   total_supply: number
@@ -80,6 +81,7 @@ export const DEFAULT_FORM_DATA: CreateAssetFormData = {
   name: '',
   symbol: '',
   asset_type: 'real_estate',
+  frame_style: undefined,
   location: '',
   description: '',
   

@@ -8,15 +8,11 @@
 from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends
 
-from src.services.admin.service import AdminService, admin_service
-from src.shared.security import require_admin
+from src.common.dependencies import get_admin_service
+from src.security import require_admin
+from src.services import AdminService
 
 router = APIRouter()
-
-
-def get_admin_service() -> AdminService:
-    """依赖注入：获取管理员服务"""
-    return admin_service
 
 
 # ============ 平台统计 ============
@@ -24,8 +20,8 @@ def get_admin_service() -> AdminService:
 
 @router.get(
     "",
-    summary="获取平台统计汇总",
-    description="获取平台所有统计数据，包括 TVL、用户、质押等",
+    summary="Get Platform Stats Summary",
+    description="Get all platform statistics including TVL, users, staking, etc.",
 )
 async def get_platform_stats(
     _: dict = Depends(require_admin),
@@ -42,8 +38,8 @@ async def get_platform_stats(
 
 @router.get(
     "/tvl",
-    summary="获取 TVL 统计",
-    description="获取总锁仓价值统计，包括按资产分解",
+    summary="Get TVL Stats",
+    description="Get total value locked statistics with per-asset breakdown",
 )
 async def get_tvl_stats(
     _: dict = Depends(require_admin),
@@ -60,7 +56,9 @@ async def get_tvl_stats(
     return create_success_response(object_data=result.model_dump(mode="json"))
 
 
-@router.get("/users", summary="获取用户统计", description="获取用户数量和 KYC 统计")
+@router.get(
+    "/users", summary="Get User Stats", description="Get user count and KYC statistics"
+)
 async def get_user_stats(
     _: dict = Depends(require_admin),
     service: AdminService = Depends(get_admin_service),
@@ -77,7 +75,11 @@ async def get_user_stats(
     return create_success_response(object_data=result.model_dump(mode="json"))
 
 
-@router.get("/staking", summary="获取质押池统计", description="获取质押挖矿统计数据")
+@router.get(
+    "/staking",
+    summary="Get Staking Pool Stats",
+    description="Get staking mining statistics",
+)
 async def get_staking_stats(
     _: dict = Depends(require_admin),
     service: AdminService = Depends(get_admin_service),

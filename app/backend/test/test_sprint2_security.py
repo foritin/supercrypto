@@ -18,7 +18,8 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from src.shared.common.validators import TX_HASH_PATTERN, validate_tx_hash
+from src.common.validators import TX_HASH_PATTERN, validate_tx_hash
+from src.services.kyc_service import KycService
 
 
 def run_async(coro):
@@ -94,7 +95,7 @@ class TestS02TxHashValidation:
         """RecordAdmissionRequest 应拒绝非法 tx_hash"""
         from pydantic import ValidationError
 
-        from src.services.kyc.schemas import RecordAdmissionRequest
+        from src.schemas.kyc import RecordAdmissionRequest
 
         # 合法
         req = RecordAdmissionRequest(tx_hash="0x" + "a" * 64)
@@ -108,7 +109,7 @@ class TestS02TxHashValidation:
         """RecordRevocationRequest 应拒绝非法 tx_hash"""
         from pydantic import ValidationError
 
-        from src.services.kyc.schemas import RecordRevocationRequest
+        from src.schemas.kyc import RecordRevocationRequest
 
         # 合法
         req = RecordRevocationRequest(tx_hash="0x" + "b" * 64, reason="test")
@@ -131,8 +132,7 @@ class TestB03Idempotency:
     )
     def test_admission_idempotent_same_tx_hash(self, tx_hash: str, address: str):
         """同一 tx_hash 重复提交 record_admission 应直接返回成功"""
-        from src.services.kyc.service import KycService
-        from src.shared.schemas.enums import KycStatus, OnChainSyncStatus
+        from src.schemas.enums import KycStatus, OnChainSyncStatus
 
         service = KycService()
         mock_kyc = MagicMock()
@@ -145,12 +145,12 @@ class TestB03Idempotency:
 
         with (
             patch(
-                "src.services.kyc.service.AccountKyc.filter",
+                "src.services.kyc_service.AccountKyc.filter",
                 return_value=MagicMock(first=AsyncMock(return_value=mock_kyc)),
             ),
             patch.object(
                 service,
-                "_to_full_response",
+                "to_full_response",
                 new_callable=AsyncMock,
                 return_value=mock_response,
             ),
@@ -168,8 +168,7 @@ class TestB03Idempotency:
     )
     def test_revocation_idempotent_same_tx_hash(self, tx_hash: str, address: str):
         """同一 tx_hash 重复提交 record_revocation 应直接返回成功"""
-        from src.services.kyc.service import KycService
-        from src.shared.schemas.enums import OnChainSyncStatus
+        from src.schemas.enums import OnChainSyncStatus
 
         service = KycService()
         mock_kyc = MagicMock()
@@ -181,12 +180,12 @@ class TestB03Idempotency:
 
         with (
             patch(
-                "src.services.kyc.service.AccountKyc.filter",
+                "src.services.kyc_service.AccountKyc.filter",
                 return_value=MagicMock(first=AsyncMock(return_value=mock_kyc)),
             ),
             patch.object(
                 service,
-                "_to_full_response",
+                "to_full_response",
                 new_callable=AsyncMock,
                 return_value=mock_response,
             ),
@@ -199,9 +198,8 @@ class TestB03Idempotency:
 
     def test_admission_different_tx_hash_raises(self):
         """不同 tx_hash 提交到已 SYNCED 的 KYC 应抛出异常"""
-        from src.services.kyc.service import KycService
-        from src.shared.common.exceptions import BusinessException
-        from src.shared.schemas.enums import KycStatus, OnChainSyncStatus
+        from src.common.exceptions import BusinessException
+        from src.schemas.enums import KycStatus, OnChainSyncStatus
 
         service = KycService()
         mock_kyc = MagicMock()
@@ -211,7 +209,7 @@ class TestB03Idempotency:
         mock_kyc.on_chain_tx_hash = "0x" + "a" * 64  # 已有不同的 tx_hash
 
         with patch(
-            "src.services.kyc.service.AccountKyc.filter",
+            "src.services.kyc_service.AccountKyc.filter",
             return_value=MagicMock(first=AsyncMock(return_value=mock_kyc)),
         ):
             with pytest.raises(BusinessException, match="already admitted"):
@@ -226,7 +224,7 @@ class TestS01RateLimiter:
 
     def test_allows_within_limit(self):
         """请求数未超限时应通过"""
-        from src.shared.middleware.rate_limit import RateLimiter
+        from src.middleware.rate_limit import RateLimiter
 
         limiter = RateLimiter(max_requests=5, window_seconds=60)
         mock_request = MagicMock()
@@ -241,7 +239,7 @@ class TestS01RateLimiter:
         """请求数超限时应抛出 429"""
         from fastapi import HTTPException
 
-        from src.shared.middleware.rate_limit import RateLimiter
+        from src.middleware.rate_limit import RateLimiter
 
         limiter = RateLimiter(max_requests=3, window_seconds=60)
         mock_request = MagicMock()
@@ -259,7 +257,7 @@ class TestS01RateLimiter:
 
     def test_different_users_independent(self):
         """不同用户的限流计数应独立"""
-        from src.shared.middleware.rate_limit import RateLimiter
+        from src.middleware.rate_limit import RateLimiter
 
         limiter = RateLimiter(max_requests=2, window_seconds=60)
 
@@ -284,7 +282,7 @@ class TestS01RateLimiter:
         """有 auth_address 时应按用户计数而非 IP"""
         from fastapi import HTTPException
 
-        from src.shared.middleware.rate_limit import RateLimiter
+        from src.middleware.rate_limit import RateLimiter
 
         limiter = RateLimiter(max_requests=2, window_seconds=60)
 
@@ -330,11 +328,23 @@ class TestB06RetryFailedSyncs:
 
         from src.tasks.kyc_sync_task import _parse_retry_info
 
-        info_1 = json.dumps({"retry_count": 1, "last_error": "not verified", "last_retry_at": "2025-01-01T00:00:00"})
+        info_1 = json.dumps(
+            {
+                "retry_count": 1,
+                "last_error": "not verified",
+                "last_retry_at": "2025-01-01T00:00:00",
+            }
+        )
         result = _parse_retry_info(info_1)
         assert result["retry_count"] == 1
 
-        info_2 = json.dumps({"retry_count": 2, "last_error": "not verified", "last_retry_at": "2025-01-02T00:00:00"})
+        info_2 = json.dumps(
+            {
+                "retry_count": 2,
+                "last_error": "not verified",
+                "last_retry_at": "2025-01-02T00:00:00",
+            }
+        )
         result = _parse_retry_info(info_2)
         assert result["retry_count"] == 2
 
@@ -344,7 +354,13 @@ class TestB06RetryFailedSyncs:
 
         from src.tasks.kyc_sync_task import MAX_RETRY_ATTEMPTS, _parse_retry_info
 
-        info = json.dumps({"retry_count": MAX_RETRY_ATTEMPTS, "last_error": "not verified", "exhausted": True})
+        info = json.dumps(
+            {
+                "retry_count": MAX_RETRY_ATTEMPTS,
+                "last_error": "not verified",
+                "exhausted": True,
+            }
+        )
         result = _parse_retry_info(info)
         assert result["retry_count"] == MAX_RETRY_ATTEMPTS
 
@@ -363,7 +379,7 @@ class TestB06RetryFailedSyncs:
 
     def test_retry_recovers_verified_record(self):
         """链上已验证的记录应自动恢复为 SYNCED"""
-        from src.shared.schemas.enums import OnChainSyncStatus
+        from src.schemas.enums import OnChainSyncStatus
         from src.tasks.kyc_sync_task import retry_failed_kyc_syncs
 
         mock_kyc = MagicMock()
@@ -388,7 +404,7 @@ class TestB06RetryFailedSyncs:
 
         with (
             patch(
-                "src.tasks.kyc_sync_task._is_db_available",
+                "src.tasks.kyc_sync_task.is_db_available",
                 return_value=True,
             ),
             patch(
@@ -401,7 +417,7 @@ class TestB06RetryFailedSyncs:
                 return_value=MagicMock(all=AsyncMock(return_value=[mock_kyc])),
             ),
             patch(
-                "src.services.kyc.contract_service.KycContractService",
+                "src.tasks.kyc_sync_task.KycService",
                 return_value=mock_contract_service,
             ),
             patch(
@@ -424,10 +440,8 @@ class TestC02NonceLock:
     """C-02: nonce 并发锁存在性检查"""
 
     def test_nonce_lock_exists(self):
-        """KycContractService 应有 _nonce_lock 类属性"""
+        """KycService 应有 _nonce_lock 类属性"""
         import asyncio
 
-        from src.services.kyc.contract_service import KycContractService
-
-        assert hasattr(KycContractService, "_nonce_lock")
-        assert isinstance(KycContractService._nonce_lock, asyncio.Lock)
+        assert hasattr(KycService, "_nonce_lock")
+        assert isinstance(KycService._nonce_lock, asyncio.Lock)

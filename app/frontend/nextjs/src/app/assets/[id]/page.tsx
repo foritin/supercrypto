@@ -40,6 +40,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getExplorerUrl } from "@/lib/utils";
+import { AssetLogoFrame } from "@/components/asset/asset-logo-frame";
 
 // 资产类型图标
 const ASSET_TYPE_ICONS: Record<AssetType, React.ReactNode> = {
@@ -171,7 +172,16 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
           {/* 标题栏 */}
           <div className="flex justify-between items-start mb-4 flex-wrap gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">{asset.location || asset.name}</h1>
+              <div className="flex items-center gap-3 mb-2">
+                <AssetLogoFrame
+                  logoUrl={asset.logo_url}
+                  frameStyle={asset.frame_style}
+                  assetType={asset.asset_type as AssetType}
+                  size="md"
+                  name={asset.name}
+                />
+                <h1 className="text-3xl font-bold text-white">{asset.location || asset.name}</h1>
+              </div>
               <div className="flex items-center gap-4">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-md text-primary text-xs">
                   {ASSET_TYPE_ICONS[asset.asset_type as AssetType]}

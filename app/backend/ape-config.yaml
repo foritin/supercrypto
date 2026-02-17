@@ -35,8 +35,7 @@ networks:
 node:
   ethereum:
     hardhat:
-      uri: http://YOUR_RPC_HOST:8545
-
+      uri: http://127.0.0.1:8545
 # 测试配置（与 Hardhat 一致）
 test:
   mnemonic: test test test test test test test test test test test junk # 助记词

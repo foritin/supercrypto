@@ -15,6 +15,28 @@ import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AccountModal } from './account-modal'
 import type { KycStatus } from './account-modal'
+import { KycStatus as KycStatusEnum } from '@/services/kyc'
+
+/**
+ * 将后端 KYC 状态映射为 UI 组件期望的状态
+ * 后端: not_started | pending | approved | rejected
+ * UI:   null        | pending | verified | rejected
+ */
+function mapKycStatusToUi(backendStatus: string | null | undefined): KycStatus {
+  if (!backendStatus) return null
+  
+  switch (backendStatus) {
+    case KycStatusEnum.APPROVED:
+      return 'verified'
+    case KycStatusEnum.PENDING:
+      return 'pending'
+    case KycStatusEnum.REJECTED:
+      return 'rejected'
+    case KycStatusEnum.NOT_STARTED:
+    default:
+      return null
+  }
+}
 
 // EIP-1193 Provider 类型扩展
 declare global {
@@ -95,6 +117,28 @@ export function WalletConnect() {
     setIsAuthenticated(false)
     return false
   }, [address])
+
+  // 获取当前用户信息（已登录但未获取用户信息时）
+  useEffect(() => {
+    async function fetchUserInfo() {
+      if (isAuthenticated && !currentUser && address) {
+        try {
+          const user = await userService.getCurrentUser()
+          if (user) {
+            setCurrentUser({
+              is_admin: user.is_admin,
+              tag: user.tag,
+              kyc_status: user.kyc_status,
+            })
+          }
+        } catch (error) {
+          console.error('Failed to fetch user info:', error)
+        }
+      }
+    }
+    
+    fetchUserInfo()
+  }, [isAuthenticated, currentUser, address])
 
   // 执行签名登录 (Requirement 7.5: 保留签名认证流程)
   const performSignIn = useCallback(async () => {
@@ -468,7 +512,7 @@ export function WalletConnect() {
                     balance={balanceData ? (Number(balanceData.value) / Math.pow(10, balanceData.decimals)).toFixed(4) : undefined}
                     symbol={balanceData?.symbol}
                     isAuthenticated={isAuthenticated}
-                    kycStatus={currentUser?.kyc_status as KycStatus | undefined}
+                    kycStatus={mapKycStatusToUi(currentUser?.kyc_status)}
                     chainId={currentChain.id}
                     chainName={currentChain.name}
                     connectorName={connector?.name}

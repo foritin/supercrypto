@@ -1,10 +1,11 @@
 """
 资产媒体模型 - 支持多图片、文档、平面图等
 """
+
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-from src.shared.schemas.enums import MediaType
+from src.schemas.enums import MediaType
 
 
 class AssetMedia(AbstractModel, TimestampMixin):
@@ -23,22 +24,21 @@ class AssetMedia(AbstractModel, TimestampMixin):
         "models.Asset",
         related_name="media_files",
         on_delete=fields.CASCADE,
-        description="关联资产"
+        description="关联资产",
     )
 
     # 媒体基本信息
     media_type = fields.CharEnumField(
-        MediaType,
-        max_length=20,
-        default=MediaType.GALLERY,
-        description="媒体类型"
+        MediaType, max_length=20, default=MediaType.GALLERY, description="媒体类型"
     )
     title = fields.CharField(max_length=200, null=True, description="媒体标题")
     description = fields.TextField(null=True, description="媒体描述")
 
     # URL 信息
     url = fields.CharField(max_length=1000, description="媒体文件URL")
-    thumbnail_url = fields.CharField(max_length=1000, null=True, description="缩略图URL")
+    thumbnail_url = fields.CharField(
+        max_length=1000, null=True, description="缩略图URL"
+    )
 
     # 文件元信息
     file_name = fields.CharField(max_length=255, null=True, description="原始文件名")
@@ -76,15 +76,16 @@ class AssetFeatures(AbstractModel, TimestampMixin):
         "models.Asset",
         related_name="features",
         on_delete=fields.CASCADE,
-        description="关联资产"
+        description="关联资产",
     )
 
     # === 房产基本信息 ===
     bedrooms = fields.IntField(null=True, description="卧室数量")
     bathrooms = fields.DecimalField(
-        max_digits=4, decimal_places=1,
+        max_digits=4,
+        decimal_places=1,
         null=True,
-        description="浴室数量 (支持半浴室如 2.5)"
+        description="浴室数量 (支持半浴室如 2.5)",
     )
     sqft = fields.IntField(null=True, description="面积 (平方英尺)")
     sqm = fields.IntField(null=True, description="面积 (平方米)")
@@ -96,33 +97,28 @@ class AssetFeatures(AbstractModel, TimestampMixin):
     property_type = fields.CharField(
         max_length=50,
         null=True,
-        description="物业类型: single_family, multi_family, condo, commercial"
+        description="物业类型: single_family, multi_family, condo, commercial",
     )
     stories = fields.IntField(null=True, description="楼层数")
 
     # === 租赁信息 ===
     rental_status = fields.CharField(
-        max_length=20,
-        null=True,
-        description="租赁状态: occupied, vacant, partial"
+        max_length=20, null=True, description="租赁状态: occupied, vacant, partial"
     )
     monthly_rent = fields.DecimalField(
-        max_digits=10, decimal_places=2,
-        null=True,
-        description="月租金 (USD)"
+        max_digits=10, decimal_places=2, null=True, description="月租金 (USD)"
     )
     lease_end_date = fields.DateField(null=True, description="租约结束日期")
 
     # === 设施 (JSON 数组存储) ===
     amenities = fields.JSONField(
         null=True,
-        description="设施列表 JSON: ['parking', 'pool', 'gym', 'security', ...]"
+        description="设施列表 JSON: ['parking', 'pool', 'gym', 'security', ...]",
     )
 
     # === 周边信息 (JSON 对象存储) ===
     neighborhood = fields.JSONField(
-        null=True,
-        description="周边信息 JSON: {schools: [], transit: [], shopping: []}"
+        null=True, description="周边信息 JSON: {schools: [], transit: [], shopping: []}"
     )
 
     class Meta:

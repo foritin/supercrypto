@@ -42,7 +42,7 @@ from tortoise import Tortoise
 from src.models.asset import Asset, AssetContractBinding
 from src.models.contracts import ContractConfig, ContractDeployment
 from src.models.contracts.provider_registry import ProviderRegistry
-from src.shared.aerich_redirect import TORTOISE_ORM
+from src.aerich_redirect import TORTOISE_ORM
 
 
 async def get_deploy_stats(project_name: str | None = None) -> dict:
@@ -101,7 +101,11 @@ async def get_deploy_stats(project_name: str | None = None) -> dict:
     else:
         asset_bindings = await AssetContractBinding.all().count()
         # 查询所有绑定了合约的资产
-        assets_with_contract = await Asset.filter(contract_address__isnull=False).exclude(contract_address="").count()
+        assets_with_contract = (
+            await Asset.filter(contract_address__isnull=False)
+            .exclude(contract_address="")
+            .count()
+        )
     stats["asset_bindings"] = asset_bindings
     stats["assets_with_contract"] = assets_with_contract
 
@@ -181,11 +185,15 @@ async def reset_deploy(project_name: str | None = None, force: bool = False) -> 
         contract_addresses = [d["address"] for d in stats["deployments"]]
 
         # 删除部署记录
-        deleted_deployments = await ContractDeployment.filter(project_name=project_name).delete()
-        
+        deleted_deployments = await ContractDeployment.filter(
+            project_name=project_name
+        ).delete()
+
         # 删除合约配置
-        deleted_configs = await ContractConfig.filter(project_name=project_name).delete()
-        
+        deleted_configs = await ContractConfig.filter(
+            project_name=project_name
+        ).delete()
+
         # 删除 Provider 注册
         deleted_registries = await ProviderRegistry.filter(
             category=project_name

@@ -7,6 +7,8 @@
 @dev 支持紧急快速通道（需3-of-3签名）、队列管理、取消机制
 """
 
+# ============ 接口定义 ============
+
 # 合约迁移接口
 interface ITimelockMigration:
     def owner() -> address: view
@@ -21,10 +23,6 @@ interface ITimelockMigration:
     def receive_migration(oldContract: address): nonpayable
     def is_migrated() -> bool: view
 
-# ============================================
-# 接口定义
-# ============================================
-
 interface IMultiSigManager:
     def verify_proposal(proposal_id: uint256, target: address, data_hash: bytes32) -> bool: view
     def is_proposal_approved(proposal_id: uint256) -> bool: view
@@ -33,9 +31,7 @@ interface IMultiSigManager:
     def has_signed(proposal_id: uint256, signer: address) -> bool: view
     def get_signer_list() -> DynArray[address, 20]: view
 
-# ============================================
-# 事件定义
-# ============================================
+# ============ 事件定义 ============
 
 event OperationQueued:
     operation_id: indexed(bytes32)
@@ -59,15 +55,12 @@ event DelayChanged:
     old_delay: uint256
     new_delay: uint256
 
-# 迁移事件
 event Migrated:
     oldContract: indexed(address)
     newContract: indexed(address)
     timestamp: uint256
 
-# ============================================
-# 数据结构
-# ============================================
+# ============ 数据结构 ============
 
 flag OperationStatus:
     PENDING      # 不存在
@@ -83,16 +76,17 @@ struct Operation:
     execute_time: uint256      # 可执行时间
     status: OperationStatus    # 状态
 
-# ============================================
-# 常量
-# ============================================
+# ============ 常量定义 ============
 
 ACTION_CANCEL: constant(bytes32) = keccak256("CANCEL")
 ACTION_SET_DELAY: constant(bytes32) = keccak256("SET_DELAY")
 
-# ============================================
-# 状态变量
-# ============================================
+# 24小时（秒）
+MIN_DELAY: constant(uint256) = 86400
+# 7天（秒）
+MAX_DELAY: constant(uint256) = 604800
+
+# ============ 存储变量 ============
 
 # 合约所有者
 owner: public(address)
@@ -121,18 +115,7 @@ operationIds: public(DynArray[bytes32, 1000])
 # 合约暂停状态
 paused: public(bool)
 
-# ============================================
-# 常量
-# ============================================
-
-# 24小时（秒）
-MIN_DELAY: constant(uint256) = 86400
-# 7天（秒）
-MAX_DELAY: constant(uint256) = 604800
-
-# ============================================
-# 构造函数
-# ============================================
+# ============ 构造函数 ============
 
 @deploy
 def __init__(_multi_sig_manager_addr: address):
@@ -149,31 +132,69 @@ def __init__(_multi_sig_manager_addr: address):
     self.delay = MIN_DELAY  # 默认24小时
     self.paused = False
 
-# ============================================
-# 修饰器辅助函数
-# ============================================
+# ============ Owner 函数 ============
 
-@internal
-@view
-def _only_owner():
-    """仅所有者可调用"""
-    assert msg.sender == self.owner, "Only owner"
+@external
+def owner_pause():
+    """
+    @notice 暂停合约（仅所有者）
+    """
+    self._only_owner()
+    self.paused = True
 
-@internal
-@view
-def _when_not_paused():
-    """仅在未暂停时可调用"""
-    assert not self.paused, "Contract is paused"
+@external
+def owner_unpause():
+    """
+    @notice 恢复合约（仅所有者）
+    """
+    self._only_owner()
+    self.paused = False
 
-@internal
-@view
-def _require_multisig():
-    """要求多签管理器已设置"""
-    assert self._multi_sig_manager.address != empty(address), "Multisig not configured"
+@external
+def owner_transfer_ownership(new_owner: address):
+    """
+    @notice 转移所有权
+    @param new_owner 新所有者地址
+    """
+    self._only_owner()
+    assert new_owner != empty(address), "Invalid owner"
+    self.owner = new_owner
 
-# ============================================
-# 核心功能
-# ============================================
+# ============ Admin 函数 ============
+
+@external
+def admin_set_delay(new_delay: uint256, proposal_id: uint256):
+    """
+    @notice 设置新的延迟时间（需要多签批准）
+    @param new_delay 新延迟时间（秒）
+    @param proposal_id 多签提案ID
+    """
+    self._only_owner()
+    
+    assert new_delay >= MIN_DELAY, "Delay too short"
+    assert new_delay <= MAX_DELAY, "Delay too long"
+    
+    # 验证提案
+    delay_data_hash: bytes32 = keccak256(
+        concat(
+            convert(new_delay, bytes32),
+            ACTION_SET_DELAY
+        )
+    )
+    
+    assert staticcall self._multi_sig_manager.is_proposal_approved(proposal_id), "Not approved"
+    assert staticcall self._multi_sig_manager.verify_proposal(
+        proposal_id,
+        self,
+        delay_data_hash
+    ), "Invalid proposal"
+    
+    old_delay: uint256 = self.delay
+    self.delay = new_delay
+    
+    log DelayChanged(old_delay, new_delay)
+
+# ============ 核心业务函数 ============
 
 @external
 def queue_operation(
@@ -287,10 +308,6 @@ def cancel_operation(operation_id: bytes32, proposal_id: uint256):
     
     log OperationCancelled(operation_id, msg.sender)
 
-# ============================================
-# 紧急快速通道（3-of-3签名）
-# ============================================
-
 @external
 def emergency_sign(operation_id: bytes32):
     """
@@ -346,9 +363,7 @@ def emergency_execute(operation_id: bytes32):
     
     log EmergencyExecuted(operation_id, msg.sender)
 
-# ============================================
-# 查询函数
-# ============================================
+# ============ 查询函数 ============
 
 @external
 @view
@@ -417,70 +432,27 @@ def has_emergency_signed(operation_id: bytes32, signer: address) -> bool:
     """
     return self.emergency_signatures[operation_id][signer]
 
-# ============================================
-# 管理函数
-# ============================================
+# ============ 内部辅助函数 ============
 
-@external
-def set_delay(new_delay: uint256, proposal_id: uint256):
-    """
-    @notice 设置新的延迟时间（需要多签批准）
-    @param new_delay 新延迟时间（秒）
-    @param proposal_id 多签提案ID
-    """
-    self._only_owner()
-    
-    assert new_delay >= MIN_DELAY, "Delay too short"
-    assert new_delay <= MAX_DELAY, "Delay too long"
-    
-    # 验证提案
-    delay_data_hash: bytes32 = keccak256(
-        concat(
-            convert(new_delay, bytes32),
-            ACTION_SET_DELAY
-        )
-    )
-    
-    assert staticcall self._multi_sig_manager.is_proposal_approved(proposal_id), "Not approved"
-    assert staticcall self._multi_sig_manager.verify_proposal(
-        proposal_id,
-        self,
-        delay_data_hash
-    ), "Invalid proposal"
-    
-    old_delay: uint256 = self.delay
-    self.delay = new_delay
-    
-    log DelayChanged(old_delay, new_delay)
+@internal
+@view
+def _only_owner():
+    """仅所有者可调用"""
+    assert msg.sender == self.owner, "Only owner"
 
-@external
-def pause():
-    """
-    @notice 暂停合约（仅所有者）
-    """
-    self._only_owner()
-    self.paused = True
+@internal
+@view
+def _when_not_paused():
+    """仅在未暂停时可调用"""
+    assert not self.paused, "Contract is paused"
 
-@external
-def unpause():
-    """
-    @notice 恢复合约（仅所有者）
-    """
-    self._only_owner()
-    self.paused = False
+@internal
+@view
+def _require_multisig():
+    """要求多签管理器已设置"""
+    assert self._multi_sig_manager.address != empty(address), "Multisig not configured"
 
-@external
-def transfer_ownership(new_owner: address):
-    """
-    @notice 转移所有权
-    @param new_owner 新所有者地址
-    """
-    self._only_owner()
-    assert new_owner != empty(address), "Invalid owner"
-    self.owner = new_owner
-
-
-# ==================== 依赖查询功能 ====================
+# ============ 依赖查询功能 ============
 
 @external
 @view
@@ -503,11 +475,10 @@ def get_dependencies() -> (DynArray[String[50], 10], DynArray[String[50], 10], D
 
     return unbound_required, bound_all, unbound_optional
 
-
-# ==================== 合约迁移功能 ====================
+# ============ 合约迁移功能 ============
 
 @external
-def migrate(new_contract: address):
+def owner_migrate(new_contract: address):
     """
     @notice 迁移所有状态到新合约
     @param new_contract 新合约地址（必须实现 receive_migration 接口）
@@ -602,4 +573,3 @@ def receive_migration(oldContract: address):
                 if has_signed:
                     self.emergency_signatures[operation_id][signer] = True
             self.emergency_signature_count[operation_id] = sig_count
-

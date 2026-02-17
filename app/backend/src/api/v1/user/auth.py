@@ -10,14 +10,18 @@ Router 层只调用 Service 方法，不直接使用 ORM 模型查询
 from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends, Request
 
-from src.services.auth.schemas import CurrentUserResponse
-from src.services.auth.service import get_auth_service
-from src.shared.security import require_user
+from src.common.dependencies import get_auth_service
+from src.schemas.auth import CurrentUserResponse
+from src.security import require_user
 
 router = APIRouter()
 
 
-@router.get("/me", summary="获取当前用户信息", description="获取当前登录用户的信息")
+@router.get(
+    "/me",
+    summary="Get Current User Info",
+    description="Get the current logged-in user's information",
+)
 async def get_current_user(
     request: Request,
     wallet_address: str = Depends(require_user),

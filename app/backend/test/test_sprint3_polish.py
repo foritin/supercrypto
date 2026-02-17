@@ -11,8 +11,8 @@ import asyncio
 
 import pytest
 
-from src.shared.common.chain_logger import ChainLogger, ChainOpContext
-from src.shared.common.metrics import ChainMetrics, start_timer
+from src.common.chain_logger import ChainLogger, ChainOpContext
+from src.common.metrics import ChainMetrics, start_timer
 
 # ============================================================================
 # P-01: ChainLogger
@@ -243,6 +243,7 @@ class TestF07I18nKeys:
     def _read_locale_file(self, lang: str) -> str:
         """Read locale file content"""
         import os
+
         # test/ is at app/backend/test/, locale is at app/frontend/nextjs/src/locales/
         base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         locale_path = os.path.join(
@@ -273,10 +274,17 @@ class TestF07I18nKeys:
     def test_no_hardcoded_manual_revocation(self, lang: str):
         """onchain-status-panel 不含硬编码 'Manual revocation' 在 recordRevocation 调用中"""
         import os
+
         base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         panel_path = os.path.join(
-            base, "..", "frontend", "nextjs", "src", "components",
-            "admin-kyc", "onchain-status-panel.tsx"
+            base,
+            "..",
+            "frontend",
+            "nextjs",
+            "src",
+            "components",
+            "admin-kyc",
+            "onchain-status-panel.tsx",
         )
         with open(panel_path) as f:
             content = f.read()

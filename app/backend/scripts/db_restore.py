@@ -36,7 +36,9 @@ def list_backups() -> list[Path]:
     if not output_dir.exists():
         return []
 
-    return sorted(output_dir.glob("*.sql"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return sorted(
+        output_dir.glob("*.sql"), key=lambda p: p.stat().st_mtime, reverse=True
+    )
 
 
 def restore_database(backup_file: str) -> None:
@@ -77,12 +79,18 @@ def restore_database(backup_file: str) -> None:
     # 构建 psql 命令
     cmd = [
         "psql",
-        "-h", str(config["host"]),
-        "-p", str(config["port"]),
-        "-U", config["user"],
-        "-d", config["database"],
-        "-f", str(backup_path),
-        "-v", "ON_ERROR_STOP=1",
+        "-h",
+        str(config["host"]),
+        "-p",
+        str(config["port"]),
+        "-U",
+        config["user"],
+        "-d",
+        config["database"],
+        "-f",
+        str(backup_path),
+        "-v",
+        "ON_ERROR_STOP=1",
     ]
 
     print("\n正在执行恢复...")

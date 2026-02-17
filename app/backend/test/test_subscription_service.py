@@ -17,19 +17,19 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
-from tortoise import Tortoise
 
+from src.common.exceptions import BusinessException
 from src.models.asset import Asset
 from src.models.subscription import Subscription
-from src.shared.common.exceptions import BusinessException
-from src.shared.schemas.enums import (
+from src.schemas.enums import (
     AssetStatus,
     AssetType,
     LockPeriod,
     SubscriptionStatus,
     TokenType,
 )
-
+from src.schemas.subscription import SubscriptionCreateRequest
+from src.services.subscription_service import SubscriptionService
 
 # ============================================================
 # 异步运行器 (与 conftest.py 保持一致)
@@ -111,10 +111,10 @@ class TestCreateSubscriptionSuccess:
             lock_period = 3
             amount = Decimal("10000")
 
-            expected_interest = Subscription.calculate_expected_interest(
+            expected_interest = SubscriptionService.calculate_expected_interest(
                 amount, apy, lock_period
             )
-            end_date = Subscription.calculate_end_date(start_date, lock_period)
+            end_date = SubscriptionService.calculate_end_date(start_date, lock_period)
 
             subscription = await Subscription.create(
                 wallet_address=wallet,
@@ -162,7 +162,7 @@ class TestCreateSubscriptionSuccess:
             amount = Decimal("5000")
             lock_period = 6
 
-            expected_interest = Subscription.calculate_expected_interest(
+            expected_interest = SubscriptionService.calculate_expected_interest(
                 amount, asset.apy_6m, lock_period
             )
 
@@ -175,10 +175,10 @@ class TestCreateSubscriptionSuccess:
                 apy=asset.apy_6m,
                 rwa_token_amount=amount,
                 start_date=datetime.now(timezone.utc),
-                end_date=Subscription.calculate_end_date(
+                end_date=SubscriptionService.calculate_end_date(
                     datetime.now(timezone.utc), lock_period
                 ),
-                original_end_date=Subscription.calculate_end_date(
+                original_end_date=SubscriptionService.calculate_end_date(
                     datetime.now(timezone.utc), lock_period
                 ),
                 expected_interest=expected_interest,
@@ -203,7 +203,7 @@ class TestCreateSubscriptionSuccess:
             amount = Decimal("20000")
             lock_period = 12
 
-            expected_interest = Subscription.calculate_expected_interest(
+            expected_interest = SubscriptionService.calculate_expected_interest(
                 amount, asset.apy_12m, lock_period
             )
 
@@ -216,10 +216,10 @@ class TestCreateSubscriptionSuccess:
                 apy=asset.apy_12m,
                 rwa_token_amount=amount,
                 start_date=datetime.now(timezone.utc),
-                end_date=Subscription.calculate_end_date(
+                end_date=SubscriptionService.calculate_end_date(
                     datetime.now(timezone.utc), lock_period
                 ),
-                original_end_date=Subscription.calculate_end_date(
+                original_end_date=SubscriptionService.calculate_end_date(
                     datetime.now(timezone.utc), lock_period
                 ),
                 expected_interest=expected_interest,
@@ -270,9 +270,6 @@ class TestCreateSubscriptionExceedsSupply:
         """SubscriptionService._do_create_subscription 应拒绝超额认购"""
 
         async def _test():
-            from src.services.subscription.schemas import SubscriptionCreateRequest
-            from src.services.subscription.service import SubscriptionService
-
             asset = await _create_test_asset(
                 total_supply=Decimal("10000"),
                 subscribed_amount=Decimal("9800"),
@@ -368,9 +365,6 @@ class TestCreateSubscriptionWithoutKyc:
         """SubscriptionService 应拒绝对不可用资产的认购"""
 
         async def _test():
-            from src.services.subscription.schemas import SubscriptionCreateRequest
-            from src.services.subscription.service import SubscriptionService
-
             asset = await _create_test_asset(status=AssetStatus.PAUSED)
 
             service = SubscriptionService()
@@ -394,9 +388,6 @@ class TestCreateSubscriptionWithoutKyc:
         """SubscriptionService 应拒绝不存在的资产"""
 
         async def _test():
-            from src.services.subscription.schemas import SubscriptionCreateRequest
-            from src.services.subscription.service import SubscriptionService
-
             service = SubscriptionService()
             request = SubscriptionCreateRequest(
                 asset_id=99999,
@@ -428,21 +419,21 @@ class TestPreviewSubscriptionYieldCalculation:
 
     def test_yield_3m_10_percent(self):
         """3 个月锁定期，APY 10%: 10000 * 10% * (3/12) = 250"""
-        result = Subscription.calculate_expected_interest(
+        result = SubscriptionService.calculate_expected_interest(
             Decimal("10000"), Decimal("10"), 3
         )
         assert result == Decimal("250")
 
     def test_yield_6m_12_percent(self):
         """6 个月锁定期，APY 12%: 10000 * 12% * (6/12) = 600"""
-        result = Subscription.calculate_expected_interest(
+        result = SubscriptionService.calculate_expected_interest(
             Decimal("10000"), Decimal("12"), 6
         )
         assert result == Decimal("600")
 
     def test_yield_12m_15_percent(self):
         """12 个月锁定期，APY 15%: 10000 * 15% * (12/12) = 1500"""
-        result = Subscription.calculate_expected_interest(
+        result = SubscriptionService.calculate_expected_interest(
             Decimal("10000"), Decimal("15"), 12
         )
         assert result == Decimal("1500")
@@ -450,18 +441,20 @@ class TestPreviewSubscriptionYieldCalculation:
     def test_yield_flexible_mode(self):
         """活期模式 (lock_period=0): 按 1 个月估算"""
         # 10000 * 6% * (1/12) = 50
-        result = Subscription.calculate_expected_interest(
+        result = SubscriptionService.calculate_expected_interest(
             Decimal("10000"), Decimal("6"), 0
         )
-        expected = Decimal("10000") * (Decimal("6") / Decimal("100")) * (
-            Decimal("1") / Decimal("12")
+        expected = (
+            Decimal("10000")
+            * (Decimal("6") / Decimal("100"))
+            * (Decimal("1") / Decimal("12"))
         )
         assert result == expected
 
     def test_yield_small_amount(self):
         """小额认购收益计算"""
         # 100 * 10% * (3/12) = 2.5
-        result = Subscription.calculate_expected_interest(
+        result = SubscriptionService.calculate_expected_interest(
             Decimal("100"), Decimal("10"), 3
         )
         assert result == Decimal("2.5")
@@ -469,14 +462,14 @@ class TestPreviewSubscriptionYieldCalculation:
     def test_yield_large_amount(self):
         """大额认购收益计算"""
         # 1000000 * 15% * (12/12) = 150000
-        result = Subscription.calculate_expected_interest(
+        result = SubscriptionService.calculate_expected_interest(
             Decimal("1000000"), Decimal("15"), 12
         )
         assert result == Decimal("150000")
 
     def test_yield_zero_amount(self):
         """零金额收益为零"""
-        result = Subscription.calculate_expected_interest(
+        result = SubscriptionService.calculate_expected_interest(
             Decimal("0"), Decimal("10"), 3
         )
         assert result == Decimal("0")
@@ -484,25 +477,25 @@ class TestPreviewSubscriptionYieldCalculation:
     def test_end_date_calculation_3m(self):
         """到期日期计算: 3 个月 = 90 天"""
         start = datetime(2025, 1, 1, tzinfo=timezone.utc)
-        end = Subscription.calculate_end_date(start, 3)
+        end = SubscriptionService.calculate_end_date(start, 3)
         assert end == start + timedelta(days=90)
 
     def test_end_date_calculation_6m(self):
         """到期日期计算: 6 个月 = 180 天"""
         start = datetime(2025, 1, 1, tzinfo=timezone.utc)
-        end = Subscription.calculate_end_date(start, 6)
+        end = SubscriptionService.calculate_end_date(start, 6)
         assert end == start + timedelta(days=180)
 
     def test_end_date_calculation_12m(self):
         """到期日期计算: 12 个月 = 360 天"""
         start = datetime(2025, 1, 1, tzinfo=timezone.utc)
-        end = Subscription.calculate_end_date(start, 12)
+        end = SubscriptionService.calculate_end_date(start, 12)
         assert end == start + timedelta(days=360)
 
     def test_end_date_flexible_mode(self):
         """活期模式到期日期 = 开始日期 (立即可赎回)"""
         start = datetime(2025, 1, 1, tzinfo=timezone.utc)
-        end = Subscription.calculate_end_date(start, 0)
+        end = SubscriptionService.calculate_end_date(start, 0)
         assert end == start
 
     def test_total_return_with_expected_interest(self):
@@ -560,8 +553,8 @@ class TestSubscriptionStatusTransitions:
                 apy=Decimal("10"),
                 rwa_token_amount=Decimal("1000"),
                 start_date=start_date,
-                end_date=Subscription.calculate_end_date(start_date, 3),
-                original_end_date=Subscription.calculate_end_date(start_date, 3),
+                end_date=SubscriptionService.calculate_end_date(start_date, 3),
+                original_end_date=SubscriptionService.calculate_end_date(start_date, 3),
                 expected_interest=Decimal("25"),
                 tx_hash="0x" + "1" * 64,
                 status=SubscriptionStatus.ACTIVE,
@@ -588,8 +581,8 @@ class TestSubscriptionStatusTransitions:
                 apy=Decimal("10"),
                 rwa_token_amount=Decimal("1000"),
                 start_date=start_date,
-                end_date=Subscription.calculate_end_date(start_date, 3),
-                original_end_date=Subscription.calculate_end_date(start_date, 3),
+                end_date=SubscriptionService.calculate_end_date(start_date, 3),
+                original_end_date=SubscriptionService.calculate_end_date(start_date, 3),
                 expected_interest=Decimal("25"),
                 tx_hash="0x" + "2" * 64,
                 status=SubscriptionStatus.PENDING,
@@ -725,8 +718,6 @@ class TestSubscriptionStatusTransitions:
         """已赎回的认购不能再次赎回"""
 
         async def _test():
-            from src.services.subscription.service import SubscriptionService
-
             asset = await _create_test_asset()
 
             past_start = datetime.now(timezone.utc) - timedelta(days=100)
@@ -769,8 +760,6 @@ class TestSubscriptionStatusTransitions:
         """未到期的认购不能赎回"""
 
         async def _test():
-            from src.services.subscription.service import SubscriptionService
-
             asset = await _create_test_asset()
 
             start_date = datetime.now(timezone.utc)
@@ -854,8 +843,6 @@ class TestGetApyForPeriod:
         """3 个月锁定期返回 apy_3m"""
 
         async def _test():
-            from src.services.subscription.service import SubscriptionService
-
             asset = await _create_test_asset(
                 apy_3m=Decimal("10"),
                 apy_6m=Decimal("12"),
@@ -870,8 +857,6 @@ class TestGetApyForPeriod:
         """6 个月锁定期返回 apy_6m"""
 
         async def _test():
-            from src.services.subscription.service import SubscriptionService
-
             asset = await _create_test_asset(
                 apy_3m=Decimal("10"),
                 apy_6m=Decimal("12"),
@@ -886,8 +871,6 @@ class TestGetApyForPeriod:
         """12 个月锁定期返回 apy_12m"""
 
         async def _test():
-            from src.services.subscription.service import SubscriptionService
-
             asset = await _create_test_asset(
                 apy_3m=Decimal("10"),
                 apy_6m=Decimal("12"),
@@ -902,8 +885,6 @@ class TestGetApyForPeriod:
         """活期模式 (lock_period=0) 返回 apy_3m * 0.6"""
 
         async def _test():
-            from src.services.subscription.service import SubscriptionService
-
             asset = await _create_test_asset(apy_3m=Decimal("10"))
             service = SubscriptionService()
             result = service._get_apy_for_period(asset, 0)

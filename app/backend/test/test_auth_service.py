@@ -12,30 +12,27 @@ _Requirements: 8.3_
 
 import asyncio
 import datetime
-import warnings
 from unittest.mock import patch
 
 import jwt as pyjwt
 import pytest
 from falib.utils.config import SETTINGS
 
-from src.shared.security.jwt import (
+from src.common.exceptions import UnauthorizedException
+from src.security.exceptions import (
+    AccessTokenExpiredException,
+    RefreshTokenExpiredException,
+)
+from src.security.jwt import (
     create_access_token,
     create_refresh_token,
     refresh_tokens,
     verify_token,
 )
-from src.shared.security.exceptions import (
-    AccessTokenExpiredException,
-    RefreshTokenExpiredException,
-)
-from src.shared.common.exceptions import UnauthorizedException
-from src.shared.security.wallet import verify_wallet_signature
+from src.security.wallet import verify_wallet_signature
 
 # 开发环境 JWT 密钥较短，抑制 PyJWT 的 InsecureKeyLengthWarning
-pytestmark = pytest.mark.filterwarnings(
-    "ignore::jwt.warnings.InsecureKeyLengthWarning"
-)
+pytestmark = pytest.mark.filterwarnings("ignore::jwt.warnings.InsecureKeyLengthWarning")
 
 
 # ============================================================

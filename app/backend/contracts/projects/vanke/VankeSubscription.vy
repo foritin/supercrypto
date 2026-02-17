@@ -9,7 +9,8 @@
      利息按实际持有时间计算
 """
 
-# 接口定义
+# ============ 接口定义 ============
+
 interface IERC20:
     def transfer(_to: address, _amount: uint256) -> bool: nonpayable
     def transferFrom(_from: address, _to: address, _amount: uint256) -> bool: nonpayable
@@ -20,9 +21,9 @@ interface IRWAToken:
     def burn(_from: address, _amount: uint256): nonpayable
 
 interface IKYCManager:
-    def isVerified(_investor: address) -> bool: view
-    def isAccredited(_investor: address) -> bool: view
-    def canInvest(_investor: address, _amount: uint256) -> bool: view
+    def is_verified(_investor: address) -> bool: view
+    def is_accredited(_investor: address) -> bool: view
+    def can_invest(_investor: address, _amount: uint256) -> bool: view
 
 interface IAddressProvider:
     def get_usdt() -> address: view
@@ -46,7 +47,8 @@ interface IMigration:
     def receive_migration(oldContract: address): nonpayable
     def is_migrated() -> bool: view
 
-# 事件
+# ============ 事件定义 ============
+
 event Subscribe:
     user: indexed(address)
     amount: uint256
@@ -76,6 +78,8 @@ event Migrated:
     newContract: indexed(address)
     timestamp: uint256
 
+# ============ 数据结构 ============
+
 # 认购记录
 struct SubscriptionInfo:
     principal: uint256       # 本金（稳定币数量，6位小数）
@@ -85,6 +89,24 @@ struct SubscriptionInfo:
     apy: uint256             # 年化收益率（基点，10000 = 100%）
     redeemed: bool           # 是否已赎回
     paymentToken: address    # 支付代币地址（USDT 或 USDC）
+
+# ============ 常量定义 ============
+
+# 活期模式 - 无固定锁定期，随时可赎回
+# 保留常量以兼容旧数据
+LOCK_1_MONTH: constant(uint256) = 30 * 24 * 3600       # 30天 (兼容)
+LOCK_3_MONTHS: constant(uint256) = 90 * 24 * 3600      # 90天 (兼容)
+LOCK_6_MONTHS: constant(uint256) = 180 * 24 * 3600     # 180天 (兼容)
+LOCK_12_MONTHS: constant(uint256) = 360 * 24 * 3600    # 360天 (兼容)
+
+# 活期模式标识
+FLEXIBLE_PERIOD: constant(uint256) = 0  # 0 表示活期，随时可赎回
+
+# 基点常量
+BASIS_POINTS: constant(uint256) = 10000  # 100% = 10000基点
+SECONDS_PER_YEAR: constant(uint256) = 365 * 24 * 3600
+
+# ============ 存储变量 ============
 
 # 状态变量
 owner: public(address)
@@ -111,26 +133,13 @@ migrated: public(bool)  # 迁移标志
 # 为迁移添加的用户列表（追踪所有有认购记录的用户）
 userList: public(DynArray[address, 1000])
 
-# 活期模式 - 无固定锁定期，随时可赎回
-# 保留常量以兼容旧数据
-LOCK_1_MONTH: constant(uint256) = 30 * 24 * 3600       # 30天 (兼容)
-LOCK_3_MONTHS: constant(uint256) = 90 * 24 * 3600      # 90天 (兼容)
-LOCK_6_MONTHS: constant(uint256) = 180 * 24 * 3600     # 180天 (兼容)
-LOCK_12_MONTHS: constant(uint256) = 360 * 24 * 3600    # 360天 (兼容)
-
-# 活期模式标识
-FLEXIBLE_PERIOD: constant(uint256) = 0  # 0 表示活期，随时可赎回
-
-# 基点常量
-BASIS_POINTS: constant(uint256) = 10000  # 100% = 10000基点
-SECONDS_PER_YEAR: constant(uint256) = 365 * 24 * 3600
-
+# ============ 构造函数 ============
 
 @deploy
 def __init__():
     """
     @notice 初始化认购合约
-    @dev 部署后需要通过 setAddressProvider 设置 Provider 地址
+    @dev 部署后需要通过 admin_set_address_provider 设置 Provider 地址
     """
     self.owner = msg.sender
     self.paused = False
@@ -148,9 +157,52 @@ def __init__():
     self.lock_period_apy[LOCK_6_MONTHS] = 1200    # 12% (兼容)
     self.lock_period_apy[LOCK_12_MONTHS] = 1500   # 15% (兼容)
 
+# ============ Owner 函数 ============
 
 @external
-def setAddressProvider(_address_provider: address):
+def owner_pause():
+    """
+    @notice 暂停合约
+    """
+    assert msg.sender == self.owner, "Only owner"
+    self.paused = True
+
+
+@external
+def owner_unpause():
+    """
+    @notice 恢复合约
+    """
+    assert msg.sender == self.owner, "Only owner"
+    self.paused = False
+
+
+@external
+def owner_transfer_ownership(_new_owner: address):
+    """
+    @notice 转移所有权
+    @param _new_owner 新所有者地址
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert _new_owner != empty(address), "Invalid address"
+    self.owner = _new_owner
+
+
+@external
+def owner_emergency_withdraw(_token: address, _amount: uint256):
+    """
+    @notice 紧急提取代币（仅管理员）
+    @param _token 代币地址
+    @param _amount 提取数量
+    """
+    assert msg.sender == self.owner, "Only owner"
+    assert extcall IERC20(_token).transfer(self.owner, _amount), "Transfer failed"
+    log EmergencyWithdraw(_token, _amount)
+
+# ============ Admin 函数 ============
+
+@external
+def admin_set_address_provider(_address_provider: address):
     """
     @notice 设置 AddressProvider 地址
     @param _address_provider AddressProvider 合约地址
@@ -161,56 +213,8 @@ def setAddressProvider(_address_provider: address):
     self.ADDRESS_PROVIDER = _address_provider
 
 
-# ==================== Provider 查询 ====================
-
-@view
-@internal
-def _get_usdt() -> address:
-    """@notice 从 AddressProvider 获取 USDT 地址"""
-    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_usdt()
-
-
-@view
-@internal
-def _get_usdc() -> address:
-    """@notice 从 AddressProvider 获取 USDC 地址"""
-    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_usdc()
-
-
-@view
-@internal
-def _get_kyc_manager() -> address:
-    """@notice 从 AddressProvider 获取 KYC 管理合约地址"""
-    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_kyc_manager()
-
-
-@view
-@internal
-def _get_rwa_token() -> address:
-    """@notice 从 AddressProvider 获取 Vanke RWA Token 地址"""
-    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_rwa_token()
-
-
 @external
-def pause():
-    """
-    @notice 暂停合约
-    """
-    assert msg.sender == self.owner, "Only owner"
-    self.paused = True
-
-
-@external
-def unpause():
-    """
-    @notice 恢复合约
-    """
-    assert msg.sender == self.owner, "Only owner"
-    self.paused = False
-
-
-@external
-def set_apy(_lock_period: uint256, _apy: uint256):
+def admin_set_apy(_lock_period: uint256, _apy: uint256):
     """
     @notice 设置年化收益率（活期模式使用 _lock_period=0）
     @param _lock_period 锁定期（秒），0 表示活期
@@ -229,7 +233,7 @@ def set_apy(_lock_period: uint256, _apy: uint256):
 
 
 @external
-def set_min_investment(_min: uint256):
+def admin_set_min_investment(_min: uint256):
     """
     @notice 设置最小投资额（STO合规）
     @param _min 最小投资额（USDT，6位小数）
@@ -239,7 +243,7 @@ def set_min_investment(_min: uint256):
 
 
 @external
-def set_max_investment(_max: uint256):
+def admin_set_max_investment(_max: uint256):
     """
     @notice 设置最大投资额（STO合规）
     @param _max 最大投资额（USDT，0表示无上限）
@@ -249,7 +253,7 @@ def set_max_investment(_max: uint256):
 
 
 @external
-def set_require_accredited(_require: bool):
+def admin_set_require_accredited(_require: bool):
     """
     @notice 设置是否要求合格投资者（STO合规）
     @param _require 是否要求
@@ -257,6 +261,7 @@ def set_require_accredited(_require: bool):
     assert msg.sender == self.owner, "Only owner"
     self.require_accredited = _require
 
+# ============ 核心业务函数 ============
 
 # 注意: set_kyc_manager, set_usdt, set_rwa_token 已移除 - 纯 Provider 模式下通过 AddressProvider 管理
 
@@ -289,11 +294,11 @@ def subscribe(_amount: uint256, _lock_period: uint256 = 0, _payment_token: addre
     # ========== STO 合规检查 ==========
 
     # 1. KYC验证（必须）
-    assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(kyc).is_verified(msg.sender), "KYC verification required"
 
     # 2. 合格投资者检查（如果要求）
     if self.require_accredited:
-        assert staticcall IKYCManager(kyc).isAccredited(msg.sender), "Accredited investor required"
+        assert staticcall IKYCManager(kyc).is_accredited(msg.sender), "Accredited investor required"
 
     # 3. 最小投资额检查
     assert _amount >= self.min_investment, "Below minimum investment"
@@ -303,7 +308,7 @@ def subscribe(_amount: uint256, _lock_period: uint256 = 0, _payment_token: addre
         assert _amount <= self.max_investment, "Exceeds maximum investment"
 
     # 5. 投资能力检查
-    assert staticcall IKYCManager(kyc).canInvest(msg.sender, _amount), "Cannot invest"
+    assert staticcall IKYCManager(kyc).can_invest(msg.sender, _amount), "Cannot invest"
 
     # ===================================
 
@@ -355,7 +360,7 @@ def redeem(_subscription_id: uint256):
     rwa_token: address = self._get_rwa_token()
 
     # STO合规：确保用户KYC仍然有效
-    assert staticcall IKYCManager(kyc).isVerified(msg.sender), "KYC verification required"
+    assert staticcall IKYCManager(kyc).is_verified(msg.sender), "KYC verification required"
 
     subscription: SubscriptionInfo = self.subscriptions[msg.sender][_subscription_id]
     assert not subscription.redeemed, "Already redeemed"
@@ -393,20 +398,7 @@ def redeem(_subscription_id: uint256):
 
     log Redeem(msg.sender, subscription.principal, interest, total)
 
-
-@view
-@internal
-def _calculate_interest(_principal: uint256, _lock_period: uint256, _apy: uint256) -> uint256:
-    """
-    @notice 计算利息
-    @param _principal 本金
-    @param _lock_period 锁定期（秒）
-    @param _apy 年化收益率（基点）
-    @return 利息
-    """
-    # 利息 = 本金 * APY * 锁定期 / 年秒数 / 基点
-    return _principal * _apy * _lock_period // SECONDS_PER_YEAR // BASIS_POINTS
-
+# ============ 查询函数 ============
 
 @view
 @external
@@ -457,29 +449,6 @@ def get_pending_reward(_user: address, _subscription_id: uint256) -> uint256:
     )
 
 
-@external
-def emergency_withdraw(_token: address, _amount: uint256):
-    """
-    @notice 紧急提取代币（仅管理员）
-    @param _token 代币地址
-    @param _amount 提取数量
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert extcall IERC20(_token).transfer(self.owner, _amount), "Transfer failed"
-    log EmergencyWithdraw(_token, _amount)
-
-
-@external
-def transfer_ownership(_new_owner: address):
-    """
-    @notice 转移所有权
-    @param _new_owner 新所有者地址
-    """
-    assert msg.sender == self.owner, "Only owner"
-    assert _new_owner != empty(address), "Invalid address"
-    self.owner = _new_owner
-
-
 @view
 @external
 def get_lock_periods() -> uint256[4]:
@@ -490,8 +459,50 @@ def get_lock_periods() -> uint256[4]:
     """
     return [FLEXIBLE_PERIOD, FLEXIBLE_PERIOD, FLEXIBLE_PERIOD, FLEXIBLE_PERIOD]
 
+# ============ 内部辅助函数 ============
 
-# ==================== 依赖查询功能 ====================
+@view
+@internal
+def _get_usdt() -> address:
+    """@notice 从 AddressProvider 获取 USDT 地址"""
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_usdt()
+
+
+@view
+@internal
+def _get_usdc() -> address:
+    """@notice 从 AddressProvider 获取 USDC 地址"""
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_usdc()
+
+
+@view
+@internal
+def _get_kyc_manager() -> address:
+    """@notice 从 AddressProvider 获取 KYC 管理合约地址"""
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_kyc_manager()
+
+
+@view
+@internal
+def _get_rwa_token() -> address:
+    """@notice 从 AddressProvider 获取 Vanke RWA Token 地址"""
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_vanke_rwa_token()
+
+
+@view
+@internal
+def _calculate_interest(_principal: uint256, _lock_period: uint256, _apy: uint256) -> uint256:
+    """
+    @notice 计算利息
+    @param _principal 本金
+    @param _lock_period 锁定期（秒）
+    @param _apy 年化收益率（基点）
+    @return 利息
+    """
+    # 利息 = 本金 * APY * 锁定期 / 年秒数 / 基点
+    return _principal * _apy * _lock_period // SECONDS_PER_YEAR // BASIS_POINTS
+
+# ============ 依赖查询功能 ============
 
 @external
 @view
@@ -543,11 +554,10 @@ def get_address_provider() -> address:
     """
     return self.ADDRESS_PROVIDER
 
-
-# ==================== 合约迁移功能 ====================
+# ============ 合约迁移功能 ============
 
 @external
-def migrate(new_contract: address):
+def owner_migrate(new_contract: address):
     """
     @notice 迁移所有状态到新合约
     @param new_contract 新合约地址（必须实现 receive_migration 接口）
@@ -564,16 +574,6 @@ def migrate(new_contract: address):
     extcall IMigration(new_contract).receive_migration(self)
 
     log Migrated(self, new_contract, block.timestamp)
-
-
-@external
-@view
-def is_migrated() -> bool:
-    """
-    @notice 检查合约是否已迁移
-    @return True 如果已迁移到新合约
-    """
-    return self.migrated
 
 
 @external
@@ -622,6 +622,16 @@ def receive_migration(old_contract: address):
 
 @external
 @view
+def is_migrated() -> bool:
+    """
+    @notice 检查合约是否已迁移
+    @return True 如果已迁移到新合约
+    """
+    return self.migrated
+
+
+@external
+@view
 def get_subscription_count(_user: address) -> uint256:
     """
     @notice 获取用户认购数量（用于迁移）
@@ -639,4 +649,3 @@ def get_user_list() -> DynArray[address, 1000]:
     @return 用户地址动态数组
     """
     return self.userList
-

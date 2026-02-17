@@ -6,10 +6,7 @@ main.py CORS 配置和 /metrics/chain 端点保护的单元测试
 - Task 2.4: /metrics/chain 端点需要管理员认证
 """
 
-import importlib
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 
 class TestCorsConfiguration:
@@ -21,7 +18,10 @@ class TestCorsConfiguration:
         mock_settings.environment = "production"
         mock_settings.debug = False
 
-        with patch("main.SETTINGS", mock_settings), patch("main.settings", mock_settings):
+        with (
+            patch("main.SETTINGS", mock_settings),
+            patch("main.settings", mock_settings),
+        ):
             import main
 
             # 重新计算 CORS origins
@@ -69,7 +69,9 @@ class TestCorsConfiguration:
 
         assert len(_PRODUCTION_ORIGINS) > 0
         for origin in _PRODUCTION_ORIGINS:
-            assert origin.startswith("https://"), f"production 域名必须使用 HTTPS: {origin}"
+            assert origin.startswith("https://"), (
+                f"production 域名必须使用 HTTPS: {origin}"
+            )
 
 
 class TestMetricsEndpointProtection:
@@ -89,14 +91,18 @@ class TestMetricsEndpointProtection:
         assert metrics_route is not None, "/metrics/chain 路由应存在"
 
         # 验证路由有 dependencies
-        assert hasattr(metrics_route, "dependencies"), "/metrics/chain 应有 dependencies"
+        assert hasattr(metrics_route, "dependencies"), (
+            "/metrics/chain 应有 dependencies"
+        )
         assert len(metrics_route.dependencies) > 0, "/metrics/chain 应至少有一个依赖"
 
         # 验证依赖中包含 require_admin
         dep_callables = [dep.dependency for dep in metrics_route.dependencies]
-        from src.shared.security import require_admin
+        from src.security import require_admin
 
-        assert require_admin in dep_callables, "/metrics/chain 应包含 require_admin 依赖"
+        assert require_admin in dep_callables, (
+            "/metrics/chain 应包含 require_admin 依赖"
+        )
 
     def test_health_endpoint_has_no_auth_dependency(self):
         """验证 /health 端点不需要认证（对比测试）"""

@@ -20,7 +20,7 @@ import { z } from 'zod'
 import { ColumnDef } from '@tanstack/react-table'
 import { 
   Plus, Edit, RefreshCw, PauseCircle, PlayCircle, 
-  DollarSign, Link, Image, Loader2
+  DollarSign, Link, Image, Loader2, Trash2
 } from 'lucide-react'
 
 // shadcn/ui components
@@ -158,6 +158,12 @@ export function AssetAdminList() {
   // AlertDialog state for status toggle confirmation
   const [statusConfirmOpen, setStatusConfirmOpen] = useState(false)
   const [assetToToggle, setAssetToToggle] = useState<AssetListItem | null>(null)
+  
+  // AlertDialog state for delete confirmation
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [assetToDelete, setAssetToDelete] = useState<AssetListItem | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
   
   // Loading states for mutations
   const [isUpdating, setIsUpdating] = useState(false)
@@ -443,6 +449,37 @@ export function AssetAdminList() {
     setStatusConfirmOpen(true)
   }
 
+  // Delete - open confirmation dialog
+  const handleDeleteClick = (asset: AssetListItem) => {
+    setAssetToDelete(asset)
+    setDeleteConfirmText('')
+    setDeleteConfirmOpen(true)
+  }
+
+  // Confirm delete
+  const confirmDelete = async () => {
+    if (!assetToDelete) return
+    setIsDeleting(true)
+    try {
+      const result = await assetService.deleteAsset(assetToDelete.id)
+      notification.success(
+        t('admin.assets.deleteSuccess', { 
+          name: result.name,
+          files: result.deleted_files,
+          media: result.deleted_media,
+        })
+      )
+      fetchAssets()
+    } catch (error) {
+      notification.error(getErrorMessage(error))
+    } finally {
+      setIsDeleting(false)
+      setDeleteConfirmOpen(false)
+      setAssetToDelete(null)
+      setDeleteConfirmText('')
+    }
+  }
+
   // Confirm status toggle
   const confirmToggleStatus = () => {
     if (!assetToToggle) return
@@ -638,6 +675,22 @@ export function AssetAdminList() {
                     : t('admin.assets.resume')
                   }
                 </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDeleteClick(record)}
+                    disabled={isDeleting}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('admin.assets.delete')}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
@@ -1107,6 +1160,57 @@ export function AssetAdminList() {
               {isUpdatingStatus && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {t('common.confirm')}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation - Dangerous Action AlertDialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteConfirmOpen(false)
+          setAssetToDelete(null)
+          setDeleteConfirmText('')
+        }
+      }}>
+        <AlertDialogContent className="border-destructive/50">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              {t('admin.assets.deleteConfirmTitle')}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="text-sm text-muted-foreground space-y-3">
+                <p>{t('admin.assets.deleteConfirmDescription', { name: assetToDelete?.name, symbol: assetToDelete?.symbol })}</p>
+                <div className="rounded-md bg-destructive/10 border border-destructive/30 p-3 text-sm text-destructive">
+                  <p className="font-semibold">{t('admin.assets.deleteWarning')}</p>
+                  <ul className="list-disc list-inside mt-1 space-y-0.5 text-destructive/80">
+                    <li>{t('admin.assets.deleteWarningMedia')}</li>
+                    <li>{t('admin.assets.deleteWarningHistory')}</li>
+                    <li>{t('admin.assets.deleteWarningBindings')}</li>
+                  </ul>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm">{t('admin.assets.deleteTypeConfirm', { name: assetToDelete?.name })}</p>
+                  <Input
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder={assetToDelete?.name || ''}
+                    className="border-destructive/30 focus:border-destructive"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>{t('common.cancel')}</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeleting || deleteConfirmText !== assetToDelete?.name}
+            >
+              {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {t('admin.assets.deleteConfirmButton')}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

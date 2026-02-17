@@ -27,14 +27,17 @@ from src.models.contracts.provider_registry import (
     ProviderRegistry,
     compute_key_hash,
 )
-from src.shared.common.adapters import get_db_adapter, get_minio_adapter
-from src.shared.schemas.enums import (
+from src.common.adapters import get_db_adapter, get_minio_adapter
+from src.schemas.enums import (
     ChainID,
     ContractScope,
     ContractStatus,
     ContractType,
+    DependencyType,
     Network,
 )
+
+from src.services.project_registry_service import get_config_loader
 
 from .base import ZERO_ADDRESS, ContractConfig
 
@@ -432,8 +435,6 @@ def save_contract_config(config: ContractConfig, project_name: str):
         config: 合约配置 (部署脚本中的 ContractConfig dataclass)
         project_name: 项目名称
     """
-    from src.shared.schemas.enums import DependencyType
-    
     # 计算 provider_key 名称和 hash
     provider_key_name = None
     provider_key_hash = None
@@ -452,7 +453,9 @@ def save_contract_config(config: ContractConfig, project_name: str):
 
     with get_db() as db:
         # 查找现有记录 (按 contract_name 唯一)
-        existing = db.query(ContractConfigModel.filter(contract_name=config.name).first())
+        existing = db.query(
+            ContractConfigModel.filter(contract_name=config.name).first()
+        )
 
         config_data = {
             "project_name": project_name or "common",
@@ -476,7 +479,9 @@ def save_contract_config(config: ContractConfig, project_name: str):
             print(f"   📝 ContractConfig 已更新: {config.name}")
         else:
             # 创建新记录
-            db.query(ContractConfigModel.create(contract_name=config.name, **config_data))
+            db.query(
+                ContractConfigModel.create(contract_name=config.name, **config_data)
+            )
             print(f"   📝 ContractConfig 已创建: {config.name}")
 
 
@@ -673,9 +678,7 @@ def record_dependencies(
 
     # 更新 ContractDeployment 的 bindings 字段
     with get_db() as db:
-        db.query(
-            ContractDeployment.filter(id=contract_id).update(bindings=bindings)
-        )
+        db.query(ContractDeployment.filter(id=contract_id).update(bindings=bindings))
         print(f"   📋 依赖绑定已更新: {contract_name} ({len(bindings)} 个依赖)")
 
 
@@ -699,7 +702,6 @@ def _provider_key_to_contract_name(provider_key: str) -> str:
     return "".join(part.capitalize() for part in parts)
 
 
-
 # ============================================
 # 项目注册表同步
 # ============================================
@@ -715,8 +717,6 @@ def sync_project_registry_before_deploy(project_name: str):
     Args:
         project_name: 项目名称
     """
-    from src.services.project_registry import get_config_loader
-
     print(f"\n🔄 同步项目注册表配置: {project_name}")
 
     with get_db() as db:
@@ -756,8 +756,6 @@ def _sync_project_config_sync(db, project_name: str, config) -> dict:
     Returns:
         同步统计
     """
-    from src.shared.schemas.enums import DependencyType
-
     stats = {"created": 0, "updated": 0, "unchanged": 0}
 
     for contract_config in config.contracts:

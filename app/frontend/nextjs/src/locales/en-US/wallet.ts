@@ -35,6 +35,7 @@ const wallet = {
       authenticated: "Authenticated",
       notAuthenticated: "Not Authenticated",
       completeKycToInvest: "Complete KYC to Invest",
+      viewKycStatus: "View KYC Status",
       detailsTitle: "Details",
       ens: "ENS",
       walletLabel: "Wallet",

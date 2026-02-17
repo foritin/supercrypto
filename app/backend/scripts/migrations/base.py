@@ -44,7 +44,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from falib.utils.log import get_logger
 from tortoise import Tortoise
 
-from src.shared.aerich_redirect import TORTOISE_ORM
+from src.aerich_redirect import TORTOISE_ORM
 
 
 logger = get_logger("supercrypto.migration")

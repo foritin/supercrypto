@@ -16,7 +16,6 @@ import asyncio
 import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from httpx import ASGITransport, AsyncClient
 
 
@@ -36,7 +35,7 @@ def run_async(coro):
 
 def _create_test_token(address: str, session_id: str = "test-session") -> str:
     """创建测试用 JWT access token"""
-    from src.shared.security.jwt import create_access_token
+    from src.security.jwt import create_access_token
 
     return create_access_token(
         {"address": address, "session_id": session_id, "token_version": 1},
@@ -78,10 +77,9 @@ class TestLoginEndpoint:
             app = _get_app()
             mock_ss = _mock_session_service()
 
-            with patch(
-                "src.api.v1.public.auth.session_service", mock_ss
-            ), patch(
-                "src.shared.security.deps.session_service", mock_ss
+            with (
+                patch("src.api.v1.public.auth.session_service", mock_ss),
+                patch("src.security.deps.session_service", mock_ss),
             ):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(
@@ -114,12 +112,10 @@ class TestLoginEndpoint:
             mock_settings.REFRESH_TOKEN_EXPIRE_MINUTES = 20160
             mock_settings.network = "mainnet"
 
-            with patch(
-                "src.api.v1.public.auth.SETTINGS", mock_settings
-            ), patch(
-                "src.api.v1.public.auth.session_service", mock_ss
-            ), patch(
-                "src.shared.security.deps.session_service", mock_ss
+            with (
+                patch("src.api.v1.public.auth.SETTINGS", mock_settings),
+                patch("src.api.v1.public.auth.session_service", mock_ss),
+                patch("src.security.deps.session_service", mock_ss),
             ):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(
@@ -146,10 +142,9 @@ class TestLoginEndpoint:
             app = _get_app()
             mock_ss = _mock_session_service()
 
-            with patch(
-                "src.api.v1.public.auth.session_service", mock_ss
-            ), patch(
-                "src.shared.security.deps.session_service", mock_ss
+            with (
+                patch("src.api.v1.public.auth.session_service", mock_ss),
+                patch("src.security.deps.session_service", mock_ss),
             ):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(
@@ -193,9 +188,7 @@ class TestAuthenticatedEndpoints:
             app = _get_app()
             mock_ss = _mock_session_service()
 
-            with patch(
-                "src.shared.security.deps.session_service", mock_ss
-            ):
+            with patch("src.security.deps.session_service", mock_ss):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(
                     transport=transport, base_url="http://test"
@@ -233,11 +226,12 @@ class TestAuthenticatedEndpoints:
                 }
             )
 
-            with patch(
-                "src.shared.security.deps.session_service", mock_ss
-            ), patch(
-                "src.api.v1.user.auth.get_auth_service",
-                return_value=mock_auth_service,
+            with (
+                patch("src.security.deps.session_service", mock_ss),
+                patch(
+                    "src.api.v1.user.auth.get_auth_service",
+                    return_value=mock_auth_service,
+                ),
             ):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(
@@ -278,11 +272,10 @@ class TestAdminEndpoints:
             mock_account.tag = "user"
             mock_account.role = "user"
 
-            with patch(
-                "src.shared.security.deps.session_service", mock_ss
-            ), patch(
-                "src.shared.security.deps.Account"
-            ) as MockAccount:
+            with (
+                patch("src.security.deps.session_service", mock_ss),
+                patch("src.security.deps.Account") as MockAccount,
+            ):
                 MockAccount.filter.return_value.first = AsyncMock(
                     return_value=mock_account
                 )
@@ -327,11 +320,10 @@ class TestAdminEndpoints:
             app.dependency_overrides[get_account_service] = lambda: mock_account_service
 
             try:
-                with patch(
-                    "src.shared.security.deps.session_service", mock_ss
-                ), patch(
-                    "src.shared.security.deps.Account"
-                ) as MockAccount:
+                with (
+                    patch("src.security.deps.session_service", mock_ss),
+                    patch("src.security.deps.Account") as MockAccount,
+                ):
                     MockAccount.filter.return_value.first = AsyncMock(
                         return_value=mock_account
                     )
@@ -359,9 +351,7 @@ class TestAdminEndpoints:
             app = _get_app()
             mock_ss = _mock_session_service()
 
-            with patch(
-                "src.shared.security.deps.session_service", mock_ss
-            ):
+            with patch("src.security.deps.session_service", mock_ss):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(
                     transport=transport, base_url="http://test"

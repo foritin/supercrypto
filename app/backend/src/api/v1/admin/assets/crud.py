@@ -10,33 +10,28 @@ Requirements: 2.2
 from decimal import Decimal
 from typing import Optional
 
-from falib.utils.handlers import create_success_response
+from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, HTTPException, Query
 from starlette import status
 
-from src.services.asset.schemas import (
+from src.common.dependencies import audit_service, get_asset_service
+from src.schemas.asset import (
     AssetCreateRequest,
     AssetStatusUpdateRequest,
     AssetUpdateRequest,
     UpdatePriceRequest,
 )
-from src.services.asset.service import AssetService
-from src.services.audit.service import audit_service
-from src.shared.schemas.enums import (
+from src.schemas.enums import (
     AssetStatus,
     AssetType,
     AuditAction,
     AuditCategory,
     AuditStatus,
 )
-from src.shared.security import require_admin
+from src.security import require_admin
+from src.services import AssetService
 
 router = APIRouter()
-
-
-def get_asset_service() -> AssetService:
-    """依赖注入：获取资产服务"""
-    return AssetService()
 
 
 # ============ 资产列表查询 ============
@@ -44,8 +39,8 @@ def get_asset_service() -> AssetService:
 
 @router.get(
     "/",
-    summary="获取资产列表 (管理员)",
-    description="获取所有资产列表，包括未绑定合约的资产",
+    summary="List Assets (Admin)",
+    description="Get all assets including those without contract bindings",
 )
 async def list_assets(
     status: Optional[AssetStatus] = Query(None, description="状态筛选"),
@@ -72,12 +67,12 @@ async def list_assets(
 
     return create_success_response(
         list_data=[item.model_dump(mode="json") for item in items],
-        pagination={
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": total_pages,
-        },
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        ),
     )
 
 
@@ -86,8 +81,8 @@ async def list_assets(
 
 @router.get(
     "/{asset_id}",
-    summary="获取资产详情 (管理员)",
-    description="根据ID获取资产的详细信息，包括未绑定合约的资产",
+    summary="Get Asset Detail (Admin)",
+    description="Get detailed asset information by ID, including assets without contract bindings",
 )
 async def get_asset(
     asset_id: int,
@@ -113,7 +108,7 @@ async def get_asset(
 # ============ 资产创建 ============
 
 
-@router.post("/", summary="创建资产", description="创建新的 RWA 资产 (管理员)")
+@router.post("/", summary="Create Asset", description="Create a new RWA asset (admin)")
 async def create_asset(
     data: AssetCreateRequest,
     service: AssetService = Depends(get_asset_service),
@@ -125,8 +120,7 @@ async def create_asset(
     - 需要管理员权限
     - 自动设置 environment 为当前环境
     """
-    # 注意：created_by 字段是 IntField，不能传入钱包地址字符串
-    # 暂时不传递 created_by，后续可以通过 User 表关联获取用户 ID
+    # created_by 是 IntField，暂不传递（后续通过 User 表关联获取用户 ID）
     result = await service.create_asset(data, created_by=None)
 
     # 记录审计日志
@@ -156,7 +150,9 @@ async def create_asset(
 
 
 @router.put(
-    "/{asset_id}", summary="更新资产信息", description="更新资产的基本信息 (管理员)"
+    "/{asset_id}",
+    summary="Update Asset",
+    description="Update asset basic information (admin)",
 )
 async def update_asset(
     asset_id: int,
@@ -195,8 +191,8 @@ async def update_asset(
 
 @router.patch(
     "/{asset_id}/status",
-    summary="更新资产状态",
-    description="暂停或恢复资产的认购状态 (管理员)",
+    summary="Update Asset Status",
+    description="Pause or resume asset subscription status (admin)",
 )
 async def update_asset_status(
     asset_id: int,
@@ -235,8 +231,8 @@ async def update_asset_status(
 
 @router.post(
     "/{asset_id}/price",
-    summary="更新资产价格",
-    description="手动更新资产价格 (管理员/预言机)",
+    summary="Update Asset Price",
+    description="Manually update asset price (admin/oracle)",
 )
 async def update_asset_price(
     asset_id: int,
@@ -266,4 +262,45 @@ async def update_asset_price(
 
     return create_success_response(
         object_data=result.model_dump(mode="json"), msg="Price updated successfully"
+    )
+
+
+# ============ 资产删除 (危险操作) ============
+
+
+@router.delete(
+    "/{asset_id}",
+    summary="Delete Asset Permanently",
+    description="Permanently delete an asset and all associated data including MinIO files, media, price history, contract bindings (admin dangerous operation)",
+)
+async def delete_asset(
+    asset_id: int,
+    service: AssetService = Depends(get_asset_service),
+    admin_address: str = Depends(require_admin),
+):
+    """
+    永久删除资产
+
+    ⚠️ 危险操作，不可恢复！
+    - 如果存在认购记录则拒绝删除
+    - 会清理 MinIO 上所有关联文件
+    - 会删除价格历史、合约绑定等所有关联数据
+    """
+    result = await service.delete_asset(asset_id)
+
+    # 记录审计日志
+    await audit_service.log_async(
+        category=AuditCategory.ASSET,
+        action=AuditAction.ASSET_DELETE,
+        operator_address=admin_address,
+        operator_type="admin",
+        target_type="asset",
+        target_id=asset_id,
+        status=AuditStatus.SUCCESS,
+        description=f"Asset #{asset_id} '{result['name']}' permanently deleted",
+        old_value=result,
+    )
+
+    return create_success_response(
+        object_data=result, msg=f"Asset '{result['name']}' permanently deleted"
     )

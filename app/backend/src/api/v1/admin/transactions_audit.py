@@ -3,35 +3,30 @@
 
 路由前缀: /api/v1/admin/transactions/audit
 """
+
 from datetime import datetime
 from typing import Optional
 
 from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, Query
 
-from src.services.audit.transaction_service import (
+from src.common.dependencies import get_transaction_audit_service
+from src.schemas.enums.audit import TransactionAuditStatus, TransactionAuditType
+from src.security import require_admin
+from src.services import (
     TransactionAuditService,
-    transaction_audit_service,
 )
-from src.shared.schemas.enums.audit import TransactionAuditStatus, TransactionAuditType
-from src.shared.security import require_admin
 
 router = APIRouter()
 
 
-# ============ 依赖注入 ============
-
-def get_transaction_audit_service() -> TransactionAuditService:
-    """获取交易审计服务实例"""
-    return transaction_audit_service
-
-
 # ============ Endpoints ============
+
 
 @router.get(
     "",
-    summary="查询交易审计",
-    description="分页查询链上交易审计记录",
+    summary="Query Transaction Audit",
+    description="Query on-chain transaction audit records with pagination",
 )
 async def query_transactions(
     chain_id: Optional[int] = Query(None, description="链ID"),
@@ -48,19 +43,7 @@ async def query_transactions(
     service: TransactionAuditService = Depends(get_transaction_audit_service),
     _admin=Depends(require_admin),
 ):
-    """
-    查询交易审计记录
-
-    支持的过滤条件：
-    - chain_id: 链ID
-    - from_address: 发送方地址
-    - to_address: 接收方地址
-    - tx_type: 交易类型 (transfer/token_transfer/token_approve/contract_deploy/contract_call/staking/unstaking/claim_reward/swap/other)
-    - status: 交易状态 (pending/confirmed/failed/reverted/dropped)
-    - token_address: Token合约地址
-    - operator_id: 操作者ID
-    - start_time/end_time: 时间范围
-    """
+    """查询交易审计记录 — 支持按链/地址/类型/状态/时间等多条件过滤"""
     txs, total, total_pages = await service.query(
         chain_id=chain_id,
         from_address=from_address,
@@ -75,20 +58,21 @@ async def query_transactions(
         page_size=page_size,
     )
 
-    pagination = PaginationInfo(
-        total=total, page=page, page_size=page_size, total_pages=total_pages
-    )
-
     return create_success_response(
         list_data=txs,
-        pagination=pagination,
+        pagination=PaginationInfo(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        ),
     )
 
 
 @router.get(
     "/stats",
-    summary="获取交易统计",
-    description="获取交易审计统计数据",
+    summary="Get Transaction Stats",
+    description="Get transaction audit statistics",
 )
 async def get_transaction_stats(
     chain_id: Optional[int] = Query(None, description="链ID"),
@@ -121,8 +105,8 @@ async def get_transaction_stats(
 
 @router.get(
     "/pending",
-    summary="获取待确认交易",
-    description="获取所有待确认的交易",
+    summary="Get Pending Transactions",
+    description="Get all pending transactions",
 )
 async def get_pending_transactions(
     chain_id: Optional[int] = Query(None, description="链ID"),
@@ -140,8 +124,8 @@ async def get_pending_transactions(
 
 @router.get(
     "/{tx_hash}",
-    summary="获取交易详情",
-    description="根据交易哈希获取交易详情",
+    summary="Get Transaction Detail",
+    description="Get transaction detail by transaction hash",
 )
 async def get_transaction(
     tx_hash: str,

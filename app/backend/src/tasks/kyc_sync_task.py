@@ -12,10 +12,11 @@ from datetime import datetime, timezone
 
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
-from tortoise import Tortoise
 
-from src.shared.common.chain_logger import ChainLogger
-from src.shared.services.lock_service import DistributedLockService, LockAcquireError
+from src.common.chain_logger import ChainLogger
+from src.common.utils import is_db_available
+from src.infra.lock_service import DistributedLockService, LockAcquireError
+from src.services.kyc_service import KycService
 
 schedule_logger = get_logger("scheduler.kyc_sync")
 chain_log = ChainLogger("scheduler.kyc_sync")
@@ -27,21 +28,6 @@ MAX_RETRY_ATTEMPTS = 3
 
 RECONCILE_BATCH_SIZE = 100
 """对账任务每批处理的最大记录数"""
-
-
-def _is_db_available() -> bool:
-    """检查 Tortoise ORM 连接池是否可用 (未关闭)"""
-    try:
-        conn = Tortoise.get_connection("default")
-        # asyncpg pool 关闭后 _pool 会是 None 或处于 closing 状态
-        pool = getattr(conn, "_pool", None)
-        if pool is None:
-            return False
-        if getattr(pool, "_closing", False) or getattr(pool, "_closed", False):
-            return False
-        return True
-    except Exception:
-        return False
 
 
 # ============ B-06: 重试失败同步 ============
@@ -60,7 +46,7 @@ async def retry_failed_kyc_syncs() -> None:
     使用分布式锁防止并发执行。
     """
     # 检查连接池是否可用 (热重载/关闭期间跳过)
-    if not _is_db_available():
+    if not is_db_available():
         schedule_logger.debug("DB pool not available, skipping retry_failed_kyc_syncs")
         return
 
@@ -68,7 +54,9 @@ async def retry_failed_kyc_syncs() -> None:
     try:
         lock_service = await DistributedLockService.get_instance()
     except Exception as e:
-        schedule_logger.warning(f"Failed to get lock service, executing without lock: {e}")
+        schedule_logger.warning(
+            f"Failed to get lock service, executing without lock: {e}"
+        )
         return await _do_retry_failed_kyc_syncs()
 
     try:
@@ -86,7 +74,7 @@ async def _do_retry_failed_kyc_syncs() -> None:
 
         from src.models.kyc import AccountKyc
         from src.models.kyc_audit_log import KycAuditLog
-        from src.shared.schemas.enums import KycAuditAction, OnChainSyncStatus
+        from src.schemas.enums import KycAuditAction, OnChainSyncStatus
 
         # 查找所有 FAILED 记录 (当前环境)
         failed_records = await AccountKyc.filter(
@@ -102,9 +90,7 @@ async def _do_retry_failed_kyc_syncs() -> None:
             f"Found {len(failed_records)} FAILED sync records to retry"
         )
 
-        from src.services.kyc.contract_service import KycContractService
-
-        contract_service = KycContractService()
+        contract_service = KycService()
         recovered = 0
         still_failed = 0
 
@@ -196,6 +182,7 @@ def _parse_retry_info(error_field: str | None) -> dict:
         pass
     # 兼容旧格式字符串 — 尝试从旧格式提取计数
     import re
+
     match = re.search(r"Auto-retry (?:attempt|exhausted) \(?(\d+)/", error_field)
     count = int(match.group(1)) if match else 0
     return {"retry_count": count, "last_error": error_field, "last_retry_at": None}
@@ -221,7 +208,7 @@ async def _notify_sync_failure(
     - 可接入 webhook / 邮件 / Slack 通知
     """
     from src.models.kyc_audit_log import KycAuditLog
-    from src.shared.schemas.enums import KycAuditAction
+    from src.schemas.enums import KycAuditAction
 
     await KycAuditLog.create(
         kyc_id=kyc_id,
@@ -266,7 +253,7 @@ async def reconcile_chain_events() -> None:
     使用分布式锁防止并发执行。
     """
     # 检查连接池是否可用 (热重载/关闭期间跳过)
-    if not _is_db_available():
+    if not is_db_available():
         schedule_logger.debug("DB pool not available, skipping reconcile_chain_events")
         return
 
@@ -274,7 +261,9 @@ async def reconcile_chain_events() -> None:
     try:
         lock_service = await DistributedLockService.get_instance()
     except Exception as e:
-        schedule_logger.warning(f"Failed to get lock service, executing without lock: {e}")
+        schedule_logger.warning(
+            f"Failed to get lock service, executing without lock: {e}"
+        )
         return await _do_reconcile_chain_events()
 
     try:
@@ -292,13 +281,12 @@ async def _do_reconcile_chain_events() -> None:
 
         from src.models.kyc import AccountKyc
         from src.models.kyc_audit_log import KycAuditLog
-        from src.services.kyc.contract_service import KycContractService
-        from src.shared.schemas.enums import KycAuditAction, KycStatus, OnChainSyncStatus
+        from src.schemas.enums import KycAuditAction, KycStatus, OnChainSyncStatus
 
         # 初始化合约服务
-        contract_service = KycContractService()
+        contract_service = KycService()
         try:
-            await contract_service._get_contract()
+            await contract_service.get_kyc_contract()
         except (ValueError, FileNotFoundError) as e:
             schedule_logger.debug(f"KYC contract not available, skipping: {e}")
             return
@@ -307,19 +295,30 @@ async def _do_reconcile_chain_events() -> None:
         # 1. SYNCED — 确认链上仍然有效 (可能被 removeInvestor)
         # 2. FAILED — 确认链上是否实际已成功 (tx 可能延迟确认)
         # 3. PENDING + 已审核通过 — 确认是否已同步但 DB 未更新
-        synced_records = await AccountKyc.filter(
-            on_chain_sync_status=OnChainSyncStatus.SYNCED,
-            network=SETTINGS.network,
-        ).limit(RECONCILE_BATCH_SIZE).all()
+        synced_records = (
+            await AccountKyc.filter(
+                on_chain_sync_status=OnChainSyncStatus.SYNCED,
+                network=SETTINGS.network,
+            )
+            .limit(RECONCILE_BATCH_SIZE)
+            .all()
+        )
 
         remaining_batch = RECONCILE_BATCH_SIZE - len(synced_records)
         failed_or_pending_records = []
         if remaining_batch > 0:
-            failed_or_pending_records = await AccountKyc.filter(
-                on_chain_sync_status__in=[OnChainSyncStatus.FAILED, OnChainSyncStatus.PENDING],
-                status=KycStatus.APPROVED,
-                network=SETTINGS.network,
-            ).limit(remaining_batch).all()
+            failed_or_pending_records = (
+                await AccountKyc.filter(
+                    on_chain_sync_status__in=[
+                        OnChainSyncStatus.FAILED,
+                        OnChainSyncStatus.PENDING,
+                    ],
+                    status=KycStatus.APPROVED,
+                    network=SETTINGS.network,
+                )
+                .limit(remaining_batch)
+                .all()
+            )
 
         all_records = synced_records + failed_or_pending_records
 

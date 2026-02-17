@@ -7,14 +7,10 @@
 from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends
 
-from src.services.kyc.service import KycService
+from src.common.dependencies import get_kyc_service
+from src.services import KycService
 
 router = APIRouter()
-
-
-def get_kyc_service() -> KycService:
-    """依赖注入：获取 KYC 服务"""
-    return KycService()
 
 
 @router.get(
