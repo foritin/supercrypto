@@ -1034,7 +1034,7 @@ requires-dist = [
     { name = "asyncpg", marker = "extra == 'all-db'", specifier = ">=0.29.0" },
     { name = "asyncpg", marker = "extra == 'postgresql'", specifier = ">=0.29.0" },
     { name = "eth-ape", specifier = ">=0.8.37" },
-    { name = "falib", git = "http://YOUR_GITLAB_HOST:7002/rex/falib.git?rev=main" },
+    { name = "falib", git = "ssh://git@github.com/foritin/falib.git?rev=main" },
     { name = "hypothesis", specifier = ">=6.151.9" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "psycopg2-binary", marker = "extra == 'all-db'", specifier = ">=2.9.0" },
@@ -1511,7 +1511,7 @@ wheels = [
 [[package]]
 name = "falib"
 version = "0.1.0"
-source = { git = "http://YOUR_GITLAB_HOST:7002/rex/falib.git?rev=main#56984e119656aae5536de9edcc684cda95ddfcb2" }
+source = { git = "ssh://git@github.com/foritin/falib.git?rev=main#1ee5129979d50a75c360ea45a4b43891d1ec28c7" }
 dependencies = [
     { name = "aioboto3" },
     { name = "aiomysql" },
