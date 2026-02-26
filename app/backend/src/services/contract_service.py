@@ -1136,19 +1136,7 @@ class ContractService:
         contracts = await ContractDeployment.filter(network=self.network).order_by(
             "name"
         )
-        return [
-            {
-                "id": c.id,
-                "name": c.name,
-                "address": c.address,
-                "project_name": c.project_name,
-                "status": c.status.value if c.status else None,
-                "is_primary": c.is_primary,
-                "symbol": c.symbol,
-                "created_at": c.created_at.isoformat() if c.created_at else None,
-            }
-            for c in contracts
-        ]
+        return contracts
 
     async def get_project_deployments(
         self,

@@ -32,6 +32,7 @@ const wallet = {
       kycVerified: "KYC ✓",
       kycPending: "KYC Pending",
       clickToViewDetails: "Click to view details",
+      quickLogout: "Logout",
       authenticated: "Authenticated",
       notAuthenticated: "Not Authenticated",
       completeKycToInvest: "Complete KYC to Invest",

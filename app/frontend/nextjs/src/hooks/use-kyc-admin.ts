@@ -3,7 +3,7 @@
  * useKycAdmin Hooks
  * Admin hooks for KYC management
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { kycService, KycStatus, type KycFullResponse, type KycReviewRequest, type PaginatedResponse } from '@/services/kyc'
 
 /**
@@ -14,32 +14,17 @@ export function useKycList(params: {
   page?: number
   page_size?: number
 } = {}) {
-  const [data, setData] = useState<PaginatedResponse<KycFullResponse> | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchList = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const result = await kycService.list(params)
-      setData(result)
-    } catch (err) {
-      setError(err as Error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [params.status, params.page, params.page_size])
-
-  useEffect(() => {
-    fetchList()
-  }, [fetchList])
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['kycList', params],
+    queryFn: () => kycService.list(params),
+    staleTime: 30 * 1000, // 30 seconds
+  })
 
   return {
-    data,
+    data: data ?? null,
     isLoading,
-    error,
-    refetch: fetchList,
+    error: error as Error | null,
+    refetch,
   }
 }
 
@@ -47,34 +32,18 @@ export function useKycList(params: {
  * Hook to get KYC by ID (admin)
  */
 export function useKycById(id: number | null) {
-  const [data, setData] = useState<KycFullResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchKyc = useCallback(async () => {
-    if (!id) return
-
-    setIsLoading(true)
-    setError(null)
-    try {
-      const result = await kycService.getById(id)
-      setData(result)
-    } catch (err) {
-      setError(err as Error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [id])
-
-  useEffect(() => {
-    fetchKyc()
-  }, [fetchKyc])
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['kycById', id],
+    queryFn: () => kycService.getById(id!),
+    enabled: !!id,
+    staleTime: 30 * 1000, // 30 seconds
+  })
 
   return {
-    data,
+    data: data ?? null,
     isLoading,
-    error,
-    refetch: fetchKyc,
+    error: error as Error | null,
+    refetch,
   }
 }
 
@@ -82,35 +51,21 @@ export function useKycById(id: number | null) {
  * Hook to review KYC (admin)
  */
 export function useKycReview() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
+  const queryClient = useQueryClient()
 
-  const mutate = useCallback(
-    async (
-      { id, data }: { id: number; data: KycReviewRequest },
-      options?: { onSuccess?: () => void; onError?: (error: Error) => void }
-    ) => {
-      setIsLoading(true)
-      setError(null)
-      try {
-        await kycService.review(id, data)
-        options?.onSuccess?.()
-      } catch (err) {
-        const error = err as Error
-        setError(error)
-        options?.onError?.(error)
-      } finally {
-        setIsLoading(false)
-      }
+  const mutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: KycReviewRequest }) => kycService.review(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['kycList'] })
+      queryClient.invalidateQueries({ queryKey: ['kycById'] })
     },
-    []
-  )
+  })
 
   return {
-    mutate,
-    mutateAsync: mutate,
-    isLoading,
-    isPending: isLoading,
-    error,
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isLoading: mutation.isPending,
+    isPending: mutation.isPending,
+    error: mutation.error as Error | null,
   }
 }

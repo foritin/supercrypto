@@ -8,7 +8,7 @@
 """
 
 # 枚举 - 统一从 enums 包导入
-from .base import ABIMainInfo, ABISubInfo, AddressInfo, ChainInfo, InfoResponse
+from .base import AddressInfo, ChainInfo, InfoResponse
 from .enums import (  # Asset; Audit; KYC; Subscription; Account; Staking; Transaction
     AssetStatus,
     AssetType,
@@ -67,7 +67,5 @@ __all__ = [
     # Base Schema
     "InfoResponse",  # 用于前端周期开始获取基本信息
     "ChainInfo",
-    "ABISubInfo",
-    "ABIMainInfo",
     "AddressInfo",
 ]

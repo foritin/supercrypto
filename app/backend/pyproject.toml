@@ -46,7 +46,7 @@ filterwarnings = [
 ]
 
 [tool.aerich]
-tortoise_orm = "src.shared.aerich_redirect.TORTOISE_ORM"
+tortoise_orm = "src.aerich_redirect.TORTOISE_ORM"
 location = "./migrations"
 src_folder = "./app/backend"
 

@@ -127,5 +127,73 @@ class DevToolsService:
 
         return recipients
 
+    # ============ ETH 水龙头 ============
+
+    async def faucet_eth(self, address: str, amount_eth: float) -> dict:
+        """
+        通过 hardhat_setBalance 给指定地址充值 ETH
+
+        仅在 hardhat 网络可用，直接设置余额，无需 gas
+
+        参数:
+            address: 目标钱包地址
+            amount_eth: 充值 ETH 数量
+
+        返回:
+            充值结果
+        """
+        import httpx
+
+        from src.models.chain import Chain
+
+        chain = await Chain.get_by_chain_id(31337)
+        if not chain:
+            raise ValueError("Hardhat chain (31337) not found in database")
+
+        rpc_url = chain.rpc_url
+
+        # 先查询当前余额
+        async with httpx.AsyncClient(timeout=10) as client:
+            balance_resp = await client.post(
+                rpc_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "eth_getBalance",
+                    "params": [address, "latest"],
+                    "id": 1,
+                },
+            )
+            balance_data = balance_resp.json()
+            old_balance_wei = int(balance_data.get("result", "0x0"), 16)
+
+            # 计算新余额 = 当前余额 + 充值数量
+            add_wei = int(amount_eth * 10**18)
+            new_balance_wei = old_balance_wei + add_wei
+            new_balance_hex = hex(new_balance_wei)
+
+            # 调用 hardhat_setBalance
+            resp = await client.post(
+                rpc_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "hardhat_setBalance",
+                    "params": [address, new_balance_hex],
+                    "id": 2,
+                },
+            )
+            result = resp.json()
+
+        if "error" in result:
+            logger.error(f"Faucet failed: {result['error']}")
+            raise ValueError(f"hardhat_setBalance failed: {result['error']}")
+
+        logger.info(f"Faucet: {amount_eth} ETH → {address[:10]}...")
+        return {
+            "address": address,
+            "amount_eth": amount_eth,
+            "old_balance_eth": old_balance_wei / 10**18,
+            "new_balance_eth": new_balance_wei / 10**18,
+        }
+
 
 # 全局服务实例

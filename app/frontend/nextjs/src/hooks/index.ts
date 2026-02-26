@@ -25,3 +25,8 @@ export {
 export { useAssets } from './use-assets'
 
 export { useTokenBalance, useNativeBalance } from './use-balance'
+
+export { usePlatformInfo } from './use-platform-info'
+
+export { useStablecoinAddresses } from './use-stablecoin-addresses'
+

@@ -3,8 +3,9 @@
  * useKycStatus Hook
  * Fetches and manages KYC status for the connected wallet
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useAccount } from 'wagmi'
+import { useQuery } from '@tanstack/react-query'
 import { kycService, KycStatus, type KycStatusResponse, type KycApplyRequest } from '@/services/kyc'
 import { toast } from 'sonner'
 
@@ -13,35 +14,29 @@ import { toast } from 'sonner'
  */
 export function useKycStatus() {
   const { address, isConnected } = useAccount()
-  const [data, setData] = useState<KycStatusResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
 
-  const fetchStatus = useCallback(async () => {
-    if (!isConnected || !address) return
-
-    setIsLoading(true)
-    setError(null)
-    try {
-      const result = await kycService.getStatus(address)
-      setData(result)
-    } catch (err) {
-      setError(err as Error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [address, isConnected])
-
-  useEffect(() => {
-    fetchStatus()
-  }, [fetchStatus])
-
-  return {
+  const {
     data,
     isLoading,
     error,
+    refetch
+  } = useQuery({
+    queryKey: ['kycStatus', address],
+    queryFn: async () => {
+      if (!isConnected || !address) return null
+      return await kycService.getStatus(address)
+    },
+    enabled: !!isConnected && !!address,
+    staleTime: 30 * 1000, // 30 seconds
+    retry: false,
+  })
+
+  return {
+    data: data ?? null,
+    isLoading,
+    error: error as Error | null,
     isError: !!error,
-    refetch: fetchStatus,
+    refetch,
     status: data?.status ?? KycStatus.NOT_STARTED,
     isApproved: data?.status === KycStatus.APPROVED && data?.on_chain_sync_status === 'synced',
     isReviewApproved: data?.status === KycStatus.APPROVED,

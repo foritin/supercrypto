@@ -49,3 +49,10 @@ class TokenRecipient(BaseModel):
     kyc_status: Optional[str] = Field(None, description="KYC 状态")
     tag: Optional[str] = Field(None, description="用户标签")
     label: str = Field(..., description="显示标签")
+
+
+class FaucetRequest(BaseModel):
+    """ETH 水龙头请求"""
+
+    address: str = Field(..., description="目标钱包地址")
+    amount_eth: float = Field(default=10.0, ge=0.1, le=1000, description="充值 ETH 数量")

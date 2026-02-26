@@ -34,7 +34,7 @@ class SessionService:
         ip_address: Optional[str] = None,
         chain_id: Optional[int] = None,
         chain_name: Optional[str] = None,
-        network_type: Optional[str] = None,
+        network: Optional[str] = None,
     ) -> str:
         """
         创建新会话
@@ -45,7 +45,7 @@ class SessionService:
             ip_address: IP 地址
             chain_id: 钱包网络链ID (1=主网, 11155111=Sepolia, 31337=本地)
             chain_name: 链名称 (用户在 MetaMask 中看到的名称)
-            network_type: 网络类型 (mainnet/testnet/local/l2/custom)
+            network: 网络类型 (mainnet/testnet/local/l2/custom)
 
         Returns:
             session_id: 会话 ID
@@ -63,7 +63,7 @@ class SessionService:
             "ip_address": ip_address or "",
             "chain_id": chain_id,
             "chain_name": chain_name or "",
-            "network_type": network_type or "unknown",
+            "network": network or "unknown",
             # Token 版本号管理
             "token_version": 1,
             "token_version_updated_at": now.isoformat(),

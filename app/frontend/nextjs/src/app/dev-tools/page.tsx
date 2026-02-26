@@ -1,10 +1,11 @@
 'use client'
 
 import { useTranslation } from 'react-i18next'
-import { Wrench, Zap, DollarSign, Trash2, AlertTriangle, XCircle } from 'lucide-react'
+import { Wrench, Zap, DollarSign, Fuel, Trash2, AlertTriangle, XCircle } from 'lucide-react'
 import { RequireAdmin } from '@/components/auth'
 import { QuickKycPanel } from '@/components/dev/quick-kyc-panel'
 import { MockTokenMint } from '@/components/dev/mock-token-mint'
+import { EthFaucet } from '@/components/dev/eth-faucet'
 import { DataResetPanel } from '@/components/dev/data-reset-panel'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
@@ -58,11 +59,15 @@ export default function DevToolsPage() {
               <TabsList className="mb-4">
                 <TabsTrigger value="kyc" className="flex items-center gap-2">
                   <Zap className="h-4 w-4" />
-                  {t('dev.quickKyc.title')}
+                  {t('dev.kyc.title')}
                 </TabsTrigger>
                 <TabsTrigger value="token" className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4" />
                   {t('dev.mockToken.title')}
+                </TabsTrigger>
+                <TabsTrigger value="faucet" className="flex items-center gap-2">
+                  <Fuel className="h-4 w-4" />
+                  {t('dev.faucet.title')}
                 </TabsTrigger>
                 <TabsTrigger value="reset" className="flex items-center gap-2">
                   <Trash2 className="h-4 w-4" />
@@ -76,6 +81,10 @@ export default function DevToolsPage() {
               
               <TabsContent value="token">
                 <MockTokenMint />
+              </TabsContent>
+              
+              <TabsContent value="faucet">
+                <EthFaucet />
               </TabsContent>
               
               <TabsContent value="reset">

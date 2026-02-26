@@ -37,6 +37,18 @@ export interface TokenRecipient {
   label: string
 }
 
+export interface FaucetRequest {
+  address: string
+  amount_eth: number
+}
+
+export interface FaucetResponse {
+  address: string
+  amount_eth: number
+  old_balance_eth: number
+  new_balance_eth: number
+}
+
 export const devToolsService = {
   /**
    * 获取可重置数据的统计信息
@@ -68,6 +80,14 @@ export const devToolsService = {
   async getTokenRecipients(): Promise<TokenRecipient[]> {
     const response = await api.get<API.ResponseData<TokenRecipient>>(DEV_PATHS.TOKEN_RECIPIENTS)
     return response.list_data || []
+  },
+
+  /**
+   * ETH 水龙头 - 给指定地址充值 ETH
+   */
+  async faucet(request: FaucetRequest): Promise<FaucetResponse> {
+    const response = await api.post<API.ResponseData<FaucetResponse>>(DEV_PATHS.FAUCET, request)
+    return response.object_data!
   },
 }
 

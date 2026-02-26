@@ -50,7 +50,7 @@ class AuthService:
             - account: Account 模型实例或 None
             - kyc: AccountKyc 模型实例或 None
             - is_admin: 是否为管理员
-            - network_type: 网络类型枚举
+            - network: 网络类型枚举
 
         示例:
             >>> auth_service = get_auth_service()
@@ -59,22 +59,17 @@ class AuthService:
             False
         """
         # 转换网络类型
-        network_type = Network.from_value(self.network)
+        network = Network.from_value(self.network)
 
         logger.debug(
-            f"查询用户信息: address={wallet_address[:10]}..., "
-            f"network={network_type.value}"
+            f"查询用户信息: address={wallet_address[:10]}..., network={network.value}"
         )
 
         # 查询账户
-        account = await Account.filter(
-            address=wallet_address, network=network_type
-        ).first()
+        account = await Account.filter(address=wallet_address, network=network).first()
 
         # 查询 KYC 状态
-        kyc = await AccountKyc.filter(
-            address=wallet_address, network=network_type
-        ).first()
+        kyc = await AccountKyc.filter(address=wallet_address, network=network).first()
 
         # 判断是否为管理员
         is_admin = account.tag == "admin" if account and account.tag else False
@@ -88,5 +83,5 @@ class AuthService:
             "account": account,
             "kyc": kyc,
             "is_admin": is_admin,
-            "network_type": network_type,
+            "network": network,
         }

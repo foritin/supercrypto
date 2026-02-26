@@ -42,13 +42,13 @@ async def get_current_user(
     account = user_info["account"]
     kyc = user_info["kyc"]
     is_admin = user_info["is_admin"]
-    network_type = user_info["network_type"]
+    network = user_info["network"]
 
     response = CurrentUserResponse(
         address=wallet_address,
         is_admin=is_admin,
         tag=account.tag if account else None,
-        net_type=network_type.value,
+        net_type=network.value,
         kyc_status=kyc.status.value if kyc else None,
     )
 

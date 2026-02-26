@@ -32,6 +32,7 @@ const wallet = {
       kycVerified: "KYC ✓",
       kycPending: "KYC 待验证",
       clickToViewDetails: "点击查看详情",
+      quickLogout: "登出",
       authenticated: "已认证",
       notAuthenticated: "未认证",
       completeKycToInvest: "完成 KYC 解锁投资",

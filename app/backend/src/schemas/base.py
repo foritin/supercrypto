@@ -2,7 +2,7 @@
 base schema 定义 + 向后兼容导出 (IDMixin, TimestampMixin)
 """
 
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -38,40 +38,21 @@ class ChainInfo(BaseModel):
     rpc_url: str
 
 
-class ABISubInfo(BaseModel):
-    """ABI子信息"""
-
-    name: str
-    type: str
-    indexed: bool
-
-
-class ABIMainInfo(BaseModel):
-    """ABI信息"""
-
-    type: str
-    name: Optional[str] = None
-    inputs: Optional[list[ABISubInfo]] = None
-    anonymous: bool
-
-
 class AddressInfo(BaseModel):
     """地址信息"""
 
     id: int
     scope: str
-    chain_id: int
     contract_type: str
     status: str
-    network: str
     address: str
     deployer_address: str
     name: str
+    abi_info: list
 
 
 class InfoResponse(BaseModel):
     """基础信息响应"""
 
     chain_info: ChainInfo
-    abi_info: list[ABIMainInfo]
     address_info: list[AddressInfo]

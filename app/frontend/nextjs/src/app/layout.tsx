@@ -38,10 +38,10 @@ export default function RootLayout({
           <Providers>
             <HtmlLangSync />
             <MainLayout>{children}</MainLayout>
+            <GlobalRiskDisclaimer />
+            <CookieConsent />
           </Providers>
         </ThemeProvider>
-        <GlobalRiskDisclaimer />
-        <CookieConsent />
       </body>
     </html>
   );

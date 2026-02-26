@@ -9,7 +9,7 @@ from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.common.exceptions import ValidationException
-from src.schemas.dev import DataResetRequest
+from src.schemas.dev import DataResetRequest, FaucetRequest
 from src.schemas.enums import ErrorCode
 from src.security import require_admin
 from src.services import DevToolsService
@@ -112,3 +112,25 @@ async def get_token_recipients(
 
     recipients = await service.get_token_recipients()
     return create_success_response(list_data=[r.model_dump() for r in recipients])
+
+@router.post("/faucet")
+async def faucet_eth(
+    request: FaucetRequest,
+    admin_address: str = Depends(require_admin),
+):
+    """
+    ETH 水龙头 - 给指定地址充值 ETH
+
+    仅在 hardhat 网络可用，通过 hardhat_setBalance 直接设置余额
+    """
+    service = get_service()
+
+    if not service.is_reset_allowed():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This feature is only available in hardhat environment",
+        )
+
+    result = await service.faucet_eth(request.address, request.amount_eth)
+    return create_success_response(object_data=result)
+

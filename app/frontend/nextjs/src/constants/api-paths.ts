@@ -13,6 +13,9 @@
 // ============================================================================
 
 export const PUBLIC_PATHS = {
+  // 平台基础信息（链配置 + 合约地址 + ABI）
+  INFO: '/public/info',
+
   // 资产
   ASSETS: '/public/assets',
   ASSET_DETAIL: (id: number) => `/public/assets/${id}`,
@@ -177,6 +180,9 @@ export const DEV_PATHS = {
   RESET_DATA: '/dev/reset',
   ENVIRONMENT: '/dev/environment',
   TOKEN_RECIPIENTS: '/dev/token-recipients',
+
+  // ETH 水龙头
+  FAUCET: '/dev/faucet',
 
   // KYC 开发工具
   KYC_QUICK_APPROVE: (address: string) => `/kyc/dev/quick-approve/${address}`,

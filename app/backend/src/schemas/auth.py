@@ -21,7 +21,7 @@ class TokenRequest(BaseModel):
     backdoor: Optional[str] = Field(None, description="后门密码")
 
     @property
-    def network_type(self) -> str:
+    def network(self) -> str:
         """
         获取网络类型
 

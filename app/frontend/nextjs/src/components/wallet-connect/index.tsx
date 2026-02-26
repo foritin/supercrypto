@@ -10,12 +10,12 @@ import { supportedChains } from '@/config/wagmi'
 import { truncateAddress } from '@/utils/format'
 import { clearAuthData, setWalletConnected, setWalletAddress, hasJwtToken, getAddressFromToken } from '@/utils/auth'
 import { logout, login } from '@/services/auth'
-import { userService } from '@/services/user'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AccountModal } from './account-modal'
 import type { KycStatus } from './account-modal'
 import { KycStatus as KycStatusEnum } from '@/services/kyc'
+import { useCurrentUser } from '@/hooks'
 
 /**
  * 将后端 KYC 状态映射为 UI 组件期望的状态
@@ -74,8 +74,8 @@ export function WalletConnect() {
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   // 是否已认证（有有效的 JWT）
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  // 当前用户信息（从 /api/v1/user/auth/me 获取）
-  const [currentUser, setCurrentUser] = useState<{ is_admin: boolean; tag: string | null; kyc_status: string | null } | null>(null)
+  // 当前用户信息
+  const { user: currentUser, refetch: refetchUser } = useCurrentUser()
   // 自定义 AccountModal 开关状态
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
   // 钱包连接时间
@@ -118,28 +118,6 @@ export function WalletConnect() {
     return false
   }, [address])
 
-  // 获取当前用户信息（已登录但未获取用户信息时）
-  useEffect(() => {
-    async function fetchUserInfo() {
-      if (isAuthenticated && !currentUser && address) {
-        try {
-          const user = await userService.getCurrentUser()
-          if (user) {
-            setCurrentUser({
-              is_admin: user.is_admin,
-              tag: user.tag,
-              kyc_status: user.kyc_status,
-            })
-          }
-        } catch (error) {
-          console.error('Failed to fetch user info:', error)
-        }
-      }
-    }
-    
-    fetchUserInfo()
-  }, [isAuthenticated, currentUser, address])
-
   // 执行签名登录 (Requirement 7.5: 保留签名认证流程)
   const performSignIn = useCallback(async () => {
     if (!address || isSigningRef.current) return
@@ -154,23 +132,10 @@ export function WalletConnect() {
       // 调用后端登录接口（传递当前网络信息）
       await login(address, signature, chain?.id, chain?.name)
 
-      // 登录成功后，调用 /api/v1/user/auth/me 获取用户信息
-      const user = await userService.getCurrentUser()
-      if (user) {
-        setCurrentUser({
-          is_admin: user.is_admin,
-          tag: user.tag,
-          kyc_status: user.kyc_status,
-        })
-        setIsAuthenticated(true)
-        // 触发自定义事件，通知其他组件（如 Header）刷新用户信息
-        window.dispatchEvent(new CustomEvent('supercrypto-login-success'))
-        toast.success(t('wallet.loginSuccess'))
-      } else {
-        // 登录成功但获取用户信息失败
-        setIsAuthenticated(false)
-        toast.error(t('wallet.error.loginFailed'))
-      }
+      // 登录成功后，触发自定义事件，通知其他组件（如 Header）刷新用户信息
+      setIsAuthenticated(true)
+      window.dispatchEvent(new CustomEvent('supercrypto-login-success'))
+      toast.success(t('wallet.loginSuccess'))
     } catch (error) {
       // 用户拒绝签名或登录失败
       const err = error as { code?: number; message?: string }
@@ -183,7 +148,6 @@ export function WalletConnect() {
       // 登录失败时断开钱包连接
       disconnect()
       setIsAuthenticated(false)
-      setCurrentUser(null)
     } finally {
       setIsLoggingIn(false)
       isSigningRef.current = false
@@ -203,7 +167,6 @@ export function WalletConnect() {
         console.log('MetaMask disconnected via accountsChanged event')
         clearAuthData()
         setIsAuthenticated(false)
-        setCurrentUser(null)
         wasConnectedRef.current = false
         // 触发 wagmi 的断开，确保状态同步
         disconnect()
@@ -215,7 +178,6 @@ export function WalletConnect() {
       console.log('Wallet disconnected via disconnect event')
       clearAuthData()
       setIsAuthenticated(false)
-      setCurrentUser(null)
       wasConnectedRef.current = false
     }
 
@@ -251,7 +213,6 @@ export function WalletConnect() {
       })
       wasConnectedRef.current = false
       setIsAuthenticated(false)
-      setCurrentUser(null)
       setConnectedAt(undefined)
     }
   }, [isConnected, address, isHydrated, checkAuthStatus, performSignIn, connectedAt])
@@ -265,7 +226,6 @@ export function WalletConnect() {
       // Clear auth data when account changes (JWT is tied to specific address)
       clearAuthData()
       setIsAuthenticated(false)
-      setCurrentUser(null)
 
       // Notify user of account change
       toast.info(t('wallet.accountChanged', {

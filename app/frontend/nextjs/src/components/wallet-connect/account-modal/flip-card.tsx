@@ -217,10 +217,22 @@ export function FlipCardModal({
                   )}
                 </div>
 
-                {/* 提示翻转 */}
-                <div className="mt-3 flex items-center gap-1.5 text-white/40 text-xs">
-                  <RotateCcw className="w-3 h-3" />
-                  <span>{t('wallet.accountModal.clickToViewDetails')}</span>
+                {/* 提示翻转 + 快捷登出 */}
+                <div className="mt-3 flex items-center justify-between text-white/40 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <RotateCcw className="w-3 h-3" />
+                    <span>{t('wallet.accountModal.clickToViewDetails')}</span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDisconnect()
+                    }}
+                    className="flex items-center gap-1 text-white/40 hover:text-red-400 transition-colors"
+                  >
+                    <LogOut className="w-3 h-3" />
+                    <span>{t('wallet.accountModal.quickLogout', 'Logout')}</span>
+                  </button>
                 </div>
               </div>
             </div>

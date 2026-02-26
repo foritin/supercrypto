@@ -222,7 +222,7 @@ class TestAuthenticatedEndpoints:
                     "account": mock_account,
                     "kyc": None,
                     "is_admin": False,
-                    "network_type": MagicMock(value="hardhat"),
+                    "network": MagicMock(value="hardhat"),
                 }
             )
 

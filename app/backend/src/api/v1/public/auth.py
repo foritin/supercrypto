@@ -13,11 +13,15 @@ import datetime
 from typing import Optional
 
 from falib.utils.config import SETTINGS
-from falib.utils.handlers import create_success_response
+from falib.utils.handlers import create_error_response, create_success_response
 from falib.utils.log import get_logger
-from fastapi import APIRouter, Cookie, HTTPException, Request, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 
-from src.common.dependencies import session_service
+from src.common.dependencies import (
+    get_account_service,
+    session_service,
+)
+from src.schemas.account import AccountCreate
 from src.schemas.auth import (
     RefreshTokenRequest,
     TokenRequest,
@@ -31,6 +35,7 @@ from src.security import (
     refresh_tokens,
     verify_wallet_signature,
 )
+from src.services import AccountService
 
 logger = get_logger("business.api.auth")
 
@@ -69,7 +74,7 @@ async def _authenticate_and_create_session(
         ip_address=request.client.host if request.client else "",
         chain_id=data.chain_id,
         chain_name=data.chain_name,
-        network_type=data.network_type,
+        network=data.network,
     )
     token_version = await session_service.get_token_version(wallet_address, session_id)
     expires_in_mins = data.expires_in_mins or SETTINGS.REFRESH_TOKEN_EXPIRE_MINUTES
@@ -122,14 +127,35 @@ def _clear_refresh_cookie(response: Response) -> None:
     summary="Login",
     description="Login with wallet signature to obtain JWT token",
 )
-async def login(data: TokenRequest, request: Request, response: Response):
+async def login(
+    data: TokenRequest,
+    request: Request,
+    response: Response,
+    account_service: AccountService = Depends(get_account_service),
+):
     """登录获取令牌 — 验证钱包签名后颁发 JWT token 并创建 Redis 会话"""
     (
         access_token,
         new_refresh_token,
         expires_in_mins,
     ) = await _authenticate_and_create_session(data, request)
-
+    if SETTINGS.CHAIN.NETWORK != data.network:
+        logger.error(
+            f"登录网络不匹配: {data.network} (请求) vs {SETTINGS.NETWORK} (配置)"
+        )
+        return create_error_response(
+            msg=f"Network {data.network} mismatch. Required {SETTINGS.CHAIN.NETWORK}. Please connect to the correct network."
+        )
+    exists = await account_service.get_or_none(address=data.address.lower())
+    if not exists:
+        await account_service.create(
+            AccountCreate(
+                address=data.address.lower(),
+                private_key="",
+                tag="normal",
+                network=data.network,
+            )
+        )
     response_data = TokenResponse(
         access_token=access_token,
         refresh_token=new_refresh_token,
@@ -182,3 +208,29 @@ async def refresh_token_api(
         response, new_refresh_token, SETTINGS.REFRESH_TOKEN_EXPIRE_MINUTES
     )
     return create_success_response(object_data=response_data)
+
+@router.post(
+    "/logout",
+    summary="Logout",
+    description="Logout and invalidate the current session",
+)
+async def logout(
+    request: Request,
+    response: Response,
+):
+    """登出 — 尽力销毁 Redis 会话，始终清除 refresh token cookie，不强制认证"""
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            from src.security.jwt import verify_token
+
+            payload = verify_token(auth_header[7:], expected_type="access")
+            wallet_address = payload.get("address", "").lower()
+            session_id = payload.get("session_id")
+            if wallet_address and session_id:
+                await session_service.delete_session(wallet_address, session_id)
+        except Exception:
+            pass
+    _clear_refresh_cookie(response)
+    return create_success_response(msg="Logged out successfully")
+

@@ -12,12 +12,15 @@ from src.api.v1.public import (
     chains,
     constants,
     contracts,
+    info,
     kyc,
     staking,
     subscriptions,
 )
 
 router = APIRouter()
+
+router.include_router(info.router, prefix="", tags=["Public Info"])
 
 # 认证 - 登录、登出、刷新
 router.include_router(auth.router, prefix="/auth", tags=["Public Auth"])

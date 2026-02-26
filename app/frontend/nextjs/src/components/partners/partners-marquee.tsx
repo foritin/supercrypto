@@ -95,7 +95,8 @@ export const PartnersMarquee: React.FC<PartnersMarqueeProps> = ({
                   alt={partner.name}
                   width={120}
                   height={40}
-                  className={`h-8 md:h-7 sm:h-6 w-auto max-w-[140px] md:max-w-[120px] sm:max-w-[100px] object-contain transition-all duration-300 ${
+                  style={{ width: 'auto' }}
+                  className={`h-8 md:h-7 sm:h-6 max-w-[140px] md:max-w-[120px] sm:max-w-[100px] object-contain transition-all duration-300 ${
                     grayscale
                       ? 'brightness-0 invert opacity-60 group-hover:opacity-100 group-hover:scale-[1.08]'
                       : ''

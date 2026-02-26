@@ -72,6 +72,27 @@ export const contractService = {
   },
 
   /**
+   * 按过滤条件获取合约地址
+   * @param params 可选过滤参数 (scope, contract_type)
+   */
+  async getAddressesByFilter(params?: {
+    scope?: string;
+    contract_type?: string;
+  }): Promise<ContractAddresses> {
+    const searchParams = new URLSearchParams();
+    if (params?.scope) searchParams.set("scope", params.scope);
+    if (params?.contract_type)
+      searchParams.set("contract_type", params.contract_type);
+    const query = searchParams.toString();
+    const url = query
+      ? `${PUBLIC_PATHS.CONTRACT_ADDRESSES}?${query}`
+      : PUBLIC_PATHS.CONTRACT_ADDRESSES;
+    const response =
+      await api.get<API.ResponseData<ContractAddresses>>(url);
+    return response.object_data as ContractAddresses;
+  },
+
+  /**
    * 获取认购合约信息
    */
   async getSubscriptionContract(): Promise<SubscriptionContractInfo | null> {

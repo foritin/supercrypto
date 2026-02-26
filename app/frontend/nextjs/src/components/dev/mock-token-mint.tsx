@@ -40,16 +40,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import { notification } from "@/lib/notification";
 import {
-  MOCK_TOKEN_ADDRESSES,
   MOCK_TOKEN_INFO,
   MOCK_TOKEN_ABI,
   type MockTokenType,
 } from "@/contracts/mock-token";
 import { devToolsService, type TokenRecipient } from "@/services/dev-tools";
-import { useCurrentUser } from "@/hooks";
+import { useCurrentUser, useStablecoinAddresses } from "@/hooks";
 import { transactionAuditService } from "@/services/transaction-audit";
+import { truncateAddress } from "@/lib/utils";
 
 type MintStep =
   | "idle"
@@ -64,6 +65,7 @@ export function MockTokenMint() {
   const { isConnected, address } = useAccount();
   const chainId = useChainId();
   const { isAdmin } = useCurrentUser();
+  const { addresses, isLoading: isAddressesLoading } = useStablecoinAddresses();
   const [selectedToken, setSelectedToken] = useState<MockTokenType>("MockUSDT");
   const [mintAmount, setMintAmount] = useState<string>("1000");
   const [selectedRecipient, setSelectedRecipient] = useState<string | null>(
@@ -73,7 +75,7 @@ export function MockTokenMint() {
   const lastProcessedTxRef = useRef<string | null>(null);
 
   const tokenInfo = MOCK_TOKEN_INFO[selectedToken];
-  const tokenAddress = MOCK_TOKEN_ADDRESSES[selectedToken];
+  const tokenAddress = addresses[selectedToken];
 
   // Fetch token recipients
   const [recipients, setRecipients] = useState<TokenRecipient[]>([]);
@@ -521,6 +523,33 @@ export function MockTokenMint() {
               </span>
             </div>
           </div>
+          {/* Contract Address */}
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-primary/10">
+            <span className="text-xs text-muted-foreground">
+              {t("dev.mockToken.contractAddress")}:
+            </span>
+            {isAddressesLoading ? (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {t("dev.mockToken.loadingAddresses")}
+              </span>
+            ) : (
+              <span
+                className="text-xs font-mono text-primary/80 cursor-pointer hover:text-primary transition-colors"
+                title={tokenAddress}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(tokenAddress);
+                    toast.success(t("dev.mockToken.addressCopied"));
+                  } catch {
+                    toast.error(t("common.error"));
+                  }
+                }}
+              >
+                {truncateAddress(tokenAddress)}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Add to Wallet Button */}
@@ -627,7 +656,7 @@ export function MockTokenMint() {
         {/* Mint & Transfer Button */}
         <Button
           onClick={handleMintAndTransfer}
-          disabled={!parsedMintAmount || parsedMintAmount <= 0 || !selectedRecipient || isProcessing}
+          disabled={!parsedMintAmount || parsedMintAmount <= 0 || !selectedRecipient || isProcessing || isAddressesLoading}
           className="w-full h-11"
         >
           {isProcessing ? (

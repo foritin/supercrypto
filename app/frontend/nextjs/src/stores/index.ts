@@ -5,3 +5,4 @@ export { useTransactionStore, type Transaction, type TransactionStatus } from '.
 export { useUserStore, type UserProfile, type KycStatus } from './user-store';
 export { useWeb3Store, type Web3State } from './web3-store';
 export { useUIScaffoldStore } from './ui-store';
+export { usePlatformInfoStore, type PlatformInfoState } from './platform-info-store';

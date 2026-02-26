@@ -8,17 +8,14 @@ from contextlib import asynccontextmanager
 from falib.adapter.scheduler import SchedulerService
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from tortoise import Tortoise
 
-from fastapi import Depends
-
-from src.api.v1.router import api_router
-from src.models import Account
 from src.aerich_redirect import TORTOISE_ORM
+from src.api.v1.router import api_router
 from src.common.adapters import close_async_redis_adapter
 from src.common.exceptions import BusinessException
 from src.common.metrics import chain_metrics
@@ -27,6 +24,7 @@ from src.middleware import (
     AuthStateMiddleware,
     RequestLoggingMiddleware,
 )
+from src.models import Account
 from src.security import require_admin
 from src.tasks.contract_task import async_sync_provider_registry
 from src.tasks.kyc_sync_task import reconcile_chain_events, retry_failed_kyc_syncs
