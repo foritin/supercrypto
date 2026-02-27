@@ -44,6 +44,7 @@ declare global {
     ethereum?: {
       on?: (event: string, handler: (...args: unknown[]) => void) => void
       removeListener?: (event: string, handler: (...args: unknown[]) => void) => void
+      request?: (args: { method: string; params?: unknown[] }) => Promise<unknown>
     }
   }
 }
@@ -92,6 +93,17 @@ export function WalletConnect() {
   const wasConnectedRef = useRef<boolean>(false)
   // 防止重复签名请求
   const isSigningRef = useRef<boolean>(false)
+  
+  // ============================================================================
+  // MetaMask 锁定状态检测 - Refs
+  // ============================================================================
+  // 连续空账户计数器（避免临时状态波动）
+  const consecutiveEmptyRef = useRef(0)
+  // 防止并发断开操作
+  const isDisconnectingRef = useRef(false)
+  // 检测配置常量
+  const MAX_EMPTY_CHECKS = 2
+  const POLLING_INTERVAL = 5000  // 5秒，减少 RPC 调用
 
   // 标记客户端已经 hydrated
   useEffect(() => {
@@ -189,6 +201,137 @@ export function WalletConnect() {
       window.ethereum?.removeListener?.('disconnect', handleDisconnect)
     }
   }, [disconnect])
+
+  // ============================================================================
+  // MetaMask 锁定状态检测
+  // ============================================================================
+  // 问题: MetaMask 锁定时不会触发 accountsChanged 事件
+  // 解决: 定期轮询 eth_accounts 检测实际可用账户
+  // 
+  // 安全设计:
+  // - 使用 useRef 保持计数器状态，避免重渲染丢失
+  // - 添加 isDisconnectingRef 防止并发断开
+  // - 异步等待 disconnect 完成
+  // - 使用类型守卫确保接口兼容性
+  // ============================================================================
+  useEffect(() => {
+    // 类型守卫：检查 ethereum provider
+    const hasEthereumProvider = (
+      provider: unknown
+    ): provider is { request: (args: { method: string }) => Promise<unknown[]> } => {
+      return (
+        typeof provider === 'object' &&
+        provider !== null &&
+        'request' in provider &&
+        typeof (provider as { request: unknown }).request === 'function'
+      )
+    }
+
+    console.log('[Wallet Lock Detection] useEffect triggered, isConnected:', isConnected)
+    console.log('[Wallet Lock Detection] window.ethereum:', typeof window.ethereum)
+
+    if (typeof window === 'undefined') {
+      console.log('[Wallet Lock Detection] window is undefined, skipping')
+      return
+    }
+    if (!hasEthereumProvider(window.ethereum)) {
+      console.log('[Wallet Lock Detection] ethereum provider not found or invalid')
+      return
+    }
+    console.log('[Wallet Lock Detection] ethereum provider validated')
+    
+    if (!isConnected) {
+      // 断开连接时重置计数器
+      consecutiveEmptyRef.current = 0
+      isDisconnectingRef.current = false
+      console.log('[Wallet Lock Detection] not connected, skipping detection')
+      return
+    }
+    
+    console.log('[Wallet Lock Detection] starting lock detection...')
+
+    const checkMetaMaskLockStatus = async () => {
+      // 防止并发断开操作
+      if (isDisconnectingRef.current) return
+
+      try {
+        console.debug('[Wallet] Checking MetaMask lock status...')
+        
+        // 使用 eth_accounts 而非 eth_requestAccounts，避免触发弹窗
+        const accounts = await window.ethereum.request({
+          method: 'eth_accounts'
+        })
+
+        // 确保返回的是数组
+        if (!Array.isArray(accounts)) {
+          console.warn('[Wallet] Unexpected accounts format:', accounts)
+          return
+        }
+
+        if (accounts.length === 0) {
+          // 检测到空账户，增加计数器
+          consecutiveEmptyRef.current++
+          console.log(`[Wallet] Empty accounts detected (${consecutiveEmptyRef.current}/${MAX_EMPTY_CHECKS})`)
+          
+          if (consecutiveEmptyRef.current >= MAX_EMPTY_CHECKS) {
+            console.log('[Wallet] MetaMask locked confirmed, disconnecting...')
+            
+            // 标记正在断开，防止并发
+            isDisconnectingRef.current = true
+            
+            try {
+              // 按顺序执行断开操作，确保状态一致性
+              clearAuthData()
+              setIsAuthenticated(false)
+              await disconnect()  // 等待断开完成
+              
+              // 显示提示
+              toast.info(t('wallet.metamaskLocked'))
+            } catch (disconnectError) {
+              console.error('[Wallet] Disconnect failed:', disconnectError)
+            } finally {
+              // 重置标记
+              isDisconnectingRef.current = false
+            }
+          }
+        } else {
+          // 账户正常，重置计数器
+          if (consecutiveEmptyRef.current > 0) {
+            console.log('[Wallet] Accounts restored, reset counter')
+            consecutiveEmptyRef.current = 0
+          }
+        }
+      } catch (error) {
+        // 静默处理错误（某些钱包可能不支持）
+        console.debug('[Wallet] Failed to check MetaMask lock status:', error)
+      }
+    }
+
+    // 初始检测
+    checkMetaMaskLockStatus()
+
+    // 每 5 秒检测一次（减少 RPC 调用）
+    const interval = setInterval(checkMetaMaskLockStatus, POLLING_INTERVAL)
+
+    // 页面重新获得焦点时立即检测
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.debug('[Wallet] Page visible, checking lock status...')
+        checkMetaMaskLockStatus()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // 清理副作用
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      // 重置计数器，避免下次连接携带旧状态
+      consecutiveEmptyRef.current = 0
+      isDisconnectingRef.current = false
+      console.debug('[Wallet] Lock detection cleanup completed')
+    }
+  }, [isConnected, disconnect, t])
 
   // 钱包连接后自动签名登录
   useEffect(() => {
