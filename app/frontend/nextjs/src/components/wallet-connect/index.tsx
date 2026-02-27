@@ -255,7 +255,7 @@ export function WalletConnect() {
       if (isDisconnectingRef.current) return
 
       try {
-        console.debug('[Wallet] Checking MetaMask lock status...')
+        console.log('[Wallet Lock Detection] Checking MetaMask lock status...')
         
         // 使用 eth_accounts 而非 eth_requestAccounts，避免触发弹窗
         const accounts = await window.ethereum.request({
@@ -264,17 +264,44 @@ export function WalletConnect() {
 
         // 确保返回的是数组
         if (!Array.isArray(accounts)) {
-          console.warn('[Wallet] Unexpected accounts format:', accounts)
+          console.warn('[Wallet Lock Detection] Unexpected accounts format:', accounts)
           return
         }
 
-        if (accounts.length === 0) {
+        console.log('[Wallet Lock Detection] accounts:', accounts)
+        
+        // 关键问题：MetaMask 锁定后 eth_accounts 仍可能返回已授权地址
+        // 解决方案：尝试调用 wallet_getPermissions 检测权限状态
+        let isLocked = accounts.length === 0
+        
+        if (!isLocked && accounts.length > 0) {
+          // 账户存在，进一步检测 MetaMask 是否锁定
+          try {
+            // 尝试获取权限，如果锁定可能会返回空或特定错误
+            const permissions = await window.ethereum.request({
+              method: 'wallet_getPermissions'
+            })
+            console.log('[Wallet Lock Detection] permissions:', permissions)
+            
+            // 如果 permissions 为空数组，可能表示锁定
+            if (!Array.isArray(permissions) || permissions.length === 0) {
+              console.log('[Wallet Lock Detection] no permissions, might be locked')
+              isLocked = true
+            }
+          } catch (permError) {
+            // 如果调用失败，很可能是因为锁定
+            console.log('[Wallet Lock Detection] wallet_getPermissions failed, likely locked:', permError)
+            isLocked = true
+          }
+        }
+        
+        if (isLocked) {
           // 检测到空账户，增加计数器
           consecutiveEmptyRef.current++
-          console.log(`[Wallet] Empty accounts detected (${consecutiveEmptyRef.current}/${MAX_EMPTY_CHECKS})`)
+          console.log(`[Wallet Lock Detection] Empty accounts detected (${consecutiveEmptyRef.current}/${MAX_EMPTY_CHECKS})`)
           
           if (consecutiveEmptyRef.current >= MAX_EMPTY_CHECKS) {
-            console.log('[Wallet] MetaMask locked confirmed, disconnecting...')
+            console.log('[Wallet Lock Detection] MetaMask locked confirmed, disconnecting...')
             
             // 标记正在断开，防止并发
             isDisconnectingRef.current = true
@@ -288,7 +315,7 @@ export function WalletConnect() {
               // 显示提示
               toast.info(t('wallet.metamaskLocked'))
             } catch (disconnectError) {
-              console.error('[Wallet] Disconnect failed:', disconnectError)
+              console.error('[Wallet Lock Detection] Disconnect failed:', disconnectError)
             } finally {
               // 重置标记
               isDisconnectingRef.current = false
@@ -297,13 +324,13 @@ export function WalletConnect() {
         } else {
           // 账户正常，重置计数器
           if (consecutiveEmptyRef.current > 0) {
-            console.log('[Wallet] Accounts restored, reset counter')
+            console.log('[Wallet Lock Detection] Accounts restored, reset counter')
             consecutiveEmptyRef.current = 0
           }
         }
       } catch (error) {
         // 静默处理错误（某些钱包可能不支持）
-        console.debug('[Wallet] Failed to check MetaMask lock status:', error)
+        console.log('[Wallet Lock Detection] Failed to check MetaMask lock status:', error)
       }
     }
 
@@ -316,7 +343,7 @@ export function WalletConnect() {
     // 页面重新获得焦点时立即检测
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.debug('[Wallet] Page visible, checking lock status...')
+        console.log('[Wallet Lock Detection] Page visible, checking lock status...')
         checkMetaMaskLockStatus()
       }
     }
@@ -329,7 +356,7 @@ export function WalletConnect() {
       // 重置计数器，避免下次连接携带旧状态
       consecutiveEmptyRef.current = 0
       isDisconnectingRef.current = false
-      console.debug('[Wallet] Lock detection cleanup completed')
+      console.log('[Wallet Lock Detection] cleanup completed')
     }
   }, [isConnected, disconnect, t])
 
