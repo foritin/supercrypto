@@ -56,22 +56,22 @@ export default function HomePage() {
       <section className="hero-section">
         {/* 背景 - 移动端使用静态图片，桌面端使用视频 */}
         <div className="hero-video-container">
-          {/* 背景: 稍亮的深色渐变 */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0d1a15] via-[#0f1f18] to-[#0d1a15]" />
+          {/* 背景: 深色渐变 */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0A0F1A] via-[#0d1320] to-[#0A0F1A]" />
           
           {/* 装饰性网格背景 */}
           <div 
             className="absolute inset-0 opacity-[0.03]"
             style={{
-              backgroundImage: `linear-gradient(rgba(0, 212, 170, 0.5) 1px, transparent 1px),
-                               linear-gradient(90deg, rgba(0, 212, 170, 0.5) 1px, transparent 1px)`,
+              backgroundImage: `linear-gradient(rgba(0, 102, 255, 0.5) 1px, transparent 1px),
+                               linear-gradient(90deg, rgba(0, 102, 255, 0.5) 1px, transparent 1px)`,
               backgroundSize: '50px 50px',
             }}
           />
           
-          {/* 桌面端: 视频背景，提高透明度 */}
+          {/* 桌面端: 视频背景 */}
           <video
-            className="hero-video hidden md:block opacity-50"
+            className="hero-video hidden md:block opacity-65"
             autoPlay
             muted
             loop
@@ -105,20 +105,20 @@ export default function HomePage() {
               {/* Requirements: 1.1 - 渐变色标题 */}
               <div>
                 <h1
-                  className="text-[clamp(48px,8vw,96px)] font-extrabold mb-0 leading-[1.1] tracking-[-0.02em] text-white text-center"
+                  className="font-display text-[clamp(48px,8vw,96px)] font-bold mb-0 leading-[1.1] tracking-[-0.02em] text-center"
                 >
-                  {/* Line 1: Bridge + Dynamic Word - 金/橙色渐变 */}
+                  {/* Line 1: Bridge + Dynamic Word - 古铜金渐变 */}
                   <span className="block whitespace-nowrap">
                     {t('home.heroTitle.unlock')}{' '}
                     <span
                       key={animationKey}
-                      className="inline-block min-w-[280px] bg-gradient-to-r from-gold via-[#FFA500] to-gold bg-clip-text text-transparent typewriter-text"
+                      className="inline-block min-w-[280px] bg-gradient-to-r from-[#D4AF37] via-[#E5C76B] to-[#D4AF37] bg-clip-text text-transparent typewriter-text"
                     >
                       {dynamicText}
                     </span>
                   </span>
-                  {/* Line 2: to DeFi Yields - 青色渐变 */}
-                  <span className="block bg-gradient-to-r from-primary via-[#00E5BB] to-primary bg-clip-text text-transparent">
+                  {/* Line 2: to DeFi Yields - 深海蓝渐变 */}
+                  <span className="block bg-gradient-to-r from-[#0066FF] via-[#3385FF] to-[#0066FF] bg-clip-text text-transparent">
                     {t('home.heroTitle.onWeb3')}
                   </span>
                 </h1>
@@ -136,7 +136,7 @@ export default function HomePage() {
                 <br />
                 <span className="mt-2 inline-block">
                   Earn up to{" "}
-                  <span className="bg-gradient-to-r from-gold to-[#FFA500] bg-clip-text text-transparent font-semibold">
+                  <span className="bg-gradient-to-r from-[#D4AF37] to-[#E5C76B] bg-clip-text text-transparent font-semibold">
                     15% APY
                   </span>
                   {" "}backed by tokenized real-world assets.
@@ -151,8 +151,8 @@ export default function HomePage() {
                   onClick={() => router.push("/assets")}
                   className="group relative min-w-[180px] h-[56px] px-10 rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                   style={{
-                    background: 'linear-gradient(135deg, #00D4AA 0%, #00B896 100%)',
-                    boxShadow: '0 4px 24px rgba(0, 212, 170, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+                    background: 'linear-gradient(135deg, #0066FF 0%, #0052CC 100%)',
+                    boxShadow: '0 4px 24px rgba(0, 102, 255, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
                   }}
                 >
                   {/* Shine overlay */}
@@ -219,7 +219,7 @@ export default function HomePage() {
             <span className="text-primary text-sm font-semibold uppercase tracking-[2px]">
               Features
             </span>
-            <h2 className="mt-4 mb-6 text-3xl md:text-4xl font-bold text-white">
+            <h2 className="font-display mt-4 mb-6 text-3xl md:text-4xl font-semibold text-white">
               {t("home.features.title")}
             </h2>
             <p className="text-lg text-white/65 max-w-[600px] mx-auto text-center">
@@ -245,7 +245,7 @@ export default function HomePage() {
             <span className="text-gold text-sm font-semibold uppercase tracking-[2px]">
               How It Works
             </span>
-            <h2 className="mt-4 mb-4 text-3xl md:text-4xl font-bold text-white">
+            <h2 className="font-display mt-4 mb-4 text-3xl md:text-4xl font-semibold text-white">
               {t("home.howItWorks.title")}
             </h2>
             <p className="text-lg text-white/65 max-w-[600px] mx-auto text-center">
@@ -302,7 +302,7 @@ export default function HomePage() {
           className="max-w-[800px] mx-auto text-center relative z-[1]"
         >
           <h2
-            className="mb-5 text-[clamp(28px,4vw,42px)] font-bold text-white"
+            className="font-display mb-5 text-[clamp(28px,4vw,42px)] font-semibold text-white"
           >
             {t("home.finalCta.title")}
           </h2>
@@ -314,7 +314,7 @@ export default function HomePage() {
           <RippleButton
             variant="default"
             onClick={() => router.push("/assets")}
-            className="h-[60px] px-14 text-lg font-semibold rounded-[14px] shadow-[0_0_40px_rgba(0,212,170,0.35)]"
+            className="h-[60px] px-14 text-lg font-semibold rounded-[14px] shadow-[0_0_40px_rgba(0,102,255,0.35)]"
           >
             <Rocket className="w-5 h-5 mr-2" />
             {t("home.finalCta.button")}

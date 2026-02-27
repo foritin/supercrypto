@@ -9,24 +9,27 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Primary: Brand teal color
+        // Primary: Deep Sea Blue
         primary:
-          'bg-[var(--color-brand-primary)] text-white hover:bg-[var(--color-brand-primary-dark)] active:bg-[var(--color-brand-primary-dark)] shadow-lg shadow-[var(--color-brand-primary)]/25',
-        // Secondary: Outline style
+          'bg-[var(--color-brand-primary)] text-white hover:bg-[var(--color-brand-primary-light)] active:bg-[var(--color-brand-primary-dark)] shadow-lg shadow-[var(--color-brand-primary)]/25',
+        // Secondary: Outline with primary color
         secondary:
-          'border border-[var(--color-border-default)] bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface-primary)] hover:border-[var(--color-border-focus)]',
+          'border border-[var(--color-brand-primary)] bg-transparent text-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary)]/10 hover:border-[var(--color-brand-primary-light)]',
+        // Accent: Antique Gold for emphasis
+        accent:
+          'bg-[var(--color-brand-accent)] text-[var(--color-bg-dark)] hover:bg-[var(--color-brand-accent-light)] active:bg-[var(--color-brand-accent-dark)] shadow-lg shadow-[var(--color-brand-accent)]/25 font-semibold',
         // Ghost: Transparent background
         ghost:
-          'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface-primary)] hover:text-[var(--color-text-primary)]',
+          'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface)] hover:text-[var(--color-text-primary)]',
         // Destructive: Error state
         destructive:
-          'bg-[var(--color-error)] text-white hover:bg-[var(--color-error-dark)] shadow-lg shadow-[var(--color-error)]/25',
+          'bg-[var(--color-error)] text-white hover:bg-[var(--color-error-light)] active:bg-[var(--color-error-dark)] shadow-lg shadow-[var(--color-error)]/25',
         // Glass: Glassmorphism effect
         glass:
-          'glass text-[var(--color-text-primary)] hover:bg-[var(--glass-bg-elevated)] active:scale-[0.98]',
+          'bg-[var(--color-glass-bg)] backdrop-blur-md border border-[var(--color-glass-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-glass-bg-elevated)] active:scale-[0.98]',
         // Outline variant
         outline:
-          'border border-[var(--color-brand-primary)] bg-transparent text-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary)]/10',
+          'border border-[var(--color-border-default)] bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] hover:border-[var(--color-border-hover)]',
       },
       size: {
         default: 'h-10 px-4 py-2',

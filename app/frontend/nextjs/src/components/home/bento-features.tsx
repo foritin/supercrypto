@@ -9,6 +9,11 @@ import { cn } from '@/lib/utils';
 /**
  * BentoFeatures 组件 - Bento Grid 布局的功能展示区
  * 
+ * 配色方案更新:
+ * - Security: #0066FF (深海蓝)
+ * - Returns: #D4AF37 (古铜金)
+ * - Global: #00C9A7 (青绿)
+ * 
  * 布局: 左侧 2/3 宽度大卡片，右侧 1/3 宽度上下两个小卡片
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
  */
@@ -19,7 +24,10 @@ interface Feature {
   descriptionKey: string;
   icon: React.ReactNode;
   iconColor: string;
-  iconBgClass: string;
+  glowColor: string;
+  gradientFrom: string;
+  gradientTo: string;
+  borderColor: string;
   size: 'large' | 'small';
 }
 
@@ -29,8 +37,11 @@ const FEATURES: Feature[] = [
     titleKey: 'home.features.security.title',
     descriptionKey: 'home.features.security.description',
     icon: <Shield className="w-8 h-8" />,
-    iconColor: '#00D4AA',
-    iconBgClass: 'icon-box-primary',
+    iconColor: '#0066FF',  // 深海蓝
+    glowColor: 'rgba(0, 102, 255, 0.2)',
+    gradientFrom: 'rgba(0, 102, 255, 0.2)',
+    gradientTo: 'rgba(0, 102, 255, 0.05)',
+    borderColor: 'rgba(0, 102, 255, 0.3)',
     size: 'large',
   },
   {
@@ -38,8 +49,11 @@ const FEATURES: Feature[] = [
     titleKey: 'home.features.returns.title',
     descriptionKey: 'home.features.returns.description',
     icon: <DollarSign className="w-7 h-7" />,
-    iconColor: '#FFD700',
-    iconBgClass: 'icon-box-gold',
+    iconColor: '#D4AF37',  // 古铜金
+    glowColor: 'rgba(212, 175, 55, 0.2)',
+    gradientFrom: 'rgba(212, 175, 55, 0.2)',
+    gradientTo: 'rgba(212, 175, 55, 0.05)',
+    borderColor: 'rgba(212, 175, 55, 0.3)',
     size: 'small',
   },
   {
@@ -47,8 +61,11 @@ const FEATURES: Feature[] = [
     titleKey: 'home.features.global.title',
     descriptionKey: 'home.features.global.description',
     icon: <Globe className="w-7 h-7" />,
-    iconColor: '#1890ff',
-    iconBgClass: 'icon-box-blue',
+    iconColor: '#00C9A7',  // 青绿
+    glowColor: 'rgba(0, 201, 167, 0.2)',
+    gradientFrom: 'rgba(0, 201, 167, 0.2)',
+    gradientTo: 'rgba(0, 201, 167, 0.05)',
+    borderColor: 'rgba(0, 201, 167, 0.3)',
     size: 'small',
   },
 ];
@@ -84,23 +101,28 @@ export function BentoFeatures({ className }: BentoFeaturesProps) {
           'flex flex-col justify-between'
         )}
         glow
-        glowColor="rgba(0, 212, 170, 0.2)"
+        glowColor={largeFeature.glowColor}
+        enhanced
       >
         <div>
           {/* 图标 */}
           <div
             className={cn(
               'w-16 h-16 rounded-2xl flex items-center justify-center mb-6',
-              'bg-gradient-to-br from-[rgba(0,212,170,0.2)] to-[rgba(0,212,170,0.05)]',
-              'border border-primary/30'
+              'transition-transform duration-300 hover:scale-110'
             )}
-            style={{ color: largeFeature.iconColor }}
+            style={{ 
+              background: `linear-gradient(135deg, ${largeFeature.gradientFrom} 0%, ${largeFeature.gradientTo} 100%)`,
+              border: `1px solid ${largeFeature.borderColor}`,
+              color: largeFeature.iconColor,
+              boxShadow: `0 0 20px ${largeFeature.glowColor}`
+            }}
           >
             {largeFeature.icon}
           </div>
 
-          {/* 标题 */}
-          <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+          {/* 标题 - 使用 Display 字体 */}
+          <h3 className="font-display text-2xl md:text-3xl font-semibold text-white mb-4">
             {t(largeFeature.titleKey)}
           </h3>
 
@@ -117,7 +139,7 @@ export function BentoFeatures({ className }: BentoFeaturesProps) {
               {['Certik', 'Hacken', 'Trail of Bits'].map((auditor) => (
                 <div
                   key={auditor}
-                  className="w-10 h-10 rounded-full bg-white/10 border-2 border-bg-card flex items-center justify-center text-xs font-medium text-white/70"
+                  className="w-10 h-10 rounded-full bg-white/10 border-2 border-[var(--color-bg-card)] flex items-center justify-center text-xs font-medium text-white/70"
                   title={auditor}
                 >
                   {auditor[0]}
@@ -136,22 +158,28 @@ export function BentoFeatures({ className }: BentoFeaturesProps) {
         <GlassCard
           key={feature.id}
           className="p-6 md:p-8 flex flex-col"
+          glow
+          glowColor={feature.glowColor}
+          enhanced
         >
           {/* 图标 */}
           <div
             className={cn(
               'w-14 h-14 rounded-xl flex items-center justify-center mb-5',
-              feature.id === 'returns'
-                ? 'bg-gradient-to-br from-[rgba(255,215,0,0.2)] to-[rgba(255,215,0,0.05)] border border-gold/30'
-                : 'bg-gradient-to-br from-[rgba(24,144,255,0.2)] to-[rgba(24,144,255,0.05)] border border-[rgba(24,144,255,0.3)]'
+              'transition-transform duration-300 hover:scale-110'
             )}
-            style={{ color: feature.iconColor }}
+            style={{ 
+              background: `linear-gradient(135deg, ${feature.gradientFrom} 0%, ${feature.gradientTo} 100%)`,
+              border: `1px solid ${feature.borderColor}`,
+              color: feature.iconColor,
+              boxShadow: `0 0 15px ${feature.glowColor}`
+            }}
           >
             {feature.icon}
           </div>
 
-          {/* 标题 */}
-          <h4 className="text-xl font-semibold text-white mb-3">
+          {/* 标题 - 使用 Display 字体 */}
+          <h4 className="font-display text-xl font-semibold text-white mb-3">
             {t(feature.titleKey)}
           </h4>
 

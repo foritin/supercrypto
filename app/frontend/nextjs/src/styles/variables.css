@@ -3,16 +3,19 @@
    ============================================ */
 
 :root {
-  /* Primary Colors - Green Neon */
-  --color-primary: #00d4aa;
-  --color-primary-light: #33ffcc;
-  --color-primary-dark: #00a080;
-  --color-primary-glow: rgba(0, 212, 170, 0.4);
+  /* Primary Colors - Deep Sea Blue */
+  --color-primary: #0066FF;
+  --color-primary-light: #3385FF;
+  --color-primary-dark: #0052CC;
+  --color-primary-glow: rgba(0, 102, 255, 0.4);
 
-  /* Gold Accent */
-  --color-gold: #ffd700;
-  --color-gold-light: #ffe55c;
-  --color-gold-dark: #c9a000;
+  /* Accent Colors - Antique Gold */
+  --color-accent: #00C9A7;
+  --color-accent-light: #33D9BD;
+  --color-accent-dark: #00A085;
+  --color-gold: #D4AF37;
+  --color-gold-light: #E5C76B;
+  --color-gold-dark: #B8941F;
 
   /* Status Colors */
   --color-success: #52c41a;
@@ -119,10 +122,10 @@
 /* Dark Mode (Default) */
 :root,
 .dark {
-  --bg-dark: #0a0f0d;
-  --bg-card: #111916;
-  --bg-card-hover: #151f1a;
-  --bg-elevated: #1a241e;
+  --bg-dark: #0A0F1A;
+  --bg-card: #111827;
+  --bg-card-hover: #1F2937;
+  --bg-elevated: #1F2937;
   --bg-gradient: linear-gradient(135deg, #0a0f0d 0%, #0d1512 50%, #111916 100%);
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.70);

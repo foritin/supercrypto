@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Playfair_Display, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/providers";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -8,10 +8,40 @@ import { GlobalRiskDisclaimer } from "@/components/compliance";
 import { CookieConsent } from "@/components/cookie-consent";
 import { HtmlLangSync } from "@/components/html-lang-sync";
 
-const inter = Inter({
+/**
+ * Display Font - Playfair Display
+ * 用于标题、Hero 文字，传达优雅、信任、金融专业感
+ */
+const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
+  variable: "--font-display",
+  weight: ["600", "700"],
+  fallback: ["Georgia", "serif"],
+});
+
+/**
+ * Body Font - Plus Jakarta Sans
+ * 用于正文、UI 文字，现代清晰，保证可读性
+ */
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-body",
+  weight: ["400", "500", "600", "700"],
+  fallback: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+});
+
+/**
+ * Mono Font - JetBrains Mono
+ * 用于代码、地址、数值，清晰区分相似字符
+ */
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-mono",
+  weight: ["400", "500"],
+  fallback: ["SF Mono", "Monaco", "Consolas", "monospace"],
 });
 
 export const metadata: Metadata = {
@@ -29,11 +59,11 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={inter.variable}
+      className={`${playfairDisplay.variable} ${plusJakartaSans.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
       data-scroll-behavior="smooth"
     >
-      <body suppressHydrationWarning>
+      <body suppressHydrationWarning className="font-body">
         <ThemeProvider>
           <Providers>
             <HtmlLangSync />

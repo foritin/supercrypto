@@ -1,84 +1,190 @@
 /* ============================================
    SuperCrypto - Color Design Tokens
    ============================================
-   Based on: Glassmorphism 2.0 Design System
-   Primary: #00D4AA (Teal/Turquoise)
-   Secondary: #6366F1 (Indigo)
-   Background Base: #0A0F0D
+   Theme: Deep Sea Finance
+   Primary: #0066FF (Deep Sea Blue)
+   Secondary: #00C9A7 (Teal Green)
+   Accent: #D4AF37 (Antique Gold)
+   Background: #0A0F1A (Dark Navy)
    ============================================ */
 
 :root {
-  /* Brand Colors */
-  --color-brand-primary: #00D4AA;
-  --color-brand-primary-light: #4DE0BF;
-  --color-brand-primary-dark: #00B896;
-  --color-brand-secondary: #6366F1;
-  --color-brand-secondary-light: #818CF8;
-  --color-brand-secondary-dark: #4F46E5;
+  /* ============================================
+     Brand Colors
+     ============================================ */
+  --color-brand-primary: #0066FF;
+  --color-brand-primary-light: #3385FF;
+  --color-brand-primary-dark: #0052CC;
+  --color-brand-primary-glow: rgba(0, 102, 255, 0.4);
 
-  /* Semantic Colors */
+  --color-brand-secondary: #00C9A7;
+  --color-brand-secondary-light: #33D9BD;
+  --color-brand-secondary-dark: #00A085;
+  --color-brand-secondary-glow: rgba(0, 201, 167, 0.4);
+
+  --color-brand-accent: #D4AF37;
+  --color-brand-accent-light: #E5C76B;
+  --color-brand-accent-dark: #B8941F;
+  --color-brand-accent-glow: rgba(212, 175, 55, 0.4);
+
+  /* ============================================
+     Semantic Colors
+     ============================================ */
   --color-success: #10B981;
   --color-success-light: #86EFAC;
   --color-success-dark: #059669;
-  
+  --color-success-glow: rgba(16, 185, 129, 0.3);
+
   --color-warning: #F59E0B;
   --color-warning-light: #FCD34D;
   --color-warning-dark: #D97706;
-  
+  --color-warning-glow: rgba(245, 158, 11, 0.3);
+
   --color-error: #EF4444;
   --color-error-light: #FCA5A5;
   --color-error-dark: #DC2626;
-  
+  --color-error-glow: rgba(239, 68, 68, 0.3);
+
   --color-info: #3B82F6;
   --color-info-light: #93C5FD;
   --color-info-dark: #2563EB;
+  --color-info-glow: rgba(59, 130, 246, 0.3);
 
-  /* Background Colors - Dark Theme */
-  --color-bg-base: #0A0F0D;
-  --color-bg-elevated: #111815;
-  --color-bg-overlay: #1A211E;
-  --color-bg-surface-primary: rgba(255, 255, 255, 0.05);
-  --color-bg-surface-secondary: rgba(255, 255, 255, 0.08);
-  --color-bg-surface-tertiary: rgba(255, 255, 255, 0.12);
+  /* ============================================
+     Background Colors - Dark Theme (Default)
+     ============================================ */
+  --color-bg-base: #0A0F1A;
+  --color-bg-elevated: #111827;
+  --color-bg-overlay: #1F2937;
+  --color-bg-surface: rgba(255, 255, 255, 0.05);
+  --color-bg-surface-hover: rgba(255, 255, 255, 0.08);
 
-  /* Text Colors - WCAG 2.1 AA Compliant */
+  /* ============================================
+     Text Colors - Dark Theme
+     WCAG 2.1 AA Compliant
+     ============================================ */
   --color-text-primary: rgba(255, 255, 255, 0.95);    /* Contrast ~15:1 */
   --color-text-secondary: rgba(255, 255, 255, 0.75);  /* Contrast ~8:1 */
-  --color-text-tertiary: rgba(255, 255, 255, 0.60);   /* Contrast ~5:1 */
-  --color-text-disabled: rgba(255, 255, 255, 0.40);   /* Contrast ~3:1 */
+  --color-text-tertiary: rgba(255, 255, 255, 0.55);   /* Contrast ~5:1 */
+  --color-text-disabled: rgba(255, 255, 255, 0.35);   /* Contrast ~3:1 */
   --color-text-placeholder: rgba(255, 255, 255, 0.45);
 
-  /* Border Colors */
+  /* ============================================
+     Border Colors
+     ============================================ */
   --color-border-default: rgba(255, 255, 255, 0.08);
-  --color-border-focus: #00D4AA;
+  --color-border-hover: rgba(255, 255, 255, 0.12);
+  --color-border-focus: var(--color-brand-primary);
+  --color-border-accent: rgba(212, 175, 55, 0.3);
   --color-border-error: rgba(239, 68, 68, 0.5);
 
-  /* Glassmorphism Colors */
-  --color-glass-bg: rgba(17, 24, 21, 0.7);
-  --color-glass-bg-elevated: rgba(26, 33, 30, 0.85);
+  /* ============================================
+     Glassmorphism Colors
+     ============================================ */
+  --color-glass-bg: rgba(17, 24, 39, 0.7);
+  --color-glass-bg-elevated: rgba(31, 41, 55, 0.85);
   --color-glass-border: rgba(255, 255, 255, 0.08);
   --color-glass-border-elevated: rgba(255, 255, 255, 0.12);
 
-  /* Status Colors (for transactions/KYC) */
+  /* ============================================
+     Status Colors (for transactions/KYC)
+     ============================================ */
   --color-status-pending: #F59E0B;
   --color-status-processing: #3B82F6;
   --color-status-completed: #10B981;
   --color-status-failed: #EF4444;
+
+  /* ============================================
+     Gradients
+     ============================================ */
+  --gradient-hero: linear-gradient(135deg, #0066FF 0%, #00C9A7 100%);
+  --gradient-hero-text: linear-gradient(135deg, #0066FF 0%, #00C9A7 100%);
+  --gradient-accent: linear-gradient(135deg, #D4AF37 0%, #E5C76B 100%);
+  --gradient-accent-text: linear-gradient(135deg, #D4AF37 0%, #F0D878 100%);
+  --gradient-glow-primary: radial-gradient(ellipse at top, rgba(0, 102, 255, 0.15) 0%, transparent 50%);
+  --gradient-glow-accent: radial-gradient(ellipse at top, rgba(212, 175, 55, 0.15) 0%, transparent 50%);
+  --gradient-bg-dark: linear-gradient(180deg, #0A0F1A 0%, #111827 100%);
+  --gradient-card-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%, rgba(255, 255, 255, 0.05) 100%);
 }
 
-/* Dark mode is default, but support light mode override */
-[data-theme="light"] {
+/* ============================================
+   Light Mode Override
+   ============================================ */
+[data-theme="light"],
+.light {
+  /* Background Colors */
   --color-bg-base: #ffffff;
   --color-bg-elevated: #f8fafc;
   --color-bg-overlay: #f1f5f9;
-  
+  --color-bg-surface: rgba(15, 23, 42, 0.05);
+  --color-bg-surface-hover: rgba(15, 23, 42, 0.08);
+
+  /* Text Colors */
   --color-text-primary: rgba(15, 23, 42, 0.95);
   --color-text-secondary: rgba(15, 23, 42, 0.75);
-  --color-text-tertiary: rgba(15, 23, 42, 0.60);
-  --color-text-disabled: rgba(15, 23, 42, 0.40);
-  
+  --color-text-tertiary: rgba(15, 23, 42, 0.55);
+  --color-text-disabled: rgba(15, 23, 42, 0.35);
+  --color-text-placeholder: rgba(15, 23, 42, 0.45);
+
+  /* Border Colors */
   --color-border-default: rgba(15, 23, 42, 0.08);
-  
+  --color-border-hover: rgba(15, 23, 42, 0.12);
+
+  /* Glassmorphism */
   --color-glass-bg: rgba(255, 255, 255, 0.8);
+  --color-glass-bg-elevated: rgba(248, 250, 252, 0.9);
   --color-glass-border: rgba(15, 23, 42, 0.08);
+  --color-glass-border-elevated: rgba(15, 23, 42, 0.12);
 }
+
+/* ============================================
+   Color Utility Classes
+   ============================================ */
+
+/* Brand Colors */
+.bg-brand-primary { background-color: var(--color-brand-primary); }
+.bg-brand-secondary { background-color: var(--color-brand-secondary); }
+.bg-brand-accent { background-color: var(--color-brand-accent); }
+
+.text-brand-primary { color: var(--color-brand-primary); }
+.text-brand-secondary { color: var(--color-brand-secondary); }
+.text-brand-accent { color: var(--color-brand-accent); }
+
+.border-brand-primary { border-color: var(--color-brand-primary); }
+.border-brand-secondary { border-color: var(--color-brand-secondary); }
+.border-brand-accent { border-color: var(--color-brand-accent); }
+
+/* Semantic Colors */
+.bg-success { background-color: var(--color-success); }
+.bg-warning { background-color: var(--color-warning); }
+.bg-error { background-color: var(--color-error); }
+.bg-info { background-color: var(--color-info); }
+
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+.text-info { color: var(--color-info); }
+
+/* Background Colors */
+.bg-base { background-color: var(--color-bg-base); }
+.bg-elevated { background-color: var(--color-bg-elevated); }
+.bg-overlay { background-color: var(--color-bg-overlay); }
+.bg-surface { background-color: var(--color-bg-surface); }
+
+/* Text Colors */
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+.text-disabled { color: var(--color-text-disabled); }
+
+/* Border Colors */
+.border-default { border-color: var(--color-border-default); }
+.border-hover { border-color: var(--color-border-hover); }
+.border-focus { border-color: var(--color-border-focus); }
+.border-accent { border-color: var(--color-border-accent); }
+
+/* Glow Effects */
+.glow-primary { box-shadow: 0 0 20px var(--color-brand-primary-glow); }
+.glow-accent { box-shadow: 0 0 20px var(--color-brand-accent-glow); }
+.glow-success { box-shadow: 0 0 20px var(--color-success-glow); }
+.glow-error { box-shadow: 0 0 20px var(--color-error-glow); }
