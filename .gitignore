@@ -11,7 +11,7 @@ __pycache__
 
 node_modules/
 
-.claude
+# .claude - now a submodule
 .cursor
 .vscode
 .playwright-mcp
