@@ -500,6 +500,23 @@ export function MockTokenMint() {
           </Select>
         </div>
 
+        {/* Address Warning */}
+        {!isAddressesLoading && !tokenAddress && (
+          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span className="font-medium text-yellow-500">
+                  合约地址未配置
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  请检查后端服务是否正常运行，并确认 contract_deployment 表中已部署 {tokenInfo.symbol} 合约
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Admin Balance */}
         <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
           <div className="grid grid-cols-2 gap-4">

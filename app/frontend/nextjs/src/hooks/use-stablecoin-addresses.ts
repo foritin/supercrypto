@@ -1,9 +1,11 @@
 'use client'
 /**
  * useStablecoinAddresses Hook
- * 从后端动态获取 USDT/USDC 合约地址，失败时回退到硬编码默认值
+ * 从后端动态获取 USDT/USDC 合约地址
+ * 如果后端未返回地址，则地址为空字符串，并在控制台发出警告
  */
 import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { contractService, type ContractAddressItem } from '@/services/contract'
 import { MOCK_TOKEN_ADDRESSES } from '@/contracts/mock-token'
 
@@ -65,6 +67,32 @@ export function useStablecoinAddresses(): UseStablecoinAddressesReturn {
   })
 
   const result = resolveStablecoinAddresses(data, defaults)
+
+  // 警告提示：如果未从后端获取到地址
+  useEffect(() => {
+    if (!isLoading) {
+      if (!result.isFromBackend) {
+        console.warn(
+          '[useStablecoinAddresses] ⚠️ 未从后端获取到稳定币合约地址。\n' +
+          '可能原因：\n' +
+          '1. 后端服务未启动或不可用\n' +
+          '2. 数据库中未部署 MockUSDT/MockUSDC 合约\n' +
+          '3. 合约名称不匹配（应为 MockUSDT/USDT 或 MockUSDC/USDC）\n' +
+          '请检查：\n' +
+          '- 后端服务状态\n' +
+          '- contract_deployment 表中是否有 scope=global, contract_type=stablecoin 的记录'
+        )
+      } else {
+        // 检查是否有空地址
+        if (!result.addresses.MockUSDT) {
+          console.warn('[useStablecoinAddresses] ⚠️ MockUSDT 地址为空')
+        }
+        if (!result.addresses.MockUSDC) {
+          console.warn('[useStablecoinAddresses] ⚠️ MockUSDC 地址为空')
+        }
+      }
+    }
+  }, [isLoading, result.isFromBackend, result.addresses])
 
   return {
     addresses: result.addresses,
