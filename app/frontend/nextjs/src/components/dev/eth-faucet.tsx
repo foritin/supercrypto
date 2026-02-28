@@ -25,7 +25,7 @@ import { useCurrentUser, useNativeBalance } from '@/hooks'
 
 export function EthFaucet() {
   const { t } = useTranslation()
-  const { isConnected } = useAccount()
+  const { isConnected, address: currentAddress } = useAccount()
   const { isAdmin } = useCurrentUser()
   const { refetch: refetchBalance } = useNativeBalance()
   const [address, setAddress] = useState('')
@@ -64,7 +64,18 @@ export function EthFaucet() {
         amount_eth: parseFloat(amount),
       })
       setLastResult({ old: result.old_balance_eth, new: result.new_balance_eth })
-      notification.success(t('dev.faucet.success', { amount: result.amount_eth }))
+
+      // 如果充值的是当前连接的钱包地址，提示刷新 MetaMask
+      const isCurrentUser = address.toLowerCase() === currentAddress?.toLowerCase()
+      if (isCurrentUser) {
+        notification.success(
+          `${t('dev.faucet.success', { amount: result.amount_eth })}。如果 MetaMask 余额未更新，请切换网络后切回。`,
+          { duration: 5000 }
+        )
+      } else {
+        notification.success(t('dev.faucet.success', { amount: result.amount_eth }))
+      }
+
       // Refresh wallet balance after faucet success
       await refetchBalance()
     } catch (err: unknown) {

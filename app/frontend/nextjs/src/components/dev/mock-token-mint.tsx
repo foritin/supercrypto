@@ -27,6 +27,7 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
   useChainId,
+  useBalance,
 } from "wagmi";
 import { parseUnits, formatUnits } from "viem";
 
@@ -102,7 +103,18 @@ export function MockTokenMint() {
     }
   }, [isAdmin]);
 
-  // Read admin balance (手动 refetch，不再自动轮询)
+  // Read admin ETH balance (用于检查是否有 gas)
+  const {
+    data: ethBalance,
+    isLoading: isEthBalanceLoading,
+  } = useBalance({
+    address: address as `0x${string}` | undefined,
+    query: {
+      enabled: !!address,
+    },
+  });
+
+  // Read admin token balance (手动 refetch，不再自动轮询)
   const {
     data: adminBalance,
     isLoading: isBalanceLoading,
@@ -116,6 +128,9 @@ export function MockTokenMint() {
       enabled: !!address,
     },
   });
+
+  // 检查是否有足够的 ETH 支付 gas
+  const hasEthForGas = ethBalance && ethBalance.value > 0n;
 
   // Read recipient balance (手动 refetch，不再自动轮询)
   const { data: recipientBalance, refetch: refetchRecipientBalance } =
@@ -517,6 +532,23 @@ export function MockTokenMint() {
           </div>
         )}
 
+        {/* ETH Balance Warning - 如果没有 ETH 支付 gas */}
+        {!isEthBalanceLoading && !hasEthForGas && (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span className="font-medium text-red-500">
+                  ETH 余额不足
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  铸造代币需要支付 gas 费用。请先到"水龙头"标签页给当前账户充值 ETH。
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Admin Balance */}
         <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
           <div className="grid grid-cols-2 gap-4">
@@ -673,7 +705,7 @@ export function MockTokenMint() {
         {/* Mint & Transfer Button */}
         <Button
           onClick={handleMintAndTransfer}
-          disabled={!parsedMintAmount || parsedMintAmount <= 0 || !selectedRecipient || isProcessing || isAddressesLoading}
+          disabled={!parsedMintAmount || parsedMintAmount <= 0 || !selectedRecipient || isProcessing || isAddressesLoading || !hasEthForGas}
           className="w-full h-11"
         >
           {isProcessing ? (
