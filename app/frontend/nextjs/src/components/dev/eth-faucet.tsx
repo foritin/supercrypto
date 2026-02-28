@@ -23,6 +23,17 @@ import { notification } from '@/lib/notification'
 import { devToolsService, type TokenRecipient } from '@/services/dev-tools'
 import { useCurrentUser, useNativeBalance } from '@/hooks'
 
+// EIP-1193 Provider 类型扩展
+declare global {
+  interface Window {
+    ethereum?: {
+      on?: (event: string, handler: (...args: unknown[]) => void) => void
+      removeListener?: (event: string, handler: (...args: unknown[]) => void) => void
+      request?: (args: { method: string; params?: unknown[] }) => Promise<unknown>
+    }
+  }
+}
+
 export function EthFaucet() {
   const { t } = useTranslation()
   const { isConnected, address: currentAddress } = useAccount()
@@ -55,23 +66,42 @@ export function EthFaucet() {
   }, [isAdmin])
 
   // 获取切换网络函数
-  const { switchChain } = useSwitchChain()
+  const { switchChain, isPending: isSwitching } = useSwitchChain()
 
   // 刷新 MetaMask 余额（通过切换网络再切回）
   const handleRefreshMetaMask = async () => {
     try {
-      // 先切换到 Sepolia，再切回 Hardhat，强制刷新余额
-      await switchChain({ chainId: 11155111 })
-      // 稍微等待一下再切回
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // 方案1: 尝试使用 Mainnet -> Hardhat（Mainnet 通常已配置）
+      try {
+        await switchChain({ chainId: 1 })
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        await switchChain({ chainId: 31337 })
+        notification.success('MetaMask 余额已刷新')
+        return
+      } catch (mainnetError) {
+        console.log('Mainnet switch failed, trying alternative...', mainnetError)
+      }
+
+      // 方案2: 如果 Mainnet 失败，尝试直接重新连接 Hardhat
+      // 先断开再连接，强制刷新
       await switchChain({ chainId: 31337 })
-      notification.success('MetaMask 余额已刷新')
+
+      // 方案3: 使用 provider 强制刷新
+      if (typeof window !== 'undefined' && window.ethereum?.request) {
+        // 调用 eth_requestAccounts 刷新账户状态
+        await window.ethereum.request({
+          method: 'eth_requestAccounts',
+        })
+        notification.success('MetaMask 已刷新')
+      }
     } catch (error) {
-      // 用户可能拒绝了切换，直接切回 Hardhat
+      console.error('Refresh failed:', error)
+      notification.error('刷新失败，请手动在 MetaMask 中切换网络后再切回 Hardhat')
+      // 确保回到 Hardhat
       try {
         await switchChain({ chainId: 31337 })
       } catch {
-        // 忽略错误
+        // 忽略
       }
     }
   }
@@ -260,10 +290,15 @@ export function EthFaucet() {
                 variant="outline"
                 size="sm"
                 onClick={handleRefreshMetaMask}
+                disabled={isSwitching}
                 className="w-full text-xs"
               >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                刷新 MetaMask 余额
+                {isSwitching ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                )}
+                {isSwitching ? '刷新中...' : '刷新 MetaMask 余额'}
               </Button>
             </div>
           </div>
