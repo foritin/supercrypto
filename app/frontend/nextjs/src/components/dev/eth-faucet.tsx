@@ -228,6 +228,13 @@ export function EthFaucet() {
                 </span>
               </div>
             </div>
+            {/* MetaMask 刷新提示 */}
+            <div className="mt-3 pt-3 border-t border-primary/10 text-xs text-yellow-500">
+              <span className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                如果 MetaMask 仍显示 0 ETH，请点击钱包内的"刷新"按钮，或切换网络后切回 Hardhat
+              </span>
+            </div>
           </div>
         )}
 
