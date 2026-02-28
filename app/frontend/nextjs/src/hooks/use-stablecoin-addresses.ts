@@ -31,8 +31,9 @@ export function resolveStablecoinAddresses(
     return { addresses: { ...defaults }, isFromBackend: false }
   }
 
-  const usdtItem = contracts.find((c) => c.name === 'MockUSDT')
-  const usdcItem = contracts.find((c) => c.name === 'MockUSDC')
+  // 支持多种命名格式：MockUSDT/USDT 和 MockUSDC/USDC
+  const usdtItem = contracts.find((c) => c.name === 'MockUSDT' || c.name === 'USDT')
+  const usdcItem = contracts.find((c) => c.name === 'MockUSDC' || c.name === 'USDC')
 
   const addresses: StablecoinAddresses = {
     MockUSDT: usdtItem ? (usdtItem.address as `0x${string}`) : defaults.MockUSDT,

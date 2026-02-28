@@ -13,6 +13,9 @@ from src.schemas.dev import ResetableDataInfo, ResetDataType, TokenRecipient
 
 logger = get_logger("business.dev.service")
 
+# ETH 水龙头限额配置
+FAUCET_MAX_AMOUNT_ETH = 10000.0  # 单次最大充值限额
+
 
 class DevToolsService:
     """开发者工具服务"""
@@ -141,10 +144,25 @@ class DevToolsService:
 
         返回:
             充值结果
+
+        异常:
+            ValueError: 当充值金额超过限额或无效时
         """
         import httpx
 
         from src.models.chain import Chain
+
+        # 验证充值金额
+        if amount_eth <= 0:
+            raise ValueError(f"Invalid amount: {amount_eth} ETH. Amount must be greater than 0.")
+
+        # 检查限额
+        if amount_eth > FAUCET_MAX_AMOUNT_ETH:
+            raise ValueError(
+                f"Amount exceeds faucet limit: {amount_eth} ETH requested, "
+                f"but maximum allowed is {FAUCET_MAX_AMOUNT_ETH} ETH. "
+                f"Please reduce the amount and try again."
+            )
 
         chain = await Chain.get_by_chain_id(31337)
         if not chain:

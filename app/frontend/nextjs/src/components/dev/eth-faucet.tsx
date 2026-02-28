@@ -21,14 +21,15 @@ import {
 } from '@/components/ui/select'
 import { notification } from '@/lib/notification'
 import { devToolsService, type TokenRecipient } from '@/services/dev-tools'
-import { useCurrentUser } from '@/hooks'
+import { useCurrentUser, useNativeBalance } from '@/hooks'
 
 export function EthFaucet() {
   const { t } = useTranslation()
   const { isConnected } = useAccount()
   const { isAdmin } = useCurrentUser()
+  const { refetch: refetchBalance } = useNativeBalance()
   const [address, setAddress] = useState('')
-  const [amount, setAmount] = useState('10')
+  const [amount, setAmount] = useState('100')
   const [isSending, setIsSending] = useState(false)
   const [lastResult, setLastResult] = useState<{ old: number; new: number } | null>(null)
 
@@ -64,6 +65,8 @@ export function EthFaucet() {
       })
       setLastResult({ old: result.old_balance_eth, new: result.new_balance_eth })
       notification.success(t('dev.faucet.success', { amount: result.amount_eth }))
+      // Refresh wallet balance after faucet success
+      await refetchBalance()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('common.error')
       notification.error(message)
@@ -186,7 +189,7 @@ export function EthFaucet() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               min={0.1}
-              max={1000}
+              max={10000}
               step={1}
               disabled={isSending}
               className="flex-1"
