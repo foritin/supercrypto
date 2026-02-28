@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Fuel, Send, RefreshCw, User, AlertTriangle, Loader2 } from 'lucide-react'
-import { useAccount } from 'wagmi'
+import { useAccount, useSwitchChain } from 'wagmi'
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -54,6 +54,28 @@ export function EthFaucet() {
     if (isAdmin) fetchRecipients()
   }, [isAdmin])
 
+  // 获取切换网络函数
+  const { switchChain } = useSwitchChain()
+
+  // 刷新 MetaMask 余额（通过切换网络再切回）
+  const handleRefreshMetaMask = async () => {
+    try {
+      // 先切换到 Sepolia，再切回 Hardhat，强制刷新余额
+      await switchChain({ chainId: 11155111 })
+      // 稍微等待一下再切回
+      await new Promise(resolve => setTimeout(resolve, 500))
+      await switchChain({ chainId: 31337 })
+      notification.success('MetaMask 余额已刷新')
+    } catch (error) {
+      // 用户可能拒绝了切换，直接切回 Hardhat
+      try {
+        await switchChain({ chainId: 31337 })
+      } catch {
+        // 忽略错误
+      }
+    }
+  }
+
   const handleSend = async () => {
     if (!address || !parseFloat(amount)) return
     setIsSending(true)
@@ -69,7 +91,7 @@ export function EthFaucet() {
       const isCurrentUser = address.toLowerCase() === currentAddress?.toLowerCase()
       if (isCurrentUser) {
         notification.success(
-          `${t('dev.faucet.success', { amount: result.amount_eth })}。如果 MetaMask 余额未更新，请切换网络后切回。`,
+          `${t('dev.faucet.success', { amount: result.amount_eth })}。如果 MetaMask 余额未更新，请点击下方的"刷新 MetaMask 余额"按钮。`,
           { duration: 5000 }
         )
       } else {
@@ -228,12 +250,21 @@ export function EthFaucet() {
                 </span>
               </div>
             </div>
-            {/* MetaMask 刷新提示 */}
-            <div className="mt-3 pt-3 border-t border-primary/10 text-xs text-yellow-500">
-              <span className="flex items-center gap-1">
+            {/* MetaMask 刷新提示和按钮 */}
+            <div className="mt-3 pt-3 border-t border-primary/10 flex flex-col gap-2">
+              <span className="text-xs text-yellow-500 flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                如果 MetaMask 仍显示 0 ETH，请点击钱包内的"刷新"按钮，或切换网络后切回 Hardhat
+                如果 MetaMask 仍显示 0 ETH，请点击下方按钮刷新
               </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshMetaMask}
+                className="w-full text-xs"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                刷新 MetaMask 余额
+              </Button>
             </div>
           </div>
         )}
