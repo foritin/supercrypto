@@ -12,6 +12,7 @@ import { useAccount, useSwitchChain } from 'wagmi'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { HARDHAT_RPC_URL } from '@/config/wagmi'
 import {
   Select,
   SelectContent,
@@ -280,6 +281,16 @@ export function EthFaucet() {
                 </span>
               </div>
             </div>
+            {/* RPC URL 诊断信息 */}
+            <div className="mt-3 pt-3 border-t border-primary/10">
+              <p className="text-xs text-muted-foreground">
+                页面连接节点: {HARDHAT_RPC_URL}
+              </p>
+              <p className="text-xs text-yellow-500 mt-1">
+                请确保 MetaMask 中的 Hardhat 网络 RPC URL 与此相同，否则余额不会同步
+              </p>
+            </div>
+
             {/* MetaMask 刷新提示和按钮 */}
             <div className="mt-3 pt-3 border-t border-primary/10 flex flex-col gap-2">
               <span className="text-xs text-yellow-500 flex items-center gap-1">
