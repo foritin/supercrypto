@@ -850,6 +850,10 @@ const admin = {
         totalSupplyNonNegative: "Total supply cannot be negative",
         minSubscriptionNonNegative: "Min subscription cannot be negative",
         priceNonNegative: "Price cannot be negative",
+        // Subscription time window
+        subscriptionStartAt: "Subscription Start",
+        subscriptionEndAt: "Subscription End",
+        endBeforeStart: "End time must be after start time",
         // Frame style
         frameStyle: {
           label: "Logo Frame Style",

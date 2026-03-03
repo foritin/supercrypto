@@ -39,10 +39,10 @@ os.chdir(backend_dir)
 # ruff: noqa: E402  # 必须在 sys.path 设置后导入
 from tortoise import Tortoise
 
+from src.aerich_redirect import TORTOISE_ORM
 from src.models.asset import Asset, AssetContractBinding
 from src.models.contracts import ContractConfig, ContractDeployment
 from src.models.contracts.provider_registry import ProviderRegistry
-from src.aerich_redirect import TORTOISE_ORM
 
 
 async def get_deploy_stats(project_name: str | None = None) -> dict:

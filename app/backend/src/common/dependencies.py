@@ -138,6 +138,10 @@ def get_project_registry_service(network: str = "hardhat") -> ProjectRegistrySer
     return _registry_instances[network]
 
 
+# 别名：供部署脚本使用
+get_config_loader = get_project_registry_service
+
+
 # ============ Session ============
 def get_session_service() -> SessionService:
     """依赖注入：获取会话服务（单例）"""

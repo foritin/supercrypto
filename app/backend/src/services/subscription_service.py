@@ -233,6 +233,15 @@ class SubscriptionService:
         if not asset:
             raise BusinessException(code=404, message="Asset not found")
 
+        # 检查认购时间窗口 (更精确的错误消息)
+        now = datetime.now(timezone.utc)
+        if asset.subscription_start_at and now < asset.subscription_start_at:
+            raise BusinessException(
+                code=400, message="Subscription has not started yet"
+            )
+        if asset.subscription_end_at and now >= asset.subscription_end_at:
+            raise BusinessException(code=400, message="Subscription period has ended")
+
         if not asset.is_available:
             raise BusinessException(
                 code=400, message="Asset is not available for subscription"

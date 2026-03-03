@@ -290,7 +290,7 @@ class KycService:
                 investor_checksum = self.web3.to_checksum_address(investor_address)
                 country_upper = country_code[:2].upper()
 
-                estimated_gas = await contract.functions.addInvestor(
+                estimated_gas = await contract.functions.admin_add_investor(
                     investor_checksum,
                     country_upper,
                     is_accredited,
@@ -301,7 +301,7 @@ class KycService:
                     f"Estimated gas: {estimated_gas}, with buffer: {gas_with_buffer}"
                 )
 
-                tx = await contract.functions.addInvestor(
+                tx = await contract.functions.admin_add_investor(
                     investor_checksum,
                     country_upper,
                     is_accredited,
@@ -383,7 +383,7 @@ class KycService:
             bool: 是否已验证
         """
         contract = await self.get_kyc_contract()
-        return await contract.functions.isVerified(
+        return await contract.functions.is_verified(
             self.web3.to_checksum_address(investor_address)
         ).call()
 
@@ -400,7 +400,7 @@ class KycService:
         contract = await self.get_kyc_contract()
 
         try:
-            info = await contract.functions.getInvestorInfo(
+            info = await contract.functions.get_investor_info(
                 self.web3.to_checksum_address(investor_address)
             ).call()
 

@@ -30,6 +30,12 @@ class AssetCreateRequest(AssetBase):
     total_supply: Decimal = Field(..., ge=0, description="总募资额")
     min_subscription: Decimal = Field(default=100, ge=0, description="最小认购金额")
     current_price: Decimal = Field(default=0, ge=0, description="当前价格")
+    subscription_start_at: Optional[datetime] = Field(
+        None, description="认购开始时间 (UTC)"
+    )
+    subscription_end_at: Optional[datetime] = Field(
+        None, description="认购截止时间 (UTC)"
+    )
     apy_3m: Decimal = Field(default=0, ge=0, le=100, description="3个月APY(%)")
     apy_6m: Decimal = Field(default=0, ge=0, le=100, description="6个月APY(%)")
     apy_12m: Decimal = Field(default=0, ge=0, le=100, description="12个月APY(%)")
@@ -58,6 +64,12 @@ class AssetUpdateRequest(BaseModel):
     total_supply: Optional[Decimal] = Field(None, ge=0)
     min_subscription: Optional[Decimal] = Field(None, ge=0)
     current_price: Optional[Decimal] = Field(None, ge=0)
+    subscription_start_at: Optional[datetime] = Field(
+        None, description="认购开始时间 (UTC)"
+    )
+    subscription_end_at: Optional[datetime] = Field(
+        None, description="认购截止时间 (UTC)"
+    )
     apy_3m: Optional[Decimal] = Field(None, ge=0, le=100)
     apy_6m: Optional[Decimal] = Field(None, ge=0, le=100)
     apy_12m: Optional[Decimal] = Field(None, ge=0, le=100)
@@ -98,6 +110,8 @@ class AssetListItem(BaseModel):
     apy_3m: float
     apy_6m: float
     apy_12m: float
+    subscription_start_at: Optional[datetime] = None
+    subscription_end_at: Optional[datetime] = None
     status: AssetStatus
     total_supply: float
     subscribed_amount: float
@@ -139,6 +153,10 @@ class AssetDetailResponse(BaseModel):
     min_subscription: float
     remaining_amount: float
     subscription_progress: float
+
+    # 认购时间窗口
+    subscription_start_at: Optional[datetime] = None
+    subscription_end_at: Optional[datetime] = None
 
     # APY
     apy_3m: float

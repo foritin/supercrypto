@@ -6,7 +6,7 @@
 部署所有公共合约：AddressProvider, KYC, USDT, USDC。
 
 Usage:
-    # 部署到远程 Hardhat 节点 (YOUR_RPC_HOST:8545)
+    # 部署到 Hardhat 节点 (地址配置在 ape-config.yaml)
     ape run deploy_common --network ethereum:hardhat:node
 
     # 或者分步部署
@@ -16,7 +16,7 @@ Usage:
 
 Note:
     - hardhat 是自定义网络 (chain_id=31337)
-    - 远程节点地址配置在 ape-config.yaml 的 node.ethereum.hardhat.uri
+    - 节点地址配置在 ape-config.yaml 的 node.ethereum.hardhat.uri
 """
 
 from deploy.common.config import (

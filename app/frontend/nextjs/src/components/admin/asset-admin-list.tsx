@@ -126,13 +126,25 @@ const createEditAssetSchema = (t: (key: string) => string) => z.object({
   apy_3m: z.number().min(0).max(100),
   apy_6m: z.number().min(0).max(100),
   apy_12m: z.number().min(0).max(100),
+  subscription_start_at: z.string().optional().nullable(),
+  subscription_end_at: z.string().optional().nullable(),
+}).refine(data => {
+  if (data.subscription_start_at && data.subscription_end_at) {
+    return new Date(data.subscription_end_at) > new Date(data.subscription_start_at)
+  }
+  return true
+}, {
+  message: t('admin.assets.form.endBeforeStart'),
+  path: ['subscription_end_at'],
 })
 
 type EditAssetFormValues = z.infer<ReturnType<typeof createEditAssetSchema>>
 
 // Price update form schema factory - uses i18n
+// Store price as string to preserve user input (trailing dots, trailing zeros)
+// and convert to number on submit
 const createPriceUpdateSchema = (t: (key: string) => string) => z.object({
-  price: z.number().min(0, t('admin.assets.form.priceNonNegative')),
+  price: z.union([z.string(), z.number()]).optional(),
   source: z.enum(['manual', 'oracle', 'api']),
 })
 
@@ -208,6 +220,8 @@ export function AssetAdminList() {
       apy_3m: 0,
       apy_6m: 0,
       apy_12m: 0,
+      subscription_start_at: null,
+      subscription_end_at: null,
     },
   })
 
@@ -215,7 +229,7 @@ export function AssetAdminList() {
   const priceForm = useForm<PriceUpdateFormValues>({
     resolver: zodResolver(priceUpdateSchema),
     defaultValues: {
-      price: 0,
+      price: undefined as number | undefined,
       source: 'manual',
     },
   })
@@ -360,7 +374,17 @@ export function AssetAdminList() {
     if (!selectedAsset) return
     setIsUpdating(true)
     try {
-      await assetService.updateAsset(selectedAsset.id, values as AssetUpdateRequest)
+      // Convert local datetime-local values to ISO strings for the API
+      const payload: AssetUpdateRequest = {
+        ...values,
+        subscription_start_at: values.subscription_start_at
+          ? new Date(values.subscription_start_at).toISOString()
+          : null,
+        subscription_end_at: values.subscription_end_at
+          ? new Date(values.subscription_end_at).toISOString()
+          : null,
+      }
+      await assetService.updateAsset(selectedAsset.id, payload)
       notification.success(t('admin.assets.updateSuccess'))
       setEditModalOpen(false)
       setSelectedAsset(null)
@@ -391,10 +415,22 @@ export function AssetAdminList() {
 
   // Update price
   const handlePriceUpdate = async (values: PriceUpdateFormValues) => {
+    console.log('[DEBUG] handlePriceUpdate called, price:', values.price, 'type:', typeof values.price)
     if (!selectedAsset) return
+    const priceNum = typeof values.price === 'string' ? parseFloat(values.price) : values.price
+    console.log('[DEBUG] priceNum:', priceNum)
+    if (priceNum === undefined || priceNum === null || Number.isNaN(priceNum)) {
+      console.log('[DEBUG] Validation failed - price is empty')
+      priceForm.setError('price', { message: t('admin.assets.form.priceRequired') })
+      return
+    }
+    if (priceNum < 0) {
+      priceForm.setError('price', { message: t('admin.assets.form.priceNonNegative') })
+      return
+    }
     setIsUpdatingPrice(true)
     try {
-      await assetService.updateAssetPrice(selectedAsset.id, values.price, values.source)
+      await assetService.updateAssetPrice(selectedAsset.id, priceNum, values.source)
       notification.success(t('admin.assets.priceUpdateSuccess'))
       setPriceModalOpen(false)
       setSelectedAsset(null)
@@ -413,6 +449,15 @@ export function AssetAdminList() {
     try {
       const detail = await assetService.getAssetAdmin(asset.id)
       setCurrentAssetDetail(detail)
+      // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+      const toLocalInput = (iso: string | null | undefined) => {
+        if (!iso) return null
+        const d = new Date(iso)
+        if (isNaN(d.getTime())) return null
+        // offset to local time
+        const offset = d.getTimezoneOffset() * 60000
+        return new Date(d.getTime() - offset).toISOString().slice(0, 16)
+      }
       editForm.reset({
         name: detail.name,
         symbol: detail.symbol,
@@ -426,6 +471,8 @@ export function AssetAdminList() {
         apy_3m: detail.apy_3m,
         apy_6m: detail.apy_6m,
         apy_12m: detail.apy_12m,
+        subscription_start_at: toLocalInput(detail.subscription_start_at),
+        subscription_end_at: toLocalInput(detail.subscription_end_at),
       })
       setEditModalOpen(true)
     } catch (err) {
@@ -437,7 +484,7 @@ export function AssetAdminList() {
   const openPriceModal = (asset: AssetListItem) => {
     setSelectedAsset(asset)
     priceForm.reset({
-      price: asset.current_price,
+      price: asset.current_price != null ? String(asset.current_price) : undefined,
       source: 'manual',
     })
     setPriceModalOpen(true)
@@ -903,7 +950,21 @@ export function AssetAdminList() {
                         type="number" 
                         {...field}
                         value={field.value ?? ''}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                        onChange={(e) => {
+                            const val = e.target.value
+                            // 允许空值
+                            if (val === '') {
+                              field.onChange(undefined)
+                              return
+                            }
+                            // 只接受数字和小数点
+                            if (/^\d*\.?\d*$/.test(val)) {
+                              const num = parseFloat(val)
+                              if (!isNaN(num)) {
+                                field.onChange(num)
+                              }
+                            }
+                          }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -939,11 +1000,23 @@ export function AssetAdminList() {
                       <FormLabel>{t('admin.assets.form.apy3m')}</FormLabel>
                       <FormControl>
                         <Input 
-                          type="number" 
-                          step="0.01" 
+                          type="text"
+                          inputMode="decimal"
                           {...field}
                           value={field.value ?? ''}
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            // 允许空值或有效数字
+                            if (val === '') {
+                              field.onChange(undefined)
+                            } else if (/^\d*\.?\d*$/.test(val)) {
+                              // 只接受数字和小数点
+                              const num = parseFloat(val)
+                              if (!isNaN(num)) {
+                                field.onChange(num)
+                              }
+                            }
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -958,11 +1031,26 @@ export function AssetAdminList() {
                       <FormLabel>{t('admin.assets.form.apy6m')}</FormLabel>
                       <FormControl>
                         <Input 
-                          type="number" 
-                          step="0.01" 
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0.00"
                           {...field}
                           value={field.value ?? ''}
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            // 允许空值
+                            if (val === '') {
+                              field.onChange(undefined)
+                              return
+                            }
+                            // 只接受数字和小数点
+                            if (/^\d*\.?\d*$/.test(val)) {
+                              const num = parseFloat(val)
+                              if (!isNaN(num)) {
+                                field.onChange(num)
+                              }
+                            }
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -981,7 +1069,52 @@ export function AssetAdminList() {
                           step="0.01" 
                           {...field}
                           value={field.value ?? ''}
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            if (val === '') {
+                              field.onChange(undefined)
+                            } else {
+                              field.onChange(parseFloat(val))
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* 认购时间窗口 */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="subscription_start_at"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('admin.assets.form.subscriptionStartAt')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="datetime-local"
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="subscription_end_at"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('admin.assets.form.subscriptionEndAt')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="datetime-local"
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value || null)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -1084,11 +1217,23 @@ export function AssetAdminList() {
                       <FormLabel>{t('admin.assets.newPrice')}</FormLabel>
                       <FormControl>
                         <Input 
-                          type="number" 
-                          step="0.01" 
-                          {...field}
+                          type="text" 
+                          inputMode="decimal" placeholder="0.00" 
                           value={field.value ?? ''}
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                          name={field.name}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            if (val === '') {
+                              field.onChange('')
+                              return
+                            }
+                            // Allow valid decimal input patterns including trailing dot and trailing zeros
+                            if (/^\d*\.?\d*$/.test(val)) {
+                              field.onChange(val)
+                            }
+                          }}
                         />
                       </FormControl>
                       <FormMessage />

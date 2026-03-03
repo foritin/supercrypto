@@ -846,6 +846,10 @@ const admin = {
         uploadCover: "上传封面",
         addImages: "添加图片",
         fileSizeError: "文件大小不能超过 {{size}}MB",
+        // 认购时间窗口
+        subscriptionStartAt: "认购开始时间",
+        subscriptionEndAt: "认购截止时间",
+        endBeforeStart: "截止时间必须晚于开始时间",
         // 边框样式
         frameStyle: {
           label: "Logo 边框样式",

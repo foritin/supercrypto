@@ -96,8 +96,7 @@ export const ADMIN_PATHS = {
   ASSETS: '/admin/assets',
   ASSET_DETAIL: (id: number) => `/admin/assets/${id}`,
   ASSET_STATUS: (id: number) => `/admin/assets/${id}/status`,
-  ASSET_PRICE: (id: number, price: number, source = 'manual') =>
-    `/admin/assets/${id}/price?price=${price}&source=${source}`,
+  ASSET_PRICE: (id: number) => `/admin/assets/${id}/price`,
   ASSET_PROJECTS: '/admin/assets/projects/available',
   ASSET_BIND_PROJECT: (id: number) => `/admin/assets/${id}/bind-project`,
   ASSET_UNBIND: (id: number) => `/admin/assets/${id}/unbind`,

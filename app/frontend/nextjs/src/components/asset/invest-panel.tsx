@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { Wallet, TrendingUp, Clock, CheckCircle, PauseCircle, Flame } from "lucide-react";
+import { Wallet, TrendingUp, Clock, CheckCircle, PauseCircle, Flame, TimerOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProgressEnhanced } from "@/components/ui/progress-enhanced";
 import { AnimatedNumber } from "@/components/ui/animated-number";
@@ -114,6 +114,17 @@ export function InvestPanel({
   const { t } = useTranslation();
   const progress = (asset.subscribed_amount / asset.total_supply) * 100;
 
+  // 客户端检查认购时间是否已过期
+  const isSubscriptionExpired = (() => {
+    if (!asset.subscription_end_at) return false;
+    return new Date() >= new Date(asset.subscription_end_at);
+  })();
+
+  const isSubscriptionNotStarted = (() => {
+    if (!asset.subscription_start_at) return false;
+    return new Date() < new Date(asset.subscription_start_at);
+  })();
+
   // 获取按钮状态
   const getButtonState = () => {
     if (!isConnected) {
@@ -129,6 +140,20 @@ export function InvestPanel({
         disabled: false,
         hint: null,
         action: onGoToKyc,
+      };
+    }
+    if (isSubscriptionExpired) {
+      return {
+        text: t("assets.invest.subscriptionEnded"),
+        disabled: true,
+        hint: t("assets.invest.subscriptionEndedHint"),
+      };
+    }
+    if (isSubscriptionNotStarted) {
+      return {
+        text: t("assets.invest.subscriptionNotStarted"),
+        disabled: true,
+        hint: t("assets.invest.subscriptionNotStartedHint"),
       };
     }
     if (asset.status !== "active") {
@@ -158,23 +183,12 @@ export function InvestPanel({
         <StatusBadge status={asset.status as AssetStatus} progress={progress} t={t} />
       </div>
 
-      {/* 倒计时 - 创建紧迫感 */}
-      {/* 注意：当后端添加 subscription_start_time 和 subscription_end_time 字段后，
-          取消下面的注释并传入实际时间 */}
-      {/*
-      <div className="mb-5">
-        <CountdownTimer
-          startTime={asset.subscription_start_time}
-          endTime={asset.subscription_end_time}
-        />
-      </div>
-      */}
-      
-      {/* 演示模式：模拟倒计时效果 */}
-      {asset.status === "active" && (
+      {/* 倒计时 - 使用真实的认购时间窗口 */}
+      {(asset.subscription_start_at || asset.subscription_end_at) && (
         <div className="mb-5">
           <CountdownTimer
-            endTime={new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000)}
+            startTime={asset.subscription_start_at ?? undefined}
+            endTime={asset.subscription_end_at ?? undefined}
           />
         </div>
       )}

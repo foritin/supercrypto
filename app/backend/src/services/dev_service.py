@@ -154,7 +154,9 @@ class DevToolsService:
 
         # 验证充值金额
         if amount_eth <= 0:
-            raise ValueError(f"Invalid amount: {amount_eth} ETH. Amount must be greater than 0.")
+            raise ValueError(
+                f"Invalid amount: {amount_eth} ETH. Amount must be greater than 0."
+            )
 
         # 检查限额
         if amount_eth > FAUCET_MAX_AMOUNT_ETH:
@@ -200,6 +202,19 @@ class DevToolsService:
                 },
             )
             result = resp.json()
+
+            if "error" not in result:
+                # 强制挖一个新块，让 MetaMask 能通过区块轮询检测到余额变化
+                # hardhat_setBalance 只修改状态不产生区块，MetaMask 无法感知
+                await client.post(
+                    rpc_url,
+                    json={
+                        "jsonrpc": "2.0",
+                        "method": "evm_mine",
+                        "params": [],
+                        "id": 3,
+                    },
+                )
 
         if "error" in result:
             logger.error(f"Faucet failed: {result['error']}")

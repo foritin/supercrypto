@@ -106,9 +106,19 @@ export const createFinancialSchema = (t: (key: string) => string) => z.object({
     .number()
     .min(0, t('admin.assets.wizard.validation.apyNonNegative'))
     .max(100, t('admin.assets.wizard.validation.apyMax')),
+  subscription_start_at: z.string().optional(),
+  subscription_end_at: z.string().optional(),
 }).refine(data => data.min_subscription <= data.total_supply, {
   message: t('admin.assets.wizard.validation.minSubscriptionExceedsSupply'),
   path: ['min_subscription'],
+}).refine(data => {
+  if (data.subscription_start_at && data.subscription_end_at) {
+    return new Date(data.subscription_end_at) > new Date(data.subscription_start_at)
+  }
+  return true
+}, {
+  message: t('admin.assets.form.endBeforeStart'),
+  path: ['subscription_end_at'],
 })
 
 export type FinancialFormValues = z.infer<ReturnType<typeof createFinancialSchema>>
@@ -289,6 +299,8 @@ export function FinancialStep({ onNext, onPrev }: StepComponentProps) {
       apy_3m: state.formData.apy_3m ?? undefined,
       apy_6m: state.formData.apy_6m ?? undefined,
       apy_12m: state.formData.apy_12m ?? undefined,
+      subscription_start_at: state.formData.subscription_start_at ?? undefined,
+      subscription_end_at: state.formData.subscription_end_at ?? undefined,
     },
     mode: 'onChange', // 实时验证
   })
@@ -448,6 +460,50 @@ export function FinancialStep({ onNext, onPrev }: StepComponentProps) {
               )}
             />
           ))}
+        </div>
+
+        {/* 第四行: 认购时间窗口 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+          <FormField
+            control={form.control}
+            name="subscription_start_at"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="subscription-start">
+                  {t('admin.assets.form.subscriptionStartAt')}
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    id="subscription-start"
+                    type="datetime-local"
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="subscription_end_at"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="subscription-end">
+                  {t('admin.assets.form.subscriptionEndAt')}
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    id="subscription-end"
+                    type="datetime-local"
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value || undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         {/* 底部按钮 - 移动端优化间距 */}

@@ -5,7 +5,7 @@ import { mainnet, sepolia, arbitrum, type Chain } from 'wagmi/chains'
 const IS_PRODUCTION = process.env.NEXT_PUBLIC_ENV === 'production'
 
 // Hardhat 开发网络 RPC URL - 优先环境变量，默认远程开发服务器
-const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://YOUR_RPC_HOST:8545'
+const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL
 
 // 自定义 Hardhat 链配置
 // 注意: 如需启用 Multicall3 批量调用，需先在 Hardhat 节点部署 Multicall3 合约

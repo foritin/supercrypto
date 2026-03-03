@@ -2,6 +2,7 @@
 RWA 资产模型
 """
 
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from tortoise import fields
@@ -45,6 +46,14 @@ class Asset(AbstractModel, TimestampMixin):
     )
     min_subscription = fields.DecimalField(
         max_digits=36, decimal_places=18, default=100, description="最小认购金额"
+    )
+
+    # 认购时间窗口
+    subscription_start_at = fields.DatetimeField(
+        null=True, description="认购开始时间 (UTC)"
+    )
+    subscription_end_at = fields.DatetimeField(
+        null=True, description="认购截止时间 (UTC)"
     )
 
     # APY 配置 (年化收益率，以百分比存储，如 10.5 表示 10.5%)
@@ -116,7 +125,14 @@ class Asset(AbstractModel, TimestampMixin):
     @property
     def is_available(self) -> bool:
         """是否可认购"""
-        return self.status == AssetStatus.ACTIVE and self.remaining_amount > 0
+        if self.status != AssetStatus.ACTIVE or self.remaining_amount <= 0:
+            return False
+        now = datetime.now(timezone.utc)
+        if self.subscription_start_at and now < self.subscription_start_at:
+            return False
+        if self.subscription_end_at and now >= self.subscription_end_at:
+            return False
+        return True
 
     async def get_primary_contract_address(self) -> str | None:
         """

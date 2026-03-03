@@ -351,7 +351,7 @@ export interface PrepareRegisterRequest {
 // 准备注册响应
 export interface PrepareRegisterResponse {
   provider_address: string;      // AddressProvider 合约地址
-  function_name: string;         // "set_address"
+  function_name: string;         // "admin_set_address"
   key_hash: string;              // keccak256(provider_key)
   contract_address: string;      // 要注册的合约地址
   contract_name: string;
@@ -390,7 +390,7 @@ export interface PrepareUnregisterRequest {
 // 准备解除注册响应
 export interface PrepareUnregisterResponse {
   provider_address: string;      // AddressProvider 合约地址
-  function_name: string;         // "set_address"
+  function_name: string;         // "admin_set_address"
   key_hash: string;              // keccak256(provider_key)
   contract_address: string;      // 零地址 (0x0000...0000)
   contract_name: string;
@@ -649,23 +649,3 @@ export const CONTRACT_SET_ABIS: Record<string, string[]> = {
   setLPToken: ["function setLPToken(address _lpToken)"],
 };
 
-// AddressProvider ABI (用于注册和 owner 检查)
-export const ADDRESS_PROVIDER_ABI = [
-  {
-    name: "owner",
-    type: "function",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ name: "", type: "address" }],
-  },
-  {
-    name: "set_address",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "_key", type: "bytes32" },
-      { name: "_address", type: "address" },
-    ],
-    outputs: [],
-  },
-] as const;

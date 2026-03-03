@@ -13,7 +13,7 @@
     - VankeLiquidityMining: 流动性挖矿合约
 
 Usage:
-    # 部署到远程 Hardhat 节点 (YOUR_RPC_HOST:8545)
+    # 部署到 Hardhat 节点 (地址配置在 ape-config.yaml)
     ape run deploy_vanke --network ethereum:hardhat:node
 
 注意:

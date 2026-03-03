@@ -269,20 +269,6 @@ def validate_config() -> list[str]:
 
 logger = get_logger("business.contract.service")
 
-# set_address 函数 ABI
-SET_ADDRESS_ABI = [
-    {
-        "name": "set_address",
-        "type": "function",
-        "stateMutability": "nonpayable",
-        "inputs": [
-            {"name": "_key", "type": "bytes32"},
-            {"name": "_address", "type": "address"},
-        ],
-        "outputs": [],
-    }
-]
-
 # 合约类型配置
 CONTRACT_TYPE_CONFIGS = {
     "registry": {"label": "注册中心", "color": "purple", "icon": "📦"},
@@ -340,6 +326,22 @@ class ContractService:
             )
         return provider
 
+    async def _get_provider_abi(self, provider: ContractDeployment) -> list:
+        """从 MinIO 动态加载 AddressProvider ABI"""
+        if not provider.abi_path:
+            raise BusinessException(
+                error_code=ErrorCode.CONTRACT_ABI_NOT_FOUND,
+                detail="AddressProvider abi_path is empty",
+            )
+        storage = StorageService()
+        abi = await storage.get_json(provider.abi_path)
+        if not abi:
+            raise BusinessException(
+                error_code=ErrorCode.CONTRACT_ABI_NOT_FOUND,
+                detail=f"Failed to load ABI from {provider.abi_path}",
+            )
+        return abi
+
     async def get_config_and_key(
         self, contract_name: str, provider_key: Optional[str]
     ) -> tuple:
@@ -389,16 +391,17 @@ class ContractService:
             )
 
         provider = await self.get_provider_contract()
+        provider_abi = await self._get_provider_abi(provider)
         key_hash = compute_key_hash(key)
 
         return {
             "provider_address": provider.address,
-            "function_name": "set_address",
+            "function_name": "admin_set_address",
             "key_hash": key_hash,
             "contract_address": contract.address,
             "contract_name": contract_name,
             "provider_key": key,
-            "abi": SET_ADDRESS_ABI,
+            "abi": provider_abi,
         }
 
     async def confirm_register(
@@ -510,15 +513,16 @@ class ContractService:
                 detail=f"Contract '{contract_name}' is not registered",
             )
 
+        provider_abi = await self._get_provider_abi(provider)
         key_hash = compute_key_hash(key)
         return {
             "provider_address": provider.address,
-            "function_name": "set_address",
+            "function_name": "admin_set_address",
             "key_hash": key_hash,
             "contract_address": ZERO_ADDRESS,
             "contract_name": contract_name,
             "provider_key": key,
-            "abi": SET_ADDRESS_ABI,
+            "abi": provider_abi,
         }
 
     async def confirm_unregister(
@@ -580,8 +584,7 @@ class ContractService:
         provider = await self.get_provider_contract()
 
         # 加载 ABI
-        storage = StorageService()
-        provider_abi = await storage.get_json(provider.abi_path)
+        provider_abi = await self._get_provider_abi(provider)
 
         # 获取所有有 provider_key 的合约
         configs = await ContractConfig.filter(provider_key__not_isnull=True)

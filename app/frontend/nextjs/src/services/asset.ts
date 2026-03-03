@@ -92,6 +92,8 @@ export interface AssetListItem {
   total_supply: number
   subscribed_amount: number
   subscription_progress: number
+  subscription_start_at: string | null
+  subscription_end_at: string | null
   is_available: boolean
 }
 
@@ -124,6 +126,8 @@ export interface AssetDetail {
   min_subscription: number
   remaining_amount: number
   subscription_progress: number
+  subscription_start_at: string | null
+  subscription_end_at: string | null
   apy_3m: number
   apy_6m: number
   apy_12m: number
@@ -180,6 +184,8 @@ export interface AssetCreateRequest {
   apy_3m?: number
   apy_6m?: number
   apy_12m?: number
+  subscription_start_at?: string
+  subscription_end_at?: string
   contract_address?: string
   frame_style?: FrameStyle
 }
@@ -197,6 +203,8 @@ export interface AssetUpdateRequest {
   apy_3m?: number
   apy_6m?: number
   apy_12m?: number
+  subscription_start_at?: string | null
+  subscription_end_at?: string | null
   contract_address?: string
   frame_style?: FrameStyle
 }
@@ -303,8 +311,8 @@ export const assetService = {
   async updateAssetPrice(id: number, price: number, source = 'manual'): Promise<AssetDetail> {
     return (
       await api.post<API.ResponseData<AssetDetail>>(
-        ADMIN_PATHS.ASSET_PRICE(id, price, source),
-        {}
+        ADMIN_PATHS.ASSET_PRICE(id),
+        { price, source }
       )
     ).object_data as AssetDetail
   },

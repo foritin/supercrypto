@@ -9,7 +9,7 @@ import { createQueryClient } from '@/lib/query-client';
 import { QueryClientProvider } from '@tanstack/react-query';
 
 // Hardhat 开发网络 RPC URL
-const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://YOUR_RPC_HOST:8545';
+const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://127.0.0.1:8545';
 
 // 自定义 Hardhat 链配置
 // 注意: 如需启用 Multicall3 批量调用，需先在 Hardhat 节点部署 Multicall3 合约

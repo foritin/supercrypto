@@ -19,7 +19,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useConnection, useWalletClient, usePublicClient } from 'wagmi'
-import { parseAbi } from 'viem'
 import {
   ShieldCheck,
   ShieldOff,
@@ -45,7 +44,7 @@ import { useTransactionTimeout } from '@/hooks/use-tx-timeout'
 import { notification } from '@/lib/notification'
 import { recordRevocation } from '@/services/admin-kyc'
 import type { KycDetail } from '@/services/admin-kyc'
-import { KYC_MANAGER_ABI } from '@/constants/abis/kyc-manager-abi'
+import { usePlatformInfoStore } from '@/stores/platform-info-store'
 import { savePendingTx, clearPendingTx, getPendingTx } from './tx-recovery'
 
 // ============ Types ============
@@ -210,12 +209,20 @@ export function OnChainStatusPanel({
     setError(null)
 
     try {
-      const abi = parseAbi(KYC_MANAGER_ABI)
+      let kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
+      if (!kycAbi || kycAbi.length === 0) {
+        await usePlatformInfoStore.getState().refresh()
+        kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
+      }
+      if (!kycAbi || kycAbi.length === 0) {
+        setError('KYC ABI not found in platform info')
+        return
+      }
 
       const result = await publicClient.readContract({
         address: contractAddress as `0x${string}`,
-        abi,
-        functionName: 'getInvestorInfo',
+        abi: kycAbi,
+        functionName: 'get_investor_info',
         args: [kyc.wallet_address as `0x${string}`],
       })
 
@@ -268,12 +275,21 @@ export function OnChainStatusPanel({
         return
       }
 
-      // Step 3: 链上验证 verifiers() 调用
-      const abi = parseAbi(KYC_MANAGER_ABI)
+      // Step 3: 从 platformInfoStore 获取 KYC ABI
+      let kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
+      if (!kycAbi || kycAbi.length === 0) {
+        await usePlatformInfoStore.getState().refresh()
+        kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
+      }
+      if (!kycAbi || kycAbi.length === 0) {
+        notification.error('KYC ABI not found in platform info')
+        setTxStatus('failed')
+        return
+      }
 
       const isVerifier = await publicClient.readContract({
         address: contractAddress as `0x${string}`,
-        abi,
+        abi: kycAbi,
         functionName: 'verifiers',
         args: [address as `0x${string}`],
       })
@@ -284,13 +300,13 @@ export function OnChainStatusPanel({
         return
       }
 
-      // Step 4: 发起链上交易 - removeInvestor
+      // Step 4: 发起链上交易 - admin_remove_investor
       setTxStatus('signing')
 
       const hash = await walletClient.writeContract({
         address: contractAddress as `0x${string}`,
-        abi,
-        functionName: 'removeInvestor',
+        abi: kycAbi,
+        functionName: 'admin_remove_investor',
         args: [
           kyc.wallet_address as `0x${string}`,
           revocationReason || t('admin.kyc.onchain.defaultRevocationReason'),

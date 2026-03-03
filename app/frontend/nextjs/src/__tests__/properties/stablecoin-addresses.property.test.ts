@@ -11,29 +11,31 @@
 import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
 import { resolveStablecoinAddresses } from '@/hooks/use-stablecoin-addresses'
-import type { ContractAddressItem } from '@/services/contract'
-import { MOCK_TOKEN_ADDRESSES } from '@/contracts/mock-token'
+import type { AddressInfo } from '@/services/platform-info'
 
 // 生成有效的以太坊地址 (0x + 40 hex chars)
 const ethAddressArb = fc
   .stringMatching(/^[0-9a-f]{40}$/)
   .map((hex) => `0x${hex}` as `0x${string}`)
 
-// 生成一个 ContractAddressItem
-function contractItemArb(name: string, address: `0x${string}`): ContractAddressItem {
+// 生成一个 AddressInfo（模拟 platformInfoStore 中的合约条目）
+function contractItemArb(name: string, address: `0x${string}`): AddressInfo {
   return {
+    id: 1,
     name,
     address,
-    symbol: name === 'MockUSDT' ? 'USDT' : 'USDC',
     scope: 'global',
-    project_name: 'mock',
+    contract_type: 'stablecoin',
+    status: 'active',
+    deployer_address: '0x0000000000000000000000000000000000000000',
+    abi_info: [],
   }
 }
 
-// 默认地址
+// 默认地址（环境变量已移除，默认为空）
 const defaults = {
-  MockUSDT: MOCK_TOKEN_ADDRESSES.MockUSDT,
-  MockUSDC: MOCK_TOKEN_ADDRESSES.MockUSDC,
+  MockUSDT: '' as `0x${string}`,
+  MockUSDC: '' as `0x${string}`,
 }
 
 describe('Feature: dynamic-contract-addresses, Property 1: Stablecoin 地址解析正确性', () => {
@@ -44,7 +46,7 @@ describe('Feature: dynamic-contract-addresses, Property 1: Stablecoin 地址解�
   it('property: 列表中有 MockUSDT 时返回后端地址', () => {
     fc.assert(
       fc.property(ethAddressArb, (addr) => {
-        const contracts: ContractAddressItem[] = [contractItemArb('MockUSDT', addr)]
+        const contracts: AddressInfo[] = [contractItemArb('MockUSDT', addr)]
         const result = resolveStablecoinAddresses(contracts, defaults)
 
         expect(result.addresses.MockUSDT).toBe(addr)
@@ -62,7 +64,7 @@ describe('Feature: dynamic-contract-addresses, Property 1: Stablecoin 地址解�
   it('property: 列表中有 MockUSDC 时返回后端地址', () => {
     fc.assert(
       fc.property(ethAddressArb, (addr) => {
-        const contracts: ContractAddressItem[] = [contractItemArb('MockUSDC', addr)]
+        const contracts: AddressInfo[] = [contractItemArb('MockUSDC', addr)]
         const result = resolveStablecoinAddresses(contracts, defaults)
 
         expect(result.addresses.MockUSDC).toBe(addr)
@@ -80,7 +82,7 @@ describe('Feature: dynamic-contract-addresses, Property 1: Stablecoin 地址解�
   it('property: 列表中同时有 MockUSDT 和 MockUSDC 时都返回后端地址', () => {
     fc.assert(
       fc.property(ethAddressArb, ethAddressArb, (usdtAddr, usdcAddr) => {
-        const contracts: ContractAddressItem[] = [
+        const contracts: AddressInfo[] = [
           contractItemArb('MockUSDT', usdtAddr),
           contractItemArb('MockUSDC', usdcAddr),
         ]
@@ -103,17 +105,20 @@ describe('Feature: dynamic-contract-addresses, Property 1: Stablecoin 地址解�
       fc.property(
         fc.array(
           fc.record({
+            id: fc.constant(1),
             name: fc.string().filter((n) => n !== 'MockUSDT' && n !== 'MockUSDC'),
             address: fc.stringMatching(/^0x[0-9a-f]{40}$/),
-            symbol: fc.constant(null),
             scope: fc.constant('global'),
-            project_name: fc.constant('mock'),
+            contract_type: fc.constant('stablecoin'),
+            status: fc.constant('active'),
+            deployer_address: fc.constant('0x0000000000000000000000000000000000000000'),
+            abi_info: fc.constant([]),
           }),
           { maxLength: 10 },
         ),
         (contracts) => {
           const result = resolveStablecoinAddresses(
-            contracts as ContractAddressItem[],
+            contracts as AddressInfo[],
             defaults,
           )
 
@@ -136,7 +141,7 @@ describe('Feature: dynamic-contract-addresses, Property 1: Stablecoin 地址解�
         fc.oneof(fc.constant(undefined), fc.constant([])),
         (contracts) => {
           const result = resolveStablecoinAddresses(
-            contracts as ContractAddressItem[] | undefined,
+            contracts as AddressInfo[] | undefined,
             defaults,
           )
 

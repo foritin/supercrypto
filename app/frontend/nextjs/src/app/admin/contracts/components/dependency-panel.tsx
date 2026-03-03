@@ -5,10 +5,8 @@ import { AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAccount, useWalletClient, usePublicClient, useSwitchChain, useChainId } from "wagmi";
 
-import {
-  contractAdminService,
-  ADDRESS_PROVIDER_ABI,
-} from "@/services/contract";
+import { contractAdminService } from "@/services/contract";
+import { usePlatformInfoStore } from "@/stores/platform-info-store";
 import type { ContractStatusItem } from "@/types/contract";
 import { transactionAuditService } from "@/services/transaction-audit";
 import { notification } from "@/lib/notification";
@@ -101,11 +99,22 @@ export function DependencyPanel({
       return null;
     }
 
+    let providerAbi = usePlatformInfoStore.getState().getAbi("AddressProvider");
+    if (!providerAbi || providerAbi.length === 0) {
+      // Store cache may be stale — refresh once and retry
+      await usePlatformInfoStore.getState().refresh();
+      providerAbi = usePlatformInfoStore.getState().getAbi("AddressProvider");
+    }
+    if (!providerAbi || providerAbi.length === 0) {
+      notification.error("AddressProvider ABI not found in platform info");
+      return null;
+    }
+
     let owner: string;
     try {
       owner = await publicClient.readContract({
         address: providerAddress as `0x${string}`,
-        abi: ADDRESS_PROVIDER_ABI,
+        abi: providerAbi,
         functionName: "owner",
       }) as string;
     } catch (ownerError) {

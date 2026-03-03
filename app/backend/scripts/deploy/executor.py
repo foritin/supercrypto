@@ -19,15 +19,18 @@ from typing import Any, Optional
 from ape import accounts, networks, project
 from falib.utils.tools import DevTools, PathTools
 
+from src.common.adapters import get_db_adapter, get_minio_adapter
+from src.common.dependencies import get_config_loader
 from src.models import Account
 from src.models.contracts import ContractConfig as ContractConfigModel
 from src.models.contracts import ContractDeployment
 from src.models.contracts.provider_registry import (
     ZERO_ADDRESS as PROVIDER_ZERO_ADDRESS,
+)
+from src.models.contracts.provider_registry import (
     ProviderRegistry,
     compute_key_hash,
 )
-from src.common.adapters import get_db_adapter, get_minio_adapter
 from src.schemas.enums import (
     ChainID,
     ContractScope,
@@ -36,8 +39,6 @@ from src.schemas.enums import (
     DependencyType,
     Network,
 )
-
-from src.services.project_registry_service import get_config_loader
 
 from .base import ZERO_ADDRESS, ContractConfig
 
@@ -102,7 +103,9 @@ def get_deployer(network: str, tag: str = "admin"):
     net_enum = get_network_enum(network)
 
     with get_db() as db:
-        data = db.query(Account.filter(tag=tag, network=net_enum).first())
+        data = db.query(
+            Account.filter(tag=tag, network=net_enum, is_deployer=True).first()
+        )
 
     if not data:
         raise ValueError(f"❌ 未找到 tag={tag}, network={network} 的账户")
@@ -179,7 +182,12 @@ def upload_abi(
 
 
 def get_deployed_contract(
-    name: str, chain_id: int, network: Network, project_name: str = ""
+    name: str,
+    chain_id: int,
+    network: Network,
+    project_name: str = "",
+    scope: str = "",
+    contract_type: str = "",
 ) -> Optional[ContractDeployment]:
     """
     查询已部署的合约
@@ -189,6 +197,8 @@ def get_deployed_contract(
         chain_id: 链 ID
         network: 网络
         project_name: 项目名称（可选）
+        scope: 作用域（可选，global/project）
+        contract_type: 功能类型（可选，registry/kyc/stablecoin/...）
 
     Returns:
         ContractDeployment 对象或 None
@@ -202,6 +212,17 @@ def get_deployed_contract(
         )
         if project_name:
             query = query.filter(project_name=project_name)
+        if scope:
+            scope_enum = (
+                ContractScope.GLOBAL if scope == "global" else ContractScope.PROJECT
+            )
+            query = query.filter(scope=scope_enum)
+        if contract_type:
+            try:
+                type_enum = ContractType(contract_type)
+                query = query.filter(contract_type=type_enum)
+            except ValueError:
+                pass
         return db.query(query.first())
 
 
@@ -291,11 +312,27 @@ def deploy_contract(
 
     # 1. 检查是否已部署
     if config.skip_if_exists:
-        existing = get_deployed_contract(config.name, chain_id, network, project_name)
+        existing = get_deployed_contract(
+            config.name,
+            chain_id,
+            network,
+            project_name,
+            scope=config.scope,
+            contract_type=config.contract_type,
+        )
         if existing:
-            print(f"   ⏭️  已存在: {existing.address}")
-            contract_class = getattr(project, config.contract_class_name)
-            return contract_class.at(existing.address), existing.address
+            # 验证链上是否真的有合约代码（Hardhat 重启后内存合约会丢失）
+            from ape import chain
+
+            code = chain.provider.get_code(existing.address)
+            if code and len(code) > 0:
+                print(f"   ⏭️  已存在: {existing.address}")
+                contract_class = getattr(project, config.contract_class_name)
+                return contract_class.at(existing.address), existing.address
+            else:
+                # 链上无代码，保持 DB 记录为 ACTIVE，继续部署
+                # save_contract 会更新该 ACTIVE 记录的地址和 tx_hash
+                print(f"   ⚠️  DB 记录存在但链上无代码，将重新部署: {existing.address}")
 
     # 2. 检查 ABI
     if not check_abi_exists(config.name):
@@ -382,13 +419,15 @@ def save_contract(
         type_enum = ContractType.UNKNOWN
 
     with get_db() as db:
-        # 查找现有记录
+        # 查找现有记录（scope + contract_type + name 三维度定位）
         existing = db.query(
             ContractDeployment.filter(
                 name=name,
                 chain_id=chain_id,
                 network=network,
                 project_name=project_name,
+                scope=scope_enum,
+                contract_type=type_enum,
                 status=ContractStatus.ACTIVE,
             ).first()
         )

@@ -82,13 +82,13 @@ function DropZone({
 }: DropZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const zoneRef = useRef<HTMLDivElement>(null)
 
   // Auto focus support for accessibility
   useEffect(() => {
-    if (autoFocus && buttonRef.current) {
+    if (autoFocus && zoneRef.current) {
       const timer = setTimeout(() => {
-        buttonRef.current?.focus()
+        zoneRef.current?.focus()
       }, 100)
       return () => clearTimeout(timer)
     }
@@ -149,16 +149,17 @@ function DropZone({
   }, [onFilesSelected])
 
   return (
-    <button
-      ref={buttonRef}
-      type="button"
+    <div
+      ref={zoneRef}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
       id={id}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      disabled={disabled}
+      aria-disabled={disabled || undefined}
       aria-label={ariaLabel}
       className={cn(
         'relative transition-all duration-200 text-left',
@@ -181,7 +182,7 @@ function DropZone({
         aria-hidden="true"
       />
       {children}
-    </button>
+    </div>
   )
 }
 

@@ -44,6 +44,10 @@ class Account(AbstractModel, TimestampMixin, BlockableMixin, SoftDeleteMixin):
     )
     is_active = fields.BooleanField(default=True, description="是否激活")
 
+    is_deployer = fields.BooleanField(
+        default=False, description="是否为部署账户（特殊标记）"
+    )
+
     class Meta:
         table = "account"
         table_description = "账户表"

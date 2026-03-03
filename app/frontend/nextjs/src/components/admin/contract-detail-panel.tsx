@@ -318,7 +318,7 @@ export function ContractDetailPanel({
               icon={<Layers size={16} />}
             >
               <InfoRow label={t('admin.contracts.detail.contractType')}>
-                <Badge variant="secondary" className="bg-white/5 border-white/10">
+                <Badge variant="secondary" className="bg-white/5 border-white/10 text-white/85">
                   {getContractTypeLabel(node.type)}
                 </Badge>
               </InfoRow>

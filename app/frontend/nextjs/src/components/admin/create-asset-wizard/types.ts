@@ -64,6 +64,8 @@ export interface CreateAssetFormData {
   apy_3m: number
   apy_6m: number
   apy_12m: number
+  subscription_start_at?: string
+  subscription_end_at?: string
   
   // Step 3: 媒体上传
   coverFile?: UploadFileItem[]
@@ -92,6 +94,8 @@ export const DEFAULT_FORM_DATA: CreateAssetFormData = {
   apy_3m: 10,
   apy_6m: 12,
   apy_12m: 15,
+  subscription_start_at: undefined,
+  subscription_end_at: undefined,
   
   // 媒体上传
   coverFile: [],

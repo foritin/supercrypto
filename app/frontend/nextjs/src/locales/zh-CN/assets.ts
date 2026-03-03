@@ -183,6 +183,10 @@ const assets = {
       toInvest: "后即可投资",
       notAvailable: "暂不可认购",
       notAvailableHint: "该资产当前未开放认购",
+      subscriptionEnded: "认购已结束",
+      subscriptionEndedHint: "该资产的认购期已截止",
+      subscriptionNotStarted: "即将开始",
+      subscriptionNotStartedHint: "认购尚未开始，请稍后再来",
       // 状态徽章
       statusBadge: {
         active: "火热认购中",
