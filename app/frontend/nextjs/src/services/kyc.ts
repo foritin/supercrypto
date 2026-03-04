@@ -306,12 +306,13 @@ export async function applyKyc(data: KycApplyRequest): Promise<KycFullResponse> 
  * @returns 更新后的状态
  */
 export async function updateKycStatus(targetStatus: string): Promise<{ status: string }> {
-  const formData = new FormData()
-  formData.append('target_status', targetStatus)
+  const requestBody = {
+    target_status: targetStatus,
+  }
 
   const response = await api.post<API.ResponseData<{ status: string }>>(
     USER_PATHS.KYC_STATUS_UPDATE,
-    formData
+    requestBody
   )
   return response.object_data as { status: string }
 }

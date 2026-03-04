@@ -107,6 +107,7 @@ export interface KycState {
   submittedAt: number | null;
   reviewedAt: number | null;
   rejectionReason: string | null;
+  onChainSyncStatus: string | null;
   
   // Draft
   lastSaved: number | null;
@@ -160,6 +161,7 @@ const initialState: KycState = {
   submittedAt: null,
   reviewedAt: null,
   rejectionReason: null,
+  onChainSyncStatus: null,
   lastSaved: null,
   isDirty: false,
   errors: {},
@@ -229,6 +231,7 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
             submittedAt: response.submitted_at ? new Date(response.submitted_at).getTime() : null,
             reviewedAt: response.reviewed_at ? new Date(response.reviewed_at).getTime() : null,
             rejectionReason: response.reject_reason,
+            onChainSyncStatus: response.on_chain_sync_status || null,
           }));
           return; // 不加载本地草稿
         }

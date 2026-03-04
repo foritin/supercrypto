@@ -330,14 +330,14 @@ export function Step2DocumentUpload({
           render={({ field }) => (
             <FormItem className="space-y-2">
               <FormLabel htmlFor="kyc-document-expiry" className="flex items-center text-sm text-white/50 font-normal">
-                {t('kyc.fields.documentExpiry', '证件有效期')}
+                {t('kyc.fields.documentExpiry')}
                 <RequiredMark />
               </FormLabel>
               <FormControl>
                 <Input
                   id="kyc-document-expiry"
                   type="date"
-                  placeholder={t('kyc.fields.documentExpiryPlaceholder', '请选择证件有效期')}
+                  placeholder={t('kyc.fields.documentExpiryPlaceholder')}
                   {...field}
                   aria-describedby={errors.documentExpiry ? 'kyc-document-expiry-error' : undefined}
                   aria-invalid={!!errors.documentExpiry}

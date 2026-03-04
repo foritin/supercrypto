@@ -688,7 +688,7 @@ export function KycWizard({
                 aria-label={t('kyc.navigation.previousAriaLabel')}
               >
                 <ChevronLeft className="w-4 h-4" aria-hidden="true" />
-                <span className="text-sm">{t('kyc.navigation.back', 'Back')}</span>
+                <span className="text-sm">{t('kyc.navigation.back')}</span>
               </Button>
             )}
           </div>
@@ -711,11 +711,11 @@ export function KycWizard({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                    <span>{t('kyc.confirmation.submitting', 'Submitting...')}</span>
+                    <span>{t('kyc.confirmation.submitting')}</span>
                   </>
                 ) : (
                   <>
-                    <span>{t('kyc.confirmation.submit', 'Submit')}</span>
+                    <span>{t('kyc.confirmation.submit')}</span>
                     <CheckCircle className="w-4 h-4" aria-hidden="true" />
                   </>
                 )}
@@ -730,9 +730,9 @@ export function KycWizard({
                   'bg-primary hover:bg-primary/90 text-bg-dark font-medium',
                   'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30'
                 )}
-                aria-label={t('kyc.navigation.continueAriaLabel', 'Continue to next step')}
+                aria-label={t('kyc.navigation.continueAriaLabel')}
               >
-                <span>{t('kyc.navigation.continue', 'Continue')}</span>
+                <span>{t('kyc.navigation.continue')}</span>
                 <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </Button>
             )}

@@ -237,7 +237,16 @@ export default function AdminKycPage() {
         review_steps: reviewSteps,
       });
       notification.success(t("admin.kyc.page.approveSuccess"));
-      setReviewPanelOpen(false);
+      notification.warning(
+        t(
+          "admin.kyc.page.approveNeedAdmission",
+          "审核已通过，请继续完成链上准入。"
+        )
+      );
+      if (selectedKyc?.kyc.id === kycId) {
+        const detail = await adminKycService.getKycDetail(kycId);
+        setSelectedKyc(detail);
+      }
       loadKycList();
       loadStats();
     } catch (error) {

@@ -17,38 +17,57 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
-const benefits = [
-  {
-    icon: Zap,
-    title: 'Higher Investment Limits',
-    description: 'Unlock higher daily and monthly investment limits after verification',
-  },
-  {
-    icon: Globe,
-    title: 'Access to Premium Assets',
-    description: 'Get exclusive access to high-yield RWA investment opportunities',
-  },
-  {
-    icon: Lock,
-    title: 'Enhanced Security',
-    description: 'Your identity is protected with bank-level encryption',
-  },
-  {
-    icon: Shield,
-    title: 'Regulatory Compliance',
-    description: 'Stay compliant with global financial regulations',
-  },
-];
-
-const requirements = [
-  { icon: FileCheck, text: 'Valid government-issued ID (Passport, National ID, or Driver\'s License)' },
-  { icon: Camera, text: 'Camera access for face verification' },
-  { icon: Clock, text: '5-10 minutes of your time' },
-];
+const benefitIcons = [Zap, Globe, Lock, Shield];
+const requirementIcons = [FileCheck, Camera, Clock];
 
 export function KycLanding() {
   const { t } = useTranslation();
   const { hideLandingPage, loadDraft, status, lastSaved } = useKycContext();
+
+  const benefits = React.useMemo(
+    () => [
+      {
+        icon: benefitIcons[0],
+        title: t('kyc.landing.benefits.limit.title'),
+        description: t('kyc.landing.benefits.limit.desc'),
+      },
+      {
+        icon: benefitIcons[1],
+        title: t('kyc.landing.benefits.premium.title'),
+        description: t('kyc.landing.benefits.premium.desc'),
+      },
+      {
+        icon: benefitIcons[2],
+        title: t('kyc.landing.benefits.security.title'),
+        description: t('kyc.landing.benefits.security.desc'),
+      },
+      {
+        icon: benefitIcons[3],
+        title: t('kyc.landing.benefits.compliance.title'),
+        description: t('kyc.landing.benefits.compliance.desc'),
+      },
+    ],
+    [t]
+  );
+
+  const requirements = React.useMemo(
+    () => [
+      { icon: requirementIcons[0], text: t('kyc.landing.requirements.id') },
+      { icon: requirementIcons[1], text: t('kyc.landing.requirements.camera') },
+      { icon: requirementIcons[2], text: t('kyc.landing.requirements.time') },
+    ],
+    [t]
+  );
+
+  const processSteps = React.useMemo(
+    () => [
+      { step: '1', title: t('kyc.landing.process.step1.title'), desc: t('kyc.landing.process.step1.desc') },
+      { step: '2', title: t('kyc.landing.process.step2.title'), desc: t('kyc.landing.process.step2.desc') },
+      { step: '3', title: t('kyc.landing.process.step3.title'), desc: t('kyc.landing.process.step3.desc') },
+      { step: '4', title: t('kyc.landing.process.step4.title'), desc: t('kyc.landing.process.step4.desc') },
+    ],
+    [t]
+  );
 
   const handleStart = () => {
     if (status === 'draft') {
@@ -65,10 +84,10 @@ export function KycLanding() {
           <Shield className="h-12 w-12 text-primary" />
         </div>
         <h1 className="text-4xl font-bold text-white mb-4">
-          {t('kyc.landing.title', 'Identity Verification')}
+          {t('kyc.landing.title')}
         </h1>
         <p className="text-xl text-white/60 max-w-2xl mx-auto mb-8">
-          {t('kyc.landing.subtitle', 'Complete your KYC verification to unlock the full potential of SuperCrypto RWA investment platform')}
+          {t('kyc.landing.subtitle')}
         </p>
 
         {/* Start Button */}
@@ -81,12 +100,12 @@ export function KycLanding() {
           >
             {status === 'draft' ? (
               <>
-                {t('kyc.landing.continue', 'Continue Verification')}
+                {t('kyc.landing.continue')}
                 <ChevronRight className="h-5 w-5" />
               </>
             ) : (
               <>
-                {t('kyc.landing.start', 'Start Verification')}
+                {t('kyc.landing.start')}
                 <ChevronRight className="h-5 w-5" />
               </>
             )}
@@ -94,7 +113,7 @@ export function KycLanding() {
 
           {status === 'draft' && lastSaved && (
             <p className="text-sm text-primary">
-              {t('kyc.landing.draftSaved', 'Last saved: {{time}}', {
+              {t('kyc.landing.draftSaved', {
                 time: new Date(lastSaved).toLocaleString(),
               })}
             </p>
@@ -105,7 +124,7 @@ export function KycLanding() {
       {/* Benefits Grid */}
       <div>
         <h2 className="text-2xl font-bold text-white text-center mb-8">
-          {t('kyc.landing.benefitsTitle', 'Why Verify Your Identity?')}
+          {t('kyc.landing.benefitsTitle')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {benefits.map((benefit, index) => (
@@ -130,7 +149,7 @@ export function KycLanding() {
       {/* Requirements Section */}
       <Card className="p-8 glass border-primary/20">
         <h2 className="text-xl font-bold text-white mb-6">
-          {t('kyc.landing.whatYouNeed', 'What You\'ll Need')}
+          {t('kyc.landing.whatYouNeed')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {requirements.map((req, index) => (
@@ -147,15 +166,10 @@ export function KycLanding() {
       {/* Process Steps */}
       <Card className="p-8 glass border-white/10">
         <h2 className="text-xl font-bold text-white mb-8 text-center">
-          {t('kyc.landing.processTitle', 'Verification Process')}
+          {t('kyc.landing.processTitle')}
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { step: '1', title: 'Personal Info', desc: 'Basic details' },
-            { step: '2', title: 'Identity', desc: 'Upload documents' },
-            { step: '3', title: 'Face Check', desc: 'Quick selfie' },
-            { step: '4', title: 'Review', desc: 'Submit & wait' },
-          ].map((item, index) => (
+          {processSteps.map((item, index) => (
             <div key={index} className="text-center">
               <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
                 <span className="text-primary font-bold">{item.step}</span>
@@ -172,12 +186,10 @@ export function KycLanding() {
         <AlertCircle className="h-6 w-6 text-amber-400 shrink-0 mt-0.5" />
         <div>
           <h4 className="font-medium text-amber-400 mb-1">
-            {t('kyc.landing.securityNote', 'Your Data is Secure')}
+            {t('kyc.landing.securityNote')}
           </h4>
           <p className="text-sm text-amber-400/70">
-            We use bank-level encryption to protect your personal information. 
-            Your data is only used for identity verification and compliance purposes. 
-            We never share your information with third parties without your consent.
+            {t('kyc.landing.securityDesc')}
           </p>
         </div>
       </div>
@@ -191,16 +203,16 @@ export function KycLanding() {
           className="min-w-[240px] gap-2 text-lg h-14"
         >
           {status === 'draft' ? (
-            <>{t('kyc.landing.continue', 'Continue Verification')}</>
+            <>{t('kyc.landing.continue')}</>
           ) : (
-            <>{t('kyc.landing.startNow', 'Start Verification Now')}</>
+            <>{t('kyc.landing.startNow')}</>
           )}
           <ChevronRight className="h-5 w-5" />
         </Button>
         <p className="mt-4 text-sm text-white/40">
-          {t('kyc.landing.questions', 'Questions? Contact our ')}
+          {t('kyc.landing.questions')}
           <a href="/support" className="text-primary hover:underline">
-            {t('kyc.landing.supportTeam', 'support team')}
+            {t('kyc.landing.supportTeam')}
           </a>
         </p>
       </div>

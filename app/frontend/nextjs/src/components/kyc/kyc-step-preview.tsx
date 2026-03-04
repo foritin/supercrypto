@@ -87,13 +87,12 @@ export function KycStepPreview({ onStart, className }: KycStepPreviewProps) {
             <Shield className="w-6 h-6 text-primary" />
           </div>
           <h2 className="text-xl font-semibold text-white">
-            {t('kyc.preview.title', 'Identity Verification')}
+            {t('kyc.preview.title')}
           </h2>
         </div>
         <p className="text-white/60 text-sm leading-relaxed">
           {t(
-            'kyc.preview.description',
-            'Complete identity verification to unlock all platform features including investing in RWA assets and higher transaction limits.'
+            'kyc.preview.description'
           )}
         </p>
       </div>
@@ -156,12 +155,12 @@ export function KycStepPreview({ onStart, className }: KycStepPreviewProps) {
             <AlertCircle className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" />
             <div>
               <h4 className="text-sm font-medium text-gold mb-1">
-                {t('kyc.preview.requirements.title', 'Before You Start')}
+                {t('kyc.preview.requirements.title')}
               </h4>
               <ul className="text-sm text-white/60 space-y-1">
-                <li>• {t('kyc.preview.requirements.id', 'Valid government-issued ID')}</li>
-                <li>• {t('kyc.preview.requirements.selfie', 'Clear selfie for verification')}</li>
-                <li>• {t('kyc.preview.requirements.address', 'Proof of address document')}</li>
+                <li>• {t('kyc.preview.requirements.id')}</li>
+                <li>• {t('kyc.preview.requirements.selfie')}</li>
+                <li>• {t('kyc.preview.requirements.address')}</li>
               </ul>
             </div>
           </div>
@@ -176,10 +175,10 @@ export function KycStepPreview({ onStart, className }: KycStepPreviewProps) {
               'bg-primary hover:bg-primary/90 text-bg-dark font-medium'
             )}
           >
-            {t('kyc.preview.startButton', 'Start Verification')}
+            {t('kyc.preview.startButton')}
           </Button>
           <p className="text-center text-xs text-white/40 mt-3">
-            {t('kyc.preview.eta', 'Estimated time: 3-5 minutes')}
+            {t('kyc.preview.eta')}
           </p>
         </div>
       </div>

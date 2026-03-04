@@ -62,7 +62,7 @@ export const KycStepper: React.FC<KycStepperProps> = ({
   return (
     <nav
       className={cn('w-full', className)}
-      aria-label={t('kyc.stepper.ariaLabel', 'Verification progress')}
+      aria-label={t('kyc.stepper.ariaLabel')}
     >
       {/* 桌面端：水平步骤条 */}
       <div className="hidden sm:flex items-center justify-center gap-2">

@@ -41,18 +41,18 @@ export function BasicInfoStep() {
           <button
             onClick={showLandingPage}
             className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-            title={t('kyc.backToOverview', 'Back to Overview')}
+            title={t('kyc.backToOverview')}
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h3 className="text-xl font-semibold text-white">
-            {t('kyc.basicInfo.title', 'Personal Information')}
+            {t('kyc.basicInfo.title')}
           </h3>
         </div>
         {lastSaved && (
           <span className="flex items-center gap-1 text-xs text-primary">
             <Save className="h-3 w-3" />
-            {t('kyc.autoSaved', 'Auto-saved')}
+            {t('kyc.autoSaved')}
           </span>
         )}
       </div>
@@ -61,7 +61,7 @@ export function BasicInfoStep() {
         {/* Name Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField 
-            label={t('kyc.basicInfo.firstName', 'First Name')} 
+            label={t('kyc.basicInfo.firstName')} 
             required 
             error={errors.firstName}
           >
@@ -77,7 +77,7 @@ export function BasicInfoStep() {
           </FormField>
 
           <FormField 
-            label={t('kyc.basicInfo.lastName', 'Last Name')} 
+            label={t('kyc.basicInfo.lastName')} 
             required 
             error={errors.lastName}
           >
@@ -96,7 +96,7 @@ export function BasicInfoStep() {
         {/* DOB and Nationality */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField 
-            label={t('kyc.basicInfo.dateOfBirth', 'Date of Birth')} 
+            label={t('kyc.basicInfo.dateOfBirth')} 
             required 
             error={errors.dateOfBirth}
           >
@@ -113,7 +113,7 @@ export function BasicInfoStep() {
           </FormField>
 
           <FormField 
-            label={t('kyc.basicInfo.nationality', 'Nationality')} 
+            label={t('kyc.basicInfo.nationality')} 
             required 
             error={errors.nationality}
           >
@@ -129,12 +129,12 @@ export function BasicInfoStep() {
         {/* Contact Information */}
         <div className="pt-6 border-t border-white/10">
           <h4 className="text-lg font-medium text-white mb-4">
-            {t('kyc.basicInfo.contact', 'Contact Information')}
+            {t('kyc.basicInfo.contact')}
           </h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField 
-              label={t('kyc.basicInfo.email', 'Email Address')} 
+              label={t('kyc.basicInfo.email')} 
               required 
               error={errors.email}
             >
@@ -150,10 +150,10 @@ export function BasicInfoStep() {
             </FormField>
 
             <FormField 
-              label={t('kyc.basicInfo.phone', 'Phone Number')} 
+              label={t('kyc.basicInfo.phone')} 
               required 
               error={errors.phone}
-              helperText={t('kyc.basicInfo.phoneHelper', 'Include country code (e.g., +1 for US)')}
+              helperText={t('kyc.basicInfo.phoneHelper')}
             >
               <FormInput
                 type="tel"
@@ -177,7 +177,7 @@ export function BasicInfoStep() {
             disabled={hasErrors}
             className="gap-2"
           >
-            {t('common.continue', 'Continue')}
+            {t('common.continue')}
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>

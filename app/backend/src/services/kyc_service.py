@@ -539,9 +539,15 @@ class KycService:
         address = data.wallet_address.lower()
 
         # 检查是否已存在申请
-        existing = await AccountKyc.filter(address=address).first()
+        existing = await AccountKyc.filter(
+            address=address,
+            network=self.network,
+        ).first()
 
         if existing:
+            logger.info(
+                f"[KYC APPLY] Found existing record: id={existing.id}, status={existing.status.value}, on_chain={existing.on_chain_sync_status.value}"
+            )
             if existing.status == KycStatus.PENDING:
                 raise BusinessException(
                     code=400, message="KYC application already pending"
@@ -589,6 +595,7 @@ class KycService:
         # 创建新申请
         kyc = await AccountKyc.create(
             address=address,
+            network=self.network,
             status=KycStatus.PENDING,
             submitted_at=datetime.now(timezone.utc),
             country_code=data.country_code,
@@ -1110,18 +1117,28 @@ class KycService:
         if not kyc:
             return "not_started"
 
-        # 只有 rejected 状态可以转换为 not_started
-        if kyc.status != KycStatus.REJECTED:
+        # 允许重置的状态：rejected，或者 approved 但链上状态为 revoked
+        can_reset = kyc.status == KycStatus.REJECTED or (
+            kyc.status == KycStatus.APPROVED
+            and kyc.on_chain_sync_status == OnChainSyncStatus.REVOKED
+        )
+        logger.info(
+            f"[KYC RESET] address={address}, status={kyc.status.value}, on_chain={kyc.on_chain_sync_status.value}, can_reset={can_reset}"
+        )
+
+        if not can_reset:
             raise BusinessException(
                 code=400,
-                message=f"当前状态 {kyc.status.value} 不允许转换为 {target_status}",
+                message=f"当前状态 {kyc.status.value} (链上: {kyc.on_chain_sync_status.value}) 不允许转换为 {target_status}",
             )
 
         # 删除关联的证件记录
-        await AccountKycDocument.filter(kyc_id=kyc.id).delete()
+        doc_count = await AccountKycDocument.filter(kyc_id=kyc.id).delete()
+        logger.info(f"[KYC RESET] Deleted {doc_count} documents for kyc_id={kyc.id}")
 
         # 删除 KYC 记录，让用户可以重新填写
         await kyc.delete()
+        logger.info(f"[KYC RESET] Deleted kyc record for address={address}")
 
         logger.info(f"KYC status updated to {target_status} for address {address}")
         return target_status

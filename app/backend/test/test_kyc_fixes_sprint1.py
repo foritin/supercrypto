@@ -11,7 +11,7 @@ KYC 修复验证测试
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -21,10 +21,12 @@ from hypothesis import strategies as st
 from src.common.exceptions import BusinessException
 from src.models.kyc import AccountKyc
 from src.schemas.enums import (
+    IdType,
     KycStatus,
     Network,
     OnChainSyncStatus,
 )
+from src.schemas.kyc import KycApplyRequest, KycDocumentInfo
 from src.services.kyc_service import KycService
 
 
@@ -109,6 +111,89 @@ class TestB01ApplyInitialSyncStatus:
         assert len(OnChainSyncStatus) == 5
         expected = {"not_required", "pending", "synced", "failed", "revoked"}
         assert {m.value for m in OnChainSyncStatus} == expected
+
+    def test_apply_filters_existing_by_current_network(self):
+        """apply() 查询 existing 记录时应带 network，避免跨网络误判 approved"""
+        request = KycApplyRequest(
+            wallet_address="0x" + "a" * 40,
+            country_code="US",
+            full_name="Alice Tester",
+            date_of_birth=date(1990, 1, 1),
+            documents=[
+                KycDocumentInfo(
+                    id_type=IdType.PASSPORT,
+                    id_number="P1234567",
+                    document_expiry=date.today() + timedelta(days=365),
+                    id_front_url="kyc/front.jpg",
+                    id_back_url=None,
+                )
+            ],
+        )
+
+        mock_created = create_mock_kyc(status=KycStatus.PENDING)
+        with (
+            patch("src.services.kyc_service.SETTINGS") as mock_settings,
+            patch("src.services.kyc_service.AccountKyc") as MockKyc,
+            patch("src.services.kyc_service.AccountKycDocument") as MockDoc,
+            patch.object(
+                KycService,
+                "to_full_response",
+                new=AsyncMock(return_value=MagicMock()),
+            ),
+        ):
+            mock_settings.network = "sepolia"
+            service = KycService()
+            MockKyc.filter.return_value.first = AsyncMock(return_value=None)
+            MockKyc.create = AsyncMock(return_value=mock_created)
+            MockDoc.create = AsyncMock(return_value=MagicMock(id=1))
+            MockDoc.filter.return_value.all = AsyncMock(return_value=[])
+
+            run_async(service.apply(request))
+
+            assert MockKyc.filter.call_args.kwargs == {
+                "address": request.wallet_address.lower(),
+                "network": "sepolia",
+            }
+
+    def test_apply_creates_record_with_current_network(self):
+        """apply() 新建记录应写入当前 network，避免默认 hardhat 污染"""
+        request = KycApplyRequest(
+            wallet_address="0x" + "b" * 40,
+            country_code="US",
+            full_name="Bob Tester",
+            date_of_birth=date(1991, 2, 2),
+            documents=[
+                KycDocumentInfo(
+                    id_type=IdType.PASSPORT,
+                    id_number="P7654321",
+                    document_expiry=date.today() + timedelta(days=365),
+                    id_front_url="kyc/front2.jpg",
+                    id_back_url=None,
+                )
+            ],
+        )
+
+        mock_created = create_mock_kyc(status=KycStatus.PENDING)
+        with (
+            patch("src.services.kyc_service.SETTINGS") as mock_settings,
+            patch("src.services.kyc_service.AccountKyc") as MockKyc,
+            patch("src.services.kyc_service.AccountKycDocument") as MockDoc,
+            patch.object(
+                KycService,
+                "to_full_response",
+                new=AsyncMock(return_value=MagicMock()),
+            ),
+        ):
+            mock_settings.network = "sepolia"
+            service = KycService()
+            MockKyc.filter.return_value.first = AsyncMock(return_value=None)
+            MockKyc.create = AsyncMock(return_value=mock_created)
+            MockDoc.create = AsyncMock(return_value=MagicMock(id=1))
+            MockDoc.filter.return_value.all = AsyncMock(return_value=[])
+
+            run_async(service.apply(request))
+
+            assert MockKyc.create.call_args.kwargs.get("network") == "sepolia"
 
 
 # ============ B-02: record_admission chain verification ============

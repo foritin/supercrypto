@@ -135,15 +135,15 @@ function KycContent() {
             <div className="flex-1 flex justify-end">
               <button
                 onClick={() => {
-                  if (confirm(t('kyc.resetConfirm', 'Are you sure you want to clear all entered data? This action cannot be undone.'))) {
+                  if (confirm(t('kyc.resetConfirm'))) {
                     reset();
                   }
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white/60 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                title={t('kyc.reset', 'Clear all data')}
+                title={t('kyc.reset')}
               >
                 <RotateCcw className="h-4 w-4" />
-                <span className="hidden sm:inline">{t('kyc.reset', 'Reset')}</span>
+                <span className="hidden sm:inline">{t('kyc.reset')}</span>
               </button>
             </div>
           </div>
@@ -152,7 +152,7 @@ function KycContent() {
           </p>
           {lastSaved && (
             <p className="text-sm text-primary mt-2 text-center">
-              {t('kyc.draftSaved', 'Draft saved {{time}}', {
+              {t('kyc.draftSaved', {
                 time: new Date(lastSaved).toLocaleTimeString(),
               })}
             </p>

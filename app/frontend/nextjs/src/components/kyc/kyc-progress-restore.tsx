@@ -167,7 +167,7 @@ export function KycProgressRestore({
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-medium text-white text-sm">
-                {t('kyc.restore.title', 'Resume Your Progress?')}
+                {t('kyc.restore.title')}
               </h3>
               <p className="text-xs text-white/60 mt-1">
                 {t('kyc.restore.description', {
@@ -194,7 +194,7 @@ export function KycProgressRestore({
               className="h-8 px-3 bg-primary hover:bg-primary/90 text-bg-dark text-xs"
             >
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-              {t('kyc.restore.resume', 'Resume')}
+              {t('kyc.restore.resume')}
             </Button>
             <Button
               size="sm"
@@ -202,7 +202,7 @@ export function KycProgressRestore({
               onClick={handleClear}
               className="h-8 px-3 text-white/60 hover:text-white hover:bg-white/5 text-xs"
             >
-              {t('kyc.restore.restart', 'Start Over')}
+              {t('kyc.restore.restart')}
             </Button>
           </div>
         </div>

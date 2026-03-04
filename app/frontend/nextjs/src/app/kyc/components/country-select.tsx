@@ -100,7 +100,7 @@ export function CountrySelect({ value, onChange, onBlur, error, placeholder }: C
         )}>
           {selectedCountry 
             ? t(selectedCountry.labelKey, selectedCountry.code)
-            : placeholder || t('kyc.basicInfo.selectNationality', 'Select nationality')
+            : placeholder || t('kyc.basicInfo.selectNationality')
           }
         </span>
         

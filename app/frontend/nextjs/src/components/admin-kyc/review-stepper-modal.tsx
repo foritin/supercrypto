@@ -39,6 +39,7 @@ import { StepDocuments } from "./step-documents";
 import { StepRiskAssessment } from "./step-risk-assessment";
 import { StepFinalDecision } from "./step-final-decision";
 import { OnChainStatusPanel } from "./onchain-status-panel";
+import { AdmissionButton, shouldShowAdmissionButton } from "./admission-button";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -330,6 +331,33 @@ export function ReviewStepperModal({
                   contractAddress={contractInfo.contract_address}
                   deployerAddress={contractInfo.deployer_address}
                   onRevocationSuccess={onAdmissionSuccess ?? (() => {})}
+                />
+              </div>
+            )}
+
+            {contractInfo && shouldShowAdmissionButton(kycDetail.kyc.status, kycDetail.kyc.on_chain_sync_status) && (
+              <div className="mt-6 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
+                <div className="mb-3">
+                  <p className="text-sm font-medium text-amber-400">
+                    {t("admin.kyc.stepper.admissionRequiredTitle", "审核已通过，请继续完成链上准入")}
+                  </p>
+                  <p className="text-xs text-white/70 mt-1">
+                    {t(
+                      "admin.kyc.stepper.admissionRequiredDesc",
+                      "当前仅完成后台审核，尚未写入链上。请点击下方按钮发起准入交易。"
+                    )}
+                  </p>
+                </div>
+
+                <AdmissionButton
+                  kycId={kycDetail.kyc.id}
+                  walletAddress={kycDetail.kyc.wallet_address}
+                  countryCode={kycDetail.kyc.country_code || ""}
+                  isAccredited={kycDetail.kyc.is_accredited ?? false}
+                  isReAdmission={kycDetail.kyc.on_chain_sync_status === "revoked"}
+                  contractAddress={contractInfo.contract_address}
+                  deployerAddress={contractInfo.deployer_address}
+                  onSuccess={onAdmissionSuccess ?? (() => {})}
                 />
               </div>
             )}
