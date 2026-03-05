@@ -9,13 +9,14 @@
  */
 'use client'
 
-import { useEffect, useRef, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { ArrowRight, ArrowLeft, HelpCircle, Zap } from 'lucide-react'
+import { useEffect, useRef, useMemo } from 'react'
+import { useForm, type SubmitHandler } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
-import { ArrowRight, ArrowLeft, HelpCircle, Zap } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
@@ -25,7 +26,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import {
   Tooltip,
   TooltipContent,
@@ -34,8 +34,8 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
-import { useWizard, useIsFirstStep } from '../wizard-context'
 import type { StepComponentProps } from '../types'
+import { useWizard, useIsFirstStep } from '../wizard-context'
 
 // ============ 常量定义 ============
 
@@ -142,11 +142,11 @@ interface PrefixInputProps {
   prefix: string
   value: number | undefined
   onChange: (value: number | undefined) => void
-  placeholder?: string
-  step?: string
-  'aria-describedby'?: string
-  'aria-invalid'?: boolean
-  inputRef?: React.RefObject<HTMLInputElement | null>
+  placeholder?: string | undefined
+  step?: string | undefined
+  'aria-describedby'?: string | undefined
+  'aria-invalid'?: boolean | undefined
+  inputRef?: React.RefObject<HTMLInputElement | null> | undefined
 }
 
 function PrefixInput({ 
@@ -193,12 +193,12 @@ interface SuffixInputProps {
   suffix: string
   value: number | undefined
   onChange: (value: number | undefined) => void
-  placeholder?: string
-  min?: number
-  max?: number
-  step?: string
-  'aria-describedby'?: string
-  'aria-invalid'?: boolean
+  placeholder?: string | undefined
+  min?: number | undefined
+  max?: number | undefined
+  step?: string | undefined
+  'aria-describedby'?: string | undefined
+  'aria-invalid'?: boolean | undefined
 }
 
 function SuffixInput({ 
@@ -290,15 +290,15 @@ export function FinancialStep({ onNext, onPrev }: StepComponentProps) {
   const financialSchema = useMemo(() => createFinancialSchema(t), [t])
 
   // 初始化表单
-  const form = useForm<FinancialFormValues>({
+  const form = useForm<FinancialFormValues, unknown, FinancialFormValues>({
     resolver: zodResolver(financialSchema),
     defaultValues: {
-      total_supply: state.formData.total_supply || undefined,
-      min_subscription: state.formData.min_subscription || undefined,
-      current_price: state.formData.current_price || undefined,
-      apy_3m: state.formData.apy_3m ?? undefined,
-      apy_6m: state.formData.apy_6m ?? undefined,
-      apy_12m: state.formData.apy_12m ?? undefined,
+      total_supply: state.formData.total_supply ?? 0,
+      min_subscription: state.formData.min_subscription ?? 100,
+      current_price: state.formData.current_price ?? 1,
+      apy_3m: state.formData.apy_3m ?? 10,
+      apy_6m: state.formData.apy_6m ?? 12,
+      apy_12m: state.formData.apy_12m ?? 15,
       subscription_start_at: state.formData.subscription_start_at ?? undefined,
       subscription_end_at: state.formData.subscription_end_at ?? undefined,
     },
@@ -318,7 +318,16 @@ export function FinancialStep({ onNext, onPrev }: StepComponentProps) {
   // 当表单数据变化时，同步到 WizardContext
   useEffect(() => {
     const subscription = form.watch((values) => {
-      updateFormData(values as Partial<FinancialFormValues>)
+      updateFormData({
+        total_supply: values.total_supply ?? 0,
+        min_subscription: values.min_subscription ?? 100,
+        current_price: values.current_price ?? 1,
+        apy_3m: values.apy_3m ?? 10,
+        apy_6m: values.apy_6m ?? 12,
+        apy_12m: values.apy_12m ?? 15,
+        ...(values.subscription_start_at ? { subscription_start_at: values.subscription_start_at } : {}),
+        ...(values.subscription_end_at ? { subscription_end_at: values.subscription_end_at } : {}),
+      })
     })
     return () => subscription.unsubscribe()
   }, [form, updateFormData])
@@ -326,8 +335,17 @@ export function FinancialStep({ onNext, onPrev }: StepComponentProps) {
   /**
    * 处理下一步
    */
-  const handleNext = (values: FinancialFormValues) => {
-    updateFormData(values)
+  const handleNext: SubmitHandler<FinancialFormValues> = (values) => {
+    updateFormData({
+      total_supply: values.total_supply,
+      min_subscription: values.min_subscription,
+      current_price: values.current_price,
+      apy_3m: values.apy_3m,
+      apy_6m: values.apy_6m,
+      apy_12m: values.apy_12m,
+      ...(values.subscription_start_at ? { subscription_start_at: values.subscription_start_at } : {}),
+      ...(values.subscription_end_at ? { subscription_end_at: values.subscription_end_at } : {}),
+    })
     markStepComplete(2)
     onNext?.()
   }

@@ -15,8 +15,9 @@
  * - 3.5: WHEN 用户输入居住地址 THEN Form_Validator SHALL 验证非空
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
+
 import {
   step1Schema,
   step2Schema,
@@ -56,7 +57,9 @@ describe('Property 4: Step1 表单验证规则正确', () => {
             const result = step1Schema.shape.fullName.safeParse(shortName)
             expect(result.success).toBe(false)
             if (!result.success) {
-              expect(result.error.issues[0].message).toContain('2')
+              const firstIssue = result.error.issues[0]
+              expect(firstIssue).toBeDefined()
+              expect(firstIssue?.message).toContain('2')
             }
           }
         ),
@@ -73,7 +76,9 @@ describe('Property 4: Step1 表单验证规则正确', () => {
             const result = step1Schema.shape.fullName.safeParse(longName)
             expect(result.success).toBe(false)
             if (!result.success) {
-              expect(result.error.issues[0].message).toContain('50')
+              const firstIssue = result.error.issues[0]
+              expect(firstIssue).toBeDefined()
+              expect(firstIssue?.message).toContain('50')
             }
           }
         ),
@@ -149,7 +154,9 @@ describe('Property 4: Step1 表单验证规则正确', () => {
           const result = step1Schema.shape.dateOfBirth.safeParse(invalidDate)
           expect(result.success).toBe(false)
           if (!result.success) {
-            expect(result.error.issues[0].message).toContain(String(KYC_MIN_AGE))
+            const firstIssue = result.error.issues[0]
+            expect(firstIssue).toBeDefined()
+            expect(firstIssue?.message).toContain(String(KYC_MIN_AGE))
           }
         }),
         { numRuns: 100 }
@@ -231,7 +238,9 @@ describe('Property 4: Step1 表单验证规则正确', () => {
       const result = step1Schema.shape.address.safeParse('')
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('地址')
+        const firstIssue = result.error.issues[0]
+        expect(firstIssue).toBeDefined()
+        expect(firstIssue?.message).toContain('地址')
       }
     })
   })
@@ -259,7 +268,9 @@ describe('Property 4: Step1 表单验证规则正确', () => {
       const result = step1Schema.shape.nationality.safeParse('')
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('国籍')
+        const firstIssue = result.error.issues[0]
+        expect(firstIssue).toBeDefined()
+        expect(firstIssue?.message).toContain('国籍')
       }
     })
   })
@@ -363,7 +374,9 @@ describe('Property 4: Step1 表单验证规则正确', () => {
       const result = step2Schema.shape.idNumber.safeParse('')
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('证件号码')
+        const firstIssue = result.error.issues[0]
+        expect(firstIssue).toBeDefined()
+        expect(firstIssue?.message).toContain('证件号码')
       }
     })
   })

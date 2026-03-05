@@ -13,9 +13,10 @@
  * - @layer base 基础配置
  */
 
-import { describe, test, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import { describe, test, expect } from 'vitest';
 
 // 读取新的 globals.css 文件（重构后的版本）
 const globalsNewPath = path.join(__dirname, '../../app/globals.css');

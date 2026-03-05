@@ -9,11 +9,13 @@
  * 4. 续期失败 → 退出登录
  */
 
-import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios'
-import { getJwtToken, clearAuthData } from '@/utils/auth'
-import { refreshAccessToken } from '@/services/auth'
+import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import axios from 'axios'
 
 import { API_BASE_URL } from '@/constants/api'
+import { refreshAccessToken } from '@/services/auth'
+import { getJwtToken, clearAuthData } from '@/utils/auth'
+
 
 /**
  * API Error
@@ -26,8 +28,12 @@ export class ApiError extends Error {
   constructor(code: number, message: string, errorCode?: number, detail?: Record<string, unknown>) {
     super(message)
     this.code = code
-    this.errorCode = errorCode
-    this.detail = detail
+    if (errorCode !== undefined) {
+      this.errorCode = errorCode
+    }
+    if (detail !== undefined) {
+      this.detail = detail
+    }
     this.name = 'ApiError'
   }
 }
@@ -203,7 +209,7 @@ export function post<T>(endpoint: string, body?: unknown): Promise<T> {
   // 如果是 FormData，删除默认的 Content-Type，让浏览器自动设置 (包含 boundary)
   if (body instanceof FormData) {
     return axiosInstance.post(endpoint, body, {
-      headers: { 'Content-Type': undefined }
+      headers: {}
     }) as Promise<T>
   }
   return axiosInstance.post(endpoint, body) as Promise<T>

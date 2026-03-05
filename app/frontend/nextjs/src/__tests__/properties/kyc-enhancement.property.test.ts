@@ -10,8 +10,8 @@ import fc from 'fast-check'
 import { describe, it, expect } from 'vitest'
 
 // 导入翻译文件
-import zhCNKyc from '@/locales/zh-CN/kyc'
 import enUSKyc from '@/locales/en-US/kyc'
+import zhCNKyc from '@/locales/zh-CN/kyc'
 
 /**
  * 新增的翻译 key 列表
@@ -149,7 +149,7 @@ describe('KYC Enhancement Property Tests', () => {
     /**
      * 状态转换函数：触发保存
      */
-    function triggerSave(state: AutoSaveState, currentTime: number): AutoSaveState {
+    function triggerSave(_state: AutoSaveState, currentTime: number): AutoSaveState {
       return {
         visible: true,
         lastTriggerTime: currentTime,

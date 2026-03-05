@@ -9,8 +9,6 @@
  */
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
 import { 
   Trash2, 
   Star, 
@@ -24,19 +22,10 @@ import {
   Square,
   XCircle
 } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from '@/components/ui/tabs'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { AssetLogoFrame, FRAME_STYLE_OPTIONS, FRAME_STYLE_THEMES } from '@/components/asset'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,15 +37,27 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
-import { cn } from '@/lib/utils'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/tabs'
 import { notification } from '@/lib/notification'
+import { cn } from '@/lib/utils'
 import { assetService, type AssetMediaItem, type MediaType, type MediaStats, type FrameStyle } from '@/services/asset'
-import { AssetLogoFrame, FRAME_STYLE_OPTIONS, FRAME_STYLE_THEMES } from '@/components/asset'
 
 // 媒体类型配置
 const MEDIA_TYPE_CONFIG: Record<
@@ -144,7 +145,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
       ])
       setMediaList(media)
       setStats(statsData)
-    } catch (error) {
+    } catch {
       notification.error(t('admin.media.messages.loadFailed'))
     } finally {
       setLoading(false)
@@ -224,7 +225,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
       if (result.failed_count > 0) {
         notification.error(t('admin.media.messages.uploadBatchFailed', { count: result.failed_count }))
       }
-    } catch (error) {
+    } catch {
       notification.error(t('admin.media.messages.uploadFailed'))
     } finally {
       setUploading(false)
@@ -243,7 +244,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
         const error = result.results[0]?.error || 'Unknown error'
         notification.error(t('admin.media.messages.deleteFailed') + ': ' + error)
       }
-    } catch (error) {
+    } catch {
       notification.error(t('admin.media.messages.deleteFailed'))
     }
   }
@@ -265,7 +266,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
       if (result.failed_count > 0) {
         notification.error(t('admin.media.messages.deleteBatchFailed', { count: result.failed_count }))
       }
-    } catch (error) {
+    } catch {
       notification.error(t('admin.media.messages.deleteFailed'))
     } finally {
       setDeleting(false)
@@ -303,7 +304,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
       notification.success(t('admin.media.messages.setPrimarySuccess'))
       loadMedia()
       onUpdate?.()
-    } catch (error) {
+    } catch {
       notification.error(t('admin.media.messages.setPrimaryFailed'))
     }
   }
@@ -314,7 +315,10 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
     setFrameStyle(newStyle)
     setSavingFrameStyle(true)
     try {
-      await assetService.updateAsset(assetId, { frame_style: newStyle ?? undefined })
+      await assetService.updateAsset(
+        assetId,
+        newStyle ? { frame_style: newStyle } : {}
+      )
       notification.success(t('admin.assets.form.frameStyle.saved'))
       onUpdate?.()
     } catch {
@@ -580,7 +584,7 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
             {uploading 
               ? t('admin.media.upload.uploading') 
               : !canUploadMore 
-                ? t('admin.media.messages.maxCountReached', { count: config?.maxCount })
+                ? t('admin.media.messages.maxCountReached', { count: config?.maxCount ?? 0 })
                 : allowMultiple
                   ? t('admin.media.upload.dragOrClickMultiple')
                   : t('admin.media.upload.dragOrClick')

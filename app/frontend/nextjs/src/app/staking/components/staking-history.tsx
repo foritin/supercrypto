@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Gift, ExternalLink } from "lucide-react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useChainId } from "wagmi";
-import { ColumnDef } from "@tanstack/react-table";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable } from "@/components/ui/data-table";
 import {
   Dialog,
   DialogContent,
@@ -19,18 +17,21 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DataTable } from "@/components/ui/data-table";
-import { cn, getExplorerUrl } from "@/lib/utils";
 import { notification } from "@/lib/notification";
-import { EmptyState } from "@/components/ui/empty-state";
+import { cn, getExplorerUrl } from "@/lib/utils";
 import { stakingService } from "@/services/staking";
 import type { StakingResponse } from "@/types/staking";
+
 import { AlertBox } from "./staking-pools";
 
 interface StakingHistoryProps {

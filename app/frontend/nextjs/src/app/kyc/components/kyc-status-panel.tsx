@@ -1,10 +1,5 @@
 'use client';
 
-import * as React from 'react';
-import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useKycContext } from '@/contexts/kyc-context';
 import { 
   Clock, 
   CheckCircle, 
@@ -15,6 +10,12 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useKycContext } from '@/contexts/kyc-context';
 
 export function KycStatusPanel() {
   const { t } = useTranslation();

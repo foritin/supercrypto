@@ -1,13 +1,15 @@
 'use client';
 
+import { ArrowLeft, ArrowRight, Shield, AlertCircle, ChevronLeft, Loader2, CheckCircle2, XCircle, Camera, RefreshCw, Upload, Video } from 'lucide-react';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useKycContext } from '@/contexts/kyc-context';
-import { ArrowLeft, ArrowRight, Shield, AlertCircle, ChevronLeft, Loader2, CheckCircle2, XCircle, Camera, RefreshCw, Upload, Video } from 'lucide-react';
 import { toast } from 'sonner';
-import { useLivenessDetection, ActionType } from '@/hooks/use-liveness-detection';
+
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useKycContext } from '@/contexts/kyc-context';
+import type { ActionType } from '@/hooks/use-liveness-detection';
+import { useLivenessDetection } from '@/hooks/use-liveness-detection';
 import { uploadBase64Image, uploadLivenessVideo } from '@/services/kyc';
 
 // 椭圆框配置
@@ -72,7 +74,7 @@ export function LivenessStep() {
     if (formData.faceImagePath) return 'success';
     return 'idle';
   });
-  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [, setUploadError] = React.useState<string | null>(null);
   // 保留 base64 图片用于重试 (Task 5.3)
   const [pendingUploadImage, setPendingUploadImage] = React.useState<string | null>(null);
 
@@ -82,7 +84,7 @@ export function LivenessStep() {
     if (formData.livenessVideoPath) return 'success';
     return 'idle';
   });
-  const [videoUploadError, setVideoUploadError] = React.useState<string | null>(null);
+  const [, setVideoUploadError] = React.useState<string | null>(null);
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const recordedChunksRef = React.useRef<Blob[]>([]);
   const [pendingVideoBlob, setPendingVideoBlob] = React.useState<Blob | null>(null);
@@ -321,10 +323,26 @@ export function LivenessStep() {
     const detector = detectorRef.current;
     if (!video || !detector || video.readyState < 2) return;
 
+    type VideoDetection = {
+      detections?: Array<{
+        boundingBox?: {
+          originX: number;
+          originY: number;
+          width: number;
+          height: number;
+        };
+      }>;
+    };
+
+    type DetectForVideoLike = {
+      detectForVideo: (video: HTMLVideoElement, timestamp: number) => VideoDetection;
+    };
+
     try {
-      const detections = (detector as any).detectForVideo(video, performance.now());
-      if (detections.detections?.length > 0) {
-        const bbox = detections.detections[0]?.boundingBox;
+      const detections = (detector as unknown as DetectForVideoLike).detectForVideo(video, performance.now());
+      const detectedList = detections.detections ?? [];
+      if (detectedList.length > 0) {
+        const bbox = detectedList[0]?.boundingBox;
         if (bbox) {
           const faceCenterX = (bbox.originX + bbox.width / 2) / video.videoWidth;
           const faceCenterY = (bbox.originY + bbox.height / 2) / video.videoHeight;

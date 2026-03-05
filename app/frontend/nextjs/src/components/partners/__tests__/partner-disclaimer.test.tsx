@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
 import { PartnerDisclaimer } from '../partner-disclaimer';
 
 // Mock i18next

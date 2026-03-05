@@ -8,8 +8,8 @@
  * - 管理员接口：/admin/kyc/*（审核、列表）
  * - 开发工具：/kyc/dev/*
  */
-import { api } from '@/services/api'
 import { PUBLIC_PATHS, USER_PATHS, ADMIN_PATHS, DEV_PATHS } from '@/constants/api-paths'
+import { api } from '@/services/api'
 
 // ============================================================================
 // KYC 文件上传类型定义

@@ -6,8 +6,8 @@
  * Feature: kyc-media-display-and-selfie
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
 
 // ============================================================================
 // Helper: Generate hex string (fast-check v4 doesn't have hexaString)
@@ -190,7 +190,21 @@ describe('Property 5: KYC Submission Selfie Inclusion', () => {
   it('property: selfiePath should correctly map to selfie_url in API request', () => {
     fc.assert(
       fc.property(kycFormDataWithSelfieArb, (formData) => {
-        const apiRequest = buildKycApiRequest(formData)
+        const normalizedFormData = {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          dateOfBirth: formData.dateOfBirth,
+          nationality: formData.nationality,
+          documentType: formData.documentType,
+          documentNumber: formData.documentNumber,
+          documentExpiry: formData.documentExpiry,
+          ...(formData.selfie ? { selfie: formData.selfie } : {}),
+          ...(formData.selfiePath ? { selfiePath: formData.selfiePath } : {}),
+          ...(formData.faceImagePath ? { faceImagePath: formData.faceImagePath } : {}),
+          ...(formData.livenessVideoPath ? { livenessVideoPath: formData.livenessVideoPath } : {}),
+        }
+
+        const apiRequest = buildKycApiRequest(normalizedFormData)
 
         if (formData.selfiePath) {
           // When selfiePath is set, selfie_url should have the same value
@@ -228,9 +242,9 @@ describe('Property 5: KYC Submission Selfie Inclusion', () => {
             documentType: 'passport',
             documentNumber: 'ABC123456',
             documentExpiry: '2030-01-01',
-            selfiePath: includeSelfie ? selfiePath : undefined,
-            faceImagePath: includeFace ? facePath : undefined,
-            livenessVideoPath: includeVideo ? videoPath : undefined,
+            ...(includeSelfie ? { selfiePath } : {}),
+            ...(includeFace ? { faceImagePath: facePath } : {}),
+            ...(includeVideo ? { livenessVideoPath: videoPath } : {}),
           }
 
           const apiRequest = buildKycApiRequest(formData)
@@ -313,7 +327,7 @@ describe('Property 5: KYC Submission Selfie Inclusion', () => {
             documentType: 'passport',
             documentNumber: 'ABC123456',
             documentExpiry: '2030-01-01',
-            selfiePath: selfiePathValue as string | undefined,
+            ...((selfiePathValue as string | undefined) ? { selfiePath: selfiePathValue as string } : {}),
           }
 
           const apiRequest = buildKycApiRequest(formData)
@@ -452,8 +466,8 @@ describe('Property 6: Draft Restoration Completeness', () => {
             formData: {
               firstName: 'Test',
               lastName: 'User',
-              selfie: selfieValue as string | undefined,
-              selfiePath: selfiePathValue as string | undefined,
+              ...((selfieValue as string | undefined) ? { selfie: selfieValue as string } : {}),
+              ...((selfiePathValue as string | undefined) ? { selfiePath: selfiePathValue as string } : {}),
             },
             status: 'draft',
             lastSaved: Date.now(),
@@ -484,7 +498,17 @@ describe('Property 6: Draft Restoration Completeness', () => {
         (formData) => {
           const savedDraft = {
             formData: {
-              ...formData,
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              dateOfBirth: formData.dateOfBirth,
+              nationality: formData.nationality,
+              documentType: formData.documentType,
+              documentNumber: formData.documentNumber,
+              documentExpiry: formData.documentExpiry,
+              ...(formData.selfie ? { selfie: formData.selfie } : {}),
+              ...(formData.selfiePath ? { selfiePath: formData.selfiePath } : {}),
+              ...(formData.faceImagePath ? { faceImagePath: formData.faceImagePath } : {}),
+              ...(formData.livenessVideoPath ? { livenessVideoPath: formData.livenessVideoPath } : {}),
             },
             status: 'draft',
             lastSaved: Date.now(),
@@ -527,7 +551,7 @@ describe('Property 6: Draft Restoration Completeness', () => {
               selfie,
               selfiePath,
             },
-            status,
+            ...(status ? { status } : {}),
             lastSaved: Date.now(),
           }
 

@@ -76,6 +76,7 @@ export const TriggeredLightFlow: React.FC<TriggeredLightFlowProps> = ({
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [trigger, duration]);
 
   // 清理

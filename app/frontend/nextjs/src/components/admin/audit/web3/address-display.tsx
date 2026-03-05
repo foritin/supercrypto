@@ -4,8 +4,9 @@
  */
 'use client';
 
-import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
+import React, { useState } from 'react';
+
 import {
   Tooltip,
   TooltipContent,
@@ -44,7 +45,7 @@ const AddressDisplay: React.FC<AddressDisplayProps> = ({
       setCopied(true);
       notification.success('已复制地址');
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch {
       notification.error('复制失败');
     }
   };

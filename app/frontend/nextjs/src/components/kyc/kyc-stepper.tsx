@@ -9,10 +9,11 @@
  * Validates: Requirements 2.1, 2.5
  */
 
+import { Check } from 'lucide-react'
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
+
 import { cn } from '@/lib/utils'
-import { Check } from 'lucide-react'
 
 /**
  * KycStepper 组件属性
@@ -58,6 +59,7 @@ export const KycStepper: React.FC<KycStepperProps> = ({
 
   // 确保 currentStep 在有效范围内
   const validCurrentStep = Math.max(0, Math.min(currentStep, STEPS.length - 1))
+  const currentStepData = STEPS[validCurrentStep]
 
   return (
     <nav
@@ -140,7 +142,7 @@ export const KycStepper: React.FC<KycStepperProps> = ({
           </span>
           <span className="mx-2 text-white/30">·</span>
           <span className="text-sm text-white/70">
-            {isZh ? STEPS[validCurrentStep].titleZh : STEPS[validCurrentStep].title}
+            {isZh ? currentStepData?.titleZh ?? '' : currentStepData?.title ?? ''}
           </span>
         </div>
         

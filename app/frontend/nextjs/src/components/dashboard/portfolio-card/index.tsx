@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
 import { motion } from 'framer-motion';
+import React from 'react';
+
 import { GlassCard } from '@/components/ui/glass-card-component';
 import { Progress } from '@/components/ui/progress';
 
@@ -121,7 +122,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
                 <div className="flex items-center gap-3">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: chartData[index].color }}
+                    style={{ backgroundColor: chartData[index]?.color ?? '#6366f1' }}
                   />
                   <div>
                     <p className="text-sm font-medium text-white">

@@ -1,7 +1,10 @@
 'use client'
 
-import { useTranslation } from 'react-i18next'
 import { Download, Chrome, Flame, Shield, Info } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -10,8 +13,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 
 interface InstallMetaMaskModalProps {
   open: boolean

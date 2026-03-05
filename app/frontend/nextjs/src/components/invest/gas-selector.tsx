@@ -1,11 +1,12 @@
 'use client';
 
+import { Zap, Clock, Gauge } from 'lucide-react';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useGasEstimate } from '@/hooks/use-transaction';
-import { useTransactionContext, type GasOption } from '@/contexts/transaction-context';
-import { Zap, Clock, Gauge } from 'lucide-react';
 import { formatGwei } from 'viem';
+
+import { useTransactionContext, type GasOption } from '@/contexts/transaction-context';
+import { useGasEstimate } from '@/hooks/use-transaction';
 
 interface GasSelectorProps {
   to: `0x${string}`;
@@ -70,7 +71,10 @@ export function GasSelector({ to, value, data }: GasSelectorProps) {
   // Auto-select standard if nothing selected
   React.useEffect(() => {
     if (gasOptions.length > 0 && !selectedGas) {
-      setGasOption(gasOptions[1]); // Standard
+      const standardOption = gasOptions[1] ?? gasOptions[0];
+      if (standardOption) {
+        setGasOption(standardOption);
+      }
     }
   }, [gasOptions, selectedGas, setGasOption]);
 

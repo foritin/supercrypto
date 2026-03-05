@@ -4,18 +4,18 @@
  */
 'use client';
 
-import React from 'react';
-import { Badge } from '@/components/ui/badge';
 import { 
   CheckCircle, 
   XCircle, 
-  Clock,
   Loader2,
   Ban,
 } from 'lucide-react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { TransactionAuditStatus } from '@/types/audit';
+
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import type { TransactionAuditStatus } from '@/types/audit';
 
 interface TxStatusBadgeProps {
   status: TransactionAuditStatus;

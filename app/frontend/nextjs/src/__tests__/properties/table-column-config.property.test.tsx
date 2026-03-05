@@ -11,10 +11,15 @@
  *        including custom render functions
  */
 
-import { describe, it, expect, afterEach } from 'vitest'
-import fc from 'fast-check'
+import type { ColumnDef} from '@tanstack/react-table';
+import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import { render, cleanup } from '@testing-library/react'
-import React from 'react'
+import fc from 'fast-check'
+import { describe, it, expect, afterEach } from 'vitest'
+
+import type {
+  AntdColumnConfig,
+  AntdColumnAlign} from '@/lib/table-utils';
 import {
   convertColumn,
   convertColumns,
@@ -22,11 +27,9 @@ import {
   getNestedValue,
   widthToSize,
   alignToCss,
-  createSortingFn,
-  AntdColumnConfig,
-  AntdColumnAlign,
+  createSortingFn
 } from '@/lib/table-utils'
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
+
 
 // Clean up after each test to prevent DOM accumulation
 afterEach(() => {
@@ -71,7 +74,12 @@ function TestTableCell<TData>({
   const rows = table.getRowModel().rows
   if (rows.length === 0) return null
 
-  const cell = rows[0].getVisibleCells()[0]
+  const firstRow = rows[0]
+  if (!firstRow) return null
+
+  const cell = firstRow.getVisibleCells()[0]
+  if (!cell) return null
+
   return (
     <div data-testid="cell-content">
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -87,14 +95,6 @@ function TestTableCell<TData>({
  * Generate valid Ant Design column alignment
  */
 const alignArbitrary = fc.constantFrom<AntdColumnAlign>('left', 'center', 'right')
-
-/**
- * Generate valid column width (number or string)
- */
-const widthArbitrary = fc.oneof(
-  fc.integer({ min: 50, max: 500 }),
-  fc.constantFrom('100px', '150px', '200px', '50%', '100%')
-)
 
 /**
  * Generate a simple Ant Design column config
@@ -169,7 +169,7 @@ describe('Property 7: Table Column Configuration Preservation', () => {
           // Header should be a function that returns the title
           expect(typeof tanstackColumn.header).toBe('function')
           if (typeof tanstackColumn.header === 'function') {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const result = (tanstackColumn.header as () => string)()
             expect(result).toBe(titleText)
           }
@@ -406,10 +406,16 @@ describe('Property 7: Table Column Configuration Preservation', () => {
 
           // Test that the sorting function works correctly
           if (typeof tanstackColumn.sortingFn === 'function' && data.length >= 2) {
-            const rowA = { original: data[0] }
-            const rowB = { original: data[1] }
+            const first = data[0]
+            const second = data[1]
+            if (!first || !second) {
+              return
+            }
+
+            const rowA = { original: first }
+            const rowB = { original: second }
             const result = tanstackColumn.sortingFn(rowA as never, rowB as never, 'value')
-            const expected = customSorter(data[0], data[1])
+            const expected = customSorter(first, second)
             expect(result).toBe(expected)
           }
         }
@@ -528,6 +534,10 @@ describe('Property 7: Table Column Configuration Preservation', () => {
           // Each column should have preserved properties
           tanstackColumns.forEach((col, index) => {
             const original = antdColumns[index]
+            if (!original) {
+              return
+            }
+
             expect(col.header).toBe(original.title)
             expect(col.size).toBe(original.width)
             expect(col.enableSorting).toBe(original.sorter === true)

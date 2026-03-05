@@ -10,15 +10,6 @@
  */
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet';
-import { Badge } from '@/components/ui/badge';
 import { 
   CheckCircle, 
   XCircle, 
@@ -36,13 +27,25 @@ import {
   Box,
   Code,
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TransactionAuditType, TransactionAuditStatus } from '@/types/audit';
-import type { TransactionAudit } from '@/types/audit';
-import { AddressDisplay, TxHashLink, TokenAmount, ChainBadge } from './web3';
+
 import { SectionCard, InfoRow } from '@/components/ui';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { getStatusBgColor } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
+import { TransactionAuditType } from '@/types/audit';
+import type { TransactionAudit , TransactionAuditStatus } from '@/types/audit';
+
+import { AddressDisplay, TxHashLink, TokenAmount, ChainBadge } from './web3';
+
 
 interface TransactionDetailProps {
   open: boolean;

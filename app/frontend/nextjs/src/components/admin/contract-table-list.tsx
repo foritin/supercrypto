@@ -14,8 +14,7 @@
  */
 'use client';
 
-import { useMemo, useState } from 'react';
-import { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import {
   CheckCircle,
   XCircle,
@@ -35,10 +34,12 @@ import {
   Link2Off,
   Star,
 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DataTable, SortableHeader } from '@/components/ui/data-table';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTable, SortableHeader } from '@/components/ui/data-table';
 import {
   Select,
   SelectContent,
@@ -136,18 +137,6 @@ interface ContractTableListProps {
   loading?: boolean;
   onContractClick?: (contract: ContractStatusItem) => void;
 }
-
-// 获取行样式类名
-const getRowClassName = (record: ContractStatusItem) => {
-  const status = record.registration_status || 'not_deployed';
-  if (status === 'mismatch' || status === 'not_registered') {
-    return 'border-l-2 border-l-yellow-500 bg-yellow-500/5';
-  }
-  if (status === 'not_deployed') {
-    return 'border-l-2 border-l-red-500 bg-red-500/5';
-  }
-  return 'border-l-2 border-l-green-500 bg-green-500/5';
-};
 
 // 翻译函数类型
 type TranslateFunction = ReturnType<typeof useTranslation>['t'];
@@ -685,7 +674,7 @@ function ContractTable({ title, dataSource, columns, loading }: ContractTablePro
         <DataTable<ContractStatusItem, unknown>
           columns={columns}
           data={dataSource}
-          loading={loading}
+          {...(loading !== undefined ? { loading } : {})}
           emptyMessage="暂无合约数据"
         />
       </div>

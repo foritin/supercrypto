@@ -6,9 +6,10 @@
  */
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import { CheckCircle, AlertCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 export function ContractStatusLegend() {

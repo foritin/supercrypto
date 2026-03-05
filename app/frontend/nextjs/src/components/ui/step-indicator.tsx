@@ -1,6 +1,7 @@
-import * as React from 'react';
-import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
+import * as React from 'react';
+
+import { cn } from '@/lib/utils';
 
 export interface Step {
   id: string;
@@ -151,7 +152,7 @@ export function TransactionStepIndicator({
       steps={steps}
       currentStep={currentStep}
       variant="detailed"
-      className={className}
+      {...(className ? { className } : {})}
     />
   );
 }
@@ -176,7 +177,7 @@ export function KYCStepIndicator({
       steps={steps}
       currentStep={currentStep}
       variant="detailed"
-      className={className}
+      {...(className ? { className } : {})}
     />
   );
 }

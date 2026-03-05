@@ -4,13 +4,14 @@
  */
 'use client';
 
-import React from 'react';
-import { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { DataTable } from '@/components/ui/data-table';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTable } from '@/components/ui/data-table';
 import {
   Tooltip,
   TooltipContent,
@@ -18,6 +19,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { AuditLog, AuditCategory, AuditAction, AuditStatus } from '@/types/audit';
+
 import { AddressDisplay } from './web3/address-display';
 
 interface AuditLogTableProps {
@@ -261,7 +263,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
         columns={columns}
         data={data}
         loading={loading}
-        pagination={paginationConfig}
+        {...(paginationConfig ? { pagination: paginationConfig } : {})}
         emptyMessage={t('admin.audit.table.empty', '暂无审计日志')}
       />
     </div>

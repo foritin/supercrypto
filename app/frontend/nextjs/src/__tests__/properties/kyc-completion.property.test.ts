@@ -15,8 +15,8 @@
  * - 5.5: on_chain_sync_status 从 SYNCED 变为其他值时，立即限制用户访问
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
 
 // ============ 类型定义 ============
 

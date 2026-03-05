@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { ServerCrash, RotateCcw } from "lucide-react";
+import { useEffect } from "react";
 
 /**
  * 管理后台错误边界

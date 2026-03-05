@@ -6,13 +6,15 @@
 
 'use client';
 
-import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { useState } from 'react';
+
 import { Badge } from '@/components/ui/badge';
-import { ContractStatusBadge } from './project-status-badge';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { ContractStatusInfo, DependencyType } from '@/types/project-registry';
+
+import { ContractStatusBadge } from './project-status-badge';
 
 interface ContractListProps {
   contracts: ContractStatusInfo[];

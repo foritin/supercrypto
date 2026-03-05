@@ -10,6 +10,7 @@
 | [GUIDE.md](./GUIDE.md) | 开发者指南、架构设计、代码规范 | 2025-10 |
 | [AERICH_GUIDE.md](./AERICH_GUIDE.md) | Aerich 数据库迁移工具指南 | 2025-11 |
 | [API_ROUTES.md](./API_ROUTES.md) | API 路由结构文档（新版 v2） | 2025-12 |
+| [SUBSCRIPTION_V2_GUIDE.md](../../docs/backend/SUBSCRIPTION_V2_GUIDE.md) | 认购 V2 全链路（pending/receipt/confirm）与一致性策略 | 2026-03 |
 
 ### 子目录文档
 
@@ -63,7 +64,17 @@
 - 认证机制说明
 - 路由映射表
 
-### 5. src/models/README.md - 审计系统
+### 5. SUBSCRIPTION_V2_GUIDE.md - 认购 V2 专项文档（已迁移）
+
+**适合人群**: 前端开发者、后端开发者、测试人员、产品
+
+**内容概览**:
+- V2 认购三段式流程（pending/receipt/confirm）
+- 前后端状态机与时序
+- 防绕过与台账一致性策略
+- 接口示例与联调清单
+
+### 6. src/models/README.md - 审计系统
 
 **适合人群**: 后端开发者、合规人员
 
@@ -73,7 +84,7 @@
 - 使用示例和查询方法
 - 扩展指南
 
-### 6. contracts/oracle/README.md - 预言机系统
+### 7. contracts/oracle/README.md - 预言机系统
 
 **适合人群**: 智能合约开发者
 
@@ -151,6 +162,8 @@ docs/
 
 | 日期 | 文档 | 变更 |
 |------|------|------|
+| 2026-03-05 | SUBSCRIPTION_V2_GUIDE.md | 新增：认购 V2 全链路与一致性治理文档 |
+| 2026-03-05 | SUBSCRIPTION_V2_GUIDE.md | 更新：新增 subscription 主动对账任务说明 |
 | 2025-12-22 | API_ROUTES.md | v2.1: Account/Transaction 迁移到 admin |
 | 2025-12-22 | API_ROUTES.md | v2.0: 路由结构文档 |
 | 2025-12-22 | DOCS_INDEX.md | 新增：文档索引 |
@@ -158,5 +171,5 @@ docs/
 ---
 
 **维护者**: SuperCrypto 开发团队  
-**最后更新**: 2025-12-22
+**最后更新**: 2026-03-05
 

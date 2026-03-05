@@ -1,13 +1,15 @@
 "use client";
 
+import { Wallet, TrendingUp, Clock, CheckCircle, PauseCircle, Flame } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Wallet, TrendingUp, Clock, CheckCircle, PauseCircle, Flame, TimerOff } from "lucide-react";
+
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Button } from "@/components/ui/button";
 import { ProgressEnhanced } from "@/components/ui/progress-enhanced";
-import { AnimatedNumber } from "@/components/ui/animated-number";
+import type { AssetDetail, AssetStatus } from "@/services/asset";
+
 import { CountdownTimer } from "./countdown-timer";
 import { InvestorStats } from "./investor-stats";
-import type { AssetDetail, AssetStatus } from "@/services/asset";
 
 interface InvestPanelProps {
   asset: AssetDetail;
@@ -187,8 +189,8 @@ export function InvestPanel({
       {(asset.subscription_start_at || asset.subscription_end_at) && (
         <div className="mb-5">
           <CountdownTimer
-            startTime={asset.subscription_start_at ?? undefined}
-            endTime={asset.subscription_end_at ?? undefined}
+            {...(asset.subscription_start_at ? { startTime: asset.subscription_start_at } : {})}
+            {...(asset.subscription_end_at ? { endTime: asset.subscription_end_at } : {})}
           />
         </div>
       )}
@@ -302,7 +304,7 @@ export function InvestPanel({
       {isConnected && !isKycApproved && (
         <p className="text-center mt-3 text-sm text-white/40">
           <Button
-            variant="link"
+            variant="ghost"
             className="text-primary p-0 h-auto hover:underline"
             onClick={onGoToKyc}
           >

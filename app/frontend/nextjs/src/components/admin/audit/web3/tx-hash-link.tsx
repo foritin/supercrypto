@@ -4,8 +4,9 @@
  */
 'use client';
 
-import React, { useState } from 'react';
 import { Copy, Check, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+
 import {
   Tooltip,
   TooltipContent,
@@ -45,7 +46,7 @@ const TxHashLink: React.FC<TxHashLinkProps> = ({
       setCopied(true);
       notification.success('已复制交易哈希');
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch {
       notification.error('复制失败');
     }
   };

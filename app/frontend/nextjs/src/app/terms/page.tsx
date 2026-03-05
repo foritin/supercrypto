@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { TermsContent } from "./TermsContent";
 
 export const metadata: Metadata = {

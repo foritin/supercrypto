@@ -13,8 +13,8 @@
  * Reference: https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
 
 // ============================================
 // Color Parsing Utilities
@@ -55,7 +55,13 @@ function parseHexColor(hex: string): { r: number; g: number; b: number; a: numbe
   
   // Handle shorthand (#RGB)
   if (hex.length === 3) {
-    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]
+    const h0 = hex[0]
+    const h1 = hex[1]
+    const h2 = hex[2]
+    if (!h0 || !h1 || !h2) {
+      throw new Error(`Invalid hex color: #${hex}`)
+    }
+    hex = h0 + h0 + h1 + h1 + h2 + h2
   }
   
   const r = parseInt(hex.slice(0, 2), 16)
@@ -73,11 +79,18 @@ function parseRgbColor(rgb: string): { r: number; g: number; b: number; a: numbe
   if (!match) {
     throw new Error(`Invalid rgb color: ${rgb}`)
   }
+
+  const r = match[1]
+  const g = match[2]
+  const b = match[3]
+  if (!r || !g || !b) {
+    throw new Error(`Invalid rgb color: ${rgb}`)
+  }
   
   return {
-    r: parseInt(match[1], 10),
-    g: parseInt(match[2], 10),
-    b: parseInt(match[3], 10),
+    r: parseInt(r, 10),
+    g: parseInt(g, 10),
+    b: parseInt(b, 10),
     a: 1
   }
 }
@@ -90,12 +103,20 @@ function parseRgbaColor(rgba: string): { r: number; g: number; b: number; a: num
   if (!match) {
     throw new Error(`Invalid rgba color: ${rgba}`)
   }
+
+  const r = match[1]
+  const g = match[2]
+  const b = match[3]
+  const a = match[4]
+  if (!r || !g || !b || !a) {
+    throw new Error(`Invalid rgba color: ${rgba}`)
+  }
   
   return {
-    r: parseInt(match[1], 10),
-    g: parseInt(match[2], 10),
-    b: parseInt(match[3], 10),
-    a: parseFloat(match[4])
+    r: parseInt(r, 10),
+    g: parseInt(g, 10),
+    b: parseInt(b, 10),
+    a: parseFloat(a)
   }
 }
 
@@ -313,7 +334,7 @@ describe('Property 3: WCAG AA Contrast Compliance', () => {
     fc.assert(
       fc.property(
         fc.constantFrom(...themeColorCombinations.decorativeText),
-        ({ fg, bg, name }) => {
+        ({ fg, bg }) => {
           const ratio = calculateContrastRatio(fg, bg)
           // Document the actual contrast ratio for reference
           // No assertion needed - decorative text is exempt from WCAG requirements

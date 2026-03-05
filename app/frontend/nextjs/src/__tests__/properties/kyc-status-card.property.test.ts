@@ -17,8 +17,9 @@
  * - 1.5: WHEN 用户已连接钱包且 KYC 状态为 rejected THEN KYC_Status_Card SHALL 显示"已拒绝"状态、拒绝原因和"重新申请"按钮
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
+
 import { KycStatus } from '@/services/kyc'
 
 // ============ 类型定义 ============
@@ -171,22 +172,6 @@ const kycStatusArb = fc.constantFrom(
   KycStatus.PENDING,
   KycStatus.APPROVED,
   KycStatus.REJECTED
-)
-
-/**
- * 生成可选的 ISO 日期字符串
- */
-const optionalDateArb = fc.option(
-  fc.integer({ min: 0, max: 365 }).map(generateISODateString),
-  { nil: null }
-)
-
-/**
- * 生成可选的拒绝原因
- */
-const optionalRejectReasonArb = fc.option(
-  fc.string({ minLength: 1, maxLength: 500 }),
-  { nil: null }
 )
 
 /**

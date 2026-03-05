@@ -1,7 +1,8 @@
 "use client";
 
-import { useTranslation } from "react-i18next";
 import { Users } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
 import { cn } from "@/lib/utils";
 import type { RecentInvestor } from "@/services/asset";
 
@@ -21,7 +22,7 @@ function getAvatarGradient(address: string): string {
     "from-rose-400 to-pink-500",
   ];
   const index = address.charCodeAt(2) % gradients.length;
-  return gradients[index];
+  return gradients[index] ?? gradients[0] ?? "from-blue-400 to-indigo-500";
 }
 
 // 生成头像首字母

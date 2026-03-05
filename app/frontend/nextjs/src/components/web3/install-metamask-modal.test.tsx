@@ -1,6 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
 import { render } from '@/test/utils'
+
 import { InstallMetaMaskModal } from './install-metamask-modal'
 
 describe('InstallMetaMaskModal', () => {

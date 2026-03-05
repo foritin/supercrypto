@@ -1,10 +1,5 @@
 'use client';
 
-import * as React from 'react';
-import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useKycContext } from '@/contexts/kyc-context';
 import { 
   Shield, 
   Zap, 
@@ -15,10 +10,16 @@ import {
   ChevronRight,
   Clock,
   AlertCircle,
+  type LucideIcon,
 } from 'lucide-react';
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 
-const benefitIcons = [Zap, Globe, Lock, Shield];
-const requirementIcons = [FileCheck, Camera, Clock];
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useKycContext } from '@/contexts/kyc-context';
+
+type LandingIcon = LucideIcon;
 
 export function KycLanding() {
   const { t } = useTranslation();
@@ -27,22 +28,22 @@ export function KycLanding() {
   const benefits = React.useMemo(
     () => [
       {
-        icon: benefitIcons[0],
+        icon: Zap as LandingIcon,
         title: t('kyc.landing.benefits.limit.title'),
         description: t('kyc.landing.benefits.limit.desc'),
       },
       {
-        icon: benefitIcons[1],
+        icon: Globe as LandingIcon,
         title: t('kyc.landing.benefits.premium.title'),
         description: t('kyc.landing.benefits.premium.desc'),
       },
       {
-        icon: benefitIcons[2],
+        icon: Lock as LandingIcon,
         title: t('kyc.landing.benefits.security.title'),
         description: t('kyc.landing.benefits.security.desc'),
       },
       {
-        icon: benefitIcons[3],
+        icon: Shield as LandingIcon,
         title: t('kyc.landing.benefits.compliance.title'),
         description: t('kyc.landing.benefits.compliance.desc'),
       },
@@ -52,9 +53,9 @@ export function KycLanding() {
 
   const requirements = React.useMemo(
     () => [
-      { icon: requirementIcons[0], text: t('kyc.landing.requirements.id') },
-      { icon: requirementIcons[1], text: t('kyc.landing.requirements.camera') },
-      { icon: requirementIcons[2], text: t('kyc.landing.requirements.time') },
+      { icon: FileCheck as LandingIcon, text: t('kyc.landing.requirements.id') },
+      { icon: Camera as LandingIcon, text: t('kyc.landing.requirements.camera') },
+      { icon: Clock as LandingIcon, text: t('kyc.landing.requirements.time') },
     ],
     [t]
   );
@@ -127,22 +128,25 @@ export function KycLanding() {
           {t('kyc.landing.benefitsTitle')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {benefits.map((benefit, index) => (
-            <Card
-              key={index}
-              className="p-6 glass border-white/10 hover:border-primary/30 transition-colors"
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <benefit.icon className="h-6 w-6 text-primary" />
+          {benefits.map((benefit, index) => {
+            const BenefitIcon = benefit.icon;
+            return (
+              <Card
+                key={index}
+                className="p-6 glass border-white/10 hover:border-primary/30 transition-colors"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <BenefitIcon className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white mb-1">{benefit.title}</h3>
+                    <p className="text-sm text-white/60">{benefit.description}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-white mb-1">{benefit.title}</h3>
-                  <p className="text-sm text-white/60">{benefit.description}</p>
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       </div>
 
@@ -152,14 +156,17 @@ export function KycLanding() {
           {t('kyc.landing.whatYouNeed')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {requirements.map((req, index) => (
-            <div key={index} className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <req.icon className="h-5 w-5 text-primary" />
+          {requirements.map((req, index) => {
+            const ReqIcon = req.icon;
+            return (
+              <div key={index} className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <ReqIcon className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-sm text-white/70">{req.text}</p>
               </div>
-              <p className="text-sm text-white/70">{req.text}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
 

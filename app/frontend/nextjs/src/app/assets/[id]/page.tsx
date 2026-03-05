@@ -1,10 +1,5 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { use } from "react";
-import { useTranslation } from "react-i18next";
-import { useRouter } from "next/navigation";
-import { useAccount, useChainId } from "wagmi";
 import {
   ArrowLeft,
   Home,
@@ -21,26 +16,30 @@ import {
   FileText,
   MapPin,
   ExternalLink,
-  Loader2,
   Download,
   FileSpreadsheet,
   Scale,
   Lock,
 } from "lucide-react";
-import { assetService, type AssetDetail, type AssetType, type AssetStatus, type AssetMediaItem } from "@/services/asset";
-import { useKycStatus } from "@/hooks";
-import { SubscriptionModal } from "@/components/subscription/subscription-modal";
+import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback , use } from "react";
+import { useTranslation } from "react-i18next";
+import { useAccount, useChainId } from "wagmi";
+
+import { AssetDetailSkeleton } from "@/components/asset/asset-detail-skeleton";
+import { AssetLogoFrame } from "@/components/asset/asset-logo-frame";
+import { InvestPanel } from "@/components/asset/invest-panel";
 import { MediaGallery } from "@/components/asset/media-gallery";
 import { PropertyHighlights } from "@/components/asset/property-highlights";
-import { InvestPanel } from "@/components/asset/invest-panel";
 import { RiskAndComplianceSection, type RiskLevel } from "@/components/asset/risk-badge";
-import { AssetDetailSkeleton } from "@/components/asset/asset-detail-skeleton";
+import { SubscriptionModalV2 } from "@/components/subscription/subscription-modal-v2";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useKycStatus } from "@/hooks";
 import { getExplorerUrl } from "@/lib/utils";
-import { AssetLogoFrame } from "@/components/asset/asset-logo-frame";
+import { assetService, type AssetDetail, type AssetType, type AssetStatus, type AssetMediaItem } from "@/services/asset";
 
 // 资产类型图标
 const ASSET_TYPE_ICONS: Record<AssetType, React.ReactNode> = {
@@ -208,7 +207,11 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
             {/* 左侧：图片和详情 */}
             <div className="lg:col-span-2">
               {/* 图片画廊 */}
-              <MediaGallery coverImage={asset.image_url} assetType={asset.asset_type} media={asset.media} />
+              <MediaGallery
+                coverImage={asset.image_url}
+                assetType={asset.asset_type}
+                {...(asset.media ? { media: asset.media } : {})}
+              />
 
               {/* 标签页导航 */}
               <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
@@ -477,7 +480,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
 
-        <SubscriptionModal
+        <SubscriptionModalV2
           open={showSubscribeModal}
           onClose={() => setShowSubscribeModal(false)}
           onSuccess={() => setShowSubscribeModal(false)}

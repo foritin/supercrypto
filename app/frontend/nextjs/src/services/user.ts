@@ -2,7 +2,6 @@
  * User API Service
  * 用户相关 API
  */
-import { api } from '@/services/api'
 import { API_BASE_URL } from '@/constants/api'
 // ApiResponseData 类型已在 types/api.d.ts 中全局声明
 

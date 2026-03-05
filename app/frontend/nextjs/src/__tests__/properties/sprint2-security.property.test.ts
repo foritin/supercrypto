@@ -7,8 +7,9 @@
  * - B-03: 幂等重试安全性 (tx-recovery 不丢 hash)
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect, beforeEach } from 'vitest'
+
 import {
   savePendingTx,
   clearPendingTx,

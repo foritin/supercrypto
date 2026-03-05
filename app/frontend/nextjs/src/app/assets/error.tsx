@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { PackageX, RotateCcw } from "lucide-react";
+import { useEffect } from "react";
 
 /**
  * 资产页面错误边界

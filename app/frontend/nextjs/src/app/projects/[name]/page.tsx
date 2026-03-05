@@ -7,27 +7,8 @@
 
 'use client';
 
-import { useParams } from 'next/navigation';
-import { useState } from 'react';
-import Link from 'next/link';
-import {
-  useProjectStatus,
-  useDeploymentOrder,
-  syncProjectConfig,
-  syncProjectBindings,
-} from '@/hooks/use-project-status';
-import {
-  ProjectStatusBadge,
-  ContractList,
-  DeploymentPlan,
-  DependencyGraph,
-} from '@/components/project-registry';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import {
   ArrowLeft,
-  RefreshCw,
   Database,
   Link2,
   FileText,
@@ -39,6 +20,26 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useState } from 'react';
+
+import {
+  ProjectStatusBadge,
+  ContractList,
+  DeploymentPlan,
+  DependencyGraph,
+} from '@/components/project-registry';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import {
+  useProjectStatus,
+  useDeploymentOrder,
+  syncProjectConfig,
+  syncProjectBindings,
+} from '@/hooks/use-project-status';
+
 
 export default function ProjectDetailPage() {
   const params = useParams();

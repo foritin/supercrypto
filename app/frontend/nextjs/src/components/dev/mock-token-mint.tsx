@@ -7,20 +7,21 @@
  * Migrated from Ant Design to shadcn/ui
  * @validates Requirements 16.13
  */
-import { useState, useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import {
   DollarSign,
   Send,
   RefreshCw,
   Plus,
   User,
-  Wallet,
   AlertTriangle,
   Loader2,
   Check,
   Circle,
 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { parseUnits, formatUnits } from "viem";
 import {
   useAccount,
   useReadContract,
@@ -29,10 +30,9 @@ import {
   useChainId,
   useBalance,
 } from "wagmi";
-import { parseUnits, formatUnits } from "viem";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -41,17 +41,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import { notification } from "@/lib/notification";
 import {
   MOCK_TOKEN_INFO,
   MOCK_TOKEN_ABI,
   type MockTokenType,
 } from "@/contracts/mock-token";
-import { devToolsService, type TokenRecipient } from "@/services/dev-tools";
 import { useCurrentUser, useStablecoinAddresses } from "@/hooks";
-import { transactionAuditService } from "@/services/transaction-audit";
+import { notification } from "@/lib/notification";
 import { truncateAddress } from "@/lib/utils";
+import { devToolsService, type TokenRecipient } from "@/services/dev-tools";
+import { transactionAuditService } from "@/services/transaction-audit";
 
 type MintStep =
   | "idle"
@@ -150,12 +149,11 @@ export function MockTokenMint() {
   const {
     writeContract,
     data: txHash,
-    isPending: isWriting,
     reset: resetWrite,
   } = useWriteContract();
 
   // Wait for transaction
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+  const { isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({
       hash: txHash,
     });
@@ -542,7 +540,7 @@ export function MockTokenMint() {
                   ETH 余额不足
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  铸造代币需要支付 gas 费用。请先到"水龙头"标签页给当前账户充值 ETH。
+                  铸造代币需要支付 gas 费用。请先到“水龙头”标签页给当前账户充值 ETH。
                 </span>
               </div>
             </div>

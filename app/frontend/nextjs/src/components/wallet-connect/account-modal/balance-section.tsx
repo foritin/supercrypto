@@ -1,6 +1,7 @@
 'use client'
 
 import { Wallet } from 'lucide-react'
+
 import { cn } from '@/lib/utils'
 
 interface BalanceSectionProps {

@@ -8,10 +8,11 @@
 
 'use client';
 
+import { CheckCircle, Clock, ArrowRight } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, ArrowRight } from 'lucide-react';
 import type { DeploymentOrderResponse } from '@/types/project-registry';
 
 interface DeploymentPlanProps {

@@ -12,11 +12,7 @@
  * @validates Requirements 6.1, 6.2, 6.3
  */
 
-import * as React from 'react'
-import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useTranslation } from 'react-i18next'
 import {
   User,
   FileText,
@@ -25,8 +21,12 @@ import {
   Shield,
   AlertCircle,
 } from 'lucide-react'
+import * as React from 'react'
+import { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 
-import { cn } from '@/lib/utils'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Form,
   FormControl,
@@ -35,8 +35,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Checkbox } from '@/components/ui/checkbox'
-
+import { cn } from '@/lib/utils'
 import {
   step4Schema,
   type Step4FormValues,
@@ -44,6 +43,7 @@ import {
   type KycWizardFormData,
   KYC_ID_TYPE_NAMES,
 } from '@/lib/validations/kyc-wizard'
+
 import { COUNTRY_LIST } from './step1-basic-info'
 
 // ============ 类型定义 ============
@@ -156,7 +156,7 @@ function SummaryItem({ label, value, isImage }: SummaryItemProps) {
       {isImage ? (
         <div className="relative w-full h-20 sm:h-24 rounded-lg overflow-hidden bg-[rgba(26,36,30,0.8)] border border-white/10">
           {typeof value === 'string' && value ? (
-            // eslint-disable-next-line @next/next/no-img-element
+             
             <img
               src={value}
               alt={label}
@@ -192,7 +192,7 @@ function ImageGrid({ images }: ImageGridProps) {
           <span className="text-[10px] sm:text-xs text-white/60">{img.label}</span>
           <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-[rgba(26,36,30,0.8)] border border-white/10">
             {img.url ? (
-              // eslint-disable-next-line @next/next/no-img-element
+               
               <img
                 src={img.url}
                 alt={img.label}

@@ -1,16 +1,15 @@
 'use client';
 
-import * as React from 'react';
-import { useWallet } from '@/hooks/use-wallet';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@radix-ui/react-dropdown-menu';
 import { Globe, Loader2, AlertCircle } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { useWallet } from '@/hooks/use-wallet';
 
 export function NetworkSwitcher() {
   const { chainId, isConnected, currentChainName, isSupportedChain, supportedChains, switchToChain, isSwitching } = useWallet();

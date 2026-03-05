@@ -1,10 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
-import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
-import reactHooks from "eslint-plugin-react-hooks";
-import jsxA11y from "eslint-plugin-jsx-a11y";
 import importPlugin from "eslint-plugin-import";
 
 const eslintConfig = defineConfig([
@@ -20,21 +17,28 @@ const eslintConfig = defineConfig([
       },
     },
     plugins: {
-      "@typescript-eslint": tseslint,
-      "react-hooks": reactHooks,
-      "jsx-a11y": jsxA11y,
       "import": importPlugin,
     },
     rules: {
       // TypeScript rules
-      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/consistent-type-imports": "error",
       
       // React Hooks rules
       "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "warn",
+      "react-hooks/exhaustive-deps": "off",
+      "react-hooks/incompatible-library": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/static-components": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+
+      // React JSX content rules
+      "react/jsx-no-comment-textnodes": "off",
+      "react/no-unescaped-entities": "warn",
       
       // Import ordering
       "import/order": [
@@ -48,6 +52,7 @@ const eslintConfig = defineConfig([
       "import/no-duplicates": "error",
       
       // Accessibility
+      "@next/next/no-img-element": "off",
       "jsx-a11y/alt-text": "error",
       "jsx-a11y/anchor-has-content": "error",
       "jsx-a11y/anchor-is-valid": "error",

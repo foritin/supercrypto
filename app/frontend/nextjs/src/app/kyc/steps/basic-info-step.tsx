@@ -1,13 +1,15 @@
 'use client';
 
+import { ArrowRight, ArrowLeft, User, Mail, Phone, Calendar, Save } from 'lucide-react';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { useKycContext } from '@/contexts/kyc-context';
-import { FormField, FormInput } from '../components/form-field';
+
 import { CountrySelect } from '../components/country-select';
-import { ArrowRight, ArrowLeft, User, Mail, Phone, Calendar, Save } from 'lucide-react';
+import { FormField, FormInput } from '../components/form-field';
 
 export function BasicInfoStep() {
   const { t, i18n } = useTranslation();

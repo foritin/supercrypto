@@ -9,10 +9,6 @@
  * Validates: Requirements 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 8.1, 8.2, 8.3
  */
 
-import * as React from 'react'
-import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
-import { uploadKycDocument } from '@/services/kyc'
 import {
   Camera,
   CameraOff,
@@ -23,7 +19,12 @@ import {
   Loader2,
   Upload,
 } from 'lucide-react'
+import * as React from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { uploadKycDocument } from '@/services/kyc'
 
 // ============================================================================
 // 类型定义
@@ -111,7 +112,13 @@ export class BrowserLivenessDetector implements ILivenessDetector {
     ctx.drawImage(videoElement, 0, 0)
     return new Promise((resolve, reject) => {
       canvas.toBlob(
-        (blob) => { blob ? resolve(blob) : reject(new Error('Failed to capture photo')) },
+        (blob) => {
+          if (blob) {
+            resolve(blob)
+            return
+          }
+          reject(new Error('Failed to capture photo'))
+        },
         'image/jpeg',
         0.9
       )
@@ -164,7 +171,6 @@ export const LivenessDetector: React.FC<LivenessDetectorProps> = ({
   const [error, setError] = React.useState<LivenessError | null>(null)
   const [blinkDetected, setBlinkDetected] = React.useState(false)
   const [countdown, setCountdown] = React.useState<number | null>(null)
-  const [selfieUrl, setSelfieUrl] = React.useState<string | null>(null)
   const [previewBlob, setPreviewBlob] = React.useState<Blob | null>(null)
 
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -224,7 +230,7 @@ export const LivenessDetector: React.FC<LivenessDetectorProps> = ({
     try {
       await detectorRef.current.start(videoRef.current)
       setPhase('preview')
-    } catch (err) {
+    } catch {
       handleError(createError('DETECTION_FAILED', getErrorMessage('DETECTION_FAILED')))
     }
   }, [createError, getErrorMessage, handleError])
@@ -255,10 +261,9 @@ export const LivenessDetector: React.FC<LivenessDetectorProps> = ({
       setPhase('uploading')
       const file = new File([blob], `selfie_${Date.now()}.jpg`, { type: 'image/jpeg' })
       const response = await uploadKycDocument('selfie', file)
-      setSelfieUrl(response.file_path)
       setPhase('success')
       onSuccess?.({ passed: true, selfieUrl: response.file_path, confidence: 1.0, method: 'blink' })
-    } catch (err) {
+    } catch {
       setRetryCount((prev) => prev + 1)
       handleError(createError('UPLOAD_FAILED', getErrorMessage('UPLOAD_FAILED')))
     }
@@ -272,6 +277,7 @@ export const LivenessDetector: React.FC<LivenessDetectorProps> = ({
     } else {
       setCountdown(null)
       capturePhoto()
+      return undefined
     }
   }, [countdown, capturePhoto])
 

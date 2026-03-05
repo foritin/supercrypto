@@ -9,7 +9,6 @@
  */
 
 import { motion } from "framer-motion";
-import { useTranslation } from "react-i18next";
 import {
   Clock,
   CheckCircle2,
@@ -20,6 +19,8 @@ import {
   ShieldCheck,
   TrendingDown,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
 import type { KycStats, RiskLevel } from "@/services/admin-kyc";
 
 interface KycStatsPanelProps {
@@ -345,11 +346,6 @@ function RiskDistributionCard({
 }) {
   const { t } = useTranslation();
   const total = Object.values(distribution).reduce((a, b) => a + b, 0);
-  
-  // 过滤掉数量为0的风险等级，减少视觉噪音
-  const activeRisks = (Object.entries(distribution) as [RiskLevel, number][])
-    .filter(([, count]) => count > 0)
-    .sort(([, a], [, b]) => b - a); // 按数量降序排列
 
   return (
     <motion.div

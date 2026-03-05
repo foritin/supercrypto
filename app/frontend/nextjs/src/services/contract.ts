@@ -6,8 +6,8 @@
  * - 公开接口：/public/contracts/*
  * - 管理员接口：/admin/contracts/*
  */
-import { api } from "@/services/api";
 import { PUBLIC_PATHS, ADMIN_PATHS } from "@/constants/api-paths";
+import { api } from "@/services/api";
 import type {
   ReadinessDetails,
   BoundAssetInfo,
@@ -170,7 +170,7 @@ export const LOCK_PERIODS = {
 } as const;
 
 // 将月份转换为秒 (活期模式: 返回 0)
-export function monthsToSeconds(months: number): number {
+export function monthsToSeconds(_months: number): number {
   // 活期模式: 始终返回 0
   return FLEXIBLE_PERIOD;
 }

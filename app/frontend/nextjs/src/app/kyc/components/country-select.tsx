@@ -1,19 +1,20 @@
 'use client';
 
-import * as React from 'react';
-import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/utils';
-import { Globe, ChevronDown, Check } from 'lucide-react';
-import US from 'country-flag-icons/react/3x2/US';
+import AU from 'country-flag-icons/react/3x2/AU';
+import CA from 'country-flag-icons/react/3x2/CA';
+import CH from 'country-flag-icons/react/3x2/CH';
 import CN from 'country-flag-icons/react/3x2/CN';
-import GB from 'country-flag-icons/react/3x2/GB';
 import DE from 'country-flag-icons/react/3x2/DE';
 import FR from 'country-flag-icons/react/3x2/FR';
+import GB from 'country-flag-icons/react/3x2/GB';
 import JP from 'country-flag-icons/react/3x2/JP';
 import SG from 'country-flag-icons/react/3x2/SG';
-import CA from 'country-flag-icons/react/3x2/CA';
-import AU from 'country-flag-icons/react/3x2/AU';
-import CH from 'country-flag-icons/react/3x2/CH';
+import US from 'country-flag-icons/react/3x2/US';
+import { Globe, ChevronDown, Check } from 'lucide-react';
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { cn } from '@/lib/utils';
 
 // 国旗组件映射
 const flagComponents: Record<string, React.ComponentType<{ className?: string }>> = {

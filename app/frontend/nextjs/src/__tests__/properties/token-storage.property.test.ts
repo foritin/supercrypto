@@ -9,8 +9,10 @@
  * **Validates: Requirements 1.10**
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fc from 'fast-check';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+import type { useUserStore as UseUserStore } from '@/stores/user-store';
 
 // 内存 localStorage 实现，用于测试 zustand persist 实际写入行为
 class InMemoryStorage implements Storage {
@@ -47,7 +49,7 @@ const STORAGE_KEY = 'supercrypto-user-storage';
 
 describe('Feature: full-stack-review-fixes', () => {
   let storage: InMemoryStorage;
-  let useUserStore: typeof import('@/stores/user-store').useUserStore;
+  let useUserStore: typeof UseUserStore;
 
   beforeEach(async () => {
     // 创建真实的内存 localStorage，让 zustand persist 能正常读写

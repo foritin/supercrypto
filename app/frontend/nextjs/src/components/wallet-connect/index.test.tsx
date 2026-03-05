@@ -4,9 +4,10 @@
  * Tests for the RainbowKit-based wallet connection component.
  * Validates Requirements: 7.2, 7.3, 7.4, 7.5, 7.7, 7.8
  */
+import { render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import type * as Wagmi from 'wagmi'
 
 // Mock dependencies before importing the component
 const { mockToast } = vi.hoisted(() => ({
@@ -81,7 +82,7 @@ vi.mock('@/services/user', () => ({
 }))
 
 vi.mock('wagmi', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('wagmi')>()
+  const actual = await importOriginal() as typeof Wagmi
   return {
     ...actual,
     useAccount: () => mockUseAccount(),

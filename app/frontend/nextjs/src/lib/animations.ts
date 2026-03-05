@@ -3,7 +3,7 @@
  * 统一管理页面和组件的动画效果
  */
 
-import { Variants } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 
 /**
  * 页面级动画

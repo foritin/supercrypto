@@ -6,14 +6,14 @@
  * 已从 Ant Design 迁移到 shadcn/ui
  * GOD_MODE: 开发环境下可绕过 KYC 检查
  */
-import { ReactNode } from 'react'
 import { ShieldAlert, ArrowRight } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAccount } from 'wagmi'
-import { useKycStatus } from '@/hooks/use-kyc-status'
-import { useGodMode } from '@/hooks/use-god-mode'
+
 
 // shadcn/ui 组件
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -21,8 +21,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useGodMode } from '@/hooks/use-god-mode'
+import { useKycStatus } from '@/hooks/use-kyc-status'
 
 export interface KycRequiredGuardProps {
   children: ReactNode
@@ -135,7 +136,7 @@ export function KycRequiredGuard({
       <KycRequiredMessage
         title={guardTitle}
         description={guardDescription}
-        onStartKyc={onStartKyc}
+        {...(onStartKyc ? { onStartKyc } : {})}
       />
     )
   }
@@ -160,7 +161,7 @@ export function KycRequiredGuard({
           <KycRequiredMessage
             title={guardTitle}
             description={guardDescription}
-            onStartKyc={onStartKyc}
+            {...(onStartKyc ? { onStartKyc } : {})}
           />
         </DialogContent>
       </Dialog>

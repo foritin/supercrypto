@@ -14,13 +14,14 @@
  * - fetchParams 和 fetchUserData 只在地址/网络真正变化时触发
  */
 import { useState, useCallback, useEffect, useRef } from "react";
+import { parseAbi, type Address } from "viem";
 import {
   useAccount,
   usePublicClient,
   useWalletClient,
   useChainId,
 } from "wagmi";
-import { parseAbi, type Address } from "viem";
+
 import {
   contractService,
   SUBSCRIPTION_ABI,
@@ -95,6 +96,8 @@ export function useSubscriptionContract() {
   // 用户数据状态
   const [usdtBalance, setUsdtBalance] = useState<number>(0);
   const [usdtAllowance, setUsdtAllowance] = useState<number>(0);
+  const [usdcBalance, setUsdcBalance] = useState<number>(0);
+  const [usdcAllowance, setUsdcAllowance] = useState<number>(0);
 
   // === 用 ref 稳定化，避免 useCallback 依赖变化导致无限循环 ===
   const addressesRef = useRef<ContractAddresses | null>(null);
@@ -206,41 +209,74 @@ export function useSubscriptionContract() {
   // ========== 获取用户余额和授权额度 ==========
   const fetchUserData = useCallback(async () => {
     const addrs = addressesRef.current;
-    if (!address || !addrs?.usdt || !publicClient) return;
+    if (!address || !publicClient) return;
 
-    try {
-      // 先检查合约是否存在，避免对空地址调用 balanceOf 导致 decode 错误
-      const code = await publicClient.getCode({ address: addrs.usdt });
-      if (!code || code === "0x") {
-        console.warn(
-          `USDT contract not deployed at ${addrs.usdt} on current chain`
-        );
+    const erc20Abi = parseAbi(ERC20_ABI);
+
+    // Fetch USDT data
+    if (addrs?.usdt) {
+      try {
+        const code = await publicClient.getCode({ address: addrs.usdt });
+        if (code && code !== "0x") {
+          const balance = (await publicClient.readContract({
+            address: addrs.usdt,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [address],
+          })) as bigint;
+          setUsdtBalance(parseUSDTAmount(balance));
+
+          if (addrs.subscription) {
+            const allowance = (await publicClient.readContract({
+              address: addrs.usdt,
+              abi: erc20Abi,
+              functionName: "allowance",
+              args: [address, addrs.subscription],
+            })) as bigint;
+            setUsdtAllowance(parseUSDTAmount(allowance));
+          }
+        } else {
+          setUsdtBalance(0);
+          setUsdtAllowance(0);
+        }
+      } catch (err) {
+        console.error("Failed to fetch USDT data:", err);
         setUsdtBalance(0);
         setUsdtAllowance(0);
-        return;
       }
+    }
 
-      const erc20Abi = parseAbi(ERC20_ABI);
+    // Fetch USDC data
+    if (addrs?.usdc) {
+      try {
+        const code = await publicClient.getCode({ address: addrs.usdc });
+        if (code && code !== "0x") {
+          const balance = (await publicClient.readContract({
+            address: addrs.usdc,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [address],
+          })) as bigint;
+          setUsdcBalance(parseUSDTAmount(balance));
 
-      const balance = (await publicClient.readContract({
-        address: addrs.usdt,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [address],
-      })) as bigint;
-      setUsdtBalance(parseUSDTAmount(balance));
-
-      if (addrs.subscription) {
-        const allowance = (await publicClient.readContract({
-          address: addrs.usdt,
-          abi: erc20Abi,
-          functionName: "allowance",
-          args: [address, addrs.subscription],
-        })) as bigint;
-        setUsdtAllowance(parseUSDTAmount(allowance));
+          if (addrs.subscription) {
+            const allowance = (await publicClient.readContract({
+              address: addrs.usdc,
+              abi: erc20Abi,
+              functionName: "allowance",
+              args: [address, addrs.subscription],
+            })) as bigint;
+            setUsdcAllowance(parseUSDTAmount(allowance));
+          }
+        } else {
+          setUsdcBalance(0);
+          setUsdcAllowance(0);
+        }
+      } catch (err) {
+        console.error("Failed to fetch USDC data:", err);
+        setUsdcBalance(0);
+        setUsdcAllowance(0);
       }
-    } catch (err) {
-      console.error("Failed to fetch user data:", err);
     }
   }, [address, publicClient]); // 只依赖 address 和 publicClient
 
@@ -320,6 +356,72 @@ export function useSubscriptionContract() {
 
   // refetchAllowance 与 refetchBalance 共用同一方法
   void refetchBalance;
+
+  // 授权 USDC
+  const approveUSDC = useCallback(
+    async (amount: number): Promise<boolean> => {
+      const addrs = addressesRef.current;
+      if (
+        !walletClient ||
+        !addrs?.usdc ||
+        !addrs?.subscription ||
+        !publicClient ||
+        !address
+      ) {
+        setError("Wallet not connected");
+        return false;
+      }
+
+      try {
+        setTxState("approving");
+        setError(null);
+
+        const amountBigInt = formatUSDTAmount(amount);
+
+        const hash = await walletClient.writeContract({
+          address: addrs.usdc,
+          abi: parseAbi(ERC20_ABI),
+          functionName: "approve",
+          args: [addrs.subscription, amountBigInt],
+        });
+
+        setTxHash(hash);
+
+        transactionAuditService.recordTokenApprove({
+          txHash: hash,
+          chainId: chainId,
+          network: backendNetworkRef.current || "hardhat",
+          fromAddress: address,
+          spenderAddress: addrs.subscription,
+          tokenAddress: addrs.usdc,
+          tokenSymbol: "USDC",
+          tokenDecimals: 6,
+          amount: amountBigInt.toString(),
+          description: `Approve USDC for subscription`,
+        });
+
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+        transactionAuditService.updateStatus(hash, "confirmed", {
+          block_number: Number(receipt.blockNumber),
+          gas_used: Number(receipt.gasUsed),
+          effective_gas_price: receipt.effectiveGasPrice?.toString(),
+        });
+
+        // 刷新授权额度
+        userDataFetchedForRef.current = null;
+        await fetchUserData();
+
+        return true;
+      } catch (err) {
+        console.error("USDC Approve failed:", err);
+        setError((err as Error).message || "USDC Approve failed");
+        setTxState("error");
+        return false;
+      }
+    },
+    [walletClient, publicClient, fetchUserData, address, chainId]
+  );
 
   // ========== 交易操作 ==========
 
@@ -544,6 +646,8 @@ export function useSubscriptionContract() {
 
     usdtBalance,
     usdtAllowance,
+    usdcBalance,
+    usdcAllowance,
 
     txState,
     txHash,
@@ -551,6 +655,7 @@ export function useSubscriptionContract() {
     isSubmitting,
 
     approveUSDT,
+    approveUSDC,
     subscribe,
     redeem,
     reset,

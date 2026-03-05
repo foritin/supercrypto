@@ -6,8 +6,9 @@
  * - F-08: useTransactionTimeout hook 行为
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
 import enAdmin from '@/locales/en-US/admin'
 import zhAdmin from '@/locales/zh-CN/admin'
 
@@ -37,7 +38,7 @@ describe('F-07: i18n Key Completeness', () => {
     'notAdmin',
     'notDeployer',
     'notVerifier',
-  ]
+  ] as const
 
   const REQUIRED_ONCHAIN_KEYS = [
     'revocationRecoverySuccess',
@@ -47,13 +48,13 @@ describe('F-07: i18n Key Completeness', () => {
     'revocationSuccess',
     'revocationFailed',
     'revocationTxReverted',
-  ]
+  ] as const
 
   it('en-US admin.kyc.admission has all required keys', () => {
     const admission = enAdmin.admin.kyc.admission
     for (const key of REQUIRED_ADMISSION_KEYS) {
       expect(admission, `Missing en-US key: admission.${key}`).toHaveProperty(key)
-      expect(admission[key]).toBeTruthy()
+      expect(admission[key as keyof typeof admission]).toBeTruthy()
     }
   })
 
@@ -61,7 +62,7 @@ describe('F-07: i18n Key Completeness', () => {
     const admission = zhAdmin.admin.kyc.admission
     for (const key of REQUIRED_ADMISSION_KEYS) {
       expect(admission, `Missing zh-CN key: admission.${key}`).toHaveProperty(key)
-      expect(admission[key]).toBeTruthy()
+      expect(admission[key as keyof typeof admission]).toBeTruthy()
     }
   })
 
@@ -69,7 +70,7 @@ describe('F-07: i18n Key Completeness', () => {
     const onchain = enAdmin.admin.kyc.onchain
     for (const key of REQUIRED_ONCHAIN_KEYS) {
       expect(onchain, `Missing en-US key: onchain.${key}`).toHaveProperty(key)
-      expect(onchain[key]).toBeTruthy()
+      expect(onchain[key as keyof typeof onchain]).toBeTruthy()
     }
   })
 
@@ -77,7 +78,7 @@ describe('F-07: i18n Key Completeness', () => {
     const onchain = zhAdmin.admin.kyc.onchain
     for (const key of REQUIRED_ONCHAIN_KEYS) {
       expect(onchain, `Missing zh-CN key: onchain.${key}`).toHaveProperty(key)
-      expect(onchain[key]).toBeTruthy()
+      expect(onchain[key as keyof typeof onchain]).toBeTruthy()
     }
   })
 

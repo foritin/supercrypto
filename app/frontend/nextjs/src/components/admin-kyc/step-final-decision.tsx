@@ -11,7 +11,6 @@
  * - isProcessing 状态下禁用按钮
  */
 
-import { useTranslation } from "react-i18next";
 import {
   CheckCircle2,
   XCircle,
@@ -23,6 +22,9 @@ import {
   ShieldCheck,
   Gavel,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
+import { SectionCard } from "@/components/ui";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -33,9 +35,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { SectionCard } from "@/components/ui";
-import { STEPS } from "./stepper-reducer";
 import type { KycDetail } from "@/services/admin-kyc";
+
+import { STEPS } from "./stepper-reducer";
 
 // ---------------------------------------------------------------------------
 // Props

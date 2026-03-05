@@ -7,8 +7,6 @@
  */
 'use client';
 
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { 
   FileCode2, 
   Clock, 
@@ -23,19 +21,10 @@ import {
   Link as LinkIcon,
   Info,
 } from 'lucide-react';
-import { GraphNode } from '@/services/contract-graph';
-import { getStatusBgColor } from '@/lib/theme-colors';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-// shadcn/ui 组件
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { SectionCard, InfoRow } from '@/components/ui';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -47,15 +36,27 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { getStatusBgColor } from '@/lib/theme-colors';
+import type { GraphNode } from '@/services/contract-graph';
+
+// shadcn/ui 组件
 
 // 通用 UI 组件
-import { SectionCard, InfoRow } from '@/components/ui';
 
 interface ContractDetailPanelProps {
   open: boolean;
@@ -71,7 +72,9 @@ interface ContractDetailPanelProps {
 }
 
 // 状态配置 - 使用 CSS 变量
-const STATUS_CONFIG: Record<string, { 
+type ContractStatus = 'ready' | 'synced' | 'not_deployed' | 'not_registered' | 'missing_deps';
+
+const STATUS_CONFIG: Record<ContractStatus, {
   color: string; 
   bg: string;
   border: string;
@@ -110,12 +113,12 @@ const STATUS_CONFIG: Record<string, {
 };
 
 // 项目颜色映射
-const PROJECT_COLOR_MAP: Record<string, { bg: string; border: string; text: string }> = {
+const PROJECT_COLOR_MAP = {
   common: { bg: 'rgba(24, 144, 255, 0.1)', border: 'rgba(24, 144, 255, 0.3)', text: 'var(--color-info)' },
   mock: { bg: 'rgba(250, 173, 20, 0.1)', border: 'rgba(250, 173, 20, 0.3)', text: 'var(--color-warning)' },
   vanke: { bg: 'rgba(0, 212, 170, 0.1)', border: 'rgba(0, 212, 170, 0.3)', text: 'var(--color-primary)' },
   fake: { bg: 'rgba(0, 212, 170, 0.1)', border: 'rgba(0, 212, 170, 0.3)', text: 'var(--color-primary)' },
-};
+} as const;
 
 export function ContractDetailPanel({
   open,
@@ -161,8 +164,9 @@ export function ContractDetailPanel({
   const showSetPrimaryButton = isProjectContract && !isPrimary && hasContractId && onSetPrimary;
   const showUnsetPrimaryButton = isProjectContract && isPrimary && hasContractId && onUnsetPrimary;
 
-  const statusConfig = STATUS_CONFIG[node.status] || STATUS_CONFIG.not_deployed;
-  const projectColors = PROJECT_COLOR_MAP[node.project] || PROJECT_COLOR_MAP.common;
+  const statusConfig = STATUS_CONFIG[node.status as ContractStatus] ?? STATUS_CONFIG.not_deployed;
+  const projectColors =
+    PROJECT_COLOR_MAP[node.project as keyof typeof PROJECT_COLOR_MAP] ?? PROJECT_COLOR_MAP.common;
 
   const handleUnregisterConfirm = () => {
     setUnregisterModalOpen(false);

@@ -1,10 +1,11 @@
 'use client';
 
+import { Trophy, DollarSign, TrendingUp } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
-import { Trophy, DollarSign, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -111,7 +112,12 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
             max={50}
             step={1}
             value={[apy]}
-            onValueChange={(values) => setApy(values[0])}
+            onValueChange={(values) => {
+              const nextApy = values[0]
+              if (nextApy !== undefined) {
+                setApy(nextApy)
+              }
+            }}
             variant="gold"
             className="py-2"
           />
@@ -132,7 +138,12 @@ export const YieldCalculator: React.FC<YieldCalculatorProps> = ({
             max={365}
             step={1}
             value={[duration]}
-            onValueChange={(values) => setDuration(values[0])}
+            onValueChange={(values) => {
+              const nextDuration = values[0]
+              if (nextDuration !== undefined) {
+                setDuration(nextDuration)
+              }
+            }}
             variant="primary"
             className="py-2"
           />

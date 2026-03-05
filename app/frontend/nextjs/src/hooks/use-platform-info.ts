@@ -1,7 +1,7 @@
 'use client'
 
-import { usePlatformInfoStore } from '@/stores/platform-info-store'
 import type { ChainInfo, AddressInfo, AbiItem } from '@/services/platform-info'
+import { usePlatformInfoStore } from '@/stores/platform-info-store'
 
 /**
  * usePlatformInfo — 便捷 hook，从 store 获取平台链信息和合约数据

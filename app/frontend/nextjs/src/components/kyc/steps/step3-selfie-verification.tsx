@@ -14,8 +14,6 @@
  * @validates Requirements 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9
  */
 
-import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import {
   Camera,
   CheckCircle,
@@ -24,16 +22,18 @@ import {
   Trash2,
   Eye,
 } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import {
   LivenessDetector,
   type LivenessResult,
   type LivenessError,
 } from '@/components/kyc/liveness-detector'
 import { ManualSelfieUpload } from '@/components/kyc/manual-selfie-upload'
+import { Button } from '@/components/ui/button'
 import type { FileUploadError } from '@/components/ui/file-upload'
+import { cn } from '@/lib/utils'
 
 // ============ 类型定义 ============
 
@@ -121,7 +121,7 @@ function SuccessPreview({
       <div className="relative">
         {/* 预览图片 - Mobile: 较小尺寸 */}
         <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-primary shadow-[0_0_30px_rgba(0,212,170,0.3)]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <img
             src={selfieUrl}
             alt={t('kyc.liveness.selfieUploaded')}

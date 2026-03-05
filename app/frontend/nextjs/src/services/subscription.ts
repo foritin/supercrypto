@@ -6,8 +6,8 @@
  * - 公开接口：/public/subscriptions/*
  * - 用户接口：/user/subscriptions/*（需要 JWT）
  */
-import { api } from '@/services/api'
 import { PUBLIC_PATHS, USER_PATHS } from '@/constants/api-paths'
+import { api } from '@/services/api'
 
 // 认购状态
 export type SubscriptionStatus = 'pending' | 'active' | 'matured' | 'redeemed' | 'cancelled'
@@ -16,7 +16,7 @@ export type SubscriptionStatus = 'pending' | 'active' | 'matured' | 'redeemed' |
 export type TokenType = 'USDT' | 'USDC'
 
 // 锁定期
-export type LockPeriod = 3 | 6 | 12
+export type LockPeriod = 0 | 3 | 6 | 12
 
 // 认购预览请求（改为 Query 参数）
 export interface SubscriptionPreviewParams {
@@ -48,6 +48,39 @@ export interface SubscriptionCreateRequest {
   token_type: TokenType
   lock_period: LockPeriod
   tx_hash: string
+}
+
+// 创建待确认订单请求 (V2 流程)
+export interface SubscriptionPendingRequest {
+  asset_id: number
+  amount: number
+  token_type: TokenType
+  lock_period: LockPeriod
+}
+
+// 创建待确认订单响应
+export interface SubscriptionPendingResponse {
+  order_id: string
+  status: 'pending_confirmation'
+  expires_at: string
+}
+
+// 确认认购请求 (带链上回执)
+export interface SubscriptionConfirmRequest {
+  order_id: string
+  tx_hash: string
+  block_number?: number
+  gas_used?: string
+  effective_gas_price?: string
+}
+
+// 交易回执响应
+export interface TransactionReceiptResponse {
+  status: 'pending' | 'success' | 'failed'
+  block_number?: number
+  gas_used?: string
+  effective_gas_price?: string
+  confirmations?: number
 }
 
 // 认购响应
@@ -185,6 +218,46 @@ export const subscriptionService = {
       { tx_hash: txHash }
     )
     return response.object_data as SubscriptionResponse
+  },
+
+  /**
+   * 创建待确认订单 (V2 统一交易流程)
+   * 先创建待确认订单，再发起链上交易
+   */
+  async createSubscriptionPending(data: SubscriptionPendingRequest): Promise<SubscriptionPendingResponse> {
+    const response = await api.post<API.ResponseData<SubscriptionPendingResponse>>(
+      USER_PATHS.SUBSCRIPTION_PENDING,
+      data
+    )
+    return response.object_data as SubscriptionPendingResponse
+  },
+
+  /**
+   * 确认认购 (V2 统一交易流程)
+   * 链上交易成功后，提交回执完成认购
+   */
+  async confirmSubscription(data: SubscriptionConfirmRequest): Promise<SubscriptionResponse> {
+    const response = await api.post<API.ResponseData<SubscriptionResponse>>(
+      USER_PATHS.SUBSCRIPTION_CONFIRM,
+      data
+    )
+    return response.object_data as SubscriptionResponse
+  },
+
+  /**
+   * 获取交易回执状态
+   * 用于轮询检查链上交易状态
+   */
+  async getTransactionReceipt(txHash: string): Promise<TransactionReceiptResponse | null> {
+    try {
+      const response = await api.get<API.ResponseData<TransactionReceiptResponse>>(
+        USER_PATHS.SUBSCRIPTION_RECEIPT(txHash)
+      )
+      return response.object_data as TransactionReceiptResponse
+    } catch {
+      // 交易还未被确认，返回 null
+      return null
+    }
   },
 }
 

@@ -16,9 +16,6 @@
  * @validates Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useConnection, useWalletClient, usePublicClient } from 'wagmi'
 import {
   ShieldCheck,
   ShieldOff,
@@ -27,9 +24,12 @@ import {
   Snowflake,
   RefreshCw,
 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useConnection, useWalletClient, usePublicClient } from 'wagmi'
 
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -45,6 +45,7 @@ import { notification } from '@/lib/notification'
 import { recordRevocation } from '@/services/admin-kyc'
 import type { KycDetail } from '@/services/admin-kyc'
 import { usePlatformInfoStore } from '@/stores/platform-info-store'
+
 import { savePendingTx, clearPendingTx, getPendingTx } from './tx-recovery'
 
 // ============ Types ============

@@ -1,20 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAccount, useWalletClient, usePublicClient, useSwitchChain, useChainId } from "wagmi";
 
-import { contractAdminService } from "@/services/contract";
-import { usePlatformInfoStore } from "@/stores/platform-info-store";
-import type { ContractStatusItem } from "@/types/contract";
-import { transactionAuditService } from "@/services/transaction-audit";
-import { notification } from "@/lib/notification";
 
 import { ContractDetailPanel } from "@/components/admin/contract-detail-panel";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { GraphNode } from "@/services/contract-graph";
+import { Input } from "@/components/ui/input";
+import { notification } from "@/lib/notification";
+import { contractAdminService } from "@/services/contract";
+import type { GraphNode } from "@/services/contract-graph";
+import { transactionAuditService } from "@/services/transaction-audit";
+import { usePlatformInfoStore } from "@/stores/platform-info-store";
+import type { ContractStatusItem } from "@/types/contract";
 
 interface DependencyPanelProps {
   detailPanelOpen: boolean;

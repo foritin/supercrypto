@@ -1,15 +1,17 @@
 'use client';
 
+import { ArrowLeft, ArrowRight, MapPin, FileText, Calendar, Home, ChevronLeft, Save } from 'lucide-react';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useKycContext, type KycFormData } from '@/contexts/kyc-context';
-import { DocumentUpload } from '../components/document-upload';
+
 import { CountrySelect } from '../components/country-select';
-import { FormField, FormInput } from '../components/form-field';
-import { ArrowLeft, ArrowRight, MapPin, FileText, Calendar, Home, ChevronLeft, Save } from 'lucide-react';
+import { DocumentUpload } from '../components/document-upload';
+import { FormInput } from '../components/form-field';
 
 const documentTypes = [
   { value: 'passport', label: 'Passport', icon: '🛂' },
@@ -103,7 +105,7 @@ export function IdentityStep() {
       : docPathFields[currentDocType]?.back;
     
     if (pathField) {
-      updateFormData({ [pathField]: undefined });
+      updateFormData({ [pathField]: '' });
     }
   };
 
@@ -356,7 +358,7 @@ export function IdentityStep() {
                 {documentTypes.map((type) => (
                   <button
                     key={type.value}
-                    onClick={() => updateFormData({ documentType: type.value as typeof formData.documentType })}
+                    onClick={() => updateFormData({ documentType: type.value as NonNullable<KycFormData['documentType']> })}
                     className={`p-4 rounded-xl border-2 text-center transition-all ${
                       formData.documentType === type.value
                         ? 'border-primary bg-primary/10'
@@ -425,8 +427,8 @@ export function IdentityStep() {
                     documentType={formData.documentType}
                     onUpload={(file, filePath) => handleFileUpload('front', file, filePath)}
                     onRemove={() => handleFileRemove('front')}
-                    uploadedFile={(currentLocalFiles as { front?: File }).front}
-                    uploadedPath={currentFrontPath}
+                    {...((currentLocalFiles as { front?: File }).front ? { uploadedFile: (currentLocalFiles as { front?: File }).front } : {})}
+                    {...(currentFrontPath ? { uploadedPath: currentFrontPath } : {})}
                   />
                   {formData.documentType !== 'passport' && (
                     <DocumentUpload
@@ -434,8 +436,10 @@ export function IdentityStep() {
                       documentType={formData.documentType}
                       onUpload={(file, filePath) => handleFileUpload('back', file, filePath)}
                       onRemove={() => handleFileRemove('back')}
-                      uploadedFile={(currentLocalFiles as { front?: File; back?: File }).back}
-                      uploadedPath={currentBackPath}
+                      {...((currentLocalFiles as { front?: File; back?: File }).back
+                        ? { uploadedFile: (currentLocalFiles as { front?: File; back?: File }).back }
+                        : {})}
+                      {...(currentBackPath ? { uploadedPath: currentBackPath } : {})}
                     />
                   )}
                 </div>

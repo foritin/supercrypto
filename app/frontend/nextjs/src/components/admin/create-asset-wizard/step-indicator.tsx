@@ -13,9 +13,11 @@
  */
 'use client'
 
-import { useTranslation } from 'react-i18next'
 import { Check } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+
 import { cn } from '@/lib/utils'
+
 import type { StepIndicatorProps, StepConfig } from './types'
 
 /**
@@ -59,8 +61,8 @@ function getConnectorStatus(
 interface StepCircleProps {
   step: StepConfig
   status: StepStatus
-  onClick?: () => void
-  t: (key: string) => string
+  onClick?: (() => void) | undefined
+  t: (key: string, params?: Record<string, unknown>) => string
 }
 
 function StepCircle({ step, status, onClick, t }: StepCircleProps) {
@@ -143,7 +145,7 @@ interface StepLabelProps {
   step: StepConfig
   status: StepStatus
   isCurrent: boolean
-  t: (key: string) => string
+  t: (key: string, params?: Record<string, unknown>) => string
 }
 
 function StepLabel({ step, status, isCurrent, t }: StepLabelProps) {
@@ -225,10 +227,12 @@ export function StepIndicator({
   onStepClick,
 }: StepIndicatorProps) {
   const { t } = useTranslation()
+  const tt = (key: string, params?: Record<string, unknown>) =>
+    params ? t(key, params) : t(key)
   
   // 获取当前步骤信息
   const currentStepConfig = steps.find(s => s.id === currentStep)
-  const currentStepTitle = currentStepConfig ? t(currentStepConfig.title) : ''
+  const currentStepTitle = currentStepConfig ? tt(currentStepConfig.title) : ''
 
   return (
     <nav
@@ -255,11 +259,11 @@ export function StepIndicator({
                 <StepCircle
                   step={step}
                   status={status}
-                  onClick={canClick ? () => onStepClick(step.id) : undefined}
-                  t={t}
+                  {...(canClick ? { onClick: () => onStepClick(step.id) } : {})}
+                  t={tt}
                 />
                 {/* 桌面端显示所有标签，移动端只显示当前步骤标签 */}
-                <StepLabel step={step} status={status} isCurrent={isCurrent} t={t} />
+                <StepLabel step={step} status={status} isCurrent={isCurrent} t={tt} />
               </div>
               
               {/* 连接线 (最后一个步骤不显示) */}
@@ -278,7 +282,7 @@ export function StepIndicator({
         currentStep={currentStep}
         totalSteps={steps.length}
         currentStepTitle={currentStepTitle}
-        t={t}
+        t={tt}
       />
     </nav>
   )

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useRef } from "react";
 import { Shield, Flame, TrendingUp, Building2, ArrowRight, Lock } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { GlassCard } from "@/components/ui";
 import { useRouter } from "next/navigation";
+import React, { useRef } from "react";
+
+import { GlassCard } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+
 
 // Mock data
 const FEATURED_ASSETS = [

@@ -5,8 +5,9 @@
  * 不再单独发请求，复用应用启动时已加载的平台信息
  */
 import { useEffect } from 'react'
-import { usePlatformInfoStore } from '@/stores/platform-info-store'
+
 import type { AddressInfo } from '@/services/platform-info'
+import { usePlatformInfoStore } from '@/stores/platform-info-store'
 
 export interface StablecoinAddresses {
   MockUSDT: `0x${string}`

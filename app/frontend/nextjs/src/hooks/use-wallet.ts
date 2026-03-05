@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
 import { injected } from 'wagmi/connectors';
+
 import { supportedChains, chainNames } from '@/config/wagmi';
 
 export function useWallet() {

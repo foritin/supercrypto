@@ -11,10 +11,10 @@
  * @validates Requirements 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
  */
 
+import { ShieldCheck } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useConnection, useWalletClient, usePublicClient } from 'wagmi'
-import { ShieldCheck } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { useCurrentUser } from '@/hooks'
@@ -22,6 +22,7 @@ import { useTransactionTimeout } from '@/hooks/use-tx-timeout'
 import { notification } from '@/lib/notification'
 import { recordAdmission } from '@/services/admin-kyc'
 import { usePlatformInfoStore } from '@/stores/platform-info-store'
+
 import { savePendingTx, clearPendingTx, getPendingTx } from './tx-recovery'
 
 // ============ Types ============

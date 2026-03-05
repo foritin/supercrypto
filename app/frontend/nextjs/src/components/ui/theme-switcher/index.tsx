@@ -1,8 +1,9 @@
 'use client';
 
-import { Moon, Sun } from 'lucide-react';
-import { useTheme } from '@/contexts/theme-context';
 import { motion } from 'framer-motion';
+import { Moon, Sun } from 'lucide-react';
+
+import { useTheme } from '@/contexts/theme-context';
 
 /**
  * ════════════════════════════════════════════════════════════════

@@ -11,9 +11,7 @@
  * - Fullscreen mode
  */
 
-import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import {
   ZoomIn,
   ZoomOut,
@@ -27,11 +25,13 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  ImageIcon,
 } from "lucide-react";
+import Image from "next/image";
+import { useState, useRef, useCallback } from "react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
 
 interface Document {
   type: "id_front" | "id_back" | "selfie" | "proof_of_address" | "face_image";
@@ -76,7 +76,6 @@ export function DocumentViewer({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const currentDoc = documents[currentIndex];
   const selfieDoc = documents.find((d) => d.type === "selfie");
   const idFrontDoc = documents.find((d) => d.type === "id_front");
 
@@ -127,6 +126,11 @@ export function DocumentViewer({
     setIsDragging(false);
   }, []);
 
+  if (!isOpen || documents.length === 0) return null;
+
+  const currentDoc = documents[currentIndex] ?? documents[0];
+  if (!currentDoc) return null;
+
   const handleDownload = async () => {
     try {
       const response = await fetch(currentDoc.url);
@@ -143,8 +147,6 @@ export function DocumentViewer({
       console.error("Download failed:", error);
     }
   };
-
-  if (!isOpen || documents.length === 0) return null;
 
   return (
     <AnimatePresence>
@@ -197,7 +199,7 @@ export function DocumentViewer({
                 }}
                 className={compareMode ? "bg-white/10 text-teal-400" : ""}
               >
-                <Compare className="w-4 h-4 mr-1" />
+                <GitCompare className="w-4 h-4 mr-1" />
                 对比
               </Button>
             )}
@@ -356,7 +358,7 @@ export function DocumentViewer({
                 <Sun className="w-4 h-4 text-white/50" />
                 <Slider
                   value={[brightness]}
-                  onValueChange={([v]) => setBrightness(v)}
+                  onValueChange={([v]) => setBrightness(v ?? brightness)}
                   min={50}
                   max={150}
                   step={5}
@@ -367,7 +369,7 @@ export function DocumentViewer({
                 <Contrast className="w-4 h-4 text-white/50" />
                 <Slider
                   value={[contrast]}
-                  onValueChange={([v]) => setContrast(v)}
+                  onValueChange={([v]) => setContrast(v ?? contrast)}
                   min={50}
                   max={150}
                   step={5}

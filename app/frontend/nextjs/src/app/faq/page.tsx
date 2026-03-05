@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { FaqContent } from "./FaqContent";
 
 export const metadata: Metadata = {

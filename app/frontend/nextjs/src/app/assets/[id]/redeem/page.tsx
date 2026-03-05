@@ -1,31 +1,29 @@
 'use client';
 
-import * as React from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useTranslation } from 'react-i18next';
-import { useChainId } from 'wagmi';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
-import { StepIndicator } from '@/components/ui/step-indicator';
-import { cn, getExplorerUrl } from '@/lib/utils';
 import { 
   ArrowLeft, 
-  Wallet, 
   TrendingUp, 
   Clock, 
-  AlertCircle,
   CheckCircle2,
   Loader2,
-  Coins,
   Receipt,
   ArrowRight,
   Shield,
   Info
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
+import { useChainId } from 'wagmi';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StepIndicator } from '@/components/ui/step-indicator';
+import { cn, getExplorerUrl } from '@/lib/utils';
+
 
 // Mock asset data
 const mockAssetData = {
@@ -68,13 +66,13 @@ const REDEMPTION_FEE_RATE = 0.001; // 0.1%
 
 export default function RedeemPage() {
   const router = useRouter();
-  const params = useParams();
   const { t } = useTranslation();
   const chainId = useChainId();
   const [currentStep, setCurrentStep] = React.useState(0);
 
   // 动态生成翻译后的步骤
-  const steps = stepKeys.map(s => ({
+  const steps = stepKeys.map((s, index) => ({
+    id: String(index + 1),
     title: t(s.titleKey),
     description: t(s.descKey),
   }));
@@ -82,7 +80,7 @@ export default function RedeemPage() {
   const [asset] = React.useState(mockAssetData);
   const [redeemAmount, setRedeemAmount] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [txStatus, setTxStatus] = React.useState<'pending' | 'success' | 'failed'> | null>(null);
+  const [txStatus, setTxStatus] = React.useState<'pending' | 'success' | 'failed' | null>(null);
   const [txHash, setTxHash] = React.useState('');
 
   React.useEffect(() => {

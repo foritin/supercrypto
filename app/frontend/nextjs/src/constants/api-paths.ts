@@ -69,6 +69,9 @@ export const USER_PATHS = {
   SUBSCRIPTION_DETAIL: (id: number) => `/user/subscriptions/${id}`,
   SUBSCRIPTION_STATS: '/user/subscriptions/stats',
   SUBSCRIPTION_REDEEM: (id: number) => `/user/subscriptions/${id}/redeem`,
+  SUBSCRIPTION_PENDING: '/user/subscriptions/pending',
+  SUBSCRIPTION_CONFIRM: '/user/subscriptions/confirm',
+  SUBSCRIPTION_RECEIPT: (txHash: string) => `/user/subscriptions/receipt/${txHash}`,
 
   // 质押
   STAKING: '/user/staking',

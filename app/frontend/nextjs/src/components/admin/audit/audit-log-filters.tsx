@@ -5,10 +5,13 @@
  */
 'use client';
 
-import React from 'react';
 import { Search, X } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import React from 'react';
 import { type DateRange } from 'react-day-picker';
+import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -17,11 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
+import type { 
+  AuditAction} from '@/types/audit';
 import { 
   AuditCategory, 
-  AuditAction, 
   AuditStatus,
 } from '@/types/audit';
 
@@ -164,11 +166,11 @@ export const AuditLogFilters: React.FC<AuditLogFiltersProps> = ({
 
         {/* 时间范围 */}
         <DateRangePicker
-          value={filters.dateRange}
           onChange={(range) => handleFieldChange('dateRange', range)}
           placeholder={t('admin.audit.filters.dateRangePlaceholder', '选择日期范围')}
           className="w-[260px]"
           dateFormat="yyyy-MM-dd"
+          {...(filters.dateRange ? { value: filters.dateRange } : {})}
         />
 
         {/* 重置按钮 */}

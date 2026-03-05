@@ -7,11 +7,12 @@
  * 如果有，显示提示让用户选择恢复或重新开始
  */
 
+import { RotateCcw, RefreshCw, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { RotateCcw, RefreshCw, X, Clock } from 'lucide-react'
-import { cn } from '@/lib/utils'
+
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 // ============ 类型定义 ============
 
@@ -139,7 +140,9 @@ export function KycProgressRestore({
 
   if (!isVisible || !savedProgress) return null
 
-  const timeAgo = formatTimeAgo(savedProgress.timestamp, t)
+  const timeAgo = formatTimeAgo(savedProgress.timestamp, (key, options) =>
+    String(t(key, options as Record<string, unknown>))
+  )
   const stepNames = [
     t('kyc.steps.personal.title'),
     t('kyc.steps.document.title'),

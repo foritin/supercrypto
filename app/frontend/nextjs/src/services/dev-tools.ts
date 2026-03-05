@@ -3,8 +3,8 @@
  * 
  * 路由：/dev/* (仅开发环境)
  */
-import { api } from '@/services/api'
 import { DEV_PATHS } from '@/constants/api-paths'
+import { api } from '@/services/api'
 // API.ResponseData 类型已在 types/api.d.ts 中全局声明
 
 export interface ResetableDataInfo {

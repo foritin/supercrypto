@@ -13,6 +13,7 @@
 
 import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+
 import { STEPS } from "./stepper-reducer";
 
 export interface StepIndicatorProps {

@@ -8,16 +8,17 @@
  * **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8**
  */
 
-import { describe, it, expect, afterEach } from 'vitest'
-import fc from 'fast-check'
 import { render, cleanup } from '@testing-library/react'
+import fc from 'fast-check'
+import { describe, it, expect, afterEach } from 'vitest'
+
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
 
 // Feature: frontend-shadcn-migration, Property 1: Component Migration Rendering Correctness
 describe('Property 1: Component Migration Rendering Correctness', () => {
@@ -34,7 +35,7 @@ describe('Property 1: Component Migration Rendering Correctness', () => {
     fc.assert(
       fc.property(
         fc.record({
-          variant: fc.constantFrom('default', 'destructive', 'outline', 'secondary', 'ghost', 'link'),
+          variant: fc.constantFrom('primary', 'destructive', 'outline', 'secondary', 'ghost', 'accent', 'glass'),
           size: fc.constantFrom('default', 'sm', 'lg', 'icon'),
           disabled: fc.boolean(),
           children: fc.string({ minLength: 0, maxLength: 100 }),

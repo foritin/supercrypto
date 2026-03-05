@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
 import { motion } from 'framer-motion';
-import { GlassCard } from '@/components/ui/glass-card-component';
+import React from 'react';
+
 import { AnimatedNumber } from '@/components/ui/animated-number';
+import { GlassCard } from '@/components/ui/glass-card-component';
 
 interface StatCardProps {
   title: string;

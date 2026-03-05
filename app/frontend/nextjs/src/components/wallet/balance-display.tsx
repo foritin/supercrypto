@@ -1,10 +1,10 @@
 'use client';
 
-import * as React from 'react';
+import { Loader2, RefreshCw } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import { useNativeBalance } from '@/hooks/use-balance';
 import { useWallet } from '@/hooks/use-wallet';
-import { Loader2, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface BalanceDisplayProps {
   className?: string;

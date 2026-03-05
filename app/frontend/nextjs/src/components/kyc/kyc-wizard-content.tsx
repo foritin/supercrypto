@@ -8,6 +8,7 @@
  */
 
 import { useRef, useEffect, useState } from 'react'
+
 import { cn } from '@/lib/utils'
 
 // ============ 类型定义 ============
@@ -29,7 +30,7 @@ export function KycWizardContent({
   currentStep,
   children,
   className,
-  direction = 'forward',
+  direction: _direction = 'forward',
 }: KycWizardContentProps) {
   const [displayChildren, setDisplayChildren] = useState(children)
   const [isAnimating, setIsAnimating] = useState(false)

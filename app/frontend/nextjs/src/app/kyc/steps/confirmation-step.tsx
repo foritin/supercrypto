@@ -1,10 +1,5 @@
 'use client';
 
-import * as React from 'react';
-import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useKycContext } from '@/contexts/kyc-context';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -13,11 +8,17 @@ import {
   MapPin, 
   FileText,
   Shield,
-  AlertCircle,
   Loader2,
   ChevronLeft,
 } from 'lucide-react';
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useKycContext } from '@/contexts/kyc-context';
+
 
 export function ConfirmationStep() {
   const { t } = useTranslation();
@@ -47,7 +48,7 @@ export function ConfirmationStep() {
       if (success) {
         toast.success(t('kyc.confirmation.submitted'));
       }
-    } catch (error) {
+    } catch {
       toast.error(t('kyc.confirmation.error'));
     } finally {
       setIsSubmitting(false);

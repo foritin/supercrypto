@@ -1,9 +1,9 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+import { Building2, Shield, Database, Globe } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, Shield, Database, Globe } from "lucide-react";
 
 // ============================================
 // 风格 1: 区块链节点脉冲 - Blockchain Pulse
@@ -129,6 +129,10 @@ function AssetCardReveal() {
     { icon: Building2, text: "Loading asset data..." },
     { icon: Globe, text: "Preparing your portfolio..." },
   ];
+  const currentStage = stages[stage] ?? stages[0];
+  if (!currentStage) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col items-center gap-8">
@@ -171,7 +175,7 @@ function AssetCardReveal() {
             transition={{ duration: 0.5, ease: "backOut" }}
           >
             {(() => {
-              const Icon = stages[stage].icon;
+              const Icon = currentStage.icon;
               return <Icon className="w-10 h-10 text-white" />;
             })()}
           </motion.div>
@@ -197,7 +201,7 @@ function AssetCardReveal() {
             exit={{ opacity: 0, y: -10 }}
             className="text-sm text-teal-300/80 font-medium tracking-wide"
           >
-            {stages[stage].text}
+            {currentStage.text}
           </motion.p>
         </AnimatePresence>
       </div>

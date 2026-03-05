@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
 import Image from 'next/image';
-import { Partner } from './partners-data';
+import React from 'react';
+
 import { PartnerDisclaimer } from './partner-disclaimer';
+import type { Partner } from './partners-data';
 import './partners-marquee.css';
 
 /**

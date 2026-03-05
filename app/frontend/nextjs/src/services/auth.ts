@@ -4,16 +4,17 @@
  */
 
 import axios from "axios";
+
+import { API_BASE_URL } from "@/constants/api";
+import type {
+  TokenData} from "@/utils/auth";
 import {
   saveTokens,
   getRefreshToken,
   clearAuthData,
   setSessionId,
-  getWalletAddress,
-  TokenData,
+  getWalletAddress
 } from "@/utils/auth";
-
-import { API_BASE_URL } from "@/constants/api";
 
 /**
  * Login response from backend

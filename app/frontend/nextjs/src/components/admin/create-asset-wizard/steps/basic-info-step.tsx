@@ -9,13 +9,14 @@
  */
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
+import { ArrowRight, ArrowLeft, Loader2, Zap } from 'lucide-react'
 import { useEffect, useRef, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
-import { ArrowRight, ArrowLeft, Loader2, Zap } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
@@ -25,8 +26,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -34,12 +33,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { cn } from '@/lib/utils'
+import { Textarea } from '@/components/ui/textarea'
 import { useConstants, constantsToSelectOptions } from '@/hooks/use-constants'
 import { FALLBACK_ASSET_TYPES } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 
-import { useWizard, useIsFirstStep } from '../wizard-context'
 import type { StepComponentProps } from '../types'
+import { useWizard, useIsFirstStep } from '../wizard-context'
 
 // ============ 常量定义 ============
 

@@ -13,7 +13,12 @@ from tortoise.transactions import in_transaction
 
 from src.common.dependencies import get_asset_service, get_subscription_service
 from src.schemas.enums import SubscriptionStatus
-from src.schemas.subscription import RedeemRequest, SubscriptionCreateRequest
+from src.schemas.subscription import (
+    RedeemRequest,
+    SubscriptionConfirmRequest,
+    SubscriptionCreateRequest,
+    SubscriptionPendingRequest,
+)
 from src.security import require_user
 from src.services import AssetService, SubscriptionService
 
@@ -45,6 +50,65 @@ async def create_subscription(
         object_data=result.model_dump(mode="json"),
         msg="Subscription created successfully",
     )
+
+
+@router.post(
+    "/pending",
+    summary="Create Pending Subscription Order",
+    description="Create a pending order before sending on-chain transaction",
+)
+async def create_subscription_pending(
+    data: SubscriptionPendingRequest,
+    wallet_address: str = Depends(require_user),
+    service: SubscriptionService = Depends(get_subscription_service),
+):
+    result = await service.create_pending_order(wallet_address, data)
+    return create_success_response(
+        object_data=result.model_dump(mode="json"),
+        msg="Pending order created",
+    )
+
+
+@router.post(
+    "/confirm",
+    summary="Confirm Subscription",
+    description="Confirm pending order with on-chain tx receipt and finalize subscription",
+)
+async def confirm_subscription(
+    data: SubscriptionConfirmRequest,
+    wallet_address: str = Depends(require_user),
+    service: SubscriptionService = Depends(get_subscription_service),
+    asset_service: AssetService = Depends(get_asset_service),
+):
+    async with in_transaction() as conn:
+        result, created = await service.confirm_pending_order(
+            wallet_address, data, using_db=conn
+        )
+        if created:
+            await asset_service.update_subscribed_amount(
+                result.asset_id,
+                Decimal(str(result.amount)),
+                is_add=True,
+                using_db=conn,
+            )
+    return create_success_response(
+        object_data=result.model_dump(mode="json"),
+        msg="Subscription confirmed",
+    )
+
+
+@router.get(
+    "/receipt/{tx_hash}",
+    summary="Get Transaction Receipt",
+    description="Get on-chain receipt status for subscription transaction",
+)
+async def get_transaction_receipt(
+    tx_hash: str,
+    _wallet_address: str = Depends(require_user),
+    service: SubscriptionService = Depends(get_subscription_service),
+):
+    receipt = await service.get_transaction_receipt(tx_hash)
+    return create_success_response(object_data=receipt.model_dump(mode="json"))
 
 
 @router.get(

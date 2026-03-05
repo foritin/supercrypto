@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import { AlertTriangle, RotateCcw, Home } from "lucide-react";
 import Link from "next/link";
+import { useEffect } from "react";
 
 /**
  * 全局错误边界

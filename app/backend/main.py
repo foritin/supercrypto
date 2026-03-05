@@ -28,6 +28,7 @@ from src.models import Account
 from src.security import require_admin
 from src.tasks.contract_task import async_sync_provider_registry
 from src.tasks.kyc_sync_task import reconcile_chain_events, retry_failed_kyc_syncs
+from src.tasks.subscription_reconcile_task import reconcile_subscription_events
 
 settings = SETTINGS
 logger = get_logger("api.main")
@@ -66,6 +67,12 @@ async def lifespan(app: FastAPI):
     # C-04: 每 5 分钟扫描合约事件对账
     await SchedulerService.schedule_task(reconcile_chain_events, "cyclic", interval=300)
     print("✅ KYC chain event reconciliation task scheduled (interval=300s)")
+
+    # Subscription: 每 5 分钟扫描认购事件台账一致性
+    await SchedulerService.schedule_task(
+        reconcile_subscription_events, "cyclic", interval=300
+    )
+    print("✅ Subscription reconciliation task scheduled (interval=300s)")
 
     # 生成数据库表（开发环境）
     if settings.debug:

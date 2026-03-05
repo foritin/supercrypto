@@ -5,8 +5,8 @@
  * - 公开接口：/public/assets/*
  * - 管理员接口：/admin/assets/*
  */
-import { api } from '@/services/api'
 import { PUBLIC_PATHS, ADMIN_PATHS } from '@/constants/api-paths'
+import { api } from '@/services/api'
 
 export type AssetStatus = 'active' | 'paused' | 'sold_out' | 'closed'
 export type AssetType = 'real_estate' | 'bond' | 'commodity' | 'equity' | 'other'
@@ -112,6 +112,8 @@ export interface RecentInvestor {
 
 export interface AssetDetail {
   id: number
+  chain_id?: number
+  risk_level?: 'low' | 'medium' | 'high'
   name: string
   symbol: string
   description: string | null

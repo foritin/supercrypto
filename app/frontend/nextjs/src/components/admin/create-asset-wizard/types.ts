@@ -64,8 +64,8 @@ export interface CreateAssetFormData {
   apy_3m: number
   apy_6m: number
   apy_12m: number
-  subscription_start_at?: string
-  subscription_end_at?: string
+  subscription_start_at?: string | undefined
+  subscription_end_at?: string | undefined
   
   // Step 3: 媒体上传
   coverFile?: UploadFileItem[]
@@ -83,7 +83,6 @@ export const DEFAULT_FORM_DATA: CreateAssetFormData = {
   name: '',
   symbol: '',
   asset_type: 'real_estate',
-  frame_style: undefined,
   location: '',
   description: '',
   
@@ -94,8 +93,6 @@ export const DEFAULT_FORM_DATA: CreateAssetFormData = {
   apy_3m: 10,
   apy_6m: 12,
   apy_12m: 15,
-  subscription_start_at: undefined,
-  subscription_end_at: undefined,
   
   // 媒体上传
   coverFile: [],
@@ -221,12 +218,12 @@ export interface AssetCardPreviewProps {
     name: string
     symbol: string
     asset_type: AssetType
-    location?: string
+    location?: string | undefined
     current_price: number
     apy_3m: number
     apy_6m: number
     apy_12m: number
-    coverImage?: string
+    coverImage?: string | undefined
   }
 }
 

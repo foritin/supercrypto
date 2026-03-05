@@ -16,28 +16,14 @@
  * - @ant-design/icons -> lucide-react
  */
 
-import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useTranslation } from 'react-i18next'
-import { ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
+import { format, formatDistanceToNow } from 'date-fns'
+import { zhCN } from 'date-fns/locale'
 import { Search, LogOut, RefreshCw, User, AlertTriangle } from 'lucide-react'
+import { useState } from 'react'
 
 import { RequireAdmin } from '@/components/auth'
-import { adminSessionService, UserSession } from '@/services/admin-sessions'
-import { truncateAddress } from '@/utils/format'
-import { notification } from '@/lib/notification'
-
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { DataTable } from '@/components/ui/data-table'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,12 +34,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { DataTable } from '@/components/ui/data-table'
+import { Input } from '@/components/ui/input'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { notification } from '@/lib/notification'
+import type { UserSession } from '@/services/admin-sessions';
+import { adminSessionService } from '@/services/admin-sessions'
+import { truncateAddress } from '@/utils/format'
 
-import { format, formatDistanceToNow } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
 
 export default function AdminSessionsPage() {
-  const { t } = useTranslation()
   const queryClient = useQueryClient()
   
   const [page, setPage] = useState(1)
@@ -68,11 +66,12 @@ export default function AdminSessionsPage() {
   // 获取会话列表
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-sessions', page, pageSize, search],
-    queryFn: () => adminSessionService.listActiveSessions({
-      page,
-      page_size: pageSize,
-      search: search || undefined,
-    }),
+    queryFn: () =>
+      adminSessionService.listActiveSessions({
+        page,
+        page_size: pageSize,
+        ...(search ? { search } : {}),
+      }),
   })
   
   // 强制下线

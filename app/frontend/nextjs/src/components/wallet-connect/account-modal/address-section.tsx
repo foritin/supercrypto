@@ -2,8 +2,9 @@
 
 import { Copy, Check, ExternalLink } from 'lucide-react'
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+
 import { cn, getExplorerUrl } from '@/lib/utils'
 import { truncateAddress } from '@/utils/format'
 

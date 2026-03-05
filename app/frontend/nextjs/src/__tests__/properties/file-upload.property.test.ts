@@ -13,8 +13,9 @@
  * - 5.2: WHEN 进行活体检测 THEN KYC_System SHALL 请求摄像头权限 (自拍照上传验证)
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
+
 import { validateFileType, validateFileSize } from '@/components/ui/file-upload'
 
 // 默认配置常量 (与 FileUpload 组件保持一致)
@@ -76,20 +77,6 @@ describe('Property 6: 文件上传验证规则正确', () => {
      * 有效的文件扩展名生成器
      */
     const validExtensionArb = fc.constantFrom('.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG')
-
-    /**
-     * 无效的文件扩展名生成器
-     */
-    const invalidExtensionArb = fc.constantFrom(
-      '.gif',
-      '.webp',
-      '.bmp',
-      '.svg',
-      '.pdf',
-      '.txt',
-      '.mp4',
-      '.doc'
-    )
 
     it('property: image/jpeg 或 image/png MIME 类型应该验证通过', () => {
       fc.assert(

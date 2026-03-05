@@ -6,11 +6,12 @@
 
 'use client';
 
-import { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   ReactFlow,
   type Node,
   type Edge,
+  type NodeTypes,
+  type EdgeTypes,
   Controls,
   Background,
   BackgroundVariant,
@@ -20,24 +21,26 @@ import {
   type NodeMouseHandler,
   Panel,
 } from '@xyflow/react';
+import { RotateCcw, Loader2 } from 'lucide-react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import '@xyflow/react/dist/style.css';
 
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Loader2 } from 'lucide-react';
-import { ContractNode } from './contract-node';
-import { DependencyEdge } from './dependency-edge';
+import { Card } from '@/components/ui/card';
 import { useDependencyGraph } from '@/hooks/use-project-status';
 import type { DependencyType } from '@/types/project-registry';
 
+import { ContractNode } from './contract-node';
+import { DependencyEdge } from './dependency-edge';
+
 // 自定义节点类型
-const nodeTypes = {
-  contract: ContractNode,
+const nodeTypes: NodeTypes = {
+  contract: ContractNode as NodeTypes['contract'],
 };
 
 // 自定义边类型
-const edgeTypes = {
-  dependency: DependencyEdge,
+const edgeTypes: EdgeTypes = {
+  dependency: DependencyEdge as EdgeTypes['dependency'],
 };
 
 
@@ -61,7 +64,7 @@ export function DependencyGraph({ projectName, network = 'hardhat' }: Dependency
       id: node.id,
       type: 'contract',
       position: node.position,
-      data: node.data,
+      data: node.data as unknown as Record<string, unknown>,
       selected: node.id === selectedNode,
     }));
   }, [data, selectedNode]);

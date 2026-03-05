@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
 import {
   DollarSign,
   TrendingUp,
@@ -15,14 +15,15 @@ import {
   ChevronRight,
   AlertTriangle,
 } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAccount } from 'wagmi';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+
+import { RequireWallet } from '@/components/auth';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { DataTable } from '@/components/ui/data-table';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -37,18 +40,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { DataTable } from '@/components/ui/data-table';
-import { ColumnDef } from '@tanstack/react-table';
-import { cn, truncateAddress } from '@/lib/utils';
-import { RequireWallet } from '@/components/auth';
-import { EmptyState } from '@/components/ui/empty-state';
-import { type SubscriptionResponse } from '@/types/subscription';
 import {
   useSubscriptions,
   useUserStats,
@@ -56,6 +55,8 @@ import {
   IS_TRANSACTION_MOCK,
   type PortfolioTransaction,
 } from '@/hooks/use-portfolio';
+import { cn, truncateAddress } from '@/lib/utils';
+import { type SubscriptionResponse } from '@/types/subscription';
 
 const TRANSACTION_TYPE_NAMES: Record<string, string> = {
   subscribe: 'portfolio.txTypes.subscribe',

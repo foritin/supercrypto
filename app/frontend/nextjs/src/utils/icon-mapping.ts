@@ -12,14 +12,11 @@ import {
   Wallet,
   Landmark, // 替代 Bank
   FileText,
-  Zap,
-  Gift,
   User,
   TrendingUp,
   Users,
   RefreshCw,
   BarChart3,
-  Check,
   X,
   Eye,
   EyeOff,
@@ -42,7 +39,6 @@ import {
   Calendar,
   Home as HomeIcon,
   MapPin, // 替代 Environment
-  UsersRound, // 替代 Team
   Clock,
   Trash2, // 替代 Delete
   AlertTriangle, // 替代 Warning

@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { motion } from 'framer-motion';
 import {
   FileText,
@@ -9,6 +8,7 @@ import {
   Gift,
   User,
 } from 'lucide-react';
+import React from 'react';
 
 /**
  * ════════════════════════════════════════════════════════════════

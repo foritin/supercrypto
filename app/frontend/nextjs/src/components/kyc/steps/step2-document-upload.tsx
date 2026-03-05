@@ -12,14 +12,14 @@
  * @validates Requirements 4.1, 4.2, 4.3
  */
 
+import { zodResolver } from '@hookform/resolvers/zod'
+import { CreditCard, FileText, Car } from 'lucide-react'
 import * as React from 'react'
 import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
-import { CreditCard, FileText, Car } from 'lucide-react'
 
-import { cn } from '@/lib/utils'
+import { IDCardUploader } from '@/components/kyc/id-card-uploader'
 import {
   Form,
   FormControl,
@@ -29,8 +29,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { IDCardUploader } from '@/components/kyc/id-card-uploader'
-
+import { cn } from '@/lib/utils'
 import {
   step2Schema,
   type Step2FormValues,

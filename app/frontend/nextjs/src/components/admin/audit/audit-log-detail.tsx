@@ -9,15 +9,6 @@
  */
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet';
-import { Badge } from '@/components/ui/badge';
 import { 
   CheckCircle, 
   XCircle, 
@@ -34,12 +25,23 @@ import {
   Link as LinkIcon,
   ArrowRight,
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { AuditLog, AuditStatus } from '@/types/audit';
-import { AddressDisplay, TxHashLink } from './web3';
+
 import { SectionCard, InfoRow } from '@/components/ui';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { getStatusBgColor } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
+import type { AuditLog, AuditStatus } from '@/types/audit';
+
+import { AddressDisplay, TxHashLink } from './web3';
 
 interface AuditLogDetailProps {
   open: boolean;

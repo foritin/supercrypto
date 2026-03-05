@@ -18,15 +18,17 @@
  * - <RequireAuth wallet admin>...</RequireAuth>     // 需钱包 + 管理员权限
  * - <RequireAuth check={() => someCondition}>...</RequireAuth> // 自定义检查
  */
-import { ReactNode, useEffect, useState, useMemo, useCallback } from 'react'
-import { useGodMode } from '@/hooks/use-god-mode'
 import { Loader2, Lock, Wallet, ShieldCheck } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
+import type { ReactNode} from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { notification } from '@/lib/notification'
 import { useCurrentUser, useKycStatus } from '@/hooks'
+import { useGodMode } from '@/hooks/use-god-mode'
+import { notification } from '@/lib/notification'
 import { KycStatus } from '@/services/kyc'
 
 /** 权限检查结果 */
@@ -113,7 +115,7 @@ export function RequireAuth({
   const [isHydrated, setIsHydrated] = useState(false)
   
   // Hooks
-  const { isAdmin, isLoading: isUserLoading, isConnected, user } = useCurrentUser()
+  const { isAdmin, isLoading: isUserLoading, isConnected } = useCurrentUser()
   const { status: kycStatus, isLoading: isKycLoading } = useKycStatus()
   
   // 跟踪是否完成首次加载
@@ -169,7 +171,7 @@ export function RequireAuth({
     if (check) {
       const result = check()
       if (typeof result === 'boolean') {
-        return { passed: result, reason: result ? undefined : 'custom' }
+        return result ? { passed: true } : { passed: false, reason: 'custom' }
       }
       return result
     }

@@ -8,12 +8,12 @@
  * including custom render functions
  */
 
-import { 
+import type { 
   ColumnDef, 
   CellContext, 
   HeaderContext,
 } from '@tanstack/react-table'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 // Type helper for column definitions with accessor
 type ColumnDefWithAccessor<TData, TValue = unknown> = ColumnDef<TData, TValue> & {
@@ -391,8 +391,8 @@ export function createTextColumn<TData>(
   const columnDef: ColumnDef<TData> = {
     id: accessorKey,
     header,
-    size: options?.width,
     enableSorting: options?.enableSorting ?? false,
+    ...(options?.width !== undefined ? { size: options.width } : {}),
   }
   
   // Set accessor key
@@ -428,8 +428,8 @@ export function createCustomColumn<TData, TValue = unknown>(
     id,
     header,
     cell,
-    size: options?.width,
     enableSorting: options?.enableSorting ?? false,
+    ...(options?.width !== undefined ? { size: options.width } : {}),
   }
 
   if (options?.accessorKey) {
@@ -455,9 +455,9 @@ export function createActionsColumn<TData>(
     id: 'actions',
     header: options?.header ?? '操作',
     cell: ({ row }) => renderActions(row.original),
-    size: options?.width,
     enableSorting: false,
     enableHiding: false,
+    ...(options?.width !== undefined ? { size: options.width } : {}),
   }
 }
 
@@ -479,8 +479,8 @@ export function createDateColumn<TData>(
   const columnDef: ColumnDef<TData> = {
     id: accessorKey,
     header,
-    size: options?.width,
     enableSorting: true,
+    ...(options?.width !== undefined ? { size: options.width } : {}),
     cell: ({ getValue }) => {
       const value = getValue()
       if (!value) return emptyText
@@ -517,8 +517,8 @@ export function createNumberColumn<TData>(
   const columnDef: ColumnDef<TData> = {
     id: accessorKey,
     header,
-    size: options?.width,
     enableSorting: true,
+    ...(options?.width !== undefined ? { size: options.width } : {}),
     cell: ({ getValue }) => {
       const value = getValue() as number
       const formatted = `${prefix}${formatNumber(value)}${suffix}`

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Building2,
   Flame,
@@ -11,14 +10,14 @@ import {
   Clock,
   PauseCircle,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
-import {
-  type AssetListItem,
-  type AssetType,
-  type AssetStatus,
-  ASSET_TYPE_NAMES,
-} from "@/services/asset";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import { AssetLogoFrame } from "@/components/asset/asset-logo-frame";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -26,13 +25,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { useAssets } from "@/hooks/use-assets";
-import { AssetLogoFrame } from "@/components/asset/asset-logo-frame";
+import { cn } from "@/lib/utils";
+import {
+  type AssetListItem,
+  type AssetListQuery,
+  type AssetType,
+  type AssetStatus,
+  ASSET_TYPE_NAMES,
+} from "@/services/asset";
 import "./assets.css";
 
 // 资产类型图标映射 - 使用 lucide-react 图标
@@ -185,7 +187,7 @@ export default function AssetsClient() {
     undefined
   );
 
-  const query: import("@/services/asset").AssetListQuery = {
+  const query: AssetListQuery = {
     page,
     page_size: pageSize,
     ...(statusFilter && { status: statusFilter }),

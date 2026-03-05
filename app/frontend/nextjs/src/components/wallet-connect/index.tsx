@@ -1,21 +1,23 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useAccount, useDisconnect, useSignMessage, useBalance } from 'wagmi'
+import { ChevronDown, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { ChevronDown, Loader2 } from 'lucide-react'
-import { supportedChains } from '@/config/wagmi'
-import { truncateAddress } from '@/utils/format'
-import { clearAuthData, setWalletConnected, setWalletAddress, hasJwtToken, getAddressFromToken } from '@/utils/auth'
-import { logout, login } from '@/services/auth'
-import { cn } from '@/lib/utils'
+import { useAccount, useDisconnect, useSignMessage, useBalance } from 'wagmi'
+
 import { Skeleton } from '@/components/ui/skeleton'
+import { useCurrentUser } from '@/hooks'
+import { cn } from '@/lib/utils'
+import { logout, login } from '@/services/auth'
+import { KycStatus as KycStatusEnum } from '@/services/kyc'
+import { clearAuthData, setWalletConnected, setWalletAddress, hasJwtToken, getAddressFromToken } from '@/utils/auth'
+import { truncateAddress } from '@/utils/format'
+
 import { AccountModal } from './account-modal'
 import type { KycStatus } from './account-modal'
-import { KycStatus as KycStatusEnum } from '@/services/kyc'
-import { useCurrentUser } from '@/hooks'
+
 
 /**
  * 将后端 KYC 状态映射为 UI 组件期望的状态
@@ -76,7 +78,7 @@ export function WalletConnect() {
   // 是否已认证（有有效的 JWT）
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   // 当前用户信息
-  const { user: currentUser, refetch: refetchUser } = useCurrentUser()
+  const { user: currentUser } = useCurrentUser()
   // 自定义 AccountModal 开关状态
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
   // 钱包连接时间
@@ -130,7 +132,7 @@ export function WalletConnect() {
       // 如果锁定，会弹出解锁窗口；如果未锁定，直接返回账户
       const accounts = await window.ethereum.request({ 
         method: 'eth_requestAccounts' 
-      })
+      }) as string[]
       
       if (!accounts || accounts.length === 0) {
         console.log('[Wallet] No accounts available, disconnecting...')
@@ -294,21 +296,6 @@ export function WalletConnect() {
     previousAddressRef.current = address
   }, [address, t, performSignIn])
 
-  // Get localized network name
-  const getNetworkName = (chainId: number | undefined): string => {
-    if (!chainId) return 'Unknown'
-    switch (chainId) {
-      case 1:
-        return t('wallet.network.mainnet')
-      case 11155111:
-        return t('wallet.network.sepolia')
-      case 31337:
-        return t('wallet.network.localhost')
-      default:
-        return chain?.name || 'Unknown'
-    }
-  }
-
   // Handle disconnect - notify backend and clear local data (Requirement 7.8)
   async function handleDisconnect() {
     try {
@@ -339,7 +326,6 @@ export function WalletConnect() {
       {({
         account,
         chain: currentChain,
-        openAccountModal,
         openChainModal,
         openConnectModal,
         authenticationStatus,
@@ -522,14 +508,16 @@ export function WalletConnect() {
                     open={isAccountModalOpen}
                     onOpenChange={setIsAccountModalOpen}
                     address={account.address}
-                    balance={balanceData ? (Number(balanceData.value) / Math.pow(10, balanceData.decimals)).toFixed(4) : undefined}
-                    symbol={balanceData?.symbol}
                     isAuthenticated={isAuthenticated}
                     kycStatus={mapKycStatusToUi(currentUser?.kyc_status)}
                     chainId={currentChain.id}
-                    chainName={currentChain.name}
-                    connectorName={connector?.name}
-                    connectedAt={connectedAt}
+                    {...(balanceData
+                      ? { balance: (Number(balanceData.value) / Math.pow(10, balanceData.decimals)).toFixed(4) }
+                      : {})}
+                    {...(balanceData?.symbol ? { symbol: balanceData.symbol } : {})}
+                    {...(currentChain.name ? { chainName: currentChain.name } : {})}
+                    {...(connector?.name ? { connectorName: connector.name } : {})}
+                    {...(connectedAt ? { connectedAt } : {})}
                     onDisconnect={handleDisconnect}
                   >
                     {/* 地址按钮 - 作为 Popover 触发器 */}

@@ -1,4 +1,4 @@
-export default {
+const staking = {
   // 页面标题
   title: '质押挖矿',
   subtitle: '质押您的 RWA 代币赚取 PLT 奖励',
@@ -177,4 +177,6 @@ export default {
     allocationDescription: '描述',
   },
 }
+
+export default staking
 

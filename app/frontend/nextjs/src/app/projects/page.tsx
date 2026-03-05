@@ -7,12 +7,13 @@
 
 'use client';
 
-import { useProjects, syncProjectConfig } from '@/hooks/use-project-status';
+import { RefreshCw, FolderOpen, AlertCircle, Inbox } from 'lucide-react';
+import { useState } from 'react';
+
 import { ProjectCard } from '@/components/project-registry/project-card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, FolderOpen, AlertCircle, Inbox } from 'lucide-react';
-import { useState } from 'react';
+import { useProjects, syncProjectConfig } from '@/hooks/use-project-status';
 
 export default function ProjectsPage() {
   const { data, error, isLoading, refetch } = useProjects('hardhat');

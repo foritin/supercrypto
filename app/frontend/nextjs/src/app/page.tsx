@@ -1,17 +1,18 @@
 "use client";
 
-import React from "react";
 import { Rocket } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
-import { useScrollReveal } from "@/hooks/use-scroll-reveal";
-import { useMouseParallax } from "@/hooks/use-mouse-parallax";
+import React from "react";
+import { useTranslation } from "react-i18next";
+
+import { StatsBar, FeaturedAssets, BentoFeatures, CalculatorSection, InfiniteMarquee, HowItWorks } from "@/components/home";
+import { PartnersMarquee, INSTITUTION_PARTNERS, ROW1_PROVIDERS, ROW2_PROVIDERS } from "@/components/partners";
+import { RippleButton } from "@/components/ui/ripple-button";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useMagneticButton } from "@/hooks/use-magnetic-button";
+import { useMouseParallax } from "@/hooks/use-mouse-parallax";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { useTypewriter } from "@/hooks/use-typewriter";
-import { RippleButton } from "@/components/ui/ripple-button";
-import { PartnersMarquee, INSTITUTION_PARTNERS, ROW1_PROVIDERS, ROW2_PROVIDERS } from "@/components/partners";
-import { StatsBar, FeaturedAssets, BentoFeatures, CalculatorSection, InfiniteMarquee, HowItWorks } from "@/components/home";
 import { cn } from "@/lib/utils";
 
 export default function HomePage() {
@@ -312,7 +313,7 @@ export default function HomePage() {
             {t("home.finalCta.description")}
           </p>
           <RippleButton
-            variant="default"
+            variant="primary"
             onClick={() => router.push("/assets")}
             className="h-[60px] px-14 text-lg font-semibold rounded-[14px] shadow-[0_0_40px_rgba(0,102,255,0.35)]"
           >

@@ -4,8 +4,8 @@
  *
  * 用于 React Flow 可视化组件
  */
-import { api } from "@/services/api";
 import { ADMIN_PATHS } from "@/constants/api-paths";
+import { api } from "@/services/api";
 import type { ContractActions } from "@/types/contract";
 
 // 图节点数据（纯 Provider 模式）

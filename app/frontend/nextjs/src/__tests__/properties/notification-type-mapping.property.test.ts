@@ -13,9 +13,10 @@
  * - 6.4: WHEN displaying info messages, THE Notification_Service SHALL use sonner's toast.info() method
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
 import { toast } from 'sonner'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
 import { notification } from '@/lib/notification'
 
 // Mock sonner toast methods

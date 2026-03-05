@@ -1,9 +1,10 @@
 'use client';
 
+import { Upload, X, CheckCircle, Loader2 } from 'lucide-react';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, X, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
 import { uploadKycDocument, getKycDocumentUrl, type KycDocumentType } from '@/services/kyc';
 
 interface DocumentUploadProps {

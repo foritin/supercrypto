@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useMemo } from "react";
 
 interface Particle {
   x: number;
@@ -143,6 +143,7 @@ export function Web3Background({
         // 粒子间连线
         for (let j = i + 1; j < particles.length; j++) {
           const p2 = particles[j];
+          if (!p2) continue;
           const dx = p.x - p2.x;
           const dy = p.y - p2.y;
           const distance = Math.sqrt(dx * dx + dy * dy);

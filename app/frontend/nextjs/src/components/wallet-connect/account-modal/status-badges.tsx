@@ -1,8 +1,10 @@
 'use client'
 
-import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
-import { type KycStatus, kycStatusConfig, walletModalTokens } from './styles'
+
+import { cn } from '@/lib/utils'
+
+import { type KycStatus, kycStatusConfig } from './styles'
 
 interface StatusBadgesProps {
   isAuthenticated: boolean

@@ -139,5 +139,5 @@ export const ErrorMessages: Record<number, string> = {
  * @returns 对应的中文错误消息，如果不存在则返回默认消息
  */
 export function getErrorMessage(code: number): string {
-  return ErrorMessages[code] || ErrorMessages[ErrorCode.UNKNOWN_ERROR];
+  return ErrorMessages[code] ?? ErrorMessages[ErrorCode.UNKNOWN_ERROR] ?? '未知错误';
 }

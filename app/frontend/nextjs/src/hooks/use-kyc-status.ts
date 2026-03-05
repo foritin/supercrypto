@@ -3,11 +3,13 @@
  * useKycStatus Hook
  * Fetches and manages KYC status for the connected wallet
  */
-import { useState, useCallback } from 'react'
-import { useAccount } from 'wagmi'
 import { useQuery } from '@tanstack/react-query'
-import { kycService, KycStatus, type KycStatusResponse, type KycApplyRequest } from '@/services/kyc'
+import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
+import { useAccount } from 'wagmi'
+
+import { kycService, KycStatus, type KycApplyRequest } from '@/services/kyc'
+
 
 /**
  * Hook to get KYC status for the connected wallet

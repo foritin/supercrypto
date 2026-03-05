@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
 import { motion } from 'framer-motion';
+import type { LucideIcon } from 'lucide-react';
+import React from 'react';
 import CountUp from 'react-countup';
-import { LucideIcon } from 'lucide-react';
 
 /**
  * ════════════════════════════════════════════════════════════════

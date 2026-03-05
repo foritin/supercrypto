@@ -16,22 +16,16 @@
  */
 'use client';
 
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Download, FileSpreadsheet, FileText, ChevronDown, Loader2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import React, { useState } from 'react';
 import type { DateRange } from 'react-day-picker';
+import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import {
   Dialog,
   DialogContent,
@@ -39,6 +33,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Form,
   FormControl,
@@ -54,9 +55,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { notification } from '@/lib/notification';
-import { exportAuditLogs } from '@/services/audit';
+import { exportAuditLogs, type AuditLogQueryParams } from '@/services/audit';
 import { AuditCategory, AuditStatus } from '@/types/audit';
 
 interface AuditExportProps {
@@ -128,7 +128,7 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
   const handleCustomExport = async (values: CustomExportFormValues) => {
     setLoading(true);
     try {
-      const params: Record<string, string> = {};
+      const params: AuditLogQueryParams = {};
       
       if (values.dateRange?.from) {
         params.start_time = values.dateRange.from.toISOString();
@@ -137,13 +137,13 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
         params.end_time = values.dateRange.to.toISOString();
       }
       if (values.category && values.category !== 'all') {
-        params.category = values.category;
+        params.category = values.category as AuditCategory;
       }
       if (values.status && values.status !== 'all') {
-        params.status = values.status;
+        params.status = values.status as AuditStatus;
       }
 
-      const blob = await exportAuditLogs(params as any);
+      const blob = await exportAuditLogs(params);
       
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -221,10 +221,10 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
                     </FormLabel>
                     <FormControl>
                       <DateRangePicker
-                        value={field.value}
                         onChange={field.onChange}
                         placeholder={`${t('admin.audit.export.startDate', '开始日期')} - ${t('admin.audit.export.endDate', '结束日期')}`}
                         className="w-full"
+                        {...(field.value ? { value: field.value } : {})}
                       />
                     </FormControl>
                     <FormMessage />
@@ -241,8 +241,8 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
                       {t('admin.audit.export.category', '类别')}
                     </FormLabel>
                     <Select
-                      value={field.value}
                       onValueChange={field.onChange}
+                      {...(field.value ? { value: field.value } : {})}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -276,8 +276,8 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
                       {t('admin.audit.export.status', '状态')}
                     </FormLabel>
                     <Select
-                      value={field.value}
                       onValueChange={field.onChange}
+                      {...(field.value ? { value: field.value } : {})}
                     >
                       <FormControl>
                         <SelectTrigger>

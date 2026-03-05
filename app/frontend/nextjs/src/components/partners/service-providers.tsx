@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import React, { useState, useEffect, useCallback } from 'react';
+
+import { Button } from '@/components/ui/button';
 import './service-providers.css';
 
 /**
@@ -123,7 +124,7 @@ export const ServiceProviders: React.FC<ServiceProvidersProps> = ({
               key={`${provider.id}-${i}`}
               className="shrink-0 w-[100px] h-[100px] sm:w-20 sm:h-20 xs:w-[70px] xs:h-[70px] bg-white/95 rounded-full flex items-center justify-center p-[22px] sm:p-[18px] xs:p-3.5 shadow-[0_4px_20px_rgba(0,0,0,0.25),0_0_0_1px_rgba(255,255,255,0.1)] transition-all duration-300 hover:scale-[1.08] hover:shadow-[0_8px_32px_rgba(0,212,170,0.3),0_0_0_2px_rgba(0,212,170,0.4),0_0_40px_rgba(0,212,170,0.15)] group"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              { }
               <img
                 src={provider.logo}
                 alt={provider.name}

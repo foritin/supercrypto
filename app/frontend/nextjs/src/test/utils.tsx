@@ -1,6 +1,8 @@
-import { ReactNode } from 'react'
-import { render, RenderOptions } from '@testing-library/react'
+import type { RenderOptions } from '@testing-library/react';
+import { render } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { I18nextProvider } from 'react-i18next'
+
 import i18n from '@/test/mocks/i18n'
 
 // Wrapper component with all providers

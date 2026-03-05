@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import {
   AlertTriangle,
   TrendingDown,
@@ -11,7 +10,9 @@ import {
   Clock,
   FileText,
 } from "lucide-react";
+import React from "react";
 import { useTranslation } from "react-i18next";
+
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 /**

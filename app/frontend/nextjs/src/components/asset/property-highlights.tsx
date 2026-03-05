@@ -1,6 +1,5 @@
 "use client";
 
-import { useTranslation } from "react-i18next";
 import {
   Coins,
   TrendingUp,
@@ -12,12 +11,13 @@ import {
   Tag,
   Calendar,
   Bed,
-  Bath,
   Home,
   Key,
   CheckCircle,
   Banknote,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
 import { cn } from "@/lib/utils";
 import type { AssetDetail } from "@/services/asset";
 

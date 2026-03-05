@@ -1,25 +1,26 @@
 "use client"
 
-import * as React from "react"
-import {
+import type {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
   VisibilityState,
+  RowSelectionState} from "@tanstack/react-table";
+import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable,
-  RowSelectionState,
+  useReactTable
 } from "@tanstack/react-table"
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import * as React from "react"
 
 import { cn } from "@/lib/utils"
+
 import { Button } from "./button"
 import { Checkbox } from "./checkbox"
-import { Skeleton } from "./skeleton"
 import {
   Select,
   SelectContent,
@@ -27,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./select"
+import { Skeleton } from "./skeleton"
 
 // ============================================
 // Table Base Components
@@ -450,10 +452,7 @@ export function DataTable<TData, TValue>({
     data,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: pagination ? undefined : getPaginationRowModel(),
-    getSortedRowModel: externalSorting ? undefined : getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: externalSorting ? undefined : setInternalSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
@@ -469,13 +468,20 @@ export function DataTable<TData, TValue>({
         },
       }),
     },
-    ...(pagination && {
-      pageCount: pagination.pageCount,
-      manualPagination: true,
-    }),
-    ...(externalSorting && {
-      manualSorting: true,
-    }),
+    ...(pagination
+      ? {
+          pageCount: pagination.pageCount,
+          manualPagination: true,
+        }
+      : {
+          getPaginationRowModel: getPaginationRowModel(),
+        }),
+    ...(externalSorting
+      ? { manualSorting: true }
+      : {
+          getSortedRowModel: getSortedRowModel(),
+          onSortingChange: setInternalSorting,
+        }),
     enableRowSelection,
   })
 
@@ -535,7 +541,10 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       {(pagination || !loading) && data.length > 0 && (
-        <DataTablePaginationControls table={table} pagination={pagination} />
+        <DataTablePaginationControls
+          table={table}
+          {...(pagination ? { pagination } : {})}
+        />
       )}
     </div>
   )

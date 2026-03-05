@@ -6,6 +6,8 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
+
+import { API_BASE_URL } from '@/constants/api';
 import type {
   ProjectListResponse,
   ProjectStatusResponse,
@@ -16,7 +18,6 @@ import type {
 } from '@/types/project-registry';
 
 
-import { API_BASE_URL } from '@/constants/api';
 
 
 const API_BASE = `${API_BASE_URL}/dev`;

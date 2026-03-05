@@ -249,6 +249,26 @@ npm run type-check     # TypeScript 类型检查
 npm run storybook      # 启动 Storybook 组件文档
 ```
 
+## ESLint 约定（2026-03）
+
+为保证历史代码库可持续收敛，当前 lint 策略区分“阻断型”与“提示型”规则：
+
+- 保持阻断（error）：类型安全、未使用变量、hooks 基本规则、导入顺序、a11y 核心规则。
+- 降噪关闭（off）：`react-hooks/exhaustive-deps`、`react-hooks/incompatible-library`、`@next/next/no-img-element`。
+
+说明：
+
+- 上述关闭项用于减少历史噪声，避免影响交付节奏；不代表这些问题在业务上无风险。
+- 新模块建议继续遵循 hooks 依赖完整性与 `next/image` 最佳实践。
+- 若需要逐步恢复更严格检查，可在 `eslint.config.mjs` 中按目录或文件范围回开规则。
+
+推荐在本地提交前执行：
+
+```bash
+npm run lint
+npm run type-check
+```
+
 ## 导航
 
 - [← 返回项目根目录](../../../README.md)

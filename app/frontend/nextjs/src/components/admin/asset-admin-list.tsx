@@ -12,38 +12,18 @@
  * 
  * @validates Requirements 8.1, 8.4, 8.5
  */
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
 import { 
   Plus, Edit, RefreshCw, PauseCircle, PlayCircle, 
-  DollarSign, Link, Image, Loader2, Trash2
+  DollarSign, Link, Image as ImageIcon, Loader2, Trash2
 } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import { z } from 'zod'
 
 // shadcn/ui components
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,12 +34,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { DataTable } from '@/components/ui/data-table'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -68,12 +54,25 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { DataTable } from '@/components/ui/data-table'
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 // Services and utilities
+import { ASSET_STATUS_BADGE } from '@/constants/status-config'
 import { notification } from '@/lib/notification'
-import { getErrorMessage } from '@/utils/error-handler'
 import { 
   assetService, 
   type AssetListItem, 
@@ -85,10 +84,11 @@ import {
   ASSET_TYPE_NAMES,
   ASSET_STATUS_NAMES,
 } from '@/services/asset'
-import { MediaManager } from './media-manager'
+import { getErrorMessage } from '@/utils/error-handler'
+
 import { AssetStatusIndicator } from './asset-status-indicator'
 import { CreateAssetWizard } from './create-asset-wizard'
-import { ASSET_STATUS_BADGE } from '@/constants/status-config'
+import { MediaManager } from './media-manager'
 
 // Asset type options
 const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
@@ -143,7 +143,7 @@ type EditAssetFormValues = z.infer<ReturnType<typeof createEditAssetSchema>>
 // Price update form schema factory - uses i18n
 // Store price as string to preserve user input (trailing dots, trailing zeros)
 // and convert to number on submit
-const createPriceUpdateSchema = (t: (key: string) => string) => z.object({
+const createPriceUpdateSchema = (_t: (key: string) => string) => z.object({
   price: z.union([z.string(), z.number()]).optional(),
   source: z.enum(['manual', 'oracle', 'api']),
 })
@@ -242,8 +242,8 @@ export function AssetAdminList() {
       const result = await assetService.getAssetsAdmin({
         page,
         page_size: pageSize,
-        status: statusFilter,
-        asset_type: typeFilter,
+        ...(statusFilter ? { status: statusFilter } : {}),
+        ...(typeFilter ? { asset_type: typeFilter } : {}),
       })
       setData(result)
     } catch (err) {
@@ -376,13 +376,24 @@ export function AssetAdminList() {
     try {
       // Convert local datetime-local values to ISO strings for the API
       const payload: AssetUpdateRequest = {
-        ...values,
-        subscription_start_at: values.subscription_start_at
-          ? new Date(values.subscription_start_at).toISOString()
-          : null,
-        subscription_end_at: values.subscription_end_at
-          ? new Date(values.subscription_end_at).toISOString()
-          : null,
+        name: values.name,
+        symbol: values.symbol,
+        asset_type: values.asset_type,
+        total_supply: values.total_supply,
+        min_subscription: values.min_subscription,
+        apy_3m: values.apy_3m,
+        apy_6m: values.apy_6m,
+        apy_12m: values.apy_12m,
+        ...(values.description ? { description: values.description } : {}),
+        ...(values.image_url ? { image_url: values.image_url } : {}),
+        ...(values.document_url ? { document_url: values.document_url } : {}),
+        ...(values.location ? { location: values.location } : {}),
+        ...(values.subscription_start_at
+          ? { subscription_start_at: new Date(values.subscription_start_at).toISOString() }
+          : { subscription_start_at: null }),
+        ...(values.subscription_end_at
+          ? { subscription_end_at: new Date(values.subscription_end_at).toISOString() }
+          : { subscription_end_at: null }),
       }
       await assetService.updateAsset(selectedAsset.id, payload)
       notification.success(t('admin.assets.updateSuccess'))
@@ -475,7 +486,7 @@ export function AssetAdminList() {
         subscription_end_at: toLocalInput(detail.subscription_end_at),
       })
       setEditModalOpen(true)
-    } catch (err) {
+    } catch {
       notification.error(t('common.error'))
     }
   }
@@ -676,7 +687,7 @@ export function AssetAdminList() {
                       setMediaModalOpen(true)
                     }}
                   >
-                    <Image className="h-4 w-4" />
+                    <ImageIcon className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{t('admin.assets.mediaManagement')}</TooltipContent>

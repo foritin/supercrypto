@@ -1,12 +1,13 @@
 'use client';
 
+import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
+import { QueryClientProvider } from '@tanstack/react-query';
 import * as React from 'react';
 import { WagmiProvider, http } from 'wagmi';
-import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
 import { mainnet, sepolia, arbitrum } from 'wagmi/chains';
+
 import '@rainbow-me/rainbowkit/styles.css';
 import { createQueryClient } from '@/lib/query-client';
-import { QueryClientProvider } from '@tanstack/react-query';
 
 // Hardhat 开发网络 RPC URL
 const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://127.0.0.1:8545';

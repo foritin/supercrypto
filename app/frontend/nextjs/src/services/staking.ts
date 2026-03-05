@@ -6,8 +6,8 @@
  * - 公开接口：/public/staking/*
  * - 用户接口：/user/staking/*（需要 JWT）
  */
-import { api } from '@/services/api'
 import { PUBLIC_PATHS, USER_PATHS } from '@/constants/api-paths'
+import { api } from '@/services/api'
 
 // 质押状态
 export type StakingStatus = 'active' | 'matured' | 'unstaked' | 'claimed' | 'cancelled'

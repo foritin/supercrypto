@@ -1,9 +1,10 @@
 'use client';
 
+import { Wallet, Loader2 } from 'lucide-react';
 import * as React from 'react';
+
 import { Button } from '@/components/ui/button';
 import { useWallet } from '@/hooks/use-wallet';
-import { Wallet, Loader2 } from 'lucide-react';
 
 export function ConnectButton() {
   const { isConnected, isConnecting, address, connectWallet, disconnectWallet } = useWallet();

@@ -3,9 +3,10 @@
  * useCurrentUser Hook
  * 获取当前用户信息和权限
  */
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useAccount } from 'wagmi'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+
 import { userService, type CurrentUser } from '@/services/user'
 import { hasJwtToken } from '@/utils/auth'
 

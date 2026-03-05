@@ -14,9 +14,8 @@
  * - Real-time updates
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { motion } from "framer-motion";
-import { useTranslation } from "react-i18next";
 import {
   Search,
   Filter,
@@ -24,24 +23,27 @@ import {
   Shield,
   AlertTriangle,
   Eye,
-  CheckCircle2,
   XCircle,
   Download,
-  MoreHorizontal,
-  Calendar,
   Globe,
-  Clock,
   AlertOctagon,
-  Loader2,
 } from "lucide-react";
-import { ColumnDef } from "@tanstack/react-table";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { AdmissionButton, shouldShowAdmissionButton } from "@/components/admin-kyc/admission-button";
+import { BatchToolbar } from "@/components/admin-kyc/batch-toolbar";
+import { KycStatsPanel } from "@/components/admin-kyc/kyc-stats-panel";
+import { ReviewStepperModal } from "@/components/admin-kyc/review-stepper-modal";
+import type { ReviewStepsData } from "@/components/admin-kyc/stepper-reducer";
+import { RequireAuth } from "@/components/auth";
+import { V6Background } from "@/components/layout/v6-background";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { DataTable } from "@/components/ui/data-table";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DataTable } from "@/components/ui/data-table";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -49,24 +51,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
 import { notification } from "@/lib/notification";
-import { RequireAuth } from "@/components/auth";
-import { V6Background } from "@/components/layout/v6-background";
-
-import { KycStatsPanel } from "@/components/admin-kyc/kyc-stats-panel";
-import { ReviewStepperModal } from "@/components/admin-kyc/review-stepper-modal";
-import { BatchToolbar } from "@/components/admin-kyc/batch-toolbar";
-import { AdmissionButton, shouldShowAdmissionButton } from "@/components/admin-kyc/admission-button";
-import type { ReviewStepsData } from "@/components/admin-kyc/stepper-reducer";
-
+import { adminService } from "@/services/admin";
+import type { KycStatusType } from "@/services/admin";
 import {
   adminKycService,
   type KycStats,
@@ -78,8 +66,6 @@ import {
   getKycContractInfo,
 } from "@/services/admin-kyc";
 import { kycService } from "@/services/kyc";
-import { adminService } from "@/services/admin";
-import type { KycStatusType } from "@/services/admin";
 
 // 状态配置
 const STATUS_CONFIG: Record<KycStatusType, { color: string; bgColor: string; labelKey: string }> = {
@@ -128,7 +114,6 @@ export default function AdminKycPage() {
   // Review Panel
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false);
   const [selectedKyc, setSelectedKyc] = useState<KycDetail | null>(null);
-  const [selectedKycId, setSelectedKycId] = useState<number | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
 
   // Batch Selection
@@ -160,11 +145,11 @@ export default function AdminKycPage() {
       };
 
       const params: KycFilterParams = {
-        status: statusMap[activeTab],
-        search_query: searchQuery || undefined,
-        risk_level: riskFilter !== "all" ? riskFilter : undefined,
-        priority: priorityFilter !== "all" ? priorityFilter : undefined,
-        country_code: countryFilter !== "all" ? countryFilter : undefined,
+        ...(statusMap[activeTab] ? { status: statusMap[activeTab] } : {}),
+        ...(searchQuery ? { search_query: searchQuery } : {}),
+        ...(riskFilter !== "all" ? { risk_level: riskFilter } : {}),
+        ...(priorityFilter !== "all" ? { priority: priorityFilter } : {}),
+        ...(countryFilter !== "all" ? { country_code: countryFilter } : {}),
         page: pagination.page,
         page_size: pagination.pageSize,
         sort_by: "submitted_at",
@@ -216,7 +201,6 @@ export default function AdminKycPage() {
 
   // Open review panel
   const handleOpenReview = async (kycId: number) => {
-    setSelectedKycId(kycId);
     try {
       const detail = await adminKycService.getKycDetail(kycId);
       setSelectedKyc(detail);
@@ -234,7 +218,7 @@ export default function AdminKycPage() {
       await kycService.review(kycId, {
         approved: true,
         is_accredited: isAccredited,
-        review_steps: reviewSteps,
+        ...(reviewSteps ? { review_steps: reviewSteps } : {}),
       });
       notification.success(t("admin.kyc.page.approveSuccess"));
       notification.warning(
@@ -265,8 +249,8 @@ export default function AdminKycPage() {
         approved: false,
         is_accredited: false,
         reject_reason_code: reasonCode,
-        reject_reason: customReason,
-        review_steps: reviewSteps,
+        ...(customReason ? { reject_reason: customReason } : {}),
+        ...(reviewSteps ? { review_steps: reviewSteps } : {}),
       });
       notification.success(t("admin.kyc.page.rejectSuccess"));
       setReviewPanelOpen(false);
@@ -321,7 +305,7 @@ export default function AdminKycPage() {
           approved: false,
           is_accredited: false,
           reject_reason_code: reasonCode,
-          reject_reason: customReason,
+          ...(customReason ? { reject_reason: customReason } : {}),
         });
       }
       notification.success(t("admin.kyc.page.batchRejectSuccess", { count: ids.length }));

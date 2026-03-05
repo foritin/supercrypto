@@ -4,9 +4,6 @@
  * 高精度还原设计图
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useAccount } from 'wagmi'
 import { 
   Loader2, 
   Check, 
@@ -17,14 +14,22 @@ import {
   Sparkles,
   AlertTriangle,
 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useAccount } from 'wagmi'
+
+import { AssetLogoFrame } from '@/components/asset/asset-logo-frame'
+import { UsdtIcon, UsdcIcon } from '@/components/icons'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { useSubscriptionContract, useTokenBalance } from '@/hooks'
 import { notification } from '@/lib/notification'
+import { cn } from '@/lib/utils'
+import type { AssetDetail } from '@/services/asset'
 import {
   subscriptionService,
 } from '@/services/subscription'
@@ -33,10 +38,6 @@ import type {
   TokenType,
   LockPeriod,
 } from '@/types/subscription'
-import type { AssetDetail } from '@/services/asset'
-import { AssetLogoFrame } from '@/components/asset/asset-logo-frame'
-import { UsdtIcon, UsdcIcon } from '@/components/icons'
-import { useSubscriptionContract, useTokenBalance } from '@/hooks'
 
 // USDT/USDC icons
 const TokenIcon = ({ type, className }: { type: TokenType; className?: string }) => {
@@ -62,7 +63,7 @@ const MiniChart = ({ className }: { className?: string }) => (
   </svg>
 )
 
-interface SubscriptionModalProps {
+export interface SubscriptionModalProps {
   open: boolean
   asset: AssetDetail | null
   onClose: () => void
@@ -83,11 +84,10 @@ export function SubscriptionModal({ open, asset, onClose, onSuccess }: Subscript
   } = useSubscriptionContract()
   
   // 从后端 API 获取的合约地址驱动余额查询，不再硬编码环境变量
-  const { formatted: usdtBalance, isLoading: usdtLoading, balance: usdtRaw } = useTokenBalance(addresses?.usdt ?? undefined)
-  const { formatted: usdcBalance, isLoading: usdcLoading, balance: usdcRaw } = useTokenBalance(addresses?.usdc ?? undefined)
+  const { formatted: usdtBalance, isLoading: usdtLoading } = useTokenBalance(addresses?.usdt ?? undefined)
+  const { formatted: usdcBalance, isLoading: usdcLoading } = useTokenBalance(addresses?.usdc ?? undefined)
   
   const getTokenBalance = (type: TokenType) => type === 'USDT' ? usdtBalance : usdcBalance
-  const getTokenBalanceRaw = (type: TokenType) => type === 'USDT' ? usdtRaw : usdcRaw
   const getBalanceLoading = (type: TokenType) => type === 'USDT' ? usdtLoading : usdcLoading
   
   const [amount, setAmount] = useState<number>(0)

@@ -5,8 +5,9 @@
  * 验证设计文档中定义的正确性属性。
  */
 
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
 import fc from 'fast-check';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 
 // Mock react-i18next for ReviewSummary component
 vi.mock("react-i18next", () => ({
@@ -26,7 +27,8 @@ vi.mock("react-i18next", () => ({
     i18n: { language: "zh-CN" },
   }),
 }));
-import { render, screen, cleanup } from '@testing-library/react';
+
+import { ReviewSummary } from '@/components/admin-kyc/step-final-decision';
 import {
   stepperReducer,
   initialState,
@@ -34,7 +36,6 @@ import {
   type StepperState,
   type StepperAction,
 } from '@/components/admin-kyc/stepper-reducer';
-import { ReviewSummary } from '@/components/admin-kyc/step-final-decision';
 
 // ---------------------------------------------------------------------------
 // Generators

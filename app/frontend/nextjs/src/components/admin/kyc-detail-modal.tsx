@@ -11,9 +11,6 @@
  *
  * @validates Requirements Admin 审核需求
  */
-import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import Image from 'next/image'
 import {
   CheckCircle,
   XCircle,
@@ -30,20 +27,11 @@ import {
   Check,
   ExternalLink,
 } from 'lucide-react'
+import Image from 'next/image'
+import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // shadcn/ui components
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { Separator } from '@/components/ui/separator'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,19 +42,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Separator } from '@/components/ui/separator'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-
 // Services and utilities
-import { notification } from '@/lib/notification'
+import { KYC_STATUS_BADGE } from '@/constants/status-config'
 import { useKycById, useKycReview } from '@/hooks/use-kyc-admin'
+import { notification } from '@/lib/notification'
 import { KycStatus } from '@/services/kyc'
 import { truncateAddress } from '@/utils/format'
-import { KYC_STATUS_BADGE } from '@/constants/status-config'
 
 // ============================================================================
 // Types
@@ -297,8 +296,8 @@ export function KycDetailModal({
         id: kycData.id,
         data: {
           approved: confirmDialog.action === 'approve',
-          reject_reason: confirmDialog.action === 'reject' ? rejectReason : undefined,
           is_accredited: confirmDialog.action === 'approve',
+          ...(confirmDialog.action === 'reject' ? { reject_reason: rejectReason } : {}),
         },
       },
       {
@@ -555,7 +554,7 @@ export function KycDetailModal({
                 拒绝
               </Button>
               <Button
-                variant="default"
+                variant="primary"
                 onClick={() => setConfirmDialog({ open: true, action: 'approve' })}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />

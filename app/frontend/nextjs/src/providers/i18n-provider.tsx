@@ -1,9 +1,9 @@
 "use client";
 
-import { type ReactNode } from "react";
 import i18n from "i18next";
-import { I18nextProvider, initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
+import { type ReactNode } from "react";
+import { I18nextProvider, initReactI18next } from "react-i18next";
 
 // 支持的语言列表
 export const SUPPORTED_LANGUAGES = ["en-US", "zh-CN"] as const;
@@ -16,27 +16,26 @@ export const LANGUAGE_NAMES: Record<SupportedLanguage, string> = {
 };
 
 // 导入翻译文件
-import enCommon from "@/locales/en-US/common";
-import enHome from "@/locales/en-US/home";
-import enAssets from "@/locales/en-US/assets";
 import enAdmin from "@/locales/en-US/admin";
+import enAssets from "@/locales/en-US/assets";
+import enCommon from "@/locales/en-US/common";
 import enDev from "@/locales/en-US/dev";
-import enWallet from "@/locales/en-US/wallet";
+import enHome from "@/locales/en-US/home";
 import enKyc from "@/locales/en-US/kyc";
 import enLayout from "@/locales/en-US/layout";
 import enPortfolio from "@/locales/en-US/portfolio";
 import enSubscription from "@/locales/en-US/subscription";
-
-import zhCommon from "@/locales/zh-CN/common";
-import zhHome from "@/locales/zh-CN/home";
-import zhAssets from "@/locales/zh-CN/assets";
+import enWallet from "@/locales/en-US/wallet";
 import zhAdmin from "@/locales/zh-CN/admin";
+import zhAssets from "@/locales/zh-CN/assets";
+import zhCommon from "@/locales/zh-CN/common";
 import zhDev from "@/locales/zh-CN/dev";
-import zhWallet from "@/locales/zh-CN/wallet";
+import zhHome from "@/locales/zh-CN/home";
 import zhKyc from "@/locales/zh-CN/kyc";
 import zhLayout from "@/locales/zh-CN/layout";
 import zhPortfolio from "@/locales/zh-CN/portfolio";
 import zhSubscription from "@/locales/zh-CN/subscription";
+import zhWallet from "@/locales/zh-CN/wallet";
 
 // 合并翻译
 const resources = {

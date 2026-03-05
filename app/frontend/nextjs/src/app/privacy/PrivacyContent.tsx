@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
 import { Shield, Eye, Database, Share2, Lock, UserX, Cookie, Mail } from "lucide-react";
+import React from "react";
 import { useTranslation } from "react-i18next";
-import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+
 import { PageBadge } from "@/components/ui/page-badge";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 /**
  * ════════════════════════════════════════════════════════════════

@@ -1,17 +1,20 @@
 "use client";
 
-import React from "react";
 import { Building2, Link2, ExternalLink } from "lucide-react";
+import Image from "next/image";
+import React from "react";
 import { useTranslation } from "react-i18next";
-import { useScrollReveal } from "@/hooks/use-scroll-reveal";
-import { PageBadge } from "@/components/ui/page-badge";
+
+import { PartnerDisclaimer } from "@/components/partners";
+import type {
+  Partner} from "@/components/partners/partners-data";
 import {
-  Partner,
   INSTITUTION_PARTNERS,
   BLOCKCHAIN_PARTNERS,
 } from "@/components/partners/partners-data";
-import { PartnerDisclaimer } from "@/components/partners";
-import Image from "next/image";
+import { PageBadge } from "@/components/ui/page-badge";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+
 
 /**
  * ════════════════════════════════════════════════════════════════

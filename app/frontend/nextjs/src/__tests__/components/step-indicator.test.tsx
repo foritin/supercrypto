@@ -9,8 +9,9 @@
  * - hover 已确认步骤时提供视觉反馈
  */
 
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+
 import { StepIndicator } from "@/components/admin-kyc/step-indicator";
 
 // Mock react-i18next

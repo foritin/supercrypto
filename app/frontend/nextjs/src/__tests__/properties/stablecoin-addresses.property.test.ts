@@ -8,8 +8,9 @@
  * **Validates: Requirements 1.2, 1.4**
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
+
 import { resolveStablecoinAddresses } from '@/hooks/use-stablecoin-addresses'
 import type { AddressInfo } from '@/services/platform-info'
 
@@ -118,7 +119,7 @@ describe('Feature: dynamic-contract-addresses, Property 1: Stablecoin 地址解�
         ),
         (contracts) => {
           const result = resolveStablecoinAddresses(
-            contracts as AddressInfo[],
+            contracts as unknown as AddressInfo[],
             defaults,
           )
 

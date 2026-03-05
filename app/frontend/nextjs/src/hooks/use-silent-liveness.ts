@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
 import type { LivenessAction as ActionType } from '@sssxyd/face-liveness-detector';
+import { useRef, useEffect, useState, useCallback } from 'react';
 
 // Re-export types for convenience
 export type { LivenessAction as ActionType } from '@sssxyd/face-liveness-detector';
@@ -206,14 +206,19 @@ export function useSilentLiveness(
         }));
       });
 
-      engine.on('detector-action', (data: { action: ActionType; status: 'started' | 'completed' | 'timeout' }) => {
+      engine.on('detector-action', (data) => {
         if (!mountedRef.current) return;
+
+        const actionStatus =
+          data.status === 'started' || data.status === 'completed' || data.status === 'timeout'
+            ? data.status
+            : null;
         
         console.log('[SilentLiveness] Action:', data);
         setState(prev => ({
           ...prev,
           currentAction: data.action,
-          actionStatus: data.status,
+          actionStatus,
         }));
       });
 

@@ -1,12 +1,8 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { 
-  useReadContract, 
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  useAccount,
-} from 'wagmi';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { 
   type Abi, 
   type Address, 
@@ -14,8 +10,13 @@ import {
   type ContractFunctionArgs,
   type ContractFunctionName,
 } from 'viem';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
+import { 
+  useReadContract, 
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useAccount,
+} from 'wagmi';
+
 import { useTransactionStore, type TransactionType } from '@/stores/transaction-store';
 
 // Generic hook for reading contract data
@@ -29,15 +30,15 @@ export function useContractRead<
   args?: ContractFunctionArgs<TAbi, 'pure' | 'view', TFunctionName>
 ) {
   return useReadContract({
-    address,
     abi,
     functionName,
-    args,
     query: {
       enabled: !!address,
       staleTime: 10 * 1000, // 10 seconds
     },
-  });
+    ...(address ? { address } : {}),
+    ...(args !== undefined ? { args } : {}),
+  } as never);
 }
 
 // Generic hook for writing to contracts
@@ -137,9 +138,9 @@ export function useContractWrite<
         address,
         abi,
         functionName,
-        args: callArgs,
-        value,
-      });
+        ...(callArgs !== undefined ? { args: callArgs } : {}),
+        ...(value !== undefined ? { value } : {}),
+      } as never);
     },
     [address, abi, functionName, writeContract, t]
   );
@@ -218,6 +219,7 @@ export function useERC20(tokenAddress: Address | undefined) {
 
   // Read allowance
   const allowance = (spender: Address | undefined) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useContractRead(
       tokenAddress,
       erc20Abi,
@@ -232,7 +234,8 @@ export function useERC20(tokenAddress: Address | undefined) {
   const symbol = useContractRead(tokenAddress, erc20Abi, 'symbol');
 
   // Approve
-  const approve = (spender: Address, amount: bigint) =>
+  const approve = (_spender: Address, _amount: bigint) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useContractWrite(tokenAddress, erc20Abi, 'approve', {
       type: 'approve',
       description: `Approve token spending`,

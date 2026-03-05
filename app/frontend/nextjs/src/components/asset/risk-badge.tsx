@@ -1,8 +1,9 @@
 "use client";
 
+import { Shield, AlertTriangle, CheckCircle, Info } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Shield, AlertTriangle, CheckCircle, Info } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 export type RiskLevel = "low" | "medium" | "high";

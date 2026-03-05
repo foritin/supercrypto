@@ -53,7 +53,8 @@ export const useCountUp = (
   const formatNumber = (num: number): string => {
     const fixed = num.toFixed(decimals);
     const parts = fixed.split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const integerPart = parts[0] ?? '0';
+    parts[0] = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     return parts.join('.');
   };
 
@@ -62,6 +63,7 @@ export const useCountUp = (
 
     const observer = new IntersectionObserver(
       ([entry]) => {
+        if (!entry) return;
         if (entry.isIntersecting && entry.intersectionRatio >= threshold && !hasAnimated.current) {
           setIsVisible(true);
           hasAnimated.current = true;

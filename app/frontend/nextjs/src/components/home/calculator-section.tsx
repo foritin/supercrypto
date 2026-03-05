@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
 import { Check, Sparkles, Shield, Clock } from 'lucide-react';
+import React from 'react';
+
 import { YieldCalculator } from '@/components/calculator/yield-calculator';
 import { cn } from '@/lib/utils';
 

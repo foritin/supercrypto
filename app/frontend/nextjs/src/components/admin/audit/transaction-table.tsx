@@ -4,12 +4,13 @@
  */
 'use client';
 
-import React from 'react';
-import { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { Eye } from 'lucide-react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { DataTable } from '@/components/ui/data-table';
+
 import { Button } from '@/components/ui/button';
+import { DataTable } from '@/components/ui/data-table';
 import {
   Tooltip,
   TooltipContent,
@@ -17,10 +18,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { TransactionAudit, TransactionAuditType } from '@/types/audit';
+
 import { AddressDisplay } from './web3/address-display';
-import { TxHashLink } from './web3/tx-hash-link';
-import { TokenAmount } from './web3/token-amount';
 import { ChainBadge } from './web3/chain-badge';
+import { TokenAmount } from './web3/token-amount';
+import { TxHashLink } from './web3/tx-hash-link';
 import { TxStatusBadge } from './web3/tx-status-badge';
 
 interface TransactionTableProps {
@@ -250,7 +252,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
         columns={columns}
         data={data}
         loading={loading}
-        pagination={paginationConfig}
+        {...(paginationConfig ? { pagination: paginationConfig } : {})}
         emptyMessage={t('admin.audit.txTable.total', '暂无交易记录')}
       />
     </div>

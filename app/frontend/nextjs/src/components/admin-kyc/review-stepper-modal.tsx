@@ -14,9 +14,10 @@
  * - 关闭时 dispatch RESET 重置状态
  */
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useReducer, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence, motion } from "framer-motion";
+
 import {
   Dialog,
   DialogContent,
@@ -24,22 +25,23 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { put } from "@/services/api";
 import type { KycDetail } from "@/services/admin-kyc";
+import { put } from "@/services/api";
+
+import { AdmissionButton, shouldShowAdmissionButton } from "./admission-button";
+import { OnChainStatusPanel } from "./onchain-status-panel";
+import { StepBasicInfo } from "./step-basic-info";
+import { StepDocuments } from "./step-documents";
+import { StepFinalDecision } from "./step-final-decision";
+import { StepFooter } from "./step-footer";
+import { StepIndicator } from "./step-indicator";
+import { StepRiskAssessment } from "./step-risk-assessment";
 import {
   stepperReducer,
   initialState,
   buildReviewSteps,
   type ReviewStepsData,
 } from "./stepper-reducer";
-import { StepIndicator } from "./step-indicator";
-import { StepFooter } from "./step-footer";
-import { StepBasicInfo } from "./step-basic-info";
-import { StepDocuments } from "./step-documents";
-import { StepRiskAssessment } from "./step-risk-assessment";
-import { StepFinalDecision } from "./step-final-decision";
-import { OnChainStatusPanel } from "./onchain-status-panel";
-import { AdmissionButton, shouldShowAdmissionButton } from "./admission-button";
 
 // ---------------------------------------------------------------------------
 // Types

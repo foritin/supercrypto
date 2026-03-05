@@ -2,11 +2,14 @@
 
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
-import { Web3Provider } from "./web3-provider";
-import { I18nProvider } from "./i18n-provider";
-import { AppReadyProvider } from "./app-ready-provider";
-import { QueryProvider } from "./query-provider";
+
 import { GodModeIndicator } from "@/components/dev/god-mode-indicator";
+
+import { AppReadyProvider } from "./app-ready-provider";
+import { I18nProvider } from "./i18n-provider";
+import { QueryProvider } from "./query-provider";
+import { Web3Provider } from "./web3-provider";
+
 
 export function Providers({ children }: { children: ReactNode }) {
   return (

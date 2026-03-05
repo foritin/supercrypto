@@ -7,7 +7,6 @@
  * 包含步骤图标、标题、描述和预估时间
  */
 
-import { useTranslation } from 'react-i18next'
 import {
   User,
   FileText,
@@ -18,8 +17,10 @@ import {
   ChevronRight,
   AlertCircle,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
+
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 // ============ 类型定义 ============
 

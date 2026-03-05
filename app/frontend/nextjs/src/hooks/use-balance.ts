@@ -1,14 +1,8 @@
 'use client';
 
-import { useBalance as useWagmiBalance, useAccount } from 'wagmi';
-import { formatUnits } from 'viem';
-
-interface TokenBalance {
-  symbol: string;
-  decimals: number;
-  value: bigint;
-  formatted: string;
-}
+import * as React from 'react';
+import { formatUnits, erc20Abi } from 'viem';
+import { useBalance as useWagmiBalance, useAccount , useReadContract } from 'wagmi';
 
 export function useNativeBalance() {
   const { address, isConnected } = useAccount();
@@ -45,10 +39,6 @@ export function useNativeBalance() {
     refetch,
   };
 }
-
-import * as React from 'react';
-import { useReadContract } from 'wagmi';
-import { erc20Abi } from 'viem';
 
 export function useTokenBalance(tokenAddress: `0x${string}` | undefined) {
   const { address, isConnected } = useAccount();

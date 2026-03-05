@@ -60,7 +60,7 @@ Authorization: Bearer <access_token>
 - `asset_id`: 资产ID (必填)
 - `amount`: 认购金额 (必填)
 - `token_type`: 支付代币 USDT/USDC (默认 USDT)
-- `lock_period`: 锁定期 3/6/12 月 (默认 3)
+- `lock_period`: 锁定期 0/3/6/12 月（0 表示活期，默认 0）
 
 ### 质押 Staking
 
@@ -124,10 +124,15 @@ Authorization: Bearer <access_token>
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/user/subscriptions` | 创建认购 |
+| POST | `/user/subscriptions/pending` | 创建待确认订单（V2） |
+| GET | `/user/subscriptions/receipt/{tx_hash}` | 查询交易回执（V2） |
+| POST | `/user/subscriptions/confirm` | 确认认购并入账（V2） |
 | GET | `/user/subscriptions` | 获取认购列表 |
 | GET | `/user/subscriptions/stats` | 获取用户统计 |
 | GET | `/user/subscriptions/{id}` | 获取认购详情 |
 | POST | `/user/subscriptions/{id}/redeem` | 赎回认购 |
+
+> V2 推荐流程：`pending -> wallet sign/send tx -> receipt polling -> confirm`
 
 ### 质押 Staking
 

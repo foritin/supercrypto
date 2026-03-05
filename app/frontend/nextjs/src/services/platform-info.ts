@@ -11,6 +11,7 @@
  */
 
 import axios from 'axios'
+
 import { API_BASE_URL } from '@/constants/api'
 import { PUBLIC_PATHS } from '@/constants/api-paths'
 

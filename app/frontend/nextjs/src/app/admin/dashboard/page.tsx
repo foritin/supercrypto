@@ -8,10 +8,6 @@
  * 改进: 移除边条 + 统一图标风格 + 清晰布局
  * ════════════════════════════════════════════════════════════════
  */
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
-import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import {
   TrendingUp,
@@ -21,16 +17,22 @@ import {
   RefreshCw,
   FileBarChart,
 } from "lucide-react";
-import {
-  adminService,
-  PlatformStatsResponse,
-} from "@/services/admin";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useAccount } from "wagmi";
+
 import { RequireAuth } from "@/components/auth";
-import { V6Background } from "@/components/layout/v6-background";
-import { StatCard } from "@/components/dashboard/stat-card";
-import { DashboardChart } from "@/components/dashboard/chart";
 import { ActivityList } from "@/components/dashboard/activity-list";
+import { DashboardChart } from "@/components/dashboard/chart";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { V6Background } from "@/components/layout/v6-background";
 import { DashboardSkeleton } from "@/components/ui/loading";
+import {
+  adminService
+} from "@/services/admin";
+import type {
+  PlatformStatsResponse} from "@/services/admin";
 import { getErrorMessage } from "@/utils/error-handler";
 
 // 主仪表盘页面

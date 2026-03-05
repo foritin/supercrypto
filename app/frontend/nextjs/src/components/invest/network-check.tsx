@@ -1,12 +1,12 @@
 'use client';
 
+import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useWallet } from '@/hooks/use-wallet';
-import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { supportedChains } from '@/config/wagmi';
+import { Button } from '@/components/ui/button';
+import { useWallet } from '@/hooks/use-wallet';
 
 interface NetworkCheckProps {
   requiredChainId?: number;

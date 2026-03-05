@@ -10,6 +10,7 @@
  */
 
 import { useState } from 'react';
+
 import { useGodMode } from '@/hooks/use-god-mode';
 
 export function GodModeIndicator() {

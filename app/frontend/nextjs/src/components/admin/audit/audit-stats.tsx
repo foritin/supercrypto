@@ -4,9 +4,6 @@
  */
 'use client';
 
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { StatCard } from '@/components/dashboard/stat-card';
 import { 
   Activity, 
   CheckCircle, 
@@ -14,6 +11,10 @@ import {
   Clock,
   ArrowRightLeft,
 } from 'lucide-react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { StatCard } from '@/components/dashboard/stat-card';
 import type { AuditStats as AuditStatsType, TransactionStats } from '@/types/audit';
 
 interface AuditStatsProps {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useTranslation } from 'react-i18next'
+
 import { AssetAdminList } from '@/components/admin/asset-admin-list'
 import { RequireAdmin } from '@/components/auth'
 

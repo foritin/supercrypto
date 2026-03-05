@@ -8,11 +8,12 @@
  * Validates: Requirements 5.6, 8.1, 8.2, 8.3
  */
 
+import { Camera, AlertTriangle, CheckCircle } from 'lucide-react'
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
+
 import { FileUpload, type FileUploadError } from '@/components/ui/file-upload'
-import { Camera, AlertTriangle, CheckCircle } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 // ============================================================================
 // 类型定义
@@ -162,10 +163,10 @@ export const ManualSelfieUpload: React.FC<ManualSelfieUploadProps> = ({
         maxSize={5 * 1024 * 1024}
         capture="user"
         documentType="selfie"
-        value={value}
-        onUpload={onUpload}
-        onError={onError}
-        onRemove={onRemove}
+        {...(value ? { value } : {})}
+        {...(onUpload ? { onUpload } : {})}
+        {...(onError ? { onError } : {})}
+        {...(onRemove ? { onRemove } : {})}
         disabled={disabled}
         placeholder={renderPlaceholder()}
         // Mobile: 较小高度，Desktop: 正常高度

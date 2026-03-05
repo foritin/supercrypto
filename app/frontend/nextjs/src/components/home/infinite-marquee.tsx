@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -41,10 +40,6 @@ export function InfiniteMarquee({
   pauseOnHover = true,
   className,
 }: InfiniteMarqueeProps) {
-  // 复制数组以实现无缝循环
-  const row1Extended = [...row1Items, ...row1Items];
-  const row2Extended = [...row2Items, ...row2Items];
-
   return (
     <section className={cn('py-20 overflow-hidden', className)}>
       {/* Header */}
@@ -129,7 +124,7 @@ function MarqueeLogoItem({ item }: { item: MarqueeItem }) {
       )}
       title={item.name}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      { }
       <img
         src={item.logo}
         alt={item.name}

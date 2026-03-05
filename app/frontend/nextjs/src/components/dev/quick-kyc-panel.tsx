@@ -10,9 +10,6 @@ import { ShieldCheck, CheckCircle, RotateCcw, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAccount } from 'wagmi'
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -24,8 +21,11 @@ import {
   AlertDialogAction,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { notification } from '@/lib/notification'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { useKycStatus, useQuickKycApprove, useKycReset, getKycStatusInfo } from '@/hooks/use-kyc-status'
+import { notification } from '@/lib/notification'
 import { KycStatus } from '@/services/kyc'
 
 export function QuickKycPanel() {

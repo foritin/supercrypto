@@ -4,14 +4,11 @@
  * 使用新的审计组件和服务
  * 已迁移到 shadcn/ui + Tailwind CSS
  */
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { RequireAdmin } from "@/components/auth";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
 import {
   AuditStats,
   AuditLogFilters,
@@ -23,6 +20,9 @@ import {
   type AuditFilters,
   DEFAULT_AUDIT_FILTERS,
 } from "@/components/admin/audit";
+import { RequireAdmin } from "@/components/auth";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { auditService } from "@/services/audit";
 import type {
   AuditLog,
@@ -35,7 +35,6 @@ import type {
 
 export default function AuditLogsPage() {
   const { t } = useTranslation();
-  const router = useRouter();
 
   // Tab 状态
   const [activeTab, setActiveTab] = useState<"general" | "transactions">("general");
@@ -254,7 +253,7 @@ export default function AuditLogsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <AuditExport currentFilters={exportFilters as any} />
+            <AuditExport currentFilters={exportFilters} />
             <Button
               variant="outline"
               onClick={handleRefresh}

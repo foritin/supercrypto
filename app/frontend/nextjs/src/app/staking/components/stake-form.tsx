@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { Zap } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -15,13 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { notification } from "@/lib/notification";
+import { cn } from "@/lib/utils";
 import { stakingService, STAKING_PERIODS } from "@/services/staking";
 import type { StakingLimitResponse } from "@/types/staking";
 import type { SubscriptionItem } from "@/types/subscription";
-import { EmptyState } from "@/components/ui/empty-state";
 
 // 周期卡片组件
 function PeriodCard({
@@ -156,7 +157,7 @@ export function StakeForm({
             description={t("staking.stake.noSubscriptionDesc")}
           >
             <Button className="mt-4" asChild>
-              <a href="/assets">{t("staking.stake.goToAssets")}</a>
+                    <Link href="/assets">{t("staking.stake.goToAssets")}</Link>
             </Button>
           </EmptyState>
         ) : (
