@@ -147,6 +147,96 @@ const subscription = {
     broadcastingTx: "Broadcasting transaction...",
     monitoringBlockchain: "Monitoring blockchain...",
     waitingBackend: "Waiting for backend confirmation...",
+
+    // Network status
+    networkUnknown: "Unknown",
+    networkConnected: "Connected",
+    networkWrong: "Wrong Network",
+
+    // Current mode hint
+    currentModeTotalReturnHint: "Real-time yield, no maturity total shown",
+
+    // Modal copy (v2)
+    minimumAmountIs: "Minimum amount is ${{amount}}",
+    insufficientBalanceMax: "Insufficient balance. Max: ${{amount}}",
+    configureInvestmentTitle: "Configure Investment",
+    reviewInvestmentTitle: "Review Investment",
+    investmentSuccessfulTitle: "Investment Successful!",
+    transactionFailedTitle: "Transaction Failed",
+    processingTransactionTitle: "Processing Transaction",
+    configureInvestmentDesc: "Set your investment parameters below",
+    reviewInvestmentDesc: "Please verify all details before confirming",
+    investmentSuccessOnchainDesc: "Your investment has been confirmed on the blockchain",
+    processingTransactionDesc: "Please wait while we process your transaction securely",
+    riskSuffix: "RISK",
+    investmentAmount: "Investment Amount",
+    amountPlaceholder: "0.00",
+    currentFlexible: "Current (Flexible)",
+    monthLock: "{{months}} Month Lock",
+    totalReturnAtMaturityDate: "Total return at maturity • {{date}}",
+    investmentSummary: "Investment Summary",
+    assetLabel: "Asset",
+    fixedMonthsShort: "Fixed {{months}}M",
+    flexibleWithdrawal: "Flexible withdrawal",
+    lockedUntilMaturity: "Locked until maturity",
+    annualYield: "Annual Yield",
+    totalReturnLabel: "Total Return",
+    principalPlusInterest: "Principal + Interest",
+    fundsWillBeLocked: "Funds Will Be Locked",
+    fixedLockWarning: "Your funds will be locked until {{date}}. Early withdrawal may incur a 2% penalty fee.",
+    maturityDateLabel: "maturity date",
+    network: "Network",
+    copy: "Copy",
+    close: "Close",
+    viewPortfolio: "View Portfolio",
+    loading: "Loading...",
+    reviewInvestmentButton: "Review Investment",
+    expectedReturns: "Expected Returns",
+    estimatedNetworkFee: "Estimated Network Fee",
+    estimatedNetworkFeeIncludesApproval: "Includes approval + subscription",
+    estimatedNetworkFeeSubscribeOnly: "Subscription transaction only",
+
+    // Product selector additions
+    withdrawAnytime: "Withdraw anytime",
+    noLockupPeriod: "No lock-up period",
+    lowerStableReturns: "Lower but stable returns",
+    higherApyRewards: "Higher APY rewards",
+    fixedMonthOptions: "3/6/12 month options",
+    earlyWithdrawalFeesApply: "Early withdrawal fees apply",
+    upToApy: "Up to {{value}}% APY",
+    best: "BEST",
+    productSelectorLockWarning: "Funds will be locked for {{months}} months. Early redemption may incur a 2% penalty fee.",
+    productSelectorCurrentInfo: "Withdraw your funds at any time with no penalties. Current APY: {{value}}%",
+
+    // Tracker and error panel additions
+    view: "View",
+    block: "Block",
+    errorDetails: "Error Details",
+    errorNetworkMismatchDescWithNetworks: "Please switch to {{required}} to complete this transaction. Your wallet is currently connected to {{current}}.",
+    chainWithId: "Chain {{id}}",
+
+    // T+1 Yield Start Rule
+    yield: {
+      tPlusOneBadge: "T+1 Yield Start",
+      tPlusOneTooltip: "Yield accrual begins 24 hours after subscription. Based on UTC time.",
+      yieldStartTime: "Yield Start Time",
+      yieldStartsAtUtc: "Yield starts at UTC",
+      yieldStartsAtDesc: "Your subscription will begin accruing yield at {{time}} UTC",
+      yieldStarted: "Accruing",
+      pending: "Pending",
+      holdingTimeHours: "Held for {{hours}} hours (UTC)",
+      holdingTimeDays: "Held for {{days}}d {{hours}}h (UTC)",
+      timeRemaining: "Starting in approximately {{hours}} hours",
+      notYetAccruedTitle: "Yield starts at UTC",
+      notYetAccruedDesc: "Your subscription will begin accruing yield at {{time}} UTC. No yield available yet.",
+      currentYield: "Current Yield",
+    },
+
+    // Time related
+    time: {
+      utcSuffix: "UTC",
+      format: "MMM DD, YYYY HH:mm",
+    },
   },
 }
 

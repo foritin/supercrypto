@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * 修复 OpenCV.js ESM 兼容性问题
  * 参考: https://github.com/TechStark/opencv-js/issues/44

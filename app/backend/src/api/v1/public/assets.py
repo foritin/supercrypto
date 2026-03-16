@@ -15,7 +15,7 @@ from falib.utils.handlers import PaginationInfo, create_success_response
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from src.common.dependencies import get_asset_service
-from src.schemas.enums import AssetStatus, AssetType, MediaType
+from src.schemas.enums import AssetStatus, AssetSubscriptionMode, AssetType, MediaType
 from src.services import AssetService
 
 router = APIRouter()
@@ -28,6 +28,9 @@ router = APIRouter()
 )
 async def list_assets(
     asset_type: Optional[AssetType] = Query(None, description="类型筛选"),
+    subscription_mode: Optional[AssetSubscriptionMode] = Query(
+        None, description="认购模式筛选"
+    ),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     service: AssetService = Depends(get_asset_service),
@@ -45,6 +48,7 @@ async def list_assets(
     items, total, total_pages = await service.list_assets(
         status=AssetStatus.ACTIVE,  # 强制 active 状态
         asset_type=asset_type,
+        subscription_mode=subscription_mode,
         page=page,
         page_size=page_size,
         public_only=True,  # 启用可见性过滤

@@ -231,6 +231,10 @@ export function getExplorerUrl(
     main: 1,
     sepolia: 11155111,
     test: 11155111,
+    arbitrum: 42161,
+    arb: 42161,
+    'arbitrum-sepolia': 421614,
+    arbitrum_sepolia: 421614,
   }
   const chainId = networkToChainId[network]
   if (!chainId) return null

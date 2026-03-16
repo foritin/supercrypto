@@ -19,18 +19,24 @@ Note:
     - 节点地址配置在 ape-config.yaml 的 node.ethereum.hardhat.uri
 """
 
+from typing import Optional
+
 from deploy.common.config import (
     KYC_CONTRACT,
     PROVIDER_CONTRACT,
     STABLECOIN_CONTRACTS,
 )
 from deploy.executor import (
+    create_provider_registry_record,
     deploy_contract,
     get_all_deployed,
     get_chain_id,
     get_current_network,
+    get_deployed_contract,
     get_deployer,
     get_network_enum,
+    save_contract_config,
+    save_external_contract_placeholder,
 )
 
 
@@ -74,9 +80,59 @@ def deploy_stablecoins(deployer, chain_id: int, network, deployed: dict):
     """部署稳定币合约"""
     network_name = get_current_network()
 
-    # 仅在测试网络部署自有稳定币
-    if network_name not in ["hardhat", "sepolia", "goerli"]:
-        print("⚠️  跳过: 自有稳定币仅部署到测试网络")
+    # hardhat: 部署 mock 稳定币；其它网络: 创建外部地址占位记录
+    if network_name != "hardhat":
+        provider_address = deployed.get("AddressProvider")
+        for config in STABLECOIN_CONTRACTS:
+            print(f"\n🔷 {config.name} (external placeholder)")
+            print("─" * 60)
+
+            existing_active = get_deployed_contract(
+                config.name,
+                chain_id,
+                network,
+                "common",
+                scope=config.scope,
+                contract_type=config.contract_type,
+            )
+            if existing_active:
+                print(f"   ⏭️  已有 ACTIVE 记录，保留: {existing_active.address}")
+                save_contract_config(config, "common")
+                if config.provider_key and provider_address:
+                    create_provider_registry_record(
+                        config=config,
+                        project_name="common",
+                        provider_address=provider_address,
+                        chain_id=chain_id,
+                        network=network,
+                    )
+                continue
+
+            placeholder = f"external://{network_name}/{config.name.lower()}"
+            save_external_contract_placeholder(
+                name=config.name,
+                placeholder_address=placeholder,
+                deployer_address=deployer.address,
+                network=network,
+                chain_id=chain_id,
+                scope=config.scope,
+                contract_type=config.contract_type,
+                project_name="common",
+            )
+            save_contract_config(config, "common")
+            if config.provider_key and provider_address:
+                create_provider_registry_record(
+                    config=config,
+                    project_name="common",
+                    provider_address=provider_address,
+                    chain_id=chain_id,
+                    network=network,
+                )
+
+            deployed[config.name] = placeholder
+            print(
+                "   📝 已创建外部地址占位记录，请在 Admin 合约管理中更新真实地址后再注册 Provider"
+            )
         return
 
     for config in STABLECOIN_CONTRACTS:
@@ -95,7 +151,7 @@ def deploy_stablecoins(deployer, chain_id: int, network, deployed: dict):
         deployed[config.name] = address
 
 
-def main(only: str = None):
+def main(only: Optional[str] = None):
     """
     部署公共合约
 

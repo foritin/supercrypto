@@ -2,6 +2,15 @@
 SuperCrypto API - FastAPI应用主入口
 """
 
+# 抑制第三方库的弃用警告（uvicorn/websockets）
+# 注意：tortoise ORM 的 pk/index 警告已在模型中修复
+import warnings
+warnings.filterwarnings(
+    "ignore",
+    message=".*WebSocketServerProtocol is deprecated.*",
+    category=DeprecationWarning,
+)
+
 import asyncio
 from contextlib import asynccontextmanager
 

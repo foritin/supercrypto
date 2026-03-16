@@ -1,28 +1,26 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  DollarSign,
-  TrendingUp,
-  Clock,
   History,
   Download,
-  Info,
-  Copy,
   Wallet,
   PieChart,
-  ArrowUpRight,
-  ChevronRight,
-  AlertTriangle,
+  LayoutGrid,
+  Table2,
+  ExternalLink,
+  ArrowRight,
+  Info,
 } from 'lucide-react';
 import { useState, useCallback, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useAccount } from 'wagmi';
 
 import { RequireWallet } from '@/components/auth';
-import { Badge } from '@/components/ui/badge';
+import { PortfolioChart } from '@/components/portfolio/portfolio-chart';
+import { InvestmentCard } from '@/components/portfolio/investment-card';
+import { StatCard } from '@/components/portfolio/stat-card';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import {
   Dialog,
@@ -32,608 +30,527 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Progress } from '@/components/ui/progress';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import {
   useSubscriptions,
   useUserStats,
-  useTransactionHistory,
-  IS_TRANSACTION_MOCK,
   type PortfolioTransaction,
 } from '@/hooks/use-portfolio';
 import { cn, truncateAddress } from '@/lib/utils';
 import { type SubscriptionResponse } from '@/types/subscription';
 
-const TRANSACTION_TYPE_NAMES: Record<string, string> = {
-  subscribe: 'portfolio.txTypes.subscribe',
-  redeem: 'portfolio.txTypes.redeem',
-  stake: 'portfolio.txTypes.stake',
-  unstake: 'portfolio.txTypes.unstake',
-  claim: 'portfolio.txTypes.claim',
-};
+type ViewMode = 'cards' | 'table';
 
-// Stat Card Component with Glassmorphism
-interface StatCardProps {
-  title: string;
-  value: number;
-  precision?: number;
-  prefix?: React.ReactNode;
-  icon: React.ReactNode;
-  trend?: number | undefined;
-  color: 'primary' | 'success' | 'warning' | 'info';
-}
+// Transaction item component
+function TransactionItem({ tx, index }: { tx: PortfolioTransaction; index: number }) {
+  const typeColors: Record<string, string> = {
+    subscribe: 'text-blue-400',
+    redeem: 'text-emerald-400',
+    claim: 'text-amber-400',
+    stake: 'text-purple-400',
+    unstake: 'text-orange-400',
+  };
 
-const colorMap = {
-  primary: 'from-primary/20 to-primary/5 border-primary/30',
-  success: 'from-green-500/20 to-green-500/5 border-green-500/30',
-  warning: 'from-yellow-500/20 to-yellow-500/5 border-yellow-500/30',
-  info: 'from-blue-500/20 to-blue-500/5 border-blue-500/30',
-};
-
-const iconColorMap = {
-  primary: 'text-primary',
-  success: 'text-green-400',
-  warning: 'text-yellow-400',
-  info: 'text-blue-400',
-};
-
-function StatCard({ title, value, precision = 2, prefix, icon, trend, color }: StatCardProps) {
   return (
-    <Card className={cn(
-      'glass border overflow-hidden relative group',
-      colorMap[color]
-    )}>
-      <div className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className={cn('p-3 rounded-xl bg-white/5', iconColorMap[color])}>
-            {icon}
-          </div>
-          {trend !== undefined && (
-            <div className={cn(
-              'flex items-center gap-1 text-sm font-medium',
-              trend >= 0 ? 'text-green-400' : 'text-red-400'
-            )}>
-              <ArrowUpRight className={cn('h-4 w-4', trend < 0 && 'rotate-90')} />
-              {Math.abs(trend)}%
-            </div>
-          )}
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="flex items-center justify-between py-4 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] px-4 -mx-4 rounded-lg transition-colors group"
+    >
+      <div className="flex items-center gap-4">
+        <div className={cn('w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center', typeColors[tx.tx_type] || 'text-gray-400')}>
+          <TrendingUpIcon className="w-4 h-4" />
         </div>
-        
-        <p className="text-white/60 text-sm mb-1">{title}</p>
-        <div className="flex items-baseline gap-1">
-          {prefix && <span className={cn('text-lg font-medium', iconColorMap[color])}>{prefix}</span>}
-          <span className="text-2xl font-bold text-white">
-            {value.toLocaleString(undefined, { 
-              minimumFractionDigits: precision, 
-              maximumFractionDigits: precision 
-            })}
-          </span>
+        <div>
+          <div className="text-white font-medium capitalize">{tx.tx_type}</div>
+          <div className="text-gray-500 text-xs">{new Date(tx.created_at).toLocaleDateString()}</div>
         </div>
       </div>
-      
-      {/* Gradient overlay */}
-      <div className={cn(
-        'absolute inset-0 bg-gradient-to-br opacity-50 -z-10',
-        colorMap[color].split(' ')[0],
-        colorMap[color].split(' ')[1]
-      )} />
-    </Card>
+
+      <div className="flex items-center gap-6">
+        <div className="text-white font-semibold">${parseFloat(tx.amount).toLocaleString()}</div>
+        <span className={cn(
+          'text-xs px-2 py-1 rounded-full border',
+          tx.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+          tx.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+          'bg-rose-500/10 text-rose-400 border-rose-500/20'
+        )}>
+          {tx.status}
+        </span>
+        <a
+          href={`https://etherscan.io/tx/${tx.tx_hash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-500 hover:text-gray-300 text-xs font-mono transition-colors flex items-center gap-1"
+        >
+          {truncateAddress(tx.tx_hash)}
+          <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </a>
+      </div>
+    </motion.div>
   );
 }
 
-// Empty State Component
-// Dev mode mock data indicator
-function MockDataBanner() {
-  const { t } = useTranslation();
+function TrendingUpIcon({ className }: { className?: string }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-medium">
-      <AlertTriangle className="h-3.5 w-3.5" />
-      <span>⚠️ {t('portfolio.mockDataBanner', '开发模式 - 使用模拟数据')}</span>
-    </div>
+    <svg 
+      className={className} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+      <polyline points="17 6 23 6 23 12" />
+    </svg>
   );
 }
 
 export default function PortfolioPage() {
-  const { t } = useTranslation();
   const { isConnected } = useAccount();
-
-  // Data from React Query hooks
-  const {
-    data: subscriptionsData,
-    isLoading: isLoadingSubscriptions,
-  } = useSubscriptions();
-  const {
-    data: userStats,
-    isLoading: isLoadingStats,
-  } = useUserStats();
-  const {
-    data: transactions,
-    isLoading: isLoadingTransactions,
-  } = useTransactionHistory();
-
-  const subscriptions = subscriptionsData?.items ?? [];
-  
-  // Modal states
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionResponse | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
-  const handleViewDetail = useCallback((subscription: SubscriptionResponse) => {
-    setSelectedSubscription(subscription);
+  const { data: subscriptionsData, isLoading: isLoadingSubscriptions } = useSubscriptions();
+  const { data: userStats, isLoading: isLoadingStats } = useUserStats();
+
+  const subscriptions = subscriptionsData?.items ?? [];
+
+  const handleViewDetail = useCallback((sub: SubscriptionResponse) => {
+    setSelectedSubscription(sub);
     setDetailModalOpen(true);
   }, []);
 
-  const copyToClipboard = useCallback((text: string) => {
-    navigator.clipboard.writeText(text);
-  }, []);
+  const portfolioTrend = useMemo(() => {
+    if (!userStats?.total_invested || userStats.total_invested === 0) return undefined;
+    return Number((((userStats.total_value ?? 0) - userStats.total_invested) / userStats.total_invested * 100).toFixed(1));
+  }, [userStats]);
 
-  // Subscription table columns
-  const subscriptionColumns: ColumnDef<SubscriptionResponse>[] = useMemo(
-    () => [
-      {
-        accessorKey: 'asset_name',
-        header: t('portfolio.table.asset'),
-        cell: ({ row }) => (
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <span className="text-primary font-bold text-sm">
-                {(row.original.asset_symbol ?? row.original.asset_name ?? '??').slice(0, 2)}
-              </span>
-            </div>
-            <div>
-              <span className="font-semibold text-white block">{row.original.asset_name}</span>
-              <span className="text-xs text-white/50">{row.original.asset_symbol}</span>
-            </div>
+  // Table columns
+  const subscriptionColumns: ColumnDef<SubscriptionResponse>[] = useMemo(() => [
+    {
+      accessorKey: 'asset_name',
+      header: 'Asset',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold text-sm">
+            {(row.original.asset_symbol ?? row.original.asset_name ?? '??').slice(0, 2)}
           </div>
-        ),
-      },
-      {
-        accessorKey: 'amount',
-        header: t('portfolio.table.amount'),
-        cell: ({ row }) => (
-          <span className="font-semibold text-primary">
-            ${row.original.amount.toLocaleString()}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'apy',
-        header: t('portfolio.table.apy'),
-        cell: ({ row }) => (
-          <Badge className="bg-primary/20 text-primary border-primary/30">
-            {row.original.apy}% APY
-          </Badge>
-        ),
-      },
-      {
-        accessorKey: 'lock_period',
-        header: t('portfolio.table.period'),
-        cell: ({ row }) => {
-          const period = row.original.lock_period;
-          const daysRemaining = row.original.days_remaining;
-          const progressPercent = Math.max(0, 100 - (daysRemaining / (period * 30)) * 100);
-          return (
-            <div className="flex flex-col gap-1 min-w-[120px]">
-              <span className="text-white/70">{t('portfolio.monthsLabel', { months: period })}</span>
-              <Progress value={progressPercent} className="h-1" />
-              <span className="text-xs text-white/50">
-                {daysRemaining > 0 ? t('portfolio.daysLeftLabel', { days: daysRemaining }) : t('portfolio.matured')}
-              </span>
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: 'status',
-        header: t('portfolio.table.status'),
-        cell: ({ row }) => {
-          const status = row.original.status;
-          const variants: Record<string, string> = {
-            active: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-            matured: 'bg-green-500/20 text-green-400 border-green-500/30',
-            redeemed: 'bg-white/10 text-white/50 border-white/20',
-          };
-          return (
-            <Badge variant="outline" className={variants[status] || variants.redeemed}>
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </Badge>
-          );
-        },
-      },
-      {
-        id: 'actions',
-        header: '',
-        cell: ({ row }) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleViewDetail(row.original)}
-            className="text-white/60 hover:text-primary hover:bg-primary/10"
-          >
-            {t('portfolio.detailsButton')}
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        ),
-      },
-    ],
-    [t, handleViewDetail]
-  );
-
-  // Transaction table columns
-  const transactionColumns: ColumnDef<PortfolioTransaction>[] = useMemo(
-    () => [
-      {
-        accessorKey: 'created_at',
-        header: t('portfolio.txTable.time'),
-        cell: ({ row }) => (
-          <span className="text-white/70">
-            {new Date(row.original.created_at).toLocaleDateString()}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'tx_type',
-        header: t('portfolio.txTable.type'),
-        cell: ({ row }) => {
-          const type = row.original.tx_type;
-          const txColorMap: Record<string, string> = {
-            subscribe: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-            redeem: 'bg-green-500/20 text-green-400 border-green-500/30',
-            stake: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-            unstake: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-            claim: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-          };
-          return (
-            <Badge variant="outline" className={txColorMap[type] || txColorMap.subscribe}>
-              {t(TRANSACTION_TYPE_NAMES[type] || type)}
-            </Badge>
-          );
-        },
-      },
-      {
-        accessorKey: 'amount',
-        header: t('portfolio.txTable.amount'),
-        cell: ({ row }) => (
-          <span className="text-white font-medium">
-            ${parseFloat(row.original.amount).toLocaleString()}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'status',
-        header: t('portfolio.txTable.status'),
-        cell: ({ row }) => {
-          const status = row.original.status;
-          const statusColorMap: Record<string, string> = {
-            pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-            confirmed: 'bg-primary/20 text-primary border-primary/30',
-            failed: 'bg-red-500/20 text-red-400 border-red-500/30',
-          };
-          return (
-            <Badge variant="outline" className={statusColorMap[status] || statusColorMap.pending}>
-              {status}
-            </Badge>
-          );
-        },
-      },
-      {
-        accessorKey: 'tx_hash',
-        header: t('portfolio.txTable.txHash'),
-        cell: ({ row }) => {
-          const hash = row.original.tx_hash;
-          return (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-white/50">
-                      {truncateAddress(hash)}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-white/40 hover:text-primary"
-                      onClick={() => copyToClipboard(hash)}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent className="glass border-white/10">
-                  <p className="font-mono text-xs">{hash}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          );
-        },
-      },
-    ],
-    [t, copyToClipboard]
-  );
-
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen bg-bg-dark pt-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          <Skeleton className="h-8 w-48 mb-8" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-32 w-full" />
-            ))}
+          <div>
+            <div className="text-white font-medium">{row.original.asset_name}</div>
+            <div className="text-gray-500 text-xs">{row.original.asset_symbol}</div>
           </div>
-          <Skeleton className="h-96 w-full" />
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <RequireWallet>
-      <div className="min-h-screen bg-bg-dark pt-24 pb-16 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Page Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/30">
-                <Wallet className="h-5 w-5 text-primary" />
-              </div>
-              <span className="text-primary text-sm font-semibold uppercase tracking-wider">
-                {t('portfolio.myPortfolio')}
+      ),
+    },
+    {
+      accessorKey: 'amount',
+      header: 'Invested',
+      cell: ({ row }) => <span className="text-white font-medium">${row.original.amount.toLocaleString()}</span>,
+    },
+    {
+      accessorKey: 'apy',
+      header: 'APY',
+      cell: ({ row }) => <span className="text-amber-400 font-medium">{row.original.apy}%</span>,
+    },
+    {
+      accessorKey: 'lock_period',
+      header: 'Progress',
+      cell: ({ row }) => {
+        const period = row.original.lock_period;
+        const daysRemaining = row.original.days_remaining;
+        const progressPercent = Math.max(0, 100 - (daysRemaining / (period * 30)) * 100);
+        const isMatured = row.original.status === 'matured';
+        return (
+          <div className="w-32">
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-gray-500">{period}mo</span>
+              <span className={isMatured ? 'text-emerald-400' : 'text-white/60'}>
+                {daysRemaining > 0 ? `${daysRemaining}d left` : 'Done'}
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
-              {t('portfolio.title', 'Investment Portfolio')}
-            </h1>
-            <p className="text-white/60 max-w-xl">
-              {t('portfolio.subtitle', 'Track your RWA investments, monitor yields, and manage your assets')}
-            </p>
+            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+              <div 
+                className={cn('h-full rounded-full', isMatured ? 'bg-emerald-400' : 'bg-blue-400')} 
+                style={{ width: `${progressPercent}%` }} 
+              />
+            </div>
           </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => {
+        const status = row.original.status;
+        return (
+          <span className={cn(
+            'text-xs px-2 py-1 rounded-full',
+            status === 'active' ? 'bg-blue-500/10 text-blue-400' :
+            status === 'matured' ? 'bg-emerald-500/10 text-emerald-400' :
+            'bg-gray-500/10 text-gray-400'
+          )}>
+            {status}
+          </span>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <button
+          onClick={() => handleViewDetail(row.original)}
+          className="text-gray-500 hover:text-white text-sm transition-colors"
+        >
+          Details
+        </button>
+      ),
+    },
+  ], [handleViewDetail]);
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-            {isLoadingStats ? (
-              [...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full" />
-              ))
+  // Empty state data - no mock data
+  const emptyStats = { 
+    total_invested: 0, 
+    total_value: 0, 
+    total_earnings: 0, 
+    active_subscriptions: 0 
+  };
+
+  // 从认购记录构建交易历史（只显示与认购相关的操作）
+  const subscriptionTransactions = useMemo(() => {
+    if (!subscriptions.length) return [];
+    
+    const txs: PortfolioTransaction[] = [];
+    
+    for (const sub of subscriptions) {
+      // 添加认购交易
+      if (sub.tx_hash) {
+        txs.push({
+          id: `subscribe-${sub.id}`,
+          created_at: sub.created_at,
+          tx_type: 'subscribe',
+          amount: sub.amount.toString(),
+          status: sub.status === 'active' || sub.status === 'matured' ? 'confirmed' : 'pending',
+          tx_hash: sub.tx_hash,
+          network: sub.environment,
+        });
+      }
+      
+      // 添加赎回交易（如果有）
+      if (sub.redeem_tx_hash) {
+        txs.push({
+          id: `redeem-${sub.id}`,
+          created_at: sub.updated_at,
+          tx_type: 'redeem',
+          amount: sub.total_return.toString(),
+          status: 'confirmed',
+          tx_hash: sub.redeem_tx_hash,
+          network: sub.environment,
+        });
+      }
+    }
+    
+    // 按时间倒序排列
+    return txs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [subscriptions]);
+
+  const renderContent = () => {
+    // Show empty state when not connected or when loading
+    const stats = isConnected ? (userStats ?? emptyStats) : emptyStats;
+    const subs = isConnected ? subscriptions : [];
+    // 使用从认购记录构建的交易历史
+    const txs = isConnected ? subscriptionTransactions : [];
+    const isLoading = isConnected && (isLoadingStats || isLoadingSubscriptions);
+
+    return (
+      <>
+        {/* Stats Section - Clean horizontal layout like demo */}
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mb-6"
+        >
+          <div className="bg-gradient-to-br from-white/[0.06] to-white/[0.02] rounded-2xl border border-white/[0.08] p-6 lg:p-8">
+            {isLoading ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 bg-white/5" />)}
+              </div>
             ) : (
-              <>
-                <StatCard
-                  title={t('portfolio.totalInvestedLabel')}
-                  value={userStats?.total_invested ?? 0}
-                  prefix="$"
-                  icon={<DollarSign className="h-5 w-5" />}
-                  color="primary"
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                <StatCard 
+                  label="Total Invested" 
+                  value={`$${(stats?.total_invested ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  delay={0} 
                 />
-                <StatCard
-                  title={t('portfolio.currentValueLabel')}
-                  value={userStats?.total_value ?? 0}
-                  prefix="$"
-                  icon={<TrendingUp className="h-5 w-5" />}
-                  trend={userStats?.total_invested ? Number(((((userStats.total_value ?? 0) - userStats.total_invested) / userStats.total_invested) * 100).toFixed(1)) : undefined}
-                  color="success"
+                <StatCard 
+                  label="Current Value" 
+                  value={`$${(stats?.total_value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  change={portfolioTrend !== undefined ? `${portfolioTrend}%` : undefined}
+                  isPositive={portfolioTrend === undefined || portfolioTrend >= 0}
+                  delay={1} 
                 />
-                <StatCard
-                  title={t('portfolio.totalEarningsLabel')}
-                  value={userStats?.total_earnings ?? 0}
-                  prefix="$"
-                  icon={<TrendingUp className="h-5 w-5" />}
-                  color="info"
+                <StatCard 
+                  label="Total Earnings" 
+                  value={`$${(stats?.total_earnings ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  delay={2} 
                 />
-                <StatCard
-                  title={t('portfolio.activeInvestmentsLabel')}
-                  value={userStats?.active_subscriptions ?? 0}
-                  precision={0}
-                  icon={<Clock className="h-5 w-5" />}
-                  color="warning"
+                <StatCard 
+                  label="Active Investments" 
+                  value={`${stats?.active_subscriptions ?? 0} assets`}
+                  delay={3} 
                 />
-              </>
+              </div>
             )}
           </div>
+        </motion.section>
 
-          {/* Main Content Tabs */}
-          <Card className="glass border-primary/10">
-            <Tabs defaultValue="investments" className="p-6">
-              <TabsList className="mb-6 bg-white/5 border border-white/10 p-1">
-                <TabsTrigger 
-                  value="investments" 
-                  className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
-                >
-                  <PieChart className="h-4 w-4" />
-                  {t('portfolio.myInvestments')}
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="history"
-                  className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
-                >
-                  <History className="h-4 w-4" />
-                  {t('portfolio.transactionHistory')}
-                  {IS_TRANSACTION_MOCK && (
-                    <span className="ml-1 text-yellow-400 text-[10px]">⚠️</span>
-                  )}
-                </TabsTrigger>
-              </TabsList>
+        {/* Chart Section */}
+        <section className="mb-6">
+          <div className="bg-gradient-to-br from-white/[0.04] to-transparent rounded-2xl border border-white/[0.06] p-6">
+            <PortfolioChart />
+          </div>
+        </section>
 
-              <TabsContent value="investments">
-                {isLoadingSubscriptions ? (
-                  <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
-                    ))}
-                  </div>
-                ) : subscriptions.length > 0 ? (
-                  <DataTable
-                    columns={subscriptionColumns}
-                    data={subscriptions}
-                  />
-                ) : (
-                  <EmptyState 
-                    message={t('portfolio.noInvestmentsYet')} 
-                    icon={<PieChart className="h-8 w-8" />}
-                  />
+        {/* My Investments Section */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.3 }}
+          className="mb-6"
+        >
+          <div className="bg-gradient-to-br from-white/[0.04] to-transparent rounded-2xl border border-white/[0.06] p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-white/5 flex items-center justify-center">
+                  <PieChart className="w-3 h-3 text-gray-400" />
+                </div>
+                <h2 className="text-lg font-bold text-white">My Investments</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                {!isConnected && (
+                  <span className="text-xs text-amber-400/80 px-2 py-1 rounded-full bg-amber-400/10">
+                    Demo
+                  </span>
                 )}
-              </TabsContent>
-
-              <TabsContent value="history">
-                <div className="flex flex-col gap-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-3">
-                      <Select defaultValue="all">
-                        <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-white">
-                          <SelectValue placeholder={t('portfolio.filterByTypeLabel')} />
-                        </SelectTrigger>
-                        <SelectContent className="glass border-white/10">
-                          <SelectItem value="all">{t('portfolio.allTypes')}</SelectItem>
-                          <SelectItem value="subscribe">{t('portfolio.subscribe')}</SelectItem>
-                          <SelectItem value="redeem">{t('portfolio.redeemType')}</SelectItem>
-                          <SelectItem value="claim">{t('portfolio.claimRewards')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {IS_TRANSACTION_MOCK && <MockDataBanner />}
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      className="border-white/10 text-white/70 hover:text-white hover:bg-white/5"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      {t('portfolio.exportLabel')}
-                    </Button>
-                  </div>
-
-                  {isLoadingTransactions ? (
-                    <div className="space-y-4">
-                      {[...Array(5)].map((_, i) => (
-                        <Skeleton key={i} className="h-12 w-full" />
-                      ))}
-                    </div>
-                  ) : (transactions ?? []).length > 0 ? (
-                    <DataTable
-                      columns={transactionColumns}
-                      data={transactions ?? []}
-                    />
-                  ) : (
-                    <EmptyState 
-                      message={t('portfolio.noTransactionsYet')} 
-                      icon={<History className="h-8 w-8" />}
-                    />
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </Card>
-        </div>
-
-        {/* Subscription Detail Modal */}
-        <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-          <DialogContent className="glass border-primary/20 max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-white">
-                <Info className="h-5 w-5 text-primary" />
-                {t('portfolio.investmentDetails')}
-              </DialogTitle>
-            </DialogHeader>
-
-            {selectedSubscription && (
-              <div className="space-y-4">
-                {/* Asset Info */}
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                      <span className="text-primary font-bold">
-                        {(selectedSubscription.asset_symbol ?? selectedSubscription.asset_name ?? '??').slice(0, 2)}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-white">{selectedSubscription.asset_name}</h3>
-                      <Badge className="bg-primary/20 text-primary border-primary/30">
-                        {selectedSubscription.apy}% APY
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-white/50 mb-1">{t('portfolio.investedAmount')}</p>
-                      <p className="text-primary font-semibold text-lg">
-                        ${selectedSubscription.amount.toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-white/50 mb-1">{t('portfolio.expectedReturnLabel')}</p>
-                      <p className="text-green-400 font-semibold text-lg">
-                        +${selectedSubscription.expected_interest.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Lock Progress */}
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-white/50">{t('portfolio.lockProgress')}</span>
-                    <span className="text-white">
-                      {selectedSubscription.days_remaining > 0 
-                        ? t('portfolio.daysRemaining', { days: selectedSubscription.days_remaining })
-                        : t('portfolio.matured')}
-                    </span>
-                  </div>
-                  <Progress 
-                    value={Math.max(0, 100 - (selectedSubscription.days_remaining / (selectedSubscription.lock_period * 30)) * 100)} 
-                    className="h-2"
-                  />
-                  <div className="flex justify-between text-xs text-white/40 mt-2">
-                    <span>{selectedSubscription.start_date}</span>
-                    <span>{selectedSubscription.end_date}</span>
-                  </div>
-                </div>
-
-                {/* Status */}
-                <div className="flex justify-center">
-                  <Badge
+                <div className="flex items-center bg-white/5 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('cards')}
                     className={cn(
-                      'text-sm px-4 py-1',
-                      selectedSubscription.status === 'active'
-                        ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                        : selectedSubscription.status === 'matured'
-                        ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                        : 'bg-white/10 text-white/50 border-white/20'
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                      viewMode === 'cards' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'
                     )}
                   >
-                    {selectedSubscription.status.charAt(0).toUpperCase() + selectedSubscription.status.slice(1)}
-                  </Badge>
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                    Cards
+                  </button>
+                  <button
+                    onClick={() => setViewMode('table')}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                      viewMode === 'table' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'
+                    )}
+                  >
+                    <Table2 className="h-3.5 w-3.5" />
+                    Table
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
 
-            <DialogFooter className="gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setDetailModalOpen(false)}
-                className="border-white/10 text-white/70 hover:text-white hover:bg-white/5"
-              >
-                {t('common.close')}
-              </Button>
-              {selectedSubscription?.is_matured && selectedSubscription?.status !== 'redeemed' && (
-                <Button className="bg-primary hover:bg-primary-dark text-bg-dark">
-                  {t('portfolio.redeemNow')}
-                </Button>
-              )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            {isLoading ? (
+              viewMode === 'cards' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-80 bg-white/5 rounded-xl" />)}
+                </div>
+              ) : (
+                <Skeleton className="h-64 bg-white/5 rounded-xl" />
+              )
+            ) : subs.length > 0 ? (
+              <AnimatePresence mode="wait">
+                {viewMode === 'cards' ? (
+                  <motion.div
+                    key="cards"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+                  >
+                    {subs.map((sub, index) => (
+                      <InvestmentCard 
+                        key={sub.id} 
+                        name={sub.asset_name}
+                        symbol={sub.asset_symbol}
+                        status={sub.status}
+                        apy={sub.apy}
+                        invested={sub.amount}
+                        expectedReturn={sub.expected_interest}
+                        progress={Math.max(0, 100 - (sub.days_remaining / (sub.lock_period * 30)) * 100)}
+                        daysLeft={sub.days_remaining}
+                        lockPeriod={sub.lock_period}
+                        totalAtMaturity={sub.total_return}
+                        onViewDetail={() => handleViewDetail(sub)}
+                        index={index}
+                      />
+                    ))}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="table"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="bg-white/[0.02] rounded-2xl border border-white/[0.06] p-6"
+                  >
+                    <DataTable columns={subscriptionColumns} data={subs} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            ) : (
+              <EmptyState message="No investments yet" icon={<PieChart className="h-12 w-12 text-white/20" />} />
+            )}
+          </div>
+        </motion.section>
+
+        {/* Recent Transactions */}
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.4 }}
+        >
+          <div className="bg-gradient-to-br from-white/[0.04] to-transparent rounded-2xl border border-white/[0.06] p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-white/5 flex items-center justify-center">
+                  <History className="w-3 h-3 text-gray-400" />
+                </div>
+                <h2 className="text-lg font-bold text-white">Recent Transactions</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                {!isConnected && (
+                  <span className="text-xs text-gray-500 px-2 py-1 rounded-full bg-white/5 flex items-center gap-1">
+                    <Info className="h-3 w-3" /> Connect wallet to view
+                  </span>
+                )}
+                <button className="text-gray-400 hover:text-white text-xs flex items-center gap-1.5 transition-colors">
+                  <Download className="h-3.5 w-3.5" />
+                  Export
+                </button>
+              </div>
+            </div>
+
+            {isConnected && isLoadingSubscriptions ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 bg-white/5 rounded-xl" />)}
+              </div>
+            ) : txs.length > 0 ? (
+              <div className="bg-white/[0.02] rounded-xl border border-white/[0.04] px-4">
+                {txs.slice(0, 5).map((tx, index) => (
+                  <TransactionItem key={tx.id} tx={tx} index={index} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState message="No transactions yet" icon={<History className="h-12 w-12 text-white/20" />} />
+            )}
+          </div>
+        </motion.section>
+      </>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0a0b14] pt-24 pb-16 px-4 sm:px-6 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[150px]" />
+        <div className="absolute top-1/3 right-0 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 left-1/3 w-[500px] h-[500px] bg-amber-500/5 rounded-full blur-[100px]" />
       </div>
-    </RequireWallet>
+      
+      <div className="max-w-6xl mx-auto relative z-10">
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.6 }}
+          className="mb-10"
+        >
+          <span className="text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase mb-2 block">Portfolio</span>
+          <h1 className="text-4xl font-bold text-white mb-2">Investment Portfolio</h1>
+          <p className="text-gray-500 text-sm">Track your RWA investments and monitor performance</p>
+        </motion.div>
+
+        {/* Connect Wallet Banner */}
+        {!isConnected && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-10 p-5 rounded-xl bg-white/[0.02] border border-white/[0.06]"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Wallet className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-white font-medium">Connect Your Wallet</h3>
+                  <p className="text-gray-500 text-sm">View your actual portfolio and manage investments</p>
+                </div>
+              </div>
+              <Button className="bg-blue-500 hover:bg-blue-500/90 text-white">
+                Connect Wallet
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Content */}
+        {isConnected ? <RequireWallet>{renderContent()}</RequireWallet> : renderContent()}
+      </div>
+
+      {/* Detail Modal */}
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="bg-[#0f1119] border-white/[0.08] max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">Investment Details</DialogTitle>
+          </DialogHeader>
+          {selectedSubscription && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold">
+                  {(selectedSubscription.asset_symbol ?? selectedSubscription.asset_name ?? '??').slice(0, 2)}
+                </div>
+                <div>
+                  <div className="text-white font-semibold">{selectedSubscription.asset_name}</div>
+                  <div className="text-amber-400 text-sm">{selectedSubscription.apy}% APY</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/[0.03] rounded-lg p-3">
+                  <div className="text-gray-500 text-xs">Invested</div>
+                  <div className="text-white font-semibold">${selectedSubscription.amount.toLocaleString()}</div>
+                </div>
+                <div className="bg-white/[0.03] rounded-lg p-3">
+                  <div className="text-gray-500 text-xs">Expected Return</div>
+                  <div className="text-amber-400 font-semibold">+${selectedSubscription.expected_interest.toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDetailModalOpen(false)} className="text-gray-400 hover:text-white">Close</Button>
+            {selectedSubscription?.is_matured && selectedSubscription?.status !== 'redeemed' && (
+              <Button className="bg-amber-500 text-black hover:bg-amber-500/90">Redeem</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

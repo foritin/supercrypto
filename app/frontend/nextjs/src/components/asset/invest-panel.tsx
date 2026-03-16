@@ -1,11 +1,17 @@
 "use client";
 
-import { Wallet, TrendingUp, Clock, CheckCircle, PauseCircle, Flame } from "lucide-react";
+import { Wallet, TrendingUp, Clock, CheckCircle, PauseCircle, Flame, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Button } from "@/components/ui/button";
 import { ProgressEnhanced } from "@/components/ui/progress-enhanced";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { AssetDetail, AssetStatus } from "@/services/asset";
 
 import { CountdownTimer } from "./countdown-timer";
@@ -265,7 +271,7 @@ export function InvestPanel({
       </div>
 
       {/* 关键数据网格 */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-3 mb-4">
         <StatCard 
           label={t("assets.financials.expectedReturn")} 
           value={asset.apy_12m} 
@@ -277,6 +283,29 @@ export function InvestPanel({
           value={asset.current_price} 
           format="usd" 
         />
+      </div>
+
+      {/* T+1 起息提示 */}
+      <div className="mb-5 flex justify-center">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium cursor-help transition-colors hover:bg-blue-500/15">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{t("subscription:subscription.yield.tPlusOneBadge")}</span>
+                <Info className="h-3 w-3 opacity-60" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent 
+              side="bottom" 
+              className="max-w-[280px] bg-[#0B1426] border-white/10"
+            >
+              <p className="text-sm text-white/70">
+                {t("subscription:subscription.yield.tPlusOneTooltip")}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* 认购按钮 */}

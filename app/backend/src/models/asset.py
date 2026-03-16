@@ -8,7 +8,7 @@ from decimal import Decimal
 from tortoise import fields
 
 from src.models.base import AbstractModel, TimestampMixin
-from src.schemas.enums import AssetStatus, AssetType
+from src.schemas.enums import AssetStatus, AssetSubscriptionMode, AssetType
 
 
 class Asset(AbstractModel, TimestampMixin):
@@ -65,6 +65,14 @@ class Asset(AbstractModel, TimestampMixin):
     )
     apy_12m = fields.DecimalField(
         max_digits=10, decimal_places=4, default=0, description="12个月锁定期 APY (%)"
+    )
+
+    # 认购产品模式
+    subscription_mode = fields.CharEnumField(
+        AssetSubscriptionMode,
+        max_length=10,
+        default=AssetSubscriptionMode.BOTH,
+        description="认购模式: current/fixed/both",
     )
 
     # 合约绑定
@@ -263,7 +271,7 @@ class AssetContractBinding(AbstractModel, TimestampMixin):
     # 合约信息
     contract_name = fields.CharField(max_length=100, description="合约名称")
     contract_address = fields.CharField(
-        max_length=128, index=True, description="合约地址"
+        max_length=128, db_index=True, description="合约地址"
     )
     contract_type = fields.CharField(
         max_length=20, default="project", description="合约类型: common / project"

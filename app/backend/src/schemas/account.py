@@ -17,15 +17,18 @@ class AccountBase(BaseModel):
     address: str = Field(..., max_length=128, description="钱包地址")
     tag: Optional[str] = Field(None, max_length=255, description="标签")
     network: str = Field(
-        default="hardhat", description="网络类型: hardhat/sepolia/mainnet"
+        default="hardhat",
+        description="网络类型: hardhat/sepolia/mainnet/arbitrum/arbitrum-sepolia",
     )
 
     @field_validator("network")
     @classmethod
     def validate_network(cls, v: str) -> str:
         """验证网络类型"""
-        if v not in ["hardhat", "sepolia", "mainnet"]:
-            raise ValueError("network必须是: hardhat, sepolia, mainnet 之一")
+        if v not in ["hardhat", "sepolia", "mainnet", "arbitrum", "arbitrum-sepolia"]:
+            raise ValueError(
+                "network必须是: hardhat, sepolia, mainnet, arbitrum, arbitrum-sepolia 之一"
+            )
         return v
 
     @field_validator("address")
@@ -72,8 +75,16 @@ class AccountUpdate(BaseModel):
     @classmethod
     def validate_network(cls, v: Optional[str]) -> Optional[str]:
         """验证网络类型"""
-        if v is not None and v not in ["hardhat", "sepolia", "mainnet"]:
-            raise ValueError("network必须是: hardhat, sepolia, mainnet 之一")
+        if v is not None and v not in [
+            "hardhat",
+            "sepolia",
+            "mainnet",
+            "arbitrum",
+            "arbitrum-sepolia",
+        ]:
+            raise ValueError(
+                "network必须是: hardhat, sepolia, mainnet, arbitrum, arbitrum-sepolia 之一"
+            )
         return v
 
     model_config = ConfigDict(

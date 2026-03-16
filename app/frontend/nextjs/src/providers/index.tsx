@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
 
+import { AuthReloginDialog } from "@/components/auth/auth-relogin-dialog";
 import { GodModeIndicator } from "@/components/dev/god-mode-indicator";
 
 import { AppReadyProvider } from "./app-ready-provider";
@@ -20,6 +21,8 @@ export function Providers({ children }: { children: ReactNode }) {
           <AppReadyProvider>{children}</AppReadyProvider>
           {/* GOD_MODE 指示器 - 仅在开发环境且启用时显示 */}
           <GodModeIndicator />
+          {/* 认证失效确认弹窗 - 终态 401 时要求用户确认后重新登录 */}
+          <AuthReloginDialog />
           {/* Sonner Toaster - Web3 主题配置 */}
           <Toaster
             position="top-right"

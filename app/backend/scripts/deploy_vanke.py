@@ -54,6 +54,7 @@ def main():
 
     deployer = get_deployer(network)
     deployed = get_global_and_project_deployed(chain_id, net_enum, project_config.name)
+    deployed_instances = {}
 
     # 部署项目合约
     for config in project_config.contracts:
@@ -70,6 +71,7 @@ def main():
         )
 
         deployed[config.name] = address
+        deployed_instances[config.name] = contract
 
         # 记录依赖关系到数据库
         db_contract = get_deployed_contract(
@@ -85,6 +87,23 @@ def main():
                 chain_id=chain_id,
                 network=net_enum,
             )
+
+    # 部署后自动授权: Subscription 需要 RWA Token 的 mint 权限
+    rwa_contract = deployed_instances.get("VankeRWAToken")
+    subscription_address = deployed.get("VankeSubscription")
+    if rwa_contract and subscription_address:
+        try:
+            current = rwa_contract.minters(subscription_address)
+            if not current:
+                print("\n🔐 授权 VankeSubscription 为 RWA minter...")
+                tx = rwa_contract.admin_set_minter(
+                    subscription_address, True, sender=deployer
+                )
+                print(f"   ✅ 已授权 (tx: {tx.txn_hash})")
+            else:
+                print("\n🔐 RWA minter 权限已存在，跳过")
+        except Exception as exc:
+            print(f"\n⚠️ 自动授权 minter 失败，请手动执行 admin_set_minter: {exc}")
 
     # 显示摘要
     print(f"\n{'=' * 60}")

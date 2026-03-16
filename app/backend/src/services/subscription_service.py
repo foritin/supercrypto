@@ -28,6 +28,7 @@ from src.models.asset import Asset
 from src.models.contracts.contract_deployment import ContractDeployment
 from src.models.subscription import Subscription
 from src.schemas.enums import ChainID, ContractStatus, SubscriptionStatus
+from src.schemas.enums.asset import AssetSubscriptionMode
 from src.schemas.subscription import (
     SubscriptionConfirmRequest,
     SubscriptionCreateRequest,
@@ -107,6 +108,8 @@ class SubscriptionService:
         asset = await Asset.filter(id=data.asset_id, environment=self.network).first()
         if not asset:
             raise BusinessException(code=404, message="Asset not found")
+
+        self._validate_lock_period_for_asset_mode(asset, data.lock_period)
 
         now = datetime.now(timezone.utc)
         if asset.subscription_start_at and now < asset.subscription_start_at:
@@ -277,6 +280,8 @@ class SubscriptionService:
                 code=400, message="Asset is not available for subscription"
             )
 
+        self._validate_lock_period_for_asset_mode(asset, data.lock_period)
+
         # 检查最小认购金额
         if data.amount < asset.min_subscription:
             raise BusinessException(
@@ -434,6 +439,8 @@ class SubscriptionService:
             raise BusinessException(
                 code=400, message="Asset is not available for subscription"
             )
+
+        self._validate_lock_period_for_asset_mode(asset, data.lock_period)
 
         # 检查剩余额度
         if data.amount > asset.remaining_amount:
@@ -687,6 +694,24 @@ class SubscriptionService:
                 asset.apy_flexible
                 if hasattr(asset, "apy_flexible")
                 else asset.apy_3m * Decimal("0.6")
+            )
+
+    def _validate_lock_period_for_asset_mode(
+        self, asset: Asset, lock_period: int
+    ) -> None:
+        """根据资产认购模式校验锁定期参数"""
+        mode = getattr(asset, "subscription_mode", AssetSubscriptionMode.BOTH)
+
+        if mode == AssetSubscriptionMode.CURRENT and lock_period != 0:
+            raise BusinessException(
+                code=400,
+                message="This asset only supports current product (lock_period must be 0)",
+            )
+
+        if mode == AssetSubscriptionMode.FIXED and lock_period == 0:
+            raise BusinessException(
+                code=400,
+                message="This asset only supports fixed-term product (lock_period must be 3/6/12)",
             )
 
     async def _to_response(self, subscription: Subscription) -> SubscriptionResponse:

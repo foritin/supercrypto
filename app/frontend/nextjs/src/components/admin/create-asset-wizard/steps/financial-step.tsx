@@ -27,6 +27,13 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -67,6 +74,7 @@ const GOD_MODE_FINANCIAL_DATA = {
   total_supply: 10000000,
   min_subscription: 500,
   current_price: 1.00,
+  subscription_mode: 'both' as const,
   apy_3m: 6,
   apy_6m: 8,
   apy_12m: 10,
@@ -94,6 +102,7 @@ export const createFinancialSchema = (t: (key: string) => string) => z.object({
   current_price: z
     .number()
     .positive(t('admin.assets.wizard.validation.pricePositive')),
+  subscription_mode: z.enum(['current', 'fixed', 'both']),
   apy_3m: z
     .number()
     .min(0, t('admin.assets.wizard.validation.apyNonNegative'))
@@ -296,6 +305,7 @@ export function FinancialStep({ onNext, onPrev }: StepComponentProps) {
       total_supply: state.formData.total_supply ?? 0,
       min_subscription: state.formData.min_subscription ?? 100,
       current_price: state.formData.current_price ?? 1,
+      subscription_mode: state.formData.subscription_mode ?? 'both',
       apy_3m: state.formData.apy_3m ?? 10,
       apy_6m: state.formData.apy_6m ?? 12,
       apy_12m: state.formData.apy_12m ?? 15,
@@ -322,6 +332,7 @@ export function FinancialStep({ onNext, onPrev }: StepComponentProps) {
         total_supply: values.total_supply ?? 0,
         min_subscription: values.min_subscription ?? 100,
         current_price: values.current_price ?? 1,
+        subscription_mode: values.subscription_mode ?? 'both',
         apy_3m: values.apy_3m ?? 10,
         apy_6m: values.apy_6m ?? 12,
         apy_12m: values.apy_12m ?? 15,
@@ -340,6 +351,7 @@ export function FinancialStep({ onNext, onPrev }: StepComponentProps) {
       total_supply: values.total_supply,
       min_subscription: values.min_subscription,
       current_price: values.current_price,
+      subscription_mode: values.subscription_mode,
       apy_3m: values.apy_3m,
       apy_6m: values.apy_6m,
       apy_12m: values.apy_12m,
@@ -417,7 +429,7 @@ export function FinancialStep({ onNext, onPrev }: StepComponentProps) {
           />
         </div>
 
-        {/* 第二行: 当前价格 - 移动端单列，桌面端双列 */}
+        {/* 第二行: 当前价格 + 认购模式 - 移动端单列，桌面端双列 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           {/* 当前价格 */}
           <FormField
@@ -442,6 +454,33 @@ export function FinancialStep({ onNext, onPrev }: StepComponentProps) {
                   />
                 </FormControl>
                 <FormMessage id="current-price-error" className="text-destructive" />
+              </FormItem>
+            )}
+          />
+
+          {/* 认购模式 */}
+          <FormField
+            control={form.control}
+            name="subscription_mode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center">
+                  {t('admin.assets.form.subscriptionMode')}
+                  <RequiredMark />
+                </FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('admin.assets.form.subscriptionModePlaceholder')} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="both">{t('admin.assets.form.subscriptionModeBoth')}</SelectItem>
+                    <SelectItem value="current">{t('admin.assets.form.subscriptionModeCurrent')}</SelectItem>
+                    <SelectItem value="fixed">{t('admin.assets.form.subscriptionModeFixed')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
               </FormItem>
             )}
           />

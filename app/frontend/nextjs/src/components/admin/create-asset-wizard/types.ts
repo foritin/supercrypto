@@ -5,7 +5,7 @@
  * @validates Requirements 1, 7
  */
 
-import type { AssetType, FrameStyle, ProjectContractInfo } from '@/services/asset'
+import type { AssetSubscriptionMode, AssetType, FrameStyle, ProjectContractInfo } from '@/services/asset'
 
 // ============ 步骤配置 ============
 
@@ -61,6 +61,7 @@ export interface CreateAssetFormData {
   total_supply: number
   min_subscription: number
   current_price: number
+  subscription_mode: AssetSubscriptionMode
   apy_3m: number
   apy_6m: number
   apy_12m: number
@@ -90,6 +91,7 @@ export const DEFAULT_FORM_DATA: CreateAssetFormData = {
   total_supply: 0,
   min_subscription: 100,
   current_price: 1,
+  subscription_mode: 'both',
   apy_3m: 10,
   apy_6m: 12,
   apy_12m: 15,

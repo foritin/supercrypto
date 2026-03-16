@@ -147,6 +147,96 @@ const subscription = {
     broadcastingTx: "广播交易中...",
     monitoringBlockchain: "监控区块链...",
     waitingBackend: "等待后端确认...",
+
+    // 网络状态
+    networkUnknown: "未知",
+    networkConnected: "已连接",
+    networkWrong: "网络不匹配",
+
+    // 活期模式提示
+    currentModeTotalReturnHint: "实时收益，不展示到期总额",
+
+    // 弹窗文案（v2）
+    minimumAmountIs: "最低金额为 ${{amount}}",
+    insufficientBalanceMax: "余额不足。最大可投：${{amount}}",
+    configureInvestmentTitle: "配置投资",
+    reviewInvestmentTitle: "确认投资",
+    investmentSuccessfulTitle: "投资成功！",
+    transactionFailedTitle: "交易失败",
+    processingTransactionTitle: "交易处理中",
+    configureInvestmentDesc: "请在下方设置您的投资参数",
+    reviewInvestmentDesc: "请在确认前核对所有信息",
+    investmentSuccessOnchainDesc: "您的投资已在链上确认",
+    processingTransactionDesc: "请稍候，我们正在安全处理您的交易",
+    riskSuffix: "风险",
+    investmentAmount: "投资金额",
+    amountPlaceholder: "0.00",
+    currentFlexible: "活期（灵活）",
+    monthLock: "{{months}} 个月锁定",
+    totalReturnAtMaturityDate: "到期总回报 • {{date}}",
+    investmentSummary: "投资摘要",
+    assetLabel: "资产",
+    fixedMonthsShort: "定期 {{months}}M",
+    flexibleWithdrawal: "灵活赎回",
+    lockedUntilMaturity: "锁定至到期",
+    annualYield: "年化收益",
+    totalReturnLabel: "总回报",
+    principalPlusInterest: "本金 + 利息",
+    fundsWillBeLocked: "资金将被锁定",
+    fixedLockWarning: "您的资金将锁定至 {{date}}。提前赎回可能产生 2% 罚金。",
+    maturityDateLabel: "到期日",
+    network: "网络",
+    copy: "复制",
+    close: "关闭",
+    viewPortfolio: "查看投资组合",
+    loading: "加载中...",
+    reviewInvestmentButton: "确认投资",
+    expectedReturns: "预期回报",
+    estimatedNetworkFee: "预计网络费",
+    estimatedNetworkFeeIncludesApproval: "包含授权 + 认购两笔交易",
+    estimatedNetworkFeeSubscribeOnly: "仅认购交易",
+
+    // 产品选择补充
+    withdrawAnytime: "随时提取",
+    noLockupPeriod: "无锁定期",
+    lowerStableReturns: "收益较低但更稳定",
+    higherApyRewards: "更高 APY 回报",
+    fixedMonthOptions: "支持 3/6/12 个月",
+    earlyWithdrawalFeesApply: "提前赎回可能产生费用",
+    upToApy: "最高 {{value}}% APY",
+    best: "最佳",
+    productSelectorLockWarning: "资金将锁定 {{months}} 个月。提前赎回可能产生 2% 罚金。",
+    productSelectorCurrentInfo: "可随时提取且无罚金。当前 APY：{{value}}%",
+
+    // 进度与错误面板补充
+    view: "查看",
+    block: "区块",
+    errorDetails: "错误详情",
+    errorNetworkMismatchDescWithNetworks: "请切换到 {{required}} 以完成此交易。您当前连接的是 {{current}}。",
+    chainWithId: "链 {{id}}",
+
+    // T+1 起息规则
+    yield: {
+      tPlusOneBadge: "T+1 起息",
+      tPlusOneTooltip: "认购满24小时后开始计算收益。计息时间基于 UTC 时间。",
+      yieldStartTime: "计息开始时间",
+      yieldStartsAtUtc: "将于 UTC 时间开始计息",
+      yieldStartsAtDesc: "您的认购将于 {{time}} UTC 开始计算收益",
+      yieldStarted: "已开始计息",
+      pending: "待计息",
+      holdingTimeHours: "已持有 {{hours}} 小时 (UTC)",
+      holdingTimeDays: "已持有 {{days}} 天 {{hours}} 小时 (UTC)",
+      timeRemaining: "约 {{hours}} 小时后开始计息",
+      notYetAccruedTitle: "将于 UTC 时间开始计息",
+      notYetAccruedDesc: "您的认购将于 {{time}} UTC 开始计算收益，当前暂无可赎回收益。",
+      currentYield: "当前收益",
+    },
+
+    // 时间相关
+    time: {
+      utcSuffix: "UTC",
+      format: "YYYY-MM-DD HH:mm",
+    },
   },
 }
 

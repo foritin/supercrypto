@@ -14,7 +14,7 @@ import axios from 'axios'
 
 import { API_BASE_URL } from '@/constants/api'
 import { refreshAccessToken } from '@/services/auth'
-import { getJwtToken, clearAuthData } from '@/utils/auth'
+import { getJwtToken } from '@/utils/auth'
 
 
 /**
@@ -63,22 +63,15 @@ function onTokenRefreshed(token: string): void {
 }
 
 /**
- * Handle logout - clear auth data and notify UI
+ * Request re-authentication confirmation from UI.
+ * UI will show a modal and logout only after user confirms.
  */
-function handleLogout(message?: string): void {
-  clearAuthData()
-  
-  if (typeof window !== 'undefined') {
-    // Dispatch event for React components
-    window.dispatchEvent(new CustomEvent('auth:logout', { 
-      detail: { message: message || '登录已过期，请重新连接钱包' } 
-    }))
-    
-    // Redirect to home
-    if (window.location.pathname !== '/') {
-      window.location.href = '/'
-    }
-  }
+function requestReauth(message?: string): void {
+  if (typeof window === 'undefined') return
+
+  window.dispatchEvent(new CustomEvent('auth:reauth-required', {
+    detail: { message: message || '登录已过期，请重新连接钱包' }
+  }))
 }
 
 /**
@@ -86,6 +79,12 @@ function handleLogout(message?: string): void {
  */
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    if (config.data instanceof FormData) {
+      const headers = config.headers as Record<string, unknown>
+      delete headers['Content-Type']
+      delete headers['content-type']
+    }
+
     if (typeof window !== 'undefined') {
       const token = getJwtToken()
       if (token) {
@@ -115,6 +114,7 @@ axiosInstance.interceptors.response.use(
   },
   async (error: AxiosError<API.Response<unknown>>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+    const tokenStatus = String(error.response?.headers?.['x-token-status'] || '').toLowerCase()
     
     // 401 Unauthorized - try refresh token
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
@@ -124,7 +124,6 @@ axiosInstance.interceptors.response.use(
                              originalRequest.url?.includes('/public/auth/logout')
       
       if (isAuthEndpoint) {
-        handleLogout('认证失败，请重新连接钱包')
         return Promise.reject(new ApiError(401, '认证失败'))
       }
       
@@ -143,13 +142,13 @@ axiosInstance.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${tokenData.accessToken}`
             return axiosInstance(originalRequest)
           } else {
-            // Refresh 失败，退出登录
-            handleLogout('登录已过期，请重新连接钱包')
+            // Refresh 失败，请求用户确认重新登录
+            requestReauth('登录已过期，请重新连接钱包')
             return Promise.reject(new ApiError(401, '登录已过期'))
           }
         } catch {
           isRefreshing = false
-          handleLogout('登录已过期，请重新连接钱包')
+          requestReauth('登录已过期，请重新连接钱包')
           return Promise.reject(new ApiError(401, '登录已过期'))
         }
       } else {
@@ -174,8 +173,25 @@ axiosInstance.interceptors.response.use(
     if (dataObjAny?.msg && (
         String(dataObjAny.msg).includes('Session revoked') ||
         String(dataObjAny.msg).includes('session_revoked'))) {
-      handleLogout('您已被管理员强制下线')
+      requestReauth('您已被管理员强制下线，请重新连接钱包')
       return Promise.reject(new ApiError(401, '会话已被撤销'))
+    }
+
+    // 终态 401（刷新后仍失败 / 会话版本不匹配 / 会话不存在）
+    if (error.response?.status === 401) {
+      const isTerminal401 =
+        !!originalRequest?._retry ||
+        tokenStatus === 'refresh_expired' ||
+        tokenStatus === 'session_not_found' ||
+        tokenStatus === 'version_mismatch'
+
+      if (isTerminal401) {
+        if (tokenStatus === 'session_not_found' || tokenStatus === 'version_mismatch') {
+          requestReauth('会话已失效，请重新连接钱包')
+        } else {
+          requestReauth('登录已过期，请重新连接钱包')
+        }
+      }
     }
     
     // 其他错误
@@ -206,12 +222,6 @@ export function get<T>(endpoint: string, params?: Record<string, unknown>): Prom
  * POST request
  */
 export function post<T>(endpoint: string, body?: unknown): Promise<T> {
-  // 如果是 FormData，删除默认的 Content-Type，让浏览器自动设置 (包含 boundary)
-  if (body instanceof FormData) {
-    return axiosInstance.post(endpoint, body, {
-      headers: {}
-    }) as Promise<T>
-  }
   return axiosInstance.post(endpoint, body) as Promise<T>
 }
 

@@ -32,6 +32,7 @@ from src.models.asset import (
     AssetContractBinding,
     AssetPriceHistory,
     AssetStatus,
+    AssetSubscriptionMode,
     AssetType,
 )
 from src.models.contracts.contract_deployment import ContractDeployment
@@ -91,6 +92,7 @@ class AssetService:
         self,
         status: Optional[AssetStatus] = None,
         asset_type: Optional[AssetType] = None,
+        subscription_mode: Optional[AssetSubscriptionMode] = None,
         page: int = 1,
         page_size: int = 10,
         public_only: bool = False,
@@ -121,6 +123,8 @@ class AssetService:
             query = query.filter(status=status)
         if asset_type:
             query = query.filter(asset_type=asset_type)
+        if subscription_mode:
+            query = query.filter(subscription_mode=subscription_mode)
 
         # 可见性过滤：只返回满足条件的资产
         if public_only:
@@ -263,6 +267,7 @@ class AssetService:
             symbol=data.symbol.upper(),
             description=data.description,
             asset_type=data.asset_type,
+            subscription_mode=data.subscription_mode,
             image_url=data.image_url,
             document_url=data.document_url,
             location=data.location,
@@ -593,6 +598,7 @@ class AssetService:
             name=asset.name,
             symbol=asset.symbol,
             asset_type=asset.asset_type,
+            subscription_mode=asset.subscription_mode,
             image_url=asset.image_url,
             cover_image_url=cover_image_url,
             logo_url=logo_url,
@@ -634,6 +640,20 @@ class AssetService:
             if bindings
             else None
         )
+
+        primary_contract_address = next(
+            (b.contract_address for b in bindings if b.is_primary),
+            asset.contract_address,
+        )
+        chain_id: int | None = None
+        if primary_contract_address:
+            deployment = await ContractDeployment.filter(
+                address=primary_contract_address,
+                network=self.network,
+                status=ContractStatus.ACTIVE,
+            ).first()
+            if deployment:
+                chain_id = int(deployment.chain_id)
 
         # 可见性信息
         is_visible = None
@@ -700,10 +720,12 @@ class AssetService:
 
         return AssetDetailResponse(
             id=asset.id,
+            chain_id=chain_id,
             name=asset.name,
             symbol=asset.symbol,
             description=asset.description,
             asset_type=asset.asset_type,
+            subscription_mode=asset.subscription_mode,
             image_url=asset.image_url,
             document_url=asset.document_url,
             location=asset.location,

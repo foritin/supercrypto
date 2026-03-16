@@ -32,17 +32,17 @@ class TransactionAudit(AbstractModel, TimestampMixin):
 
     # === 交易基本信息 ===
     tx_hash = fields.CharField(
-        max_length=128, unique=True, index=True, description="交易哈希"
+        max_length=128, unique=True, db_index=True, description="交易哈希"
     )
-    chain_id = fields.IntField(index=True, description="链ID")
-    network = fields.CharField(max_length=32, index=True, description="网络名称")
+    chain_id = fields.IntField(db_index=True, description="链ID")
+    network = fields.CharField(max_length=32, db_index=True, description="网络名称")
 
     # === 地址信息 ===
     from_address = fields.CharField(
-        max_length=128, index=True, description="发送方地址"
+        max_length=128, db_index=True, description="发送方地址"
     )
     to_address = fields.CharField(
-        max_length=128, null=True, index=True, description="接收方地址"
+        max_length=128, null=True, db_index=True, description="接收方地址"
     )
     value = fields.CharField(
         max_length=78, default="0", description="交易金额(Wei字符串)"
@@ -50,19 +50,19 @@ class TransactionAudit(AbstractModel, TimestampMixin):
 
     # === 交易类型和状态 ===
     tx_type = fields.CharEnumField(
-        TransactionAuditType, max_length=32, index=True, description="交易类型"
+        TransactionAuditType, max_length=32, db_index=True, description="交易类型"
     )
     status = fields.CharEnumField(
         TransactionAuditStatus,
         max_length=20,
         default=TransactionAuditStatus.PENDING,
-        index=True,
+        db_index=True,
         description="交易状态",
     )
 
     # === Token 信息 (ERC20 转账) ===
     token_address = fields.CharField(
-        max_length=128, null=True, index=True, description="Token合约地址"
+        max_length=128, null=True, db_index=True, description="Token合约地址"
     )
     token_symbol = fields.CharField(max_length=32, null=True, description="Token符号")
     token_decimals = fields.IntField(null=True, description="Token精度")
@@ -87,14 +87,14 @@ class TransactionAudit(AbstractModel, TimestampMixin):
     gas_cost = fields.CharField(max_length=78, null=True, description="Gas费用(Wei)")
 
     # === 区块信息 ===
-    block_number = fields.BigIntField(null=True, index=True, description="区块高度")
+    block_number = fields.BigIntField(null=True, db_index=True, description="区块高度")
     block_timestamp = fields.DatetimeField(null=True, description="区块时间")
     nonce = fields.IntField(null=True, description="交易Nonce")
 
     # === 关联信息 ===
-    operator_id = fields.IntField(null=True, index=True, description="操作者账户ID")
+    operator_id = fields.IntField(null=True, db_index=True, description="操作者账户ID")
     related_audit_id = fields.IntField(
-        null=True, index=True, description="关联的AuditLog ID"
+        null=True, db_index=True, description="关联的AuditLog ID"
     )
 
     # === 其他 ===
@@ -109,7 +109,7 @@ class TransactionAudit(AbstractModel, TimestampMixin):
     environment = fields.CharField(
         max_length=32,
         default="hardhat",
-        index=True,
+        db_index=True,
         description="环境: hardhat/sepolia/mainnet",
     )
 

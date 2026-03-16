@@ -370,35 +370,19 @@ class StorageService:
         Returns:
             删除的文件数量
         """
-        import asyncio  # noqa: PLC0415
-
-        from minio.deleteobjects import DeleteObject  # noqa: PLC0415
-
         try:
             async with self._get_adapter() as minio:
-                objects_list = await asyncio.to_thread(
-                    lambda: list(
-                        minio.client.list_objects(
-                            bucket_name=self.bucket,
-                            prefix=prefix,
-                            recursive=False,
-                        )
-                    )
+                objects_list = await minio.list_objects(
+                    self.bucket,
+                    prefix=prefix,
+                    recursive=False,
                 )
 
-                delete_objects = [DeleteObject(obj.object_name) for obj in objects_list]
+                delete_objects = [obj.object_name for obj in objects_list]
                 if not delete_objects:
                     return 0
 
-                errors = await asyncio.to_thread(
-                    lambda: list(
-                        minio.client.remove_objects(self.bucket, delete_objects)
-                    )
-                )
-                deleted_count = len(delete_objects) - len(errors)
-
-                for error in errors:
-                    logger.warning(f"Failed to delete {error.name}: {error.message}")
+                deleted_count = await minio.remove_objects(self.bucket, delete_objects)
 
                 logger.info(f"Deleted {deleted_count} files with prefix '{prefix}'")
                 return deleted_count
@@ -460,13 +444,11 @@ class StorageService:
         Args:
             object_name: 对象名称/路径
         """
-        import asyncio  # noqa: PLC0415
+        object_name = self._strip_leading_slash(object_name)
 
         try:
             async with self._get_adapter() as minio:
-                await asyncio.to_thread(
-                    minio.client.stat_object, self.bucket, object_name
-                )
+                await minio.stat_object(self.bucket, object_name)
             return True
         except Exception:
             return False

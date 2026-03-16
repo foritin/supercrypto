@@ -119,22 +119,25 @@ export const contractService = {
 
 // Subscription 合约 ABI (关键函数 - 活期模式)
 // 注意: Vyper 合约使用 snake_case 命名，与 Solidity 的 camelCase 不同
+// [UPDATED T+1] calculate_interest 添加 startTime 参数用于满1天判断
 export const SUBSCRIPTION_ABI = [
   // 读取函数 (Vyper snake_case)
   "function min_investment() view returns (uint256)",
   "function max_investment() view returns (uint256)",
   "function require_accredited() view returns (bool)",
   "function paused() view returns (bool)",
+  "function ADDRESS_PROVIDER() view returns (address)",
   "function lock_period_apy(uint256 period) view returns (uint256)",
   "function subscriptionCount(address user) view returns (uint256)",
   "function get_subscription(address user, uint256 subscriptionId) view returns ((uint256 principal, uint256 lockPeriod, uint256 subscribeTime, uint256 redeemTime, uint256 apy, bool redeemed))",
-  "function calculate_interest(uint256 principal, uint256 lockPeriod, uint256 apy) view returns (uint256)",
+  "function calculate_interest(uint256 principal, uint256 lockPeriod, uint256 apy, uint256 startTime) view returns (uint256)",
   "function get_pending_reward(address user, uint256 subscriptionId) view returns (uint256)",
   "function get_lock_periods() view returns (uint256[4])",
 
   // 写入函数 (活期模式: lockPeriod 参数可选，默认0)
   "function subscribe(uint256 amount)",
   "function subscribe(uint256 amount, uint256 lockPeriod)",
+  "function subscribe(uint256 amount, uint256 lockPeriod, address paymentToken)",
   "function redeem(uint256 subscriptionId)",
 
   // 事件
@@ -346,6 +349,7 @@ export interface ResetDeployRequest {
 export interface PrepareRegisterRequest {
   contract_name: string;
   provider_key?: string;
+  external_address?: string;
 }
 
 // 准备注册响应

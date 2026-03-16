@@ -10,6 +10,7 @@ import { api } from '@/services/api'
 
 export type AssetStatus = 'active' | 'paused' | 'sold_out' | 'closed'
 export type AssetType = 'real_estate' | 'bond' | 'commodity' | 'equity' | 'other'
+export type AssetSubscriptionMode = 'current' | 'fixed' | 'both'
 export type FrameStyle = 'green' | 'blue' | 'gold' | 'purple' | 'gray'
 // MVP 媒体类型 - 与后端 MediaType 枚举同步
 export type MediaType = 'cover' | 'gallery' | 'valuation' | 'legal' | 'financial' | 'floor_plan' | 'video' | 'other' | 'logo'
@@ -80,6 +81,7 @@ export interface AssetListItem {
   name: string
   symbol: string
   asset_type: AssetType
+  subscription_mode: AssetSubscriptionMode
   image_url: string | null
   cover_image_url: string | null  // 封面图预签名 URL（从 AssetMedia 获取）
   logo_url: string | null  // Logo 预签名 URL（从 AssetMedia 获取）
@@ -118,6 +120,7 @@ export interface AssetDetail {
   symbol: string
   description: string | null
   asset_type: AssetType
+  subscription_mode: AssetSubscriptionMode
   image_url: string | null
   document_url: string | null
   location: string | null
@@ -169,6 +172,7 @@ export interface MediaStats {
 export interface AssetListQuery {
   status?: AssetStatus
   asset_type?: AssetType
+  subscription_mode?: AssetSubscriptionMode
   page?: number
   page_size?: number
 }
@@ -177,6 +181,7 @@ export interface AssetCreateRequest {
   symbol: string
   description?: string
   asset_type: AssetType
+  subscription_mode?: AssetSubscriptionMode
   image_url?: string
   document_url?: string
   location?: string
@@ -196,6 +201,7 @@ export interface AssetUpdateRequest {
   symbol?: string
   description?: string
   asset_type?: AssetType
+  subscription_mode?: AssetSubscriptionMode
   image_url?: string
   document_url?: string
   location?: string
@@ -218,6 +224,7 @@ export const assetService = {
     const params = new URLSearchParams()
     if (query.status) params.append('status', query.status)
     if (query.asset_type) params.append('asset_type', query.asset_type)
+    if (query.subscription_mode) params.append('subscription_mode', query.subscription_mode)
     if (query.page) params.append('page', query.page.toString())
     if (query.page_size) params.append('page_size', query.page_size.toString())
     const url = PUBLIC_PATHS.ASSETS + (params.toString() ? '?' + params.toString() : '')
@@ -263,6 +270,7 @@ export const assetService = {
     const params = new URLSearchParams()
     if (query.status) params.append('status', query.status)
     if (query.asset_type) params.append('asset_type', query.asset_type)
+    if (query.subscription_mode) params.append('subscription_mode', query.subscription_mode)
     if (query.page) params.append('page', query.page.toString())
     if (query.page_size) params.append('page_size', query.page_size.toString())
     const url = ADMIN_PATHS.ASSETS + (params.toString() ? '?' + params.toString() : '')

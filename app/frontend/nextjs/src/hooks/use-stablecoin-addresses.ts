@@ -6,6 +6,7 @@
  */
 import { useEffect } from 'react'
 
+import { pickPreferredAddressInfoStablecoin } from '@/lib/stablecoin-selector'
 import type { AddressInfo } from '@/services/platform-info'
 import { usePlatformInfoStore } from '@/stores/platform-info-store'
 
@@ -39,8 +40,9 @@ export function resolveStablecoinAddresses(
   }
 
   // 支持多种命名格式：MockUSDT/USDT 和 MockUSDC/USDC
-  const usdtItem = contracts.find((c) => c.name === 'MockUSDT' || c.name === 'USDT')
-  const usdcItem = contracts.find((c) => c.name === 'MockUSDC' || c.name === 'USDC')
+  // 优先级：active + global > active > global > others
+  const usdtItem = pickPreferredAddressInfoStablecoin(contracts, ['MockUSDT', 'USDT'])
+  const usdcItem = pickPreferredAddressInfoStablecoin(contracts, ['MockUSDC', 'USDC'])
 
   const addresses: StablecoinAddresses = {
     MockUSDT: usdtItem ? (usdtItem.address as `0x${string}`) : defaults.MockUSDT,

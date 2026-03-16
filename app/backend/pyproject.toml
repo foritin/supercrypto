@@ -15,7 +15,7 @@ dependencies = [
     "aerich>=0.9.2",
     "vyper>=0.4.0",
     "web3>=7.13.0",
-    "uvicorn>=0.38.0",
+    "uvicorn>=0.41.0",
     "pyjwt[crypto]>=2.10.1",
     "python-multipart>=0.0.20",
     "ape-hardhat>=0.8.5",
@@ -39,8 +39,8 @@ filterwarnings = [
     "ignore:`index` is deprecated:DeprecationWarning",
     # Mock 对象创建时产生的未等待协程警告 (测试 Mock 产物，非真实问题)
     "ignore:coroutine .* was never awaited:RuntimeWarning",
-    # websockets 库废弃 legacy 模块警告 (第三方依赖，非项目代码)
-    "ignore:websockets.legacy is deprecated:DeprecationWarning",
+    # tortoise ORM 已修复，保留用于其他第三方库
+    # "ignore:websockets.legacy is deprecated:DeprecationWarning",
     # PyJWT 开发环境密钥长度警告 (dev 配置密钥较短，非生产问题)
     "ignore:.*HMAC key.*below the minimum recommended length.*:jwt.warnings.InsecureKeyLengthWarning",
     # Starlette HTTP 状态码废弃警告 (第三方库内部，非项目代码)

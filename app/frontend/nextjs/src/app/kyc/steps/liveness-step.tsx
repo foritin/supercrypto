@@ -98,10 +98,17 @@ export function LivenessStep() {
   const progressIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const videoRef = React.useRef<HTMLVideoElement>(null);
+  const [videoElement, setVideoElement] = React.useState<HTMLVideoElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
+  const cameraRequestSeqRef = React.useRef(0);
   const detectorRef = React.useRef<unknown>(null);
   const detectionIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const setVideoRef = React.useCallback((node: HTMLVideoElement | null) => {
+    videoRef.current = node;
+    setVideoElement(node);
+  }, []);
 
   // 活体检测完成回调
   const handleLivenessComplete = React.useCallback(() => {
@@ -255,14 +262,42 @@ export function LivenessStep() {
 
   // 摄像头相关函数
   const requestCameraAccess = React.useCallback(async () => {
+    const requestSeq = ++cameraRequestSeqRef.current;
+
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraPermission('denied');
+        toast.error(t('kyc.liveness.cameraNotSupported'));
+        return;
+      }
+
+      // 防止残留流占用摄像头设备
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
       });
+
+      // 请求已过期（StrictMode 双挂载/快速切换场景），立即释放该流避免设备被占用
+      if (requestSeq !== cameraRequestSeqRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+
       streamRef.current = stream;
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => setCameraReady(true);
+        const video = videoRef.current;
+        video.onloadedmetadata = () => setCameraReady(true);
+        video.srcObject = stream;
+        try {
+          await video.play();
+          setCameraReady(true);
+        } catch (playError) {
+          console.warn('[LivenessStep] video.play() failed, waiting metadata event:', playError);
+        }
       }
       setCameraPermission('granted');
     } catch (err) {
@@ -273,6 +308,7 @@ export function LivenessStep() {
   }, [t]);
 
   const stopCamera = React.useCallback(() => {
+    cameraRequestSeqRef.current += 1;
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -403,6 +439,36 @@ export function LivenessStep() {
       requestCameraAccess();
     }
   }, [activeMode, requestCameraAccess]);
+
+  // 兜底：当 video 节点重建（StrictMode/HMR/模式切换）时，确保已存在的流重新绑定到当前节点
+  React.useEffect(() => {
+    if (activeMode === 'none') return;
+
+    const video = videoElement;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+
+    if (video.srcObject !== stream) {
+      video.srcObject = stream;
+    }
+
+    const ensurePlaying = async () => {
+      try {
+        await video.play();
+        setCameraReady(true);
+      } catch {
+        // 忽略自动播放失败，等待 metadata 事件
+      }
+    };
+
+    if (video.readyState >= 1) {
+      void ensurePlaying();
+    } else {
+      video.onloadedmetadata = () => {
+        void ensurePlaying();
+      };
+    }
+  }, [activeMode, videoElement]);
 
   // 清理
   React.useEffect(() => {
@@ -979,7 +1045,7 @@ export function LivenessStep() {
             <div className="space-y-4">
               <div className="relative rounded-2xl overflow-hidden bg-black">
                 <video 
-                  ref={videoRef} 
+                  ref={setVideoRef} 
                   autoPlay 
                   playsInline 
                   muted 
@@ -1033,7 +1099,7 @@ export function LivenessStep() {
             <div className="space-y-4">
               <div className="relative rounded-2xl overflow-hidden bg-black">
                 <video 
-                  ref={videoRef} 
+                  ref={setVideoRef} 
                   autoPlay 
                   playsInline 
                   muted 
@@ -1117,7 +1183,7 @@ export function LivenessStep() {
 
               <div className="relative rounded-2xl overflow-hidden bg-black">
                 <video 
-                  ref={videoRef} 
+                  ref={setVideoRef} 
                   autoPlay 
                   playsInline 
                   muted 

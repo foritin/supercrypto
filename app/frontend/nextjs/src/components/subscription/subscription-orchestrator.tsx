@@ -20,7 +20,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAccount, useChainId } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 
+import { AUTH_PATHS } from "@/constants/api-paths";
 import { useSubscriptionContract, useTokenBalance } from "@/hooks";
 import { notification } from "@/lib/notification";
 import { api } from "@/services/api";
@@ -76,17 +78,27 @@ export interface UseSubscriptionOrchestratorReturn {
   // Data
   preview: SubscriptionPreviewResponse | null;
   isPreviewLoading: boolean;
+  estimatedNetworkFeeEth: string | null;
+  estimatedFeeIncludesApproval: boolean;
+  isEstimatingNetworkFee: boolean;
   
   // Actions
   initSubscription: (params: SubscriptionParams) => Promise<boolean>;
   retry: () => Promise<boolean>;
   reset: () => void;
   refreshPreview: (amount: number, tokenType: TokenType, lockPeriod: LockPeriod) => Promise<void>;
+  estimateNetworkFee: (amount: number, tokenType: TokenType, lockPeriod: LockPeriod) => Promise<void>;
   
   // Contract Data
   tokenBalance: string;
   tokenBalanceRaw: bigint;
   isBalanceLoading: boolean;
+  usdtBalance: string;
+  usdtBalanceRaw: bigint;
+  usdtLoading: boolean;
+  usdcBalance: string;
+  usdcBalanceRaw: bigint;
+  usdcLoading: boolean;
   allowance: number;
   needsApproval: boolean;
   approveToken: (amount: number) => Promise<boolean>;
@@ -107,8 +119,8 @@ export interface SubscriptionParams {
 const MAX_RETRIES = 3;
 const RECEIPT_TIMEOUT = 120000; // 2 minutes
 
-interface KycStatusApiResponse {
-  data?: { status?: string };
+interface CurrentUserApiResponse {
+  object_data?: { kyc_status?: string | null };
 }
 
 interface MonitoredReceipt {
@@ -150,6 +162,7 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
   const { t } = useTranslation();
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
+  const queryClient = useQueryClient();
   
   // Contract hooks
   const {
@@ -159,6 +172,7 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
     approveUSDT,
     approveUSDC,
     subscribe,
+    estimateNetworkFee: estimateContractNetworkFee,
     reset: resetContract,
   } = useSubscriptionContract();
   
@@ -180,6 +194,9 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
   const [context, setContext] = useState<TransactionContext>({ retryCount: 0 });
   const [preview, setPreview] = useState<SubscriptionPreviewResponse | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [estimatedNetworkFeeEth, setEstimatedNetworkFeeEth] = useState<string | null>(null);
+  const [estimatedFeeIncludesApproval, setEstimatedFeeIncludesApproval] = useState(false);
+  const [isEstimatingNetworkFee, setIsEstimatingNetworkFee] = useState(false);
   
   // Refs for managing async operations
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -246,6 +263,32 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
       setIsPreviewLoading(false);
     }
   }, []);
+
+  const estimateNetworkFee = useCallback(async (
+    amount: number,
+    tokenType: TokenType,
+    lockPeriod: LockPeriod
+  ) => {
+    if (!amount || amount <= 0) {
+      setEstimatedNetworkFeeEth(null);
+      setEstimatedFeeIncludesApproval(false);
+      return;
+    }
+
+    setIsEstimatingNetworkFee(true);
+    try {
+      const estimate = await estimateContractNetworkFee(amount, lockPeriod, tokenType);
+      if (estimate) {
+        setEstimatedNetworkFeeEth(estimate.totalEth);
+        setEstimatedFeeIncludesApproval(estimate.includesApproval);
+      } else {
+        setEstimatedNetworkFeeEth(null);
+        setEstimatedFeeIncludesApproval(false);
+      }
+    } finally {
+      setIsEstimatingNetworkFee(false);
+    }
+  }, [estimateContractNetworkFee]);
   
   // Validate prerequisites
   const validatePrerequisites = useCallback(async (
@@ -264,8 +307,8 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
     
     // Check KYC status via API
     try {
-      const response = (await api.get("/v1/user/kyc/status")) as KycStatusApiResponse;
-      if (response.data?.status !== "approved") {
+      const response = (await api.get(AUTH_PATHS.ME)) as CurrentUserApiResponse;
+      if (response.object_data?.kyc_status !== "approved") {
         return { valid: false, reason: "kyc_rejected" };
       }
     } catch (error: unknown) {
@@ -425,7 +468,7 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
       
       // Step 4: Submit transaction
       setTxState("awaiting_signature");
-      const txResult = await subscribe(params.amount, params.lockPeriod);
+      const txResult = await subscribe(params.amount, params.lockPeriod, params.tokenType);
       
       if (!txResult) {
         setFailureReason("user_rejected");
@@ -483,6 +526,11 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
       setContext(prev => ({ ...prev, backendConfirmed: true }));
       setTxState("completed");
       notification.success(t("subscription.successTitle"));
+      
+      // 刷新认购数据缓存
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['userStats'] });
+      
       return true;
       
     } catch (error: unknown) {
@@ -532,6 +580,8 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
     setFailureReason(null);
     setContext({ retryCount: 0 });
     setPreview(null);
+    setEstimatedNetworkFeeEth(null);
+    setEstimatedFeeIncludesApproval(false);
     currentParamsRef.current = null;
     abortControllerRef.current?.abort();
     if (monitoringIntervalRef.current) {
@@ -558,13 +608,23 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
     progress: STATE_PROGRESS[txState],
     preview,
     isPreviewLoading,
+    estimatedNetworkFeeEth,
+    estimatedFeeIncludesApproval,
+    isEstimatingNetworkFee,
     initSubscription,
     retry,
     reset,
     refreshPreview,
+    estimateNetworkFee,
     tokenBalance: tokenData.balance,
     tokenBalanceRaw: tokenData.raw ?? 0n,
     isBalanceLoading: tokenData.loading,
+    usdtBalance,
+    usdtBalanceRaw: usdtRaw ?? 0n,
+    usdtLoading,
+    usdcBalance,
+    usdcBalanceRaw: usdcRaw ?? 0n,
+    usdcLoading,
     allowance: tokenData.allowance,
     needsApproval: currentParamsRef.current 
       ? needsApproval(currentParamsRef.current.amount, currentParamsRef.current.tokenType)

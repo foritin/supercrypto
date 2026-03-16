@@ -10,8 +10,8 @@
 __pycache__
 
 node_modules/
-
-# .claude - now a submodule
+demo
+.claude
 .cursor
 .vscode
 .playwright-mcp

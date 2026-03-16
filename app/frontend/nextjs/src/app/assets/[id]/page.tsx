@@ -32,7 +32,7 @@ import { InvestPanel } from "@/components/asset/invest-panel";
 import { MediaGallery } from "@/components/asset/media-gallery";
 import { PropertyHighlights } from "@/components/asset/property-highlights";
 import { RiskAndComplianceSection, type RiskLevel } from "@/components/asset/risk-badge";
-import { SubscriptionModalV2 } from "@/components/subscription/subscription-modal-v2";
+import { SubscriptionModal } from "@/components/subscription/subscription-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -480,12 +480,14 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
 
-        <SubscriptionModalV2
-          open={showSubscribeModal}
-          onClose={() => setShowSubscribeModal(false)}
-          onSuccess={() => setShowSubscribeModal(false)}
-          asset={asset}
-        />
+        {showSubscribeModal && (
+          <SubscriptionModal
+            open={showSubscribeModal}
+            onClose={() => setShowSubscribeModal(false)}
+            onSuccess={() => setShowSubscribeModal(false)}
+            asset={asset}
+          />
+        )}
       </div>
     </TooltipProvider>
   );

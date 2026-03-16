@@ -72,6 +72,14 @@ export function getRpcUrl(chainId: number): string {
 // 导出 Hardhat RPC URL 供其他模块使用
 export { HARDHAT_RPC_URL }
 
+const createBatchedHttp = (url?: string) =>
+  http(url, {
+    batch: {
+      wait: 30,
+      batchSize: 20,
+    },
+  })
+
 // 注意: 主要 wagmi 配置现在通过 RainbowKit 的 getDefaultConfig 在 providers/web3-provider.tsx 中创建
 // 这个文件保留用于:
 // 1. 链配置常量导出
@@ -82,10 +90,10 @@ export { HARDHAT_RPC_URL }
 export const wagmiConfig = createConfig({
   chains: supportedChains as unknown as readonly [Chain, ...Chain[]],
   transports: {
-    [mainnet.id]: http(),
-    [arbitrum.id]: http(),
-    [sepolia.id]: http(),
-    [customHardhat.id]: http(HARDHAT_RPC_URL),
+    [mainnet.id]: createBatchedHttp(),
+    [arbitrum.id]: createBatchedHttp(),
+    [sepolia.id]: createBatchedHttp(),
+    [customHardhat.id]: createBatchedHttp(HARDHAT_RPC_URL),
   },
   ssr: true,
 })

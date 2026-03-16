@@ -154,4 +154,45 @@ describe('Feature: dynamic-contract-addresses, Property 1: Stablecoin 地址解�
       { numRuns: 100 },
     )
   })
+
+  /**
+   * **Validates: active/global 优先级规则**
+   * 同名合约存在多条记录时，应优先选择 active + global 的地址
+   */
+  it('property: 同名稳定币冲突时优先 active+global', () => {
+    fc.assert(
+      fc.property(
+        ethAddressArb,
+        ethAddressArb,
+        ethAddressArb,
+        (activeGlobalAddr, activeProjectAddr, pausedGlobalAddr) => {
+          const contracts: AddressInfo[] = [
+            {
+              ...contractItemArb('USDT', activeProjectAddr),
+              id: 1,
+              scope: 'project',
+              status: 'active',
+            },
+            {
+              ...contractItemArb('USDT', pausedGlobalAddr),
+              id: 2,
+              scope: 'global',
+              status: 'paused',
+            },
+            {
+              ...contractItemArb('USDT', activeGlobalAddr),
+              id: 3,
+              scope: 'global',
+              status: 'active',
+            },
+          ]
+
+          const result = resolveStablecoinAddresses(contracts, defaults)
+          expect(result.addresses.MockUSDT).toBe(activeGlobalAddr)
+          expect(result.isFromBackend).toBe(true)
+        },
+      ),
+      { numRuns: 100 },
+    )
+  })
 })

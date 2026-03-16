@@ -49,7 +49,7 @@ async def _authenticate_and_create_session(
     data: TokenRequest,
     request: Request,
 ) -> tuple[str, str, int]:
-    """验证签名、创建会话、生成令牌，返回 (access_token, refresh_token, expires_in_mins)"""
+    """验证签名、创建会话、生成令牌，返回 (access_token, refresh_token, access_expires_in_mins)"""
     if not (
         SETTINGS.environment in ("dev", "test")
         and data.backdoor
@@ -77,17 +77,19 @@ async def _authenticate_and_create_session(
         network=data.network,
     )
     token_version = await session_service.get_token_version(wallet_address, session_id)
-    expires_in_mins = data.expires_in_mins or SETTINGS.REFRESH_TOKEN_EXPIRE_MINUTES
-    expire = datetime.timedelta(minutes=expires_in_mins)
+    access_expires_in_mins = (
+        data.expires_in_mins or SETTINGS.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+    access_expire = datetime.timedelta(minutes=access_expires_in_mins)
     token_data = {
         "address": wallet_address,
         "session_id": session_id,
         "token_version": token_version,
     }
     return (
-        create_access_token(token_data, expires_delta=expire),
-        create_refresh_token(token_data, expires_delta=expire),
-        expires_in_mins,
+        create_access_token(token_data, expires_delta=access_expire),
+        create_refresh_token(token_data),
+        access_expires_in_mins,
     )
 
 
@@ -137,7 +139,7 @@ async def login(
     (
         access_token,
         new_refresh_token,
-        expires_in_mins,
+        access_expires_in_mins,
     ) = await _authenticate_and_create_session(data, request)
     if SETTINGS.CHAIN.NETWORK != data.network:
         logger.error(
@@ -160,9 +162,11 @@ async def login(
         access_token=access_token,
         refresh_token=new_refresh_token,
         token_type="Bearer",
-        expires_in_mins=expires_in_mins,
+        expires_in_mins=access_expires_in_mins,
     )
-    _set_refresh_cookie(response, new_refresh_token, expires_in_mins)
+    _set_refresh_cookie(
+        response, new_refresh_token, SETTINGS.REFRESH_TOKEN_EXPIRE_MINUTES
+    )
     return create_success_response(object_data=response_data)
 
 
@@ -202,12 +206,13 @@ async def refresh_token_api(
         access_token=new_access_token,
         refresh_token=new_refresh_token,
         token_type="Bearer",
-        expires_in_mins=SETTINGS.REFRESH_TOKEN_EXPIRE_MINUTES,
+        expires_in_mins=SETTINGS.ACCESS_TOKEN_EXPIRE_MINUTES,
     )
     _set_refresh_cookie(
         response, new_refresh_token, SETTINGS.REFRESH_TOKEN_EXPIRE_MINUTES
     )
     return create_success_response(object_data=response_data)
+
 
 @router.post(
     "/logout",
@@ -233,4 +238,3 @@ async def logout(
             pass
     _clear_refresh_cookie(response)
     return create_success_response(msg="Logged out successfully")
-

@@ -78,6 +78,7 @@ import {
   type AssetListItem, 
   type AssetDetail,
   type AssetStatus, 
+  type AssetSubscriptionMode,
   type AssetType,
   type AssetUpdateRequest,
   type ProjectContractInfo,
@@ -118,6 +119,7 @@ const createEditAssetSchema = (t: (key: string) => string) => z.object({
   symbol: z.string().min(1, t('admin.assets.form.symbolEmpty')),
   description: z.string().optional(),
   asset_type: z.enum(['real_estate', 'bond', 'commodity', 'equity', 'other']),
+  subscription_mode: z.enum(['current', 'fixed', 'both']),
   image_url: z.string().optional(),
   document_url: z.string().optional(),
   location: z.string().optional(),
@@ -154,6 +156,7 @@ export function AssetAdminList() {
   const { t } = useTranslation()
   const [statusFilter, setStatusFilter] = useState<AssetStatus | undefined>(undefined)
   const [typeFilter, setTypeFilter] = useState<AssetType | undefined>(undefined)
+  const [subscriptionModeFilter, setSubscriptionModeFilter] = useState<AssetSubscriptionMode | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   
@@ -212,6 +215,7 @@ export function AssetAdminList() {
       symbol: '',
       description: '',
       asset_type: 'real_estate',
+      subscription_mode: 'both',
       image_url: '',
       document_url: '',
       location: '',
@@ -244,6 +248,7 @@ export function AssetAdminList() {
         page_size: pageSize,
         ...(statusFilter ? { status: statusFilter } : {}),
         ...(typeFilter ? { asset_type: typeFilter } : {}),
+        ...(subscriptionModeFilter ? { subscription_mode: subscriptionModeFilter } : {}),
       })
       setData(result)
     } catch (err) {
@@ -252,7 +257,7 @@ export function AssetAdminList() {
     } finally {
       setIsLoading(false)
     }
-  }, [page, pageSize, statusFilter, typeFilter, t])
+  }, [page, pageSize, statusFilter, typeFilter, subscriptionModeFilter, t])
 
   useEffect(() => {
     fetchAssets()
@@ -379,6 +384,7 @@ export function AssetAdminList() {
         name: values.name,
         symbol: values.symbol,
         asset_type: values.asset_type,
+        subscription_mode: values.subscription_mode,
         total_supply: values.total_supply,
         min_subscription: values.min_subscription,
         apy_3m: values.apy_3m,
@@ -474,6 +480,7 @@ export function AssetAdminList() {
         symbol: detail.symbol,
         description: detail.description || '',
         asset_type: detail.asset_type,
+        subscription_mode: (detail.subscription_mode || 'both') as AssetSubscriptionMode,
         image_url: detail.image_url || '',
         document_url: detail.document_url || '',
         location: detail.location || '',
@@ -546,6 +553,12 @@ export function AssetAdminList() {
   }
 
   // Table columns using @tanstack/react-table ColumnDef
+  const subscriptionModeLabelMap = {
+    current: t('admin.assets.form.subscriptionModeCurrent'),
+    fixed: t('admin.assets.form.subscriptionModeFixed'),
+    both: t('admin.assets.form.subscriptionModeBoth'),
+  } as const
+
   const columns: ColumnDef<AssetListItem>[] = [
     {
       accessorKey: 'id',
@@ -577,6 +590,16 @@ export function AssetAdminList() {
       cell: ({ row }) => (
         <Badge variant={STATUS_BADGE_VARIANTS[row.original.status]}>
           {ASSET_STATUS_NAMES[row.original.status]}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: 'subscription_mode',
+      header: t('admin.assets.subscriptionMode'),
+      size: 130,
+      cell: ({ row }) => (
+        <Badge variant="outline">
+          {subscriptionModeLabelMap[row.original.subscription_mode]}
         </Badge>
       ),
     },
@@ -766,6 +789,13 @@ export function AssetAdminList() {
     { value: 'closed', label: ASSET_STATUS_NAMES.closed },
   ]
 
+  const subscriptionModeOptions: { value: 'all' | AssetSubscriptionMode; label: string }[] = [
+    { value: 'all', label: t('admin.assets.allModes') },
+    { value: 'both', label: t('admin.assets.form.subscriptionModeBoth') },
+    { value: 'current', label: t('admin.assets.form.subscriptionModeCurrent') },
+    { value: 'fixed', label: t('admin.assets.form.subscriptionModeFixed') },
+  ]
+
   return (
     <Card>
       <CardHeader>
@@ -797,6 +827,21 @@ export function AssetAdminList() {
               <SelectContent>
                 <SelectItem value="all">{t('admin.assets.allTypes')}</SelectItem>
                 {ASSET_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={subscriptionModeFilter || 'all'}
+              onValueChange={(value) => setSubscriptionModeFilter(value === 'all' ? undefined : value as AssetSubscriptionMode)}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder={t('admin.assets.filterByMode')} />
+              </SelectTrigger>
+              <SelectContent>
+                {subscriptionModeOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -901,6 +946,29 @@ export function AssetAdminList() {
                             {option.label}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editForm.control}
+                name="subscription_mode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('admin.assets.form.subscriptionMode')}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="both">{t('admin.assets.form.subscriptionModeBoth')}</SelectItem>
+                        <SelectItem value="current">{t('admin.assets.form.subscriptionModeCurrent')}</SelectItem>
+                        <SelectItem value="fixed">{t('admin.assets.form.subscriptionModeFixed')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

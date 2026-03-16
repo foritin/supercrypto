@@ -9,7 +9,7 @@
 from .account import NetType, NetworkType
 
 # 资产相关
-from .asset import AssetStatus, AssetType, MediaType
+from .asset import AssetStatus, AssetSubscriptionMode, AssetType, MediaType
 
 # 审计相关
 from .audit import (
@@ -64,6 +64,7 @@ __all__ = [
     "RejectReasonCode",
     # Asset
     "AssetStatus",
+    "AssetSubscriptionMode",
     "AssetType",
     "MediaType",
     # Subscription

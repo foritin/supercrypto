@@ -48,6 +48,7 @@ class PrepareRegisterRequest(BaseModel):
 
     contract_name: str
     provider_key: Optional[str] = None
+    external_address: Optional[str] = None
 
 
 class ConfirmRegisterRequest(BaseModel):
@@ -71,6 +72,13 @@ class ConfirmUnregisterRequest(BaseModel):
     contract_name: str
     provider_key: str
     tx_hash: str
+
+
+class ContractAddressUpdateRequest(BaseModel):
+    """手动更新合约地址请求"""
+
+    contract_name: str
+    address: str
 
 
 # ============ 合约验证 Schemas ============

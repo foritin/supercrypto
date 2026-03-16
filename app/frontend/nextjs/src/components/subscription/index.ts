@@ -10,8 +10,8 @@ export type {
   SubscriptionParams,
 } from "./subscription-orchestrator";
 
-export { SubscriptionModalV2 } from "./subscription-modal-v2";
-export type { SubscriptionModalV2Props } from "./subscription-modal-v2";
+export { SubscriptionModal } from "./subscription-modal";
+export type { SubscriptionModalProps } from "./subscription-modal";
 
 export { TransactionStatusPanel } from "./transaction-tracker";
 export type { TransactionStatusPanelProps } from "./transaction-tracker";
@@ -21,7 +21,3 @@ export type { ErrorStatePanelProps } from "./error-states";
 
 export { ProductSelector } from "./product-selector";
 export type { ProductSelectorProps, ProductType } from "./product-selector";
-
-// Legacy export for backward compatibility
-export { SubscriptionModal } from "./subscription-modal";
-export type { SubscriptionModalProps } from "./subscription-modal";

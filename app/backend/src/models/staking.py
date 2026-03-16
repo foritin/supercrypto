@@ -20,7 +20,7 @@ class StakingRecord(AbstractModel, TimestampMixin):
 
     # 用户钱包地址
     wallet_address = fields.CharField(
-        max_length=128, index=True, description="用户钱包地址"
+        max_length=128, db_index=True, description="用户钱包地址"
     )
 
     # 关联的认购（质押会顺延认购赎回时间）
@@ -59,7 +59,7 @@ class StakingRecord(AbstractModel, TimestampMixin):
 
     # 状态
     status = fields.CharEnumField(
-        StakingStatus, default=StakingStatus.ACTIVE, index=True, description="质押状态"
+        StakingStatus, default=StakingStatus.ACTIVE, db_index=True, description="质押状态"
     )
 
     # 交易信息
@@ -73,7 +73,7 @@ class StakingRecord(AbstractModel, TimestampMixin):
     # 环境
     environment = fields.CharField(
         max_length=32,
-        index=True,
+        db_index=True,
         default="hardhat",
         description="环境: hardhat/sepolia/mainnet",
     )
@@ -138,7 +138,7 @@ class StakingLimit(AbstractModel, TimestampMixin):
     # 环境
     environment = fields.CharField(
         max_length=32,
-        index=True,
+        db_index=True,
         default="hardhat",
         description="环境: hardhat/sepolia/mainnet",
     )
@@ -174,7 +174,7 @@ class RewardClaim(AbstractModel, TimestampMixin):
 
     # 用户钱包地址
     wallet_address = fields.CharField(
-        max_length=128, index=True, description="用户钱包地址"
+        max_length=128, db_index=True, description="用户钱包地址"
     )
 
     # 关联的质押记录
@@ -196,7 +196,7 @@ class RewardClaim(AbstractModel, TimestampMixin):
     # 环境
     environment = fields.CharField(
         max_length=32,
-        index=True,
+        db_index=True,
         default="hardhat",
         description="环境: hardhat/sepolia/mainnet",
     )

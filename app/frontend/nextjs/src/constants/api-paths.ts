@@ -120,6 +120,7 @@ export const ADMIN_PATHS = {
   CONTRACT_RESET_ALL: '/admin/contracts/reset/all',
   CONTRACT_REGISTER_PREPARE: '/admin/contracts/register/prepare',
   CONTRACT_REGISTER_CONFIRM: '/admin/contracts/register/confirm',
+  CONTRACT_REGISTER_UPDATE_ADDRESS: '/admin/contracts/address',
   CONTRACT_UNREGISTER_PREPARE: '/admin/contracts/unregister/prepare',
   CONTRACT_UNREGISTER_CONFIRM: '/admin/contracts/unregister/confirm',
   CONTRACT_VALIDATE: '/admin/contracts/validate',

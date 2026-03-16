@@ -22,7 +22,6 @@ export function useCurrentUser() {
   } = useQuery({
     queryKey: ['currentUser', address],
     queryFn: async () => {
-      console.log('Fetching currentUser for address:', address)
       if (!isConnected || !address || !hasJwtToken()) {
         return null
       }

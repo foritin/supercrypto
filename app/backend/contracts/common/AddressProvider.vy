@@ -38,6 +38,9 @@ VANKE_SUBSCRIPTION: constant(bytes32) = keccak256("VANKE_SUBSCRIPTION")
 VANKE_STAKING: constant(bytes32) = keccak256("VANKE_STAKING")
 VANKE_LIQUIDITY_MINING: constant(bytes32) = keccak256("VANKE_LIQUIDITY_MINING")
 
+# 国库地址 Key
+TREASURY: constant(bytes32) = keccak256("TREASURY")
+
 # ============ 存储变量 ============
 
 owner: public(address)
@@ -215,6 +218,13 @@ def get_vanke_staking() -> address:
 def get_vanke_liquidity_mining() -> address:
     """@notice 获取 Vanke LiquidityMining 地址"""
     return self.addresses[VANKE_LIQUIDITY_MINING]
+
+
+@view
+@external
+def get_treasury() -> address:
+    """@notice 获取国库地址"""
+    return self.addresses[TREASURY]
 
 @view
 @external

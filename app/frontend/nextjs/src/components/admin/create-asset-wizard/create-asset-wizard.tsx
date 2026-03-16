@@ -76,6 +76,7 @@ function WizardContent({
         name: formData.name,
         symbol: formData.symbol.toUpperCase(),
         asset_type: formData.asset_type,
+        subscription_mode: formData.subscription_mode,
         total_supply: formData.total_supply,
         min_subscription: formData.min_subscription || 100,
         current_price: formData.current_price || 1,

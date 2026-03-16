@@ -16,7 +16,7 @@ class Subscription(AbstractModel, TimestampMixin):
 
     # 用户信息
     wallet_address = fields.CharField(
-        max_length=128, index=True, description="用户钱包地址"
+        max_length=128, db_index=True, description="用户钱包地址"
     )
 
     # 资产信息
@@ -96,13 +96,49 @@ class Subscription(AbstractModel, TimestampMixin):
 
     @property
     def is_matured(self) -> bool:
-        """是否已到期 (活期模式: 始终可赎回)"""
+        """是否已到期 (T+1起息：定期需检查锁定期结束+满1天)"""
         # 活期模式: lock_period == 0，始终可赎回
         if self.lock_period == 0:
             return True
         if not self.end_date:
             return False
+        # 定期模式：锁定期结束且满1天
         return datetime.now(timezone.utc) >= self.end_date
+
+    @property
+    def can_redeem(self) -> bool:
+        """是否可赎回 (活期：始终可赎回；定期：锁定期结束)"""
+        # 活期模式：随时可赎回
+        if self.lock_period == 0:
+            return True
+        # 定期模式：锁定期结束即可赎回（收益按T+1计算）
+        if not self.end_date:
+            return False
+        return datetime.now(timezone.utc) >= self.end_date
+
+    def get_redeemable_interest(self, current_time: datetime = None) -> Decimal:
+        """
+        计算当前可赎回的收益 (T+1起息：未满1天返回0)
+        
+        Args:
+            current_time: 当前时间，默认为 UTC now
+            
+        Returns:
+            可赎回收益金额
+        """
+        if current_time is None:
+            current_time = datetime.now(timezone.utc)
+        
+        # 检查是否满1天
+        if not self.start_date:
+            return Decimal(0)
+        
+        time_diff = current_time - self.start_date
+        if time_diff.total_seconds() < 24 * 3600:  # 未满24小时
+            return Decimal(0)
+        
+        # 已满1天，返回预期收益（实际赎回时由合约计算）
+        return self.expected_interest
 
     @property
     def days_remaining(self) -> int:

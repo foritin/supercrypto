@@ -36,6 +36,14 @@ const customHardhat = {
 
 const IS_PRODUCTION = process.env.NEXT_PUBLIC_ENV === 'production';
 
+const createBatchedHttp = (url?: string) =>
+  http(url, {
+    batch: {
+      wait: 30,
+      batchSize: 20,
+    },
+  });
+
 // 根据环境选择支持的网络列表
 const chains = IS_PRODUCTION 
   ? [mainnet, arbitrum] as const
@@ -43,8 +51,8 @@ const chains = IS_PRODUCTION
 
 // 显式指定 RPC transport，确保 wagmi 能正确连接到 Hardhat 节点
 const transports = IS_PRODUCTION
-  ? { [mainnet.id]: http(), [arbitrum.id]: http() }
-  : { [customHardhat.id]: http(HARDHAT_RPC_URL), [sepolia.id]: http() };
+  ? { [mainnet.id]: createBatchedHttp(), [arbitrum.id]: createBatchedHttp() }
+  : { [customHardhat.id]: createBatchedHttp(HARDHAT_RPC_URL), [sepolia.id]: createBatchedHttp() };
 
 // RainbowKit + Wagmi 配置
 const config = getDefaultConfig({

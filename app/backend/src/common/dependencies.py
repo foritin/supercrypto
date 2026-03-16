@@ -37,6 +37,9 @@ from src.services.audit_service import AuditService, TransactionAuditService
 from src.services.auth_service import AuthService
 from src.services.chain_service import ChainService
 from src.services.contract_service import ContractService
+from src.services.deploy_config_loader_service import (
+    get_config_loader as get_deploy_config_loader,
+)
 from src.services.dev_service import DevToolsService
 from src.services.kyc_service import KycService
 from src.services.project_registry_service import ProjectRegistryService
@@ -139,7 +142,7 @@ def get_project_registry_service(network: str = "hardhat") -> ProjectRegistrySer
 
 
 # 别名：供部署脚本使用
-get_config_loader = get_project_registry_service
+get_config_loader = get_deploy_config_loader
 
 
 # ============ Session ============

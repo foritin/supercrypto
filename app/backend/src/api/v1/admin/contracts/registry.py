@@ -14,6 +14,7 @@ from src.common.dependencies import audit_service, get_contract_service
 from src.schemas.contract import (
     ConfirmRegisterRequest,
     ConfirmUnregisterRequest,
+    ContractAddressUpdateRequest,
     PrepareRegisterRequest,
     PrepareUnregisterRequest,
 )
@@ -64,6 +65,7 @@ async def prepare_register(
     result = await service.prepare_register(
         contract_name=request.contract_name,
         provider_key=request.provider_key,
+        external_address=request.external_address,
     )
     return create_success_response(object_data=result)
 
@@ -130,8 +132,33 @@ async def prepare_unregister(
     result = await service.prepare_unregister(
         contract_name=request.contract_name,
         provider_key=request.provider_key,
+        external_address=request.external_address,
     )
     return create_success_response(object_data=result)
+
+
+@router.patch(
+    "/address",
+    summary="Update Contract Address",
+    description="Update contract deployment address manually before provider registration (for external contracts)",
+)
+async def update_contract_address(
+    request: ContractAddressUpdateRequest,
+    service: ContractService = Depends(get_contract_service),
+    _admin=Depends(require_admin),
+):
+    contract = await service.update_registry_record(
+        contract_name=request.contract_name,
+        address=request.address,
+    )
+    return create_success_response(
+        object_data={
+            "contract_name": contract.name,
+            "address": contract.address,
+            "status": contract.status.value if contract.status else None,
+            "network": contract.network.value if contract.network else None,
+        }
+    )
 
 
 @router.post(

@@ -14,6 +14,7 @@ import { logout, login } from '@/services/auth'
 import { KycStatus as KycStatusEnum } from '@/services/kyc'
 import { clearAuthData, setWalletConnected, setWalletAddress, hasJwtToken, getAddressFromToken } from '@/utils/auth'
 import { truncateAddress } from '@/utils/format'
+import { revokeCurrentDappPermissions } from '@/utils/wallet-permissions'
 
 import { AccountModal } from './account-modal'
 import type { KycStatus } from './account-modal'
@@ -53,6 +54,7 @@ declare global {
 
 // 签名登录的固定消息
 const SIGN_MESSAGE = 'SlimCryptoAccess'
+const DEBUG_WALLET_CONNECTION = process.env.NEXT_PUBLIC_DEBUG_WALLET_CONNECTION === 'true'
 
 /**
  * WalletConnect Component
@@ -127,7 +129,9 @@ export function WalletConnect() {
     if (typeof window === 'undefined' || !window.ethereum?.request) return false
     
     try {
-      console.log('[Wallet] Verifying connection before critical operation...')
+      if (DEBUG_WALLET_CONNECTION) {
+        console.log('[Wallet] Verifying connection before critical operation...')
+      }
       // 使用 eth_requestAccounts 检测 MetaMask 状态
       // 如果锁定，会弹出解锁窗口；如果未锁定，直接返回账户
       const accounts = await window.ethereum.request({ 
@@ -135,18 +139,24 @@ export function WalletConnect() {
       }) as string[]
       
       if (!accounts || accounts.length === 0) {
-        console.log('[Wallet] No accounts available, disconnecting...')
+        if (DEBUG_WALLET_CONNECTION) {
+          console.log('[Wallet] No accounts available, disconnecting...')
+        }
         clearAuthData()
         setIsAuthenticated(false)
         disconnect()
         return false
       }
       
-      console.log('[Wallet] Connection verified')
+      if (DEBUG_WALLET_CONNECTION) {
+        console.log('[Wallet] Connection verified')
+      }
       return true
     } catch (error) {
       // 用户拒绝解锁或发生错误
-      console.log('[Wallet] Connection verification failed:', error)
+      if (DEBUG_WALLET_CONNECTION) {
+        console.log('[Wallet] Connection verification failed:', error)
+      }
       return false
     }
   }, [disconnect])
@@ -210,6 +220,17 @@ export function WalletConnect() {
         wasConnectedRef.current = false
         // 触发 wagmi 的断开，确保状态同步
         disconnect()
+        return
+      }
+
+      const nextAccount = accounts[0]?.toLowerCase()
+      const currentAccount = address?.toLowerCase()
+      if (nextAccount && currentAccount && nextAccount !== currentAccount) {
+        // 严格模式：账户切换后必须重新连接并重新签名，避免旧会话误用
+        clearAuthData()
+        setIsAuthenticated(false)
+        wasConnectedRef.current = false
+        disconnect()
       }
     }
 
@@ -228,6 +249,20 @@ export function WalletConnect() {
       window.ethereum?.removeListener?.('accountsChanged', handleAccountsChanged)
       window.ethereum?.removeListener?.('disconnect', handleDisconnect)
     }
+  }, [disconnect])
+
+  // Handle global forced logout (e.g. terminal 401 after refresh retry)
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      void revokeCurrentDappPermissions()
+      disconnect()
+      setIsAuthenticated(false)
+      wasConnectedRef.current = false
+      setConnectedAt(undefined)
+    }
+
+    window.addEventListener('auth:logout', handleAuthLogout)
+    return () => window.removeEventListener('auth:logout', handleAuthLogout)
   }, [disconnect])
 
   // ============================================================================
@@ -272,7 +307,7 @@ export function WalletConnect() {
     }
   }, [isConnected, address, isHydrated, checkAuthStatus, performSignIn, connectedAt])
 
-  // Detect account changes (Requirement 7.3) - 切换账户时重新签名登录
+  // Detect account changes (Requirement 7.3) - 严格模式：切换账户后断开并要求重新连接
   useEffect(() => {
     const previousAddress = previousAddressRef.current
 
@@ -283,18 +318,17 @@ export function WalletConnect() {
       setIsAuthenticated(false)
 
       // Notify user of account change
-      toast.info(t('wallet.accountChanged', {
+      toast.warning(t('wallet.accountChanged', {
         from: truncateAddress(previousAddress),
         to: truncateAddress(address)
       }))
 
-      // 触发新账户的签名登录
-      performSignIn()
+      disconnect()
     }
 
     // Update ref for next comparison
     previousAddressRef.current = address
-  }, [address, t, performSignIn])
+  }, [address, t, disconnect])
 
   // Handle disconnect - notify backend and clear local data (Requirement 7.8)
   async function handleDisconnect() {
@@ -305,6 +339,9 @@ export function WalletConnect() {
       // 即使后端通知失败也继续断开
       console.warn('Failed to notify backend of logout')
     }
+
+    // 尝试撤销当前站点的账户权限（仅部分钱包支持，如 MetaMask 扩展）
+    await revokeCurrentDappPermissions()
     
     // Disconnect wallet via wagmi
     disconnect()

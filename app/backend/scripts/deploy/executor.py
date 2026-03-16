@@ -13,6 +13,7 @@ SuperCrypto 合约部署执行器
 - ContractConfig: 合约配置
 """
 
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -327,6 +328,15 @@ def deploy_contract(
             code = chain.provider.get_code(existing.address)
             if code and len(code) > 0:
                 print(f"   ⏭️  已存在: {existing.address}")
+                save_contract_config(config, project_name)
+                if config.provider_key and provider:
+                    create_provider_registry_record(
+                        config=config,
+                        project_name=project_name,
+                        provider_address=str(provider.address),
+                        chain_id=chain_id,
+                        network=network,
+                    )
                 contract_class = getattr(project, config.contract_class_name)
                 return contract_class.at(existing.address), existing.address
             else:
@@ -463,6 +473,65 @@ def save_contract(
             )
 
 
+def save_external_contract_placeholder(
+    name: str,
+    placeholder_address: str,
+    deployer_address: str,
+    network: Network,
+    chain_id: int,
+    scope: str,
+    contract_type: str,
+    project_name: str,
+):
+    """保存外部合约占位记录到数据库（非 hardhat 环境）"""
+    scope_enum = ContractScope.GLOBAL if scope == "global" else ContractScope.PROJECT
+    try:
+        type_enum = ContractType(contract_type)
+    except ValueError:
+        type_enum = ContractType.UNKNOWN
+
+    with get_db() as db:
+        existing = db.query(
+            ContractDeployment.filter(
+                name=name,
+                chain_id=chain_id,
+                network=network,
+                project_name=project_name,
+                scope=scope_enum,
+                contract_type=type_enum,
+            ).first()
+        )
+
+        if existing:
+            db.query(
+                ContractDeployment.filter(id=existing.id).update(
+                    address=placeholder_address,
+                    deployer_address=deployer_address,
+                    tx_hash="EXTERNAL_PENDING",
+                    abi_path=existing.abi_path,
+                    scope=scope_enum,
+                    contract_type=type_enum,
+                    status=ContractStatus.PAUSED,
+                )
+            )
+        else:
+            db.query(
+                ContractDeployment.create(
+                    name=name,
+                    address=placeholder_address,
+                    deployer_address=deployer_address,
+                    network=network,
+                    chain_id=chain_id,
+                    scope=scope_enum,
+                    contract_type=type_enum,
+                    project_name=project_name,
+                    tx_hash="EXTERNAL_PENDING",
+                    status=ContractStatus.PAUSED,
+                    abi_path="",
+                )
+            )
+
+
 def save_contract_config(config: ContractConfig, project_name: str):
     """
     保存合约配置到 ContractConfig 表
@@ -591,13 +660,14 @@ def _contract_name_to_provider_key(contract_name: str) -> str:
     if contract_name in special_mappings:
         return special_mappings[contract_name]
 
-    # 通用规则: 驼峰转下划线大写
-    result = []
-    for i, char in enumerate(contract_name):
-        if char.isupper() and i > 0:
-            result.append("_")
-        result.append(char.upper())
-    return "".join(result)
+    # 通用规则: 驼峰/缩写感知转下划线大写
+    # 示例:
+    # - USDT -> USDT
+    # - VankeRWAToken -> VANKE_RWA_TOKEN
+    # - LiquidityMining -> LIQUIDITY_MINING
+    first_pass = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", contract_name)
+    second_pass = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", first_pass)
+    return second_pass.upper()
 
 
 def create_provider_registry_record(

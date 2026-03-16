@@ -72,6 +72,16 @@ interface InvestorInfo {
   frozen: boolean
 }
 
+type InvestorInfoObject = {
+  verified: boolean
+  country: string
+  accreditedInvestor: boolean
+  addedTime: bigint
+  verificationTime: bigint
+  expiryTime: bigint
+  frozen: boolean
+}
+
 /** 交易状态 */
 type TxStatus = 'idle' | 'verifying' | 'signing' | 'confirming' | 'recording' | 'success' | 'failed'
 
@@ -86,6 +96,59 @@ function formatTimestamp(timestamp: bigint): string {
     return '-'
   }
   return new Date(Number(timestamp) * 1000).toLocaleString()
+}
+
+function parseInvestorInfo(result: unknown): InvestorInfo {
+  if (Array.isArray(result)) {
+    const tuple = result as unknown[]
+    if (tuple.length >= 7) {
+      const [verified, country, accreditedInvestor, addedTime, verificationTime, expiryTime, frozen] = tuple
+      if (
+        typeof verified === 'boolean' &&
+        typeof country === 'string' &&
+        typeof accreditedInvestor === 'boolean' &&
+        typeof addedTime === 'bigint' &&
+        typeof verificationTime === 'bigint' &&
+        typeof expiryTime === 'bigint' &&
+        typeof frozen === 'boolean'
+      ) {
+        return {
+          verified,
+          country,
+          accreditedInvestor,
+          addedTime,
+          verificationTime,
+          expiryTime,
+          frozen,
+        }
+      }
+    }
+  }
+
+  if (result && typeof result === 'object') {
+    const info = result as Partial<InvestorInfoObject>
+    if (
+      typeof info.verified === 'boolean' &&
+      typeof info.country === 'string' &&
+      typeof info.accreditedInvestor === 'boolean' &&
+      typeof info.addedTime === 'bigint' &&
+      typeof info.verificationTime === 'bigint' &&
+      typeof info.expiryTime === 'bigint' &&
+      typeof info.frozen === 'boolean'
+    ) {
+      return {
+        verified: info.verified,
+        country: info.country,
+        accreditedInvestor: info.accreditedInvestor,
+        addedTime: info.addedTime,
+        verificationTime: info.verificationTime,
+        expiryTime: info.expiryTime,
+        frozen: info.frozen,
+      }
+    }
+  }
+
+  throw new Error('Unexpected investor info shape')
 }
 
 // ============ Sub-components ============
@@ -227,19 +290,7 @@ export function OnChainStatusPanel({
         args: [kyc.wallet_address as `0x${string}`],
       })
 
-      // result is a struct (tuple) from Vyper — viem returns it as an array
-      const tuple = result as readonly [boolean, string, boolean, bigint, bigint, bigint, boolean]
-      const [verified, country, accreditedInvestor, addedTime, verificationTime, expiryTime, frozen] = tuple
-
-      setInvestorInfo({
-        verified,
-        country,
-        accreditedInvestor,
-        addedTime,
-        verificationTime,
-        expiryTime,
-        frozen,
-      })
+      setInvestorInfo(parseInvestorInfo(result))
     } catch (err) {
       const errorMessage = (err as Error).message || ''
       setError(errorMessage.slice(0, 200))

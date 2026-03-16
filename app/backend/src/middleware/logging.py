@@ -26,7 +26,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
     - 生成 request_id 并注入 request.state 和 contextvars
     - 记录请求完成日志（method, path, status_code, duration_ms）
-    - 日志级别: 5xx → WARNING，其余 → INFO
+    - 日志级别: 5xx → ERROR，4xx → WARNING，其余 → INFO
     - 在响应头中添加 X-Request-ID
     - 请求结束后 reset contextvars，防止上下文泄漏
     """
@@ -43,8 +43,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             duration_ms = int((time.time() - start_time) * 1000)
 
-            # 日志级别：5xx 用 WARNING，其余用 INFO
-            level = "warning" if response.status_code >= 500 else "info"
+            # 日志级别：5xx 用 ERROR，4xx 用 WARNING，其余用 INFO
+            if response.status_code >= 500:
+                level = "error"
+            elif response.status_code >= 400:
+                level = "warning"
+            else:
+                level = "info"
             getattr(logger, level)(
                 f"[{request_id}] {request.method} {request.url.path} "
                 f"→ {response.status_code} ({duration_ms}ms)"

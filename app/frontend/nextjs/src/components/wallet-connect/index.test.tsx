@@ -4,7 +4,8 @@
  * Tests for the RainbowKit-based wallet connection component.
  * Validates Requirements: 7.2, 7.3, 7.4, 7.5, 7.7, 7.8
  */
-import { render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, render as rtlRender, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type * as Wagmi from 'wagmi'
@@ -33,6 +34,8 @@ const mockUseSignMessage = vi.fn()
 const mockOpenConnectModal = vi.fn()
 const mockOpenAccountModal = vi.fn()
 const mockOpenChainModal = vi.fn()
+const mockDisconnect = vi.fn()
+let accountsChangedHandler: ((accounts: string[]) => void) | null = null
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -150,9 +153,28 @@ vi.mock('next/navigation', () => ({
 // Import component after mocks
 import { WalletConnect } from './index'
 
+function render(ui: React.ReactElement) {
+  const queryClient = new QueryClient()
+  return rtlRender(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  )
+}
+
 describe('WalletConnect Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    accountsChangedHandler = null
+
+    ;(window as Window & { ethereum?: { on?: (event: string, handler: (...args: unknown[]) => void) => void; removeListener?: (event: string, handler: (...args: unknown[]) => void) => void } }).ethereum = {
+      on: (event: string, handler: (...args: unknown[]) => void) => {
+        if (event === 'accountsChanged') {
+          accountsChangedHandler = handler as (accounts: string[]) => void
+        }
+      },
+      removeListener: vi.fn(),
+    }
     
     mockUseAccount.mockReturnValue({
       address: undefined,
@@ -161,7 +183,7 @@ describe('WalletConnect Component', () => {
     })
     
     mockUseDisconnect.mockReturnValue({
-      disconnect: vi.fn(),
+      disconnect: mockDisconnect,
     })
     
     mockUseSignMessage.mockReturnValue({
@@ -273,6 +295,33 @@ describe('WalletConnect Component', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('rainbowkit-custom')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Requirement 7.3: Account switching events', () => {
+    it('should clear auth and disconnect when accountsChanged emits another account', async () => {
+      mockUseAccount.mockReturnValue({
+        address: '0x1234567890abcdef1234567890abcdef12345678',
+        isConnected: true,
+        chain: { id: 1, name: 'Ethereum' },
+      })
+      mockHasJwtToken.mockReturnValue(true)
+      mockGetAddressFromToken.mockReturnValue('0x1234567890abcdef1234567890abcdef12345678')
+
+      render(<WalletConnect />)
+
+      await waitFor(() => {
+        expect(accountsChangedHandler).toBeTruthy()
+      })
+
+      await act(async () => {
+        accountsChangedHandler?.(['0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'])
+      })
+
+      await waitFor(() => {
+        expect(mockClearAuthData).toHaveBeenCalled()
+        expect(mockDisconnect).toHaveBeenCalled()
       })
     })
   })

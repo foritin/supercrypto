@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * 复制 Human.js 模型文件到 public 目录
  */
@@ -6,22 +7,6 @@ const path = require('path');
 
 const sourceDir = path.join(__dirname, '../node_modules/@vladmandic/human/models');
 const targetDir = path.join(__dirname, '../public/models');
-
-// 需要复制的模型文件
-const requiredModels = [
-  'blazeface.json',
-  'blazeface.bin',
-  'facemesh.json',
-  'facemesh.bin',
-  'iris.json',
-  'iris.bin',
-  'emotion.json',
-  'emotion.bin',
-  'facedetect.json',
-  'facedetect.bin',
-  'faceres.json',
-  'faceres.bin',
-];
 
 function copyModels() {
   // 创建目标目录
