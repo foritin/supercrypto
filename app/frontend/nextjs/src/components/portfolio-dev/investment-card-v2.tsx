@@ -60,7 +60,7 @@ export function InvestmentCardV2({ asset, onClick, delay = 0 }: InvestmentCardV2
         'bg-white/[0.02] backdrop-blur-sm',
         'border border-white/[0.06]',
         'transition-all duration-250',
-        'hover:border-[#00f5d4]/30',
+        'hover:border-[#00C9A7]/30',
         'overflow-hidden'
       )}
     >
@@ -68,8 +68,8 @@ export function InvestmentCardV2({ asset, onClick, delay = 0 }: InvestmentCardV2
       <div 
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-250 pointer-events-none"
         style={{
-          background: 'radial-gradient(circle at 50% 0%, rgba(0,245,212,0.08) 0%, transparent 60%)',
-          boxShadow: 'inset 0 0 0 1px rgba(0,245,212,0.1), 0 0 25px rgba(0,245,212,0.1)',
+          background: 'radial-gradient(circle at 50% 0%, rgba(0,201,167,0.08) 0%, transparent 60%)',
+          boxShadow: 'inset 0 0 0 1px rgba(0,201,167,0.1), 0 0 25px rgba(0,245,212,0.1)',
         }}
       />
 
@@ -79,7 +79,7 @@ export function InvestmentCardV2({ asset, onClick, delay = 0 }: InvestmentCardV2
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-3">
             {/* Avatar */}
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00f5d4]/20 to-[#a855f7]/20 flex items-center justify-center border border-white/10">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00C9A7]/20 to-[#0066FF]/20 flex items-center justify-center border border-white/10">
               <span className="text-sm font-bold text-white">{asset.symbol.slice(0, 2)}</span>
             </div>
             <div>
@@ -99,7 +99,7 @@ export function InvestmentCardV2({ asset, onClick, delay = 0 }: InvestmentCardV2
             </div>
           </div>
           <div className="text-right">
-            <span className="text-lg font-bold text-[#00f5d4]">{asset.apy}%</span>
+            <span className="text-lg font-bold text-[#00C9A7]">{asset.apy}%</span>
             <p className="text-[10px] text-gray-500">APY</p>
           </div>
         </div>
@@ -129,7 +129,7 @@ export function InvestmentCardV2({ asset, onClick, delay = 0 }: InvestmentCardV2
               transition={{ duration: 1, delay: delay * 0.1 + 0.3, ease: 'easeOut' }}
               className="h-full rounded-full relative overflow-hidden"
               style={{
-                background: 'linear-gradient(90deg, #00f5d4 0%, #00c4a6 100%)',
+                background: 'linear-gradient(90deg, #00C9A7 0%, #00c4a6 100%)',
               }}
             >
               {/* Shimmer effect */}
@@ -149,7 +149,7 @@ export function InvestmentCardV2({ asset, onClick, delay = 0 }: InvestmentCardV2
             <p className="text-[10px] text-gray-500 uppercase tracking-wider">Total at Maturity</p>
             <p className="text-base font-bold text-white">${asset.totalAtMaturity.toLocaleString()}</p>
           </div>
-          <div className="flex items-center gap-1 text-[#00f5d4] text-xs group-hover:gap-2 transition-all">
+          <div className="flex items-center gap-1 text-[#00C9A7] text-xs group-hover:gap-2 transition-all">
             <span>Details</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </div>

@@ -34,7 +34,7 @@ export function NeonBackground({ className }: NeonBackgroundProps) {
       <div 
         className="absolute w-[500px] h-[500px] rounded-full animate-float-cyan"
         style={{
-          background: 'radial-gradient(circle, rgba(0,245,212,0.08) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(0,201,167,0.08) 0%, transparent 70%)',
           top: '10%',
           left: '-10%',
           filter: 'blur(40px)',
@@ -45,7 +45,7 @@ export function NeonBackground({ className }: NeonBackgroundProps) {
       <div 
         className="absolute w-[600px] h-[600px] rounded-full animate-float-purple"
         style={{
-          background: 'radial-gradient(circle, rgba(168,85,247,0.06) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(0,102,255,0.06) 0%, transparent 70%)',
           bottom: '10%',
           right: '-10%',
           filter: 'blur(50px)',

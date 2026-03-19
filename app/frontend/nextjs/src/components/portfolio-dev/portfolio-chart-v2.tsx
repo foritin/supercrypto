@@ -59,7 +59,7 @@ function CustomTooltip({
   const returnRate = invested > 0 ? ((earnings / invested) * 100).toFixed(2) : '0.00';
   
   return (
-    <div className="bg-[#0a0b0e]/95 border border-[#00f5d4]/20 rounded-xl p-4 shadow-2xl backdrop-blur-md min-w-[180px]">
+    <div className="bg-[#0a0b0e]/95 border border-[#00C9A7]/20 rounded-xl p-4 shadow-2xl backdrop-blur-md min-w-[180px]">
       <p className="text-gray-500 text-xs mb-3">{label}</p>
       <div className="space-y-2">
         <div className="flex justify-between items-center">
@@ -71,8 +71,8 @@ function CustomTooltip({
           <span className="text-white text-xs">${invested.toLocaleString()}</span>
         </div>
         <div className="flex justify-between items-center pt-2 border-t border-white/10">
-          <span className="text-[#00f5d4] text-xs">Return</span>
-          <span className="text-[#00f5d4] font-bold text-sm">+{returnRate}%</span>
+          <span className="text-[#00C9A7] text-xs">Return</span>
+          <span className="text-[#00C9A7] font-bold text-sm">+{returnRate}%</span>
         </div>
       </div>
     </div>
@@ -126,8 +126,8 @@ export function PortfolioChartV2({
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00f5d4]/20 to-[#a855f7]/20 flex items-center justify-center border border-white/10">
-              <TrendingUp className="w-5 h-5 text-[#00f5d4]" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00C9A7]/20 to-[#0066FF]/20 flex items-center justify-center border border-white/10">
+              <TrendingUp className="w-5 h-5 text-[#00C9A7]" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-white">Portfolio Performance</h3>
@@ -146,7 +146,7 @@ export function PortfolioChartV2({
                 className={cn(
                   'px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200',
                   timeRange === range.value
-                    ? 'bg-gradient-to-r from-[#00f5d4]/20 to-[#a855f7]/20 text-white border border-[#00f5d4]/30'
+                    ? 'bg-gradient-to-r from-[#00C9A7]/20 to-[#0066FF]/20 text-white border border-[#00C9A7]/30'
                     : 'text-gray-500 hover:text-white'
                 )}
               >
@@ -163,7 +163,7 @@ export function PortfolioChartV2({
           <p className="text-gray-600 text-xs mb-6">Start investing to see your performance chart</p>
           <Link href="/assets">
             <Button 
-              className="bg-gradient-to-r from-[#00f5d4] to-[#00c4a6] text-black font-medium hover:opacity-90 transition-opacity"
+              className="bg-gradient-to-r from-[#00C9A7] to-[#00c4a6] text-black font-medium hover:opacity-90 transition-opacity"
             >
               Explore Assets
             </Button>
@@ -187,8 +187,8 @@ export function PortfolioChartV2({
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00f5d4]/20 to-[#a855f7]/20 flex items-center justify-center border border-white/10">
-            <TrendingUp className="w-5 h-5 text-[#00f5d4]" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00C9A7]/20 to-[#0066FF]/20 flex items-center justify-center border border-white/10">
+            <TrendingUp className="w-5 h-5 text-[#00C9A7]" />
           </div>
           <div>
             <h3 className="text-base font-semibold text-white">Portfolio Performance</h3>
@@ -203,7 +203,7 @@ export function PortfolioChartV2({
               className={cn(
                 'px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200',
                 timeRange === range.value
-                  ? 'bg-gradient-to-r from-[#00f5d4]/20 to-[#a855f7]/20 text-white border border-[#00f5d4]/30'
+                  ? 'bg-gradient-to-r from-[#00C9A7]/20 to-[#0066FF]/20 text-white border border-[#00C9A7]/30'
                   : 'text-gray-500 hover:text-white'
               )}
             >
@@ -219,8 +219,8 @@ export function PortfolioChartV2({
           <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorTotalV2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#00f5d4" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#00f5d4" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#00C9A7" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#00C9A7" stopOpacity={0}/>
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
@@ -242,7 +242,7 @@ export function PortfolioChartV2({
               type="monotone" 
               dataKey="totalValue" 
               name="totalValue"
-              stroke="#00f5d4" 
+              stroke="#00C9A7" 
               strokeWidth={2}
               fillOpacity={1} 
               fill="url(#colorTotalV2)" 

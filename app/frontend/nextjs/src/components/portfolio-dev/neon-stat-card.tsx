@@ -43,7 +43,7 @@ export function NeonStatCard({
         'relative group p-4 rounded-xl',
         'bg-white/[0.02] backdrop-blur-sm',
         'border border-white/[0.04]',
-        'hover:border-[#00f5d4]/30',
+        'hover:border-[#00C9A7]/30',
         'transition-all duration-200',
         className
       )}
@@ -55,7 +55,7 @@ export function NeonStatCard({
       <div 
         className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
         style={{
-          boxShadow: '0 0 30px rgba(0,245,212,0.15), inset 0 0 0 1px rgba(0,245,212,0.2)',
+          boxShadow: '0 0 30px rgba(0,201,167,0.15), inset 0 0 0 1px rgba(0,201,167,0.2)',
         }}
       />
       

@@ -76,7 +76,7 @@ export function TransactionItemV2({ transaction, delay = 0 }: TransactionItemV2P
       )}
     >
       {/* Left neon border on hover */}
-      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#00f5d4] opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#00C9A7] opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
 
       {/* Left: Icon + Info */}
       <div className="flex items-center gap-3">

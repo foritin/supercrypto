@@ -94,7 +94,7 @@ export default function PortfolioDevPage() {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="mb-8"
         >
-          <p className="text-[#00f5d4] text-xs font-medium uppercase tracking-widest mb-2">Portfolio</p>
+          <p className="text-[#00C9A7] text-xs font-medium uppercase tracking-widest mb-2">Portfolio</p>
           <h1 className="text-3xl font-bold text-white mb-2">Investment Portfolio</h1>
           <p className="text-gray-500">Track your RWA investments and monitor performance</p>
         </motion.div>
@@ -143,8 +143,8 @@ export default function PortfolioDevPage() {
           <Card className="bg-white/[0.02] border-white/[0.06] backdrop-blur-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-4">
               <CardTitle className="text-base font-semibold text-white flex items-center gap-2">
-                <span className="w-5 h-5 rounded-lg bg-gradient-to-br from-[#00f5d4]/20 to-[#a855f7]/20 flex items-center justify-center">
-                  <LayoutGrid className="w-3 h-3 text-[#00f5d4]" />
+                <span className="w-5 h-5 rounded-lg bg-gradient-to-br from-[#00C9A7]/20 to-[#0066FF]/20 flex items-center justify-center">
+                  <LayoutGrid className="w-3 h-3 text-[#00C9A7]" />
                 </span>
                 My Investments
               </CardTitle>
@@ -209,8 +209,8 @@ export default function PortfolioDevPage() {
           <Card className="bg-white/[0.02] border-white/[0.06] backdrop-blur-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-4">
               <CardTitle className="text-base font-semibold text-white flex items-center gap-2">
-                <span className="w-5 h-5 rounded-lg bg-gradient-to-br from-[#00f5d4]/20 to-[#a855f7]/20 flex items-center justify-center">
-                  <Download className="w-3 h-3 text-[#00f5d4]" />
+                <span className="w-5 h-5 rounded-lg bg-gradient-to-br from-[#00C9A7]/20 to-[#0066FF]/20 flex items-center justify-center">
+                  <Download className="w-3 h-3 text-[#00C9A7]" />
                 </span>
                 Recent Transactions
               </CardTitle>

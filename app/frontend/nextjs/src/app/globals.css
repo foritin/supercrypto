@@ -150,11 +150,11 @@
 @keyframes pulse-glow {
   0%, 100% {
     opacity: 0.3;
-    box-shadow: 0 0 10px rgba(0,245,212,0.2);
+    box-shadow: 0 0 10px rgba(0,201,167,0.2);
   }
   50% {
     opacity: 0.6;
-    box-shadow: 0 0 20px rgba(0,245,212,0.4);
+    box-shadow: 0 0 20px rgba(0,201,167,0.4);
   }
 }
 

@@ -13,7 +13,7 @@ export function EmptyStateLottie({ className }: EmptyStateLottieProps) {
     <div className={cn('relative w-[200px] h-[200px]', className)}>
       {/* Background glow */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-32 h-32 rounded-full bg-[#00f5d4]/5 blur-2xl animate-pulse" />
+        <div className="w-32 h-32 rounded-full bg-[#00C9A7]/5 blur-2xl animate-pulse" />
       </div>
       
       {/* Chart frame */}
@@ -35,13 +35,13 @@ export function EmptyStateLottie({ className }: EmptyStateLottieProps) {
           <svg viewBox="0 0 80 60" className="w-full h-full overflow-visible">
             <defs>
               <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#00f5d4" stopOpacity="0.5" />
-                <stop offset="50%" stopColor="#00f5d4" stopOpacity="1" />
-                <stop offset="100%" stopColor="#a855f7" stopOpacity="1" />
+                <stop offset="0%" stopColor="#00C9A7" stopOpacity="0.5" />
+                <stop offset="50%" stopColor="#00C9A7" stopOpacity="1" />
+                <stop offset="100%" stopColor="#0066FF" stopOpacity="1" />
               </linearGradient>
               <linearGradient id="glowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#00f5d4" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#00f5d4" stopOpacity="0" />
+                <stop offset="0%" stopColor="#00C9A7" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#00C9A7" stopOpacity="0" />
               </linearGradient>
             </defs>
             
@@ -83,7 +83,7 @@ export function EmptyStateLottie({ className }: EmptyStateLottieProps) {
                 cx={point.cx}
                 cy={point.cy}
                 r="3"
-                fill="#00f5d4"
+                fill="#00C9A7"
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: [0, 1.2, 1], opacity: 1 }}
                 transition={{
@@ -116,7 +116,7 @@ export function EmptyStateLottie({ className }: EmptyStateLottieProps) {
       {[0, 1, 2].map((i) => (
         <motion.div
           key={i}
-          className="absolute w-1.5 h-1.5 rounded-full bg-[#00f5d4]"
+          className="absolute w-1.5 h-1.5 rounded-full bg-[#00C9A7]"
           style={{
             top: '50%',
             left: '50%',
