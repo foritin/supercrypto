@@ -109,3 +109,67 @@
     font-family: var(--font-mono);
   }
 }
+
+/* Neon Background Animations */
+@keyframes float-cyan {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(50px, 30px) scale(1.05);
+  }
+  50% {
+    transform: translate(20px, 60px) scale(0.95);
+  }
+  75% {
+    transform: translate(-30px, 40px) scale(1.02);
+  }
+}
+
+@keyframes float-purple {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-40px, -30px) scale(1.08);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.92);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.3;
+    box-shadow: 0 0 10px rgba(0,245,212,0.2);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 20px rgba(0,245,212,0.4);
+  }
+}
+
+.animate-float-cyan {
+  animation: float-cyan 25s ease-in-out infinite;
+}
+
+.animate-float-purple {
+  animation: float-purple 30s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 3s linear infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
