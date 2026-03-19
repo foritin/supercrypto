@@ -1,7 +1,7 @@
 /**
- * 开发者工具 API Service
- * 
- * 路由：/dev/* (仅开发环境)
+ * 开发者工具 / 运维工具 API Service
+ *
+ * 路由：/dev/*
  */
 import { DEV_PATHS } from '@/constants/api-paths'
 import { api } from '@/services/api'
@@ -33,7 +33,8 @@ export interface EnvironmentInfo {
 export interface TokenRecipient {
   address: string
   kyc_status: string | null
-  tag: string | null
+  roles?: string[]
+  tag?: string | null
   label: string
 }
 
@@ -47,6 +48,38 @@ export interface FaucetResponse {
   amount_eth: number
   old_balance_eth: number
   new_balance_eth: number
+}
+
+export interface TreasuryInitRequest {
+  signer_addresses: string[]
+  required_signatures: number
+}
+
+export interface TreasuryInitResponse {
+  contract_address: string | null
+  tx_hash: string
+  signer_count: number
+  required_signatures: number
+}
+
+export interface TreasuryInitPrepareResponse {
+  contract_address: string
+  function_name: string
+  abi: readonly unknown[]
+  signer_addresses: string[]
+  required_signatures: number
+}
+
+export interface TreasuryInitConfirmRequest extends TreasuryInitRequest {
+  tx_hash: string
+}
+
+export interface TreasuryConfigResponse {
+  contract_address: string | null
+  signers: string[]
+  required_signatures: number
+  threshold_ratio: string
+  is_initialized: boolean
 }
 
 export const devToolsService = {
@@ -89,5 +122,36 @@ export const devToolsService = {
     const response = await api.post<API.ResponseData<FaucetResponse>>(DEV_PATHS.FAUCET, request)
     return response.object_data!
   },
-}
 
+  /**
+   * 初始化 Treasury 多签配置
+   */
+  async initTreasury(request: TreasuryInitRequest): Promise<TreasuryInitResponse> {
+    const response = await api.post<API.ResponseData<TreasuryInitResponse>>(
+      DEV_PATHS.TREASURY_INIT,
+      request
+    )
+    return response.object_data!
+  },
+
+  async prepareInitTreasury(request: TreasuryInitRequest): Promise<TreasuryInitPrepareResponse> {
+    const response = await api.post<API.ResponseData<TreasuryInitPrepareResponse>>(
+      DEV_PATHS.TREASURY_INIT_PREPARE,
+      request
+    )
+    return response.object_data!
+  },
+
+  async confirmInitTreasury(request: TreasuryInitConfirmRequest): Promise<TreasuryInitResponse> {
+    const response = await api.post<API.ResponseData<TreasuryInitResponse>>(
+      DEV_PATHS.TREASURY_INIT_CONFIRM,
+      request
+    )
+    return response.object_data!
+  },
+
+  async getTreasuryConfig(): Promise<TreasuryConfigResponse> {
+    const response = await api.get<API.ResponseData<TreasuryConfigResponse>>(DEV_PATHS.TREASURY_CONFIG)
+    return response.object_data!
+  },
+}

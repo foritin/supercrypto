@@ -6,10 +6,10 @@
 import { format, addHours } from "date-fns";
 
 // UTC 时间格式模板
-const UTC_FORMATS: Record<string, string> = {
+const UTC_FORMATS = {
   zh: "yyyy-MM-dd HH:mm",
   en: "MMM dd, yyyy HH:mm",
-};
+} as const;
 
 /**
  * 格式化为 UTC 时间字符串
@@ -22,7 +22,7 @@ export function formatUTCTime(
   locale: "zh" | "en" = "zh"
 ): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  const formatStr = UTC_FORMATS[locale];
+  const formatStr = locale === "en" ? UTC_FORMATS.en : UTC_FORMATS.zh;
   return `${format(d, formatStr)} UTC`;
 }
 

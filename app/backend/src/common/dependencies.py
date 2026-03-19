@@ -47,8 +47,12 @@ from src.services.staking_service import StakingService
 from src.services.storage_service import StorageService
 from src.services.subscription_service import SubscriptionService
 from src.services.transaction_service import TransactionService
+from src.services.treasury_service import TreasuryService
 
 # ============ 模块级单例 ============
+
+# Treasury Service 单例
+treasury_service = TreasuryService()
 
 # 无状态 & 有内部缓存 → 全局共享
 admin_service = AdminService()
@@ -178,3 +182,9 @@ def get_transaction_service() -> TransactionService:
 def get_transaction_audit_service() -> TransactionAuditService:
     """依赖注入：获取交易审计服务（单例）"""
     return transaction_audit_service
+
+
+# ============ Treasury ============
+def get_treasury_service() -> TreasuryService:
+    """依赖注入：获取国库服务（单例）"""
+    return treasury_service

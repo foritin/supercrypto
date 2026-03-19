@@ -403,6 +403,20 @@ export async function quickApproveKyc(walletAddress: string): Promise<KycFullRes
 }
 
 /**
+ * Confirm quick approve KYC after wallet tx is mined (dev only)
+ */
+export async function confirmQuickApproveKyc(
+  walletAddress: string,
+  txHash: string
+): Promise<KycFullResponse> {
+  const response = await api.post<API.ResponseData<KycFullResponse>>(
+    DEV_PATHS.KYC_QUICK_APPROVE_CONFIRM(walletAddress),
+    { tx_hash: txHash }
+  )
+  return response.object_data as KycFullResponse
+}
+
+/**
  * Reset KYC (dev only)
  */
 export async function resetKyc(
@@ -437,5 +451,6 @@ export const kycService = {
 
   // 开发工具
   quickApprove: quickApproveKyc,
+  confirmQuickApprove: confirmQuickApproveKyc,
   reset: resetKyc,
 }

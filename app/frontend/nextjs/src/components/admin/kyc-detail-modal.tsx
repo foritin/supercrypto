@@ -84,9 +84,9 @@ export interface KycDetailModalProps {
 
 // ID type labels
 const ID_TYPE_LABELS: Record<string, string> = {
-  passport: '护照',
-  id_card: '身份证',
-  driver_license: '驾驶证',
+  passport: 'Passport',
+  id_card: 'ID Card',
+  driver_license: 'Driver License',
 }
 
 // 使用共享状态徽章配置
@@ -132,7 +132,7 @@ function CopyableAddress({ address, className }: { address: string; className?: 
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            {copied ? '已复制' : '复制完整地址'}
+            {copied ? 'Copied' : 'Copy full address'}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -186,7 +186,7 @@ function DocumentImage({
         <div className="w-full aspect-[3/2] bg-muted/30 rounded-lg flex items-center justify-center border border-dashed border-muted-foreground/30">
           <div className="text-center text-muted-foreground">
             <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <span className="text-xs">未上传</span>
+            <span className="text-xs">Not uploaded</span>
           </div>
         </div>
         <span className="text-xs text-muted-foreground mt-2">{label}</span>
@@ -206,7 +206,7 @@ function DocumentImage({
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <span className="text-xs">加载失败</span>
+              <span className="text-xs">Load failed</span>
             </div>
           </div>
         ) : (
@@ -236,7 +236,7 @@ function DocumentImage({
                   <ExternalLink className="h-3 w-3 text-white" />
                 </a>
               </TooltipTrigger>
-              <TooltipContent>在新标签页打开</TooltipContent>
+              <TooltipContent>Open in new tab</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         )}
@@ -336,7 +336,7 @@ export function KycDetailModal({
   // Format date
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return '-'
-    return new Date(dateStr).toLocaleString('zh-CN', {
+    return new Date(dateStr).toLocaleString('en-US', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -352,10 +352,10 @@ export function KycDetailModal({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              KYC 审核详情
+              KYC Review Details
             </DialogTitle>
             <DialogDescription>
-              查看用户提交的 KYC 认证信息并进行审核
+              Review submitted KYC information
             </DialogDescription>
           </DialogHeader>
 
@@ -371,10 +371,10 @@ export function KycDetailModal({
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <AlertCircle className="h-12 w-12 text-destructive mb-4" />
               <p className="text-sm text-muted-foreground mb-4">
-                加载失败: {error.message}
+                Load failed: {error.message}
               </p>
               <Button variant="outline" onClick={() => refetch()}>
-                重试
+                Retry
               </Button>
             </div>
           )}
@@ -389,7 +389,7 @@ export function KycDetailModal({
                   {renderStatus(kycData.status)}
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  提交时间: {formatDate(kycData.submitted_at)}
+                  Submitted: {formatDate(kycData.submitted_at)}
                 </span>
               </div>
 
@@ -399,32 +399,32 @@ export function KycDetailModal({
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  基本信息
+                  Basic Information
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/20 rounded-lg border border-white/5">
                   <InfoRow
                     icon={CreditCard}
-                    label="钱包地址"
+                    label="Wallet Address"
                     value={<CopyableAddress address={kycData.wallet_address} />}
                   />
                   <InfoRow
                     icon={User}
-                    label="姓名"
+                    label="Full Name"
                     value={kycData.full_name || '-'}
                   />
                   <InfoRow
                     icon={Calendar}
-                    label="出生日期"
+                    label="Date of Birth"
                     value={kycData.date_of_birth || '-'}
                   />
                   <InfoRow
                     icon={Globe}
-                    label="国籍"
+                    label="Nationality"
                     value={kycData.country_code || '-'}
                   />
                   <InfoRow
                     icon={MapPin}
-                    label="居住地址"
+                    label="Residential Address"
                     value={kycData.address || '-'}
                     className="sm:col-span-2"
                   />
@@ -437,31 +437,31 @@ export function KycDetailModal({
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  证件信息
+                  ID Document
                 </h3>
                 <div className="p-4 bg-muted/20 rounded-lg border border-white/5 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <InfoRow
                       icon={CreditCard}
-                      label="证件类型"
+                      label="ID Type"
                       value={ID_TYPE_LABELS[kycData.id_type ?? ''] || kycData.id_type || '-'}
                     />
                     <InfoRow
                       icon={CreditCard}
-                      label="证件号码"
+                      label="ID Number"
                       value={kycData.id_number ? `****${kycData.id_number.slice(-4)}` : '-'}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <DocumentImage
                       src={kycData.id_front_url}
-                      alt="证件正面"
-                      label="证件正面"
+                      alt="ID front"
+                      label="ID Front"
                     />
                     <DocumentImage
                       src={kycData.id_back_url}
-                      alt="证件背面"
-                      label="证件背面"
+                      alt="ID back"
+                      label="ID Back"
                     />
                   </div>
                 </div>
@@ -473,29 +473,29 @@ export function KycDetailModal({
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <Camera className="h-4 w-4" />
-                  自拍验证
+                  Selfie Verification
                 </h3>
                 <div className="p-4 bg-muted/20 rounded-lg border border-white/5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="max-w-[200px]">
                       <DocumentImage
                         src={kycData.selfie_url}
-                        alt="自拍照"
-                        label="自拍照"
+                        alt="Selfie"
+                        label="Selfie"
                       />
                     </div>
                     <div className="flex flex-col justify-center space-y-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">活体检测:</span>
+                        <span className="text-sm text-muted-foreground">Liveness:</span>
                         {kycData.liveness_verified ? (
                           <Badge variant="success" className="flex items-center gap-1">
                             <CheckCircle className="h-3 w-3" />
-                            已通过
+                            Passed
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="flex items-center gap-1">
                             <XCircle className="h-3 w-3" />
-                            未验证
+                            Not verified
                           </Badge>
                         )}
                       </div>
@@ -511,7 +511,7 @@ export function KycDetailModal({
                   <div className="space-y-2">
                     <h3 className="text-sm font-semibold flex items-center gap-2 text-destructive">
                       <XCircle className="h-4 w-4" />
-                      拒绝原因
+                      Rejection Reason
                     </h3>
                     <div className="p-4 bg-destructive/10 rounded-lg border border-destructive/20">
                       <p className="text-sm text-destructive whitespace-pre-wrap">
@@ -527,9 +527,9 @@ export function KycDetailModal({
                 <>
                   <Separator />
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>审核时间: {formatDate(kycData.reviewed_at)}</span>
+                    <span>Reviewed at: {formatDate(kycData.reviewed_at)}</span>
                     {kycData.reviewer_address && (
-                      <span>审核人: {truncateAddress(kycData.reviewer_address)}</span>
+                      <span>Reviewer: {truncateAddress(kycData.reviewer_address)}</span>
                     )}
                   </div>
                 </>
@@ -544,21 +544,21 @@ export function KycDetailModal({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
               >
-                取消
+                Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => setConfirmDialog({ open: true, action: 'reject' })}
               >
                 <XCircle className="h-4 w-4 mr-2" />
-                拒绝
+                Reject
               </Button>
               <Button
                 variant="primary"
                 onClick={() => setConfirmDialog({ open: true, action: 'approve' })}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                通过
+                Approve
               </Button>
             </DialogFooter>
           )}
@@ -570,7 +570,7 @@ export function KycDetailModal({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
               >
-                关闭
+                Close
               </Button>
             </DialogFooter>
           )}

@@ -115,9 +115,9 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      notification.success(t('admin.audit.export.success', '导出成功'));
+      notification.success(t('admin.audit.export.success'));
     } catch (error) {
-      notification.error(t('admin.audit.export.failed', '导出失败'));
+      notification.error(t('admin.audit.export.failed'));
       console.error('Export failed:', error);
     } finally {
       setLoading(false);
@@ -154,11 +154,11 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      notification.success(t('admin.audit.export.success', '导出成功'));
+      notification.success(t('admin.audit.export.success'));
       setModalOpen(false);
       form.reset();
     } catch (error) {
-      notification.error(t('admin.audit.export.failed', '导出失败'));
+      notification.error(t('admin.audit.export.failed'));
       console.error('Export failed:', error);
     } finally {
       setLoading(false);
@@ -180,22 +180,22 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            <span className="ml-2">{t('admin.audit.export.button', '导出')}</span>
+            <span className="ml-2">{t('admin.audit.export.button')}</span>
             <ChevronDown className="ml-2 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => handleQuickExport('csv')}>
             <FileSpreadsheet className="mr-2 h-4 w-4" />
-            {t('admin.audit.export.exportCsv', '导出 CSV')}
+            {t('admin.audit.export.exportCsv')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleQuickExport('json')}>
             <FileText className="mr-2 h-4 w-4" />
-            {t('admin.audit.export.exportJson', '导出 JSON')}
+            {t('admin.audit.export.exportJson')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setModalOpen(true)}>
-            {t('admin.audit.export.customExport', '自定义导出...')}
+            {t('admin.audit.export.customExport')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -205,7 +205,7 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
-              {t('admin.audit.export.customTitle', '自定义导出')}
+              {t('admin.audit.export.customTitle')}
             </DialogTitle>
           </DialogHeader>
           
@@ -217,12 +217,12 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t('admin.audit.export.dateRange', '时间范围')}
+                      {t('admin.audit.export.dateRange')}
                     </FormLabel>
                     <FormControl>
                       <DateRangePicker
                         onChange={field.onChange}
-                        placeholder={`${t('admin.audit.export.startDate', '开始日期')} - ${t('admin.audit.export.endDate', '结束日期')}`}
+                        placeholder={`${t('admin.audit.export.startDate')} - ${t('admin.audit.export.endDate')}`}
                         className="w-full"
                         {...(field.value ? { value: field.value } : {})}
                       />
@@ -238,7 +238,7 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t('admin.audit.export.category', '类别')}
+                      {t('admin.audit.export.category')}
                     </FormLabel>
                     <Select
                       onValueChange={field.onChange}
@@ -247,13 +247,13 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue
-                            placeholder={t('admin.audit.export.allCategories', '全部类别')}
+                            placeholder={t('admin.audit.export.allCategories')}
                           />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="all">
-                          {t('admin.audit.export.allCategories', '全部类别')}
+                          {t('admin.audit.export.allCategories')}
                         </SelectItem>
                         {Object.values(AuditCategory).map((cat) => (
                           <SelectItem key={cat} value={cat}>
@@ -273,7 +273,7 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t('admin.audit.export.status', '状态')}
+                      {t('admin.audit.export.status')}
                     </FormLabel>
                     <Select
                       onValueChange={field.onChange}
@@ -282,13 +282,13 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue
-                            placeholder={t('admin.audit.export.allStatus', '全部状态')}
+                            placeholder={t('admin.audit.export.allStatus')}
                           />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="all">
-                          {t('admin.audit.export.allStatus', '全部状态')}
+                          {t('admin.audit.export.allStatus')}
                         </SelectItem>
                         {Object.values(AuditStatus).map((status) => (
                           <SelectItem key={status} value={status}>
@@ -308,7 +308,7 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t('admin.audit.export.format', '导出格式')}
+                      {t('admin.audit.export.format')}
                     </FormLabel>
                     <Select
                       value={field.value}
@@ -345,11 +345,11 @@ export const AuditExport: React.FC<AuditExportProps> = ({ currentFilters }) => {
                   variant="outline"
                   onClick={handleModalClose}
                 >
-                  {t('common.cancel', '取消')}
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t('admin.audit.export.confirm', '导出')}
+                  {t('admin.audit.export.confirm')}
                 </Button>
               </DialogFooter>
             </form>

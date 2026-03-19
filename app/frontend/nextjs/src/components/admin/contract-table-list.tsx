@@ -33,12 +33,14 @@ import {
   Link2,
   Link2Off,
   Star,
+  CircleHelp,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { GlowStatusBadge } from '@/components/ui/glow-status-badge';
 import { DataTable, SortableHeader } from '@/components/ui/data-table';
 import {
   Select,
@@ -65,26 +67,29 @@ import type {
   ProjectReadinessStatus,
 } from '@/types/contract';
 
-// 注册状态样式映射（纯 Provider 模式）
-const REGISTRATION_STATUS_STYLES: Record<RegistrationStatus, { className: string; icon: React.ReactNode }> = {
+// 注册状态到 GlowStatusBadge variant 的映射
+const REGISTRATION_STATUS_VARIANTS: Record<RegistrationStatus, { variant: 'success' | 'warning' | 'orange' | 'error' | 'default'; icon: React.ReactNode; pulse?: boolean; glow?: boolean }> = {
   synced: {
-    className: 'bg-green-500/20 text-green-400 border-green-500/30',
+    variant: 'success',
     icon: <CheckCircle className="h-3 w-3" />,
+    glow: true,
   },
   mismatch: {
-    className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    variant: 'warning',
     icon: <AlertCircle className="h-3 w-3" />,
   },
   not_registered: {
-    className: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    variant: 'orange',
     icon: <AlertTriangle className="h-3 w-3" />,
+    pulse: true,
+    glow: true,
   },
   not_deployed: {
-    className: 'bg-red-500/20 text-red-400 border-red-500/30',
+    variant: 'error',
     icon: <XCircle className="h-3 w-3" />,
   },
   unknown: {
-    className: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+    variant: 'default',
     icon: <AlertCircle className="h-3 w-3" />,
   },
 };
@@ -115,18 +120,19 @@ const DEP_STATUS_STYLES = {
   not_registered: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
 } as const;
 
-// 项目就绪状态样式映射 (Requirements: 4.1)
-const PROJECT_READINESS_STYLES: Record<ProjectReadinessStatus, { className: string; icon: React.ReactNode }> = {
+// 项目就绪状态到 GlowStatusBadge variant 的映射 (Requirements: 4.1)
+const PROJECT_READINESS_VARIANTS: Record<ProjectReadinessStatus, { variant: 'success' | 'warning' | 'error'; icon: React.ReactNode; glow?: boolean }> = {
   ready: {
-    className: 'bg-green-500/20 text-green-400 border-green-500/30',
+    variant: 'success',
     icon: <CheckCircle className="h-3 w-3" />,
+    glow: true,
   },
   partially_ready: {
-    className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    variant: 'warning',
     icon: <AlertCircle className="h-3 w-3" />,
   },
   not_ready: {
-    className: 'bg-red-500/20 text-red-400 border-red-500/30',
+    variant: 'error',
     icon: <XCircle className="h-3 w-3" />,
   },
 };
@@ -216,7 +222,7 @@ function ProjectStatusCard({ projectGroup, t }: ProjectStatusCardProps) {
   } = projectGroup;
 
   // 获取就绪状态样式
-  const readinessStyle = PROJECT_READINESS_STYLES[project_readiness] || PROJECT_READINESS_STYLES.not_ready;
+  const readinessVariant = PROJECT_READINESS_VARIANTS[project_readiness] || PROJECT_READINESS_VARIANTS.not_ready;
   
   // 就绪状态标签文本
   const readinessLabelKey = {
@@ -237,6 +243,9 @@ function ProjectStatusCard({ projectGroup, t }: ProjectStatusCardProps) {
     if (!readiness_details.has_primary) {
       unmetConditions.push(t('admin.contracts.projectReadiness.conditions.hasPrimaryNo'));
     }
+    if (!readiness_details.treasury_configured) {
+      unmetConditions.push(t('admin.contracts.projectReadiness.conditions.treasuryConfiguredNo'));
+    }
   }
 
   return (
@@ -255,16 +264,24 @@ function ProjectStatusCard({ projectGroup, t }: ProjectStatusCardProps) {
           </div>
           
           {/* 就绪状态标签 (Requirements: 4.1) */}
+          <GlowStatusBadge 
+            variant={readinessVariant.variant}
+            icon={readinessVariant.icon}
+            glow={readinessVariant.glow}
+          >
+            {t(`admin.contracts.projectReadiness.${readinessLabelKey}`)}
+          </GlowStatusBadge>
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge 
-                  variant="outline" 
-                  className={cn('gap-1 font-medium cursor-default', readinessStyle.className)}
+                <button
+                  type="button"
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/20 text-white/60 hover:text-white/90 hover:border-white/40"
+                  aria-label={t('admin.contracts.projectReadiness.title')}
                 >
-                  {readinessStyle.icon}
-                  {t(`admin.contracts.projectReadiness.${readinessLabelKey}`)}
-                </Badge>
+                  <CircleHelp className="h-3.5 w-3.5" />
+                </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs">
                 <div className="space-y-2">
@@ -301,6 +318,12 @@ function ProjectStatusCard({ projectGroup, t }: ProjectStatusCardProps) {
                         <li className="flex items-center gap-1">
                           <CheckCircle className="h-3 w-3 text-green-400" />
                           {t('admin.contracts.projectReadiness.conditions.hasPrimary')}
+                        </li>
+                      )}
+                      {readiness_details.treasury_configured && (
+                        <li className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-400" />
+                          {t('admin.contracts.projectReadiness.conditions.treasuryConfigured')}
                         </li>
                       )}
                     </ul>
@@ -435,7 +458,7 @@ function getGlobalColumns(
       size: 160,
       cell: ({ row }) => {
         const status = row.original.registration_status || 'unknown';
-        const { className, icon } = REGISTRATION_STATUS_STYLES[status] || REGISTRATION_STATUS_STYLES.unknown;
+        const { variant, icon, pulse, glow } = REGISTRATION_STATUS_VARIANTS[status] || REGISTRATION_STATUS_VARIANTS.unknown;
         const labelKey = {
           synced: 'synced',
           mismatch: 'mismatch',
@@ -444,10 +467,9 @@ function getGlobalColumns(
           unknown: 'unknown',
         }[status] || 'unknown';
         return (
-          <Badge variant="outline" className={cn('gap-1 font-medium', className)}>
-            {icon}
+          <GlowStatusBadge variant={variant} icon={icon} pulse={pulse} glow={glow}>
             {t(`admin.contracts.status.${labelKey}`)}
-          </Badge>
+          </GlowStatusBadge>
         );
       },
     },
@@ -567,7 +589,7 @@ function getProjectColumns(
       size: 160,
       cell: ({ row }) => {
         const status = row.original.registration_status || 'unknown';
-        const { className, icon } = REGISTRATION_STATUS_STYLES[status] || REGISTRATION_STATUS_STYLES.unknown;
+        const { variant, icon, pulse, glow } = REGISTRATION_STATUS_VARIANTS[status] || REGISTRATION_STATUS_VARIANTS.unknown;
         const labelKey = {
           synced: 'synced',
           mismatch: 'mismatch',
@@ -576,10 +598,9 @@ function getProjectColumns(
           unknown: 'unknown',
         }[status] || 'unknown';
         return (
-          <Badge variant="outline" className={cn('gap-1 font-medium', className)}>
-            {icon}
+          <GlowStatusBadge variant={variant} icon={icon} pulse={pulse} glow={glow}>
             {t(`admin.contracts.status.${labelKey}`)}
-          </Badge>
+          </GlowStatusBadge>
         );
       },
     },
@@ -675,7 +696,7 @@ function ContractTable({ title, dataSource, columns, loading }: ContractTablePro
           columns={columns}
           data={dataSource}
           {...(loading !== undefined ? { loading } : {})}
-          emptyMessage="暂无合约数据"
+          emptyMessage="No contract data"
         />
       </div>
     </div>
@@ -732,7 +753,7 @@ export function ContractTableList({
               Global Contracts
             </span>
             <span className="text-xs text-muted-foreground">
-              ({t('admin.contracts.globalContracts.description') || '公共基础设施合约'})
+              ({t('admin.contracts.globalContracts.description') || 'Shared infrastructure contracts'})
             </span>
           </div>
         }
@@ -755,7 +776,7 @@ export function ContractTableList({
                     Project Contracts
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    ({t('admin.contracts.projectContracts.description') || '项目专属合约'})
+                    ({t('admin.contracts.projectContracts.description') || 'Project-specific contracts'})
                   </span>
                 </div>
                 <Badge variant="secondary" className="bg-blue-500/20 text-blue-400">
@@ -806,7 +827,7 @@ export function ContractTableList({
                 columns={projectColumns}
                 data={filteredProjectContracts}
                 loading={loading}
-                emptyMessage={t('admin.contracts.table.noData', '暂无合约数据')}
+                emptyMessage={t('admin.contracts.table.noData', 'No contract data')}
               />
             </div>
           </div>

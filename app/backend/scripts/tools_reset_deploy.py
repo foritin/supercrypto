@@ -46,6 +46,8 @@ from src.aerich_redirect import TORTOISE_ORM
 from src.models.asset import Asset, AssetContractBinding
 from src.models.contracts import ContractConfig, ContractDeployment
 from src.models.contracts.provider_registry import ProviderRegistry
+from src.models.kyc import AccountKyc, AccountKycDocument
+from src.models.kyc_audit_log import KycAuditLog
 from src.models.staking import StakingRecord
 from src.models.subscription import Subscription
 from src.models.transaction_audit import TransactionAudit
@@ -62,6 +64,9 @@ async def get_deploy_stats(project_name: str | None = None) -> dict:
         "subscriptions": 0,
         "transaction_audits": 0,
         "staking_records": 0,
+        "kyc_records": 0,
+        "kyc_documents": 0,
+        "kyc_audit_logs": 0,
     }
 
     # 查询部署记录
@@ -159,6 +164,14 @@ async def get_deploy_stats(project_name: str | None = None) -> dict:
     else:
         stats["staking_records"] = await StakingRecord.all().count()
 
+    # 查询 KYC 相关记录
+    # KYC 是全局/网络维度数据，不按项目拆分。
+    # 仅在清理 all 或 common 时统计并清理。
+    if project_name in (None, "common"):
+        stats["kyc_records"] = await AccountKyc.all().count()
+        stats["kyc_documents"] = await AccountKycDocument.all().count()
+        stats["kyc_audit_logs"] = await KycAuditLog.all().count()
+
     return stats
 
 
@@ -199,6 +212,9 @@ async def reset_deploy(project_name: str | None = None, force: bool = False) -> 
     print(f"📜 认购记录: {stats['subscriptions']} 条")
     print(f"📋 交易审计: {stats['transaction_audits']} 条")
     print(f"🔒 质押记录: {stats['staking_records']} 条")
+    print(f"🪪 KYC 记录: {stats['kyc_records']} 条")
+    print(f"🖼️ KYC 证件: {stats['kyc_documents']} 条")
+    print(f"📚 KYC 审计日志: {stats['kyc_audit_logs']} 条")
 
     total = (
         len(stats["deployments"])
@@ -209,6 +225,9 @@ async def reset_deploy(project_name: str | None = None, force: bool = False) -> 
         + stats["subscriptions"]
         + stats["transaction_audits"]
         + stats["staking_records"]
+        + stats["kyc_records"]
+        + stats["kyc_documents"]
+        + stats["kyc_audit_logs"]
     )
     print("-" * 60)
     print(f"📊 总计: {total} 条记录")
@@ -238,6 +257,9 @@ async def reset_deploy(project_name: str | None = None, force: bool = False) -> 
     deleted_subscriptions = 0
     deleted_transaction_audits = 0
     deleted_staking_records = 0
+    deleted_kyc_records = 0
+    deleted_kyc_documents = 0
+    deleted_kyc_audit_logs = 0
 
     if project_name:
         # 清理指定项目
@@ -289,6 +311,12 @@ async def reset_deploy(project_name: str | None = None, force: bool = False) -> 
             deleted_staking_records = await StakingRecord.filter(
                 asset_id__in=asset_ids
             ).delete()
+
+        # 清理 KYC 相关（仅 common 项目）
+        if project_name == "common":
+            deleted_kyc_audit_logs = await KycAuditLog.all().delete()
+            deleted_kyc_documents = await AccountKycDocument.all().delete()
+            deleted_kyc_records = await AccountKyc.all().delete()
     else:
         # 清理所有
         deleted_deployments = await ContractDeployment.all().delete()
@@ -309,6 +337,11 @@ async def reset_deploy(project_name: str | None = None, force: bool = False) -> 
         # 清理所有质押记录
         deleted_staking_records = await StakingRecord.all().delete()
 
+        # 清理所有 KYC 相关
+        deleted_kyc_audit_logs = await KycAuditLog.all().delete()
+        deleted_kyc_documents = await AccountKycDocument.all().delete()
+        deleted_kyc_records = await AccountKyc.all().delete()
+
     print("\n✅ 清理完成:")
     print(f"   • 部署记录: {deleted_deployments} 条")
     print(f"   • 合约配置: {deleted_configs} 条")
@@ -318,6 +351,9 @@ async def reset_deploy(project_name: str | None = None, force: bool = False) -> 
     print(f"   • 认购记录: {deleted_subscriptions} 条")
     print(f"   • 交易审计: {deleted_transaction_audits} 条")
     print(f"   • 质押记录: {deleted_staking_records} 条")
+    print(f"   • KYC 记录: {deleted_kyc_records} 条")
+    print(f"   • KYC 证件: {deleted_kyc_documents} 条")
+    print(f"   • KYC 审计日志: {deleted_kyc_audit_logs} 条")
     print("=" * 60)
 
     await Tortoise.close_connections()
@@ -349,6 +385,9 @@ async def show_stats(project_name: str | None = None) -> None:
         print(f"📜 认购记录: {stats['subscriptions']} 条")
         print(f"📋 交易审计: {stats['transaction_audits']} 条")
         print(f"🔒 质押记录: {stats['staking_records']} 条")
+        print(f"🪪 KYC 记录: {stats['kyc_records']} 条")
+        print(f"🖼️ KYC 证件: {stats['kyc_documents']} 条")
+        print(f"📚 KYC 审计日志: {stats['kyc_audit_logs']} 条")
     finally:
         await Tortoise.close_connections()
 

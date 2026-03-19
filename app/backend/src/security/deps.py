@@ -209,10 +209,78 @@ async def require_admin(request: Request) -> str:
     network = SETTINGS.network
     account = await Account.filter(address=wallet_address, network=network).first()
 
-    if not account or account.tag != "admin":
+    roles = account.roles or [] if account else []
+    is_admin = "admin" in roles
+    is_contract_owner = "contract_owner" in roles
+    is_treasury_route = request.url.path.startswith("/api/v1/admin/treasury")
+
+    if not is_admin and not (is_treasury_route and is_contract_owner):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin permission required",
+        )
+
+    return wallet_address
+
+
+async def require_multisig_signer(request: Request) -> str:
+    """
+    多签签名者权限验证依赖
+
+    前置条件：AuthStateMiddleware 已处理 JWT 解析
+
+    检查：
+    1. 基础认证（复用 require_user）
+    2. 是否为多签成员
+    """
+
+    # 复用用户认证
+    wallet_address = await require_user(request)
+
+    # 查询账户并验证多签成员权限
+    network = SETTINGS.network
+    account = await Account.filter(address=wallet_address, network=network).first()
+
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account not found",
+        )
+
+    # 检查是否为多签成员（统一角色：multisig_signer；contract_owner 保留签名权限）
+    valid_roles = ["multisig_signer", "contract_owner"]
+    account_roles = account.roles or []
+    if not any(role in account_roles for role in valid_roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Multisig signer permission required",
+        )
+
+    return wallet_address
+
+
+async def require_contract_owner(request: Request) -> str:
+    """
+    合约所有者权限验证依赖
+
+    前置条件：AuthStateMiddleware 已处理 JWT 解析
+
+    检查：
+    1. 基础认证（复用 require_user）
+    2. 是否为合约所有者账户（可执行部署等管理操作）
+    """
+
+    # 复用用户认证
+    wallet_address = await require_user(request)
+
+    # 查询账户并验证合约所有者权限
+    network = SETTINGS.network
+    account = await Account.filter(address=wallet_address, network=network).first()
+
+    if not account or "contract_owner" not in (account.roles or []):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Contract owner permission required",
         )
 
     return wallet_address

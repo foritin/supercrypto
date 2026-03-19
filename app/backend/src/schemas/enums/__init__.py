@@ -44,6 +44,9 @@ from .kyc import (
     RiskLevel,
 )
 
+# 赎回相关
+from .redemption import RedemptionEventType, RedemptionStatus, SignatureStatus
+
 # 质押相关
 from .staking import StakingPeriod, StakingStatus
 
@@ -98,4 +101,8 @@ __all__ = [
     "ProjectReadiness",
     # Error Codes
     "ErrorCode",
+    # Redemption
+    "RedemptionEventType",
+    "RedemptionStatus",
+    "SignatureStatus",
 ]

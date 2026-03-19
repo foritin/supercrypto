@@ -31,6 +31,11 @@ const portfolio = {
       period: "Lock Period",
       status: "Status",
       actions: "Actions",
+      recentTransactions: "Recent Transactions",
+      assetType: "Asset/Type",
+      txId: "TxID",
+      date: "Date",
+      viewDetails: "View Details",
     },
     
     // Transaction history table columns
@@ -139,6 +144,38 @@ const portfolio = {
       unstake: "Unstake",
       claim: "Claim",
     },
+    
+    // Investment card
+    card: {
+      invested: "Invested",
+      expectedReturn: "Expected Return",
+      totalAtMaturity: "Total at Maturity",
+      daysLeft: "{{days}} days left",
+      inProgress: "In Progress",
+      completed: "Completed",
+      matured: "Matured",
+      pending: "Pending",
+      redeem: "Redeem",
+      details: "Details",
+      lockPeriod: "Lock Period",
+      redeemCompleted: "Redeem Completed",
+    },
+    
+    // Dev mode
+    dev: {
+      mockData: "Mock Data",
+      demo: "Demo",
+    },
+    
+    // View options
+    view: {
+      cards: "Cards",
+      table: "Table",
+    },
+    
+    // Dashboard portfolio card
+    totalAssets: "{{count}} assets",
+    totalReturn: "Total Return",
 
     // Legacy flat structure (keep for compatibility)
     totalInvested: "Total Invested",

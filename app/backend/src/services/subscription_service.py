@@ -660,10 +660,11 @@ class SubscriptionService:
         for sub in subscriptions:
             if sub.status in [SubscriptionStatus.ACTIVE, SubscriptionStatus.MATURED]:
                 total_invested += sub.amount
-                total_value += sub.total_return
-                total_earnings += sub.expected_interest
+                # 未赎回前不计入预期收益：当前价值按本金计算
+                total_value += sub.amount
                 active_count += 1
             elif sub.status == SubscriptionStatus.REDEEMED:
+                # 已赎回后才计入已实现收益
                 total_earnings += sub.actual_interest
 
         return {
@@ -722,6 +723,13 @@ class SubscriptionService:
 
         asset = subscription.asset
 
+        if subscription.actual_interest > 0:
+            display_interest = subscription.actual_interest
+        elif subscription.lock_period == 0:
+            display_interest = subscription.get_redeemable_interest()
+        else:
+            display_interest = subscription.expected_interest
+
         return SubscriptionResponse(
             id=subscription.id,
             wallet_address=subscription.wallet_address,
@@ -735,9 +743,9 @@ class SubscriptionService:
             rwa_token_amount=float(subscription.rwa_token_amount),
             start_date=subscription.start_date,
             end_date=subscription.end_date,
-            expected_interest=float(subscription.expected_interest),
+            expected_interest=float(display_interest),
             actual_interest=float(subscription.actual_interest),
-            total_return=float(subscription.total_return),
+            total_return=float(subscription.amount + display_interest),
             days_remaining=subscription.days_remaining,
             is_matured=subscription.is_matured,
             status=subscription.status,

@@ -55,7 +55,7 @@ export const AuditStats: React.FC<AuditStatsProps> = ({
         {/* 总操作数 */}
         <div className="relative">
           <StatCard
-            title={t('admin.audit.stats.totalOperations', '总操作数')}
+            title={t('admin.audit.stats.totalOperations')}
             value={stats?.total_operations || 0}
             icon={Activity}
             variant="gold"
@@ -68,7 +68,7 @@ export const AuditStats: React.FC<AuditStatsProps> = ({
         {/* 成功操作 */}
         <div className="relative">
           <StatCard
-            title={t('admin.audit.stats.successCount', '成功操作')}
+            title={t('admin.audit.stats.successCount')}
             value={stats?.success_count || 0}
             suffix={successRate > 0 ? ` ( ${successRate}% )` : ''}
             icon={CheckCircle}
@@ -82,7 +82,7 @@ export const AuditStats: React.FC<AuditStatsProps> = ({
         {/* 失败操作 */}
         <div className="relative">
           <StatCard
-            title={t('admin.audit.stats.failedCount', '失败操作')}
+            title={t('admin.audit.stats.failedCount')}
             value={stats?.failed_count || 0}
             icon={XCircle}
             variant="gold"
@@ -96,7 +96,7 @@ export const AuditStats: React.FC<AuditStatsProps> = ({
         <div className="relative">
           {transactionStats ? (
             <StatCard
-              title={t('admin.audit.stats.totalTransactions', '链上交易')}
+              title={t('admin.audit.stats.totalTransactions')}
               value={transactionStats.total_transactions || 0}
               icon={ArrowRightLeft}
               variant="cyan"
@@ -104,7 +104,7 @@ export const AuditStats: React.FC<AuditStatsProps> = ({
             />
           ) : (
             <StatCard
-              title={t('admin.audit.stats.pendingCount', '待处理')}
+              title={t('admin.audit.stats.pendingCount')}
               value={stats?.pending_count || 0}
               icon={Clock}
               variant="cyan"

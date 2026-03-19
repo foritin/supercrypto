@@ -25,7 +25,7 @@ const API_BASE = `${API_BASE_URL}/dev`;
 const fetcher = async <T>(url: string): Promise<T> => {
   const res = await fetch(url);
   if (!res.ok) {
-    const error = new Error('请求失败');
+    const error = new Error('Request failed');
     throw error;
   }
   return res.json();
@@ -93,7 +93,7 @@ export async function syncProjectConfig(name: string, force: boolean = false): P
   const res = await fetch(`${API_BASE}/projects/${name}/sync?force=${force}`, {
     method: 'POST',
   });
-  if (!res.ok) throw new Error('同步失败');
+  if (!res.ok) throw new Error('Sync failed');
   return res.json();
 }
 
@@ -105,7 +105,7 @@ export async function syncProjectBindings(name: string, network: string = 'hardh
   const res = await fetch(`${API_BASE}/projects/${name}/sync-bindings?network=${network}`, {
     method: 'POST',
   });
-  if (!res.ok) throw new Error('同步失败');
+  if (!res.ok) throw new Error('Sync failed');
   return res.json();
 }
 
@@ -128,7 +128,7 @@ export async function updateContractDeployment(
       body: JSON.stringify({ address, status }),
     }
   );
-  if (!res.ok) throw new Error('更新失败');
+  if (!res.ok) throw new Error('Update failed');
 }
 
 
@@ -149,5 +149,5 @@ export async function updateContractBindings(
       body: JSON.stringify({ bindings }),
     }
   );
-  if (!res.ok) throw new Error('更新失败');
+  if (!res.ok) throw new Error('Update failed');
 }

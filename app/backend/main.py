@@ -2,15 +2,6 @@
 SuperCrypto API - FastAPI应用主入口
 """
 
-# 抑制第三方库的弃用警告（uvicorn/websockets）
-# 注意：tortoise ORM 的 pk/index 警告已在模型中修复
-import warnings
-warnings.filterwarnings(
-    "ignore",
-    message=".*WebSocketServerProtocol is deprecated.*",
-    category=DeprecationWarning,
-)
-
 import asyncio
 from contextlib import asynccontextmanager
 
@@ -35,8 +26,6 @@ from src.middleware import (
 )
 from src.models import Account
 from src.security import require_admin
-from src.tasks.contract_task import async_sync_provider_registry
-from src.tasks.kyc_sync_task import reconcile_chain_events, retry_failed_kyc_syncs
 from src.tasks.subscription_reconcile_task import reconcile_subscription_events
 
 settings = SETTINGS
@@ -63,19 +52,12 @@ async def lifespan(app: FastAPI):
     print("✅ Scheduler started")
 
     print("🔄 Scheduling tasks...")
-    # 每 2 分钟同步 Provider 注册状态
-    await SchedulerService.schedule_task(
-        async_sync_provider_registry, "cyclic", interval=120
+    print(
+        "ℹ️ Provider sync periodic task disabled (using register/unregister on-chain confirmation)"
     )
-    print("✅ Provider sync task scheduled (interval=120s)")
-
-    # B-06: 每 5 分钟重试失败的 KYC 链上同步
-    await SchedulerService.schedule_task(retry_failed_kyc_syncs, "cyclic", interval=300)
-    print("✅ KYC failed sync retry task scheduled (interval=300s)")
-
-    # C-04: 每 5 分钟扫描合约事件对账
-    await SchedulerService.schedule_task(reconcile_chain_events, "cyclic", interval=300)
-    print("✅ KYC chain event reconciliation task scheduled (interval=300s)")
+    print(
+        "ℹ️ KYC periodic sync tasks disabled (KYC sync requires on-chain confirmation in request flow)"
+    )
 
     # Subscription: 每 5 分钟扫描认购事件台账一致性
     await SchedulerService.schedule_task(

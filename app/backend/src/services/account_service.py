@@ -17,6 +17,7 @@ from src.schemas.account import (
     AccountCreate,
     AccountListQuery,
     AccountResponse,
+    AccountRolesUpdate,
     AccountUpdate,
 )
 
@@ -63,7 +64,7 @@ class AccountService:
             address=address,
             private_key=data.private_key,
             network=self.network,
-            tag=data.tag,
+            roles=data.roles,
         )
 
         return self._to_response(account)
@@ -147,9 +148,38 @@ class AccountService:
             )
 
         # 更新非 None 字段
-        if data.tag is not None:
-            account.tag = data.tag
+        if data.roles is not None:
+            account.roles = data.roles
 
+        await account.save()
+        return self._to_response(account)
+
+    async def update_roles(
+        self, address: str, data: AccountRolesUpdate
+    ) -> AccountResponse:
+        """
+        更新账户角色
+
+        参数:
+            address: 钱包地址
+            data: 角色更新数据
+
+        返回:
+            AccountResponse: 更新后的账户
+
+        异常:
+            NotFoundException: 账户不存在
+        """
+        address = address.lower()
+        account = await Account.filter(address=address, network=self.network).first()
+
+        if not account:
+            raise NotFoundException(
+                f"Account {address[:10]}... not found",
+                detail={"address": address},
+            )
+
+        account.roles = data.roles
         await account.save()
         return self._to_response(account)
 
@@ -191,8 +221,14 @@ class AccountService:
         q = Account.filter(network=self.network)
 
         # 应用过滤条件
-        if query.tag:
-            q = q.filter(tag__icontains=query.tag)
+        if query.roles:
+            # JSONField 包含查询 - 使用 __contains 检查 roles 数组包含任意指定角色
+            from tortoise.expressions import Q
+
+            role_filters = Q()
+            for role in query.roles:
+                role_filters |= Q(roles__contains=[role])
+            q = q.filter(role_filters)
         if query.address:
             q = q.filter(address__icontains=query.address.lower())
 
@@ -203,6 +239,30 @@ class AccountService:
         accounts = (
             await q.offset(offset).limit(query.page_size).order_by("-created_at").all()
         )
+
+        return [self._to_response(acc) for acc in accounts], total, total_pages
+
+    async def list_by_role(
+        self, role: str, page: int = 1, page_size: int = 20
+    ) -> Tuple[List[AccountResponse], int, int]:
+        """
+        根据角色查询账户列表
+
+        参数:
+            role: 角色名称
+            page: 页码
+            page_size: 每页数量
+
+        返回:
+            Tuple[List[AccountResponse], int, int]: (账户列表, 总数, 总页数)
+        """
+        q = Account.filter(network=self.network, roles__contains=[role])
+
+        total = await q.count()
+        total_pages = calculate_total_pages(total, page_size)
+
+        offset = (page - 1) * page_size
+        accounts = await q.offset(offset).limit(page_size).order_by("-created_at").all()
 
         return [self._to_response(acc) for acc in accounts], total, total_pages
 
@@ -250,7 +310,7 @@ class AccountService:
         return AccountResponse(
             id=account.id,
             address=account.address,
-            tag=account.tag,
+            roles=account.roles if account.roles else [],
             network=account.network,
             last_login_dt=account.last_login_dt,
             created_at=account.created_at,

@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/components/ui/glass-card-component';
 import { Progress } from '@/components/ui/progress';
@@ -26,6 +27,8 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
   totalValue,
   loading = false
 }) => {
+  const { t } = useTranslation();
+
   // 计算图表数据
   const chartData = assets.map((asset, index) => ({
     name: asset.name,
@@ -65,7 +68,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
 
         {/* 中心文字 */}
         <div className="absolute inset-0 flex flex-col items-center justify-center transform rotate-0">
-          <p className="text-xs text-gray-400 mb-1">总资产</p>
+          <p className="text-xs text-gray-400 mb-1">{t('portfolio.stats.totalValue')}</p>
           <p className="text-lg font-bold text-white">
             ¥{(totalValue / 1000).toFixed(1)}K
           </p>
@@ -80,7 +83,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
         <div className="h-full flex items-center justify-center">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-400">加载投资组合...</p>
+            <p className="text-gray-400">{t('common.loading')}</p>
           </div>
         </div>
       </GlassCard>
@@ -91,9 +94,9 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
     <GlassCard className="p-6 h-full">
       {/* 标题 */}
       <h2 className="text-xl font-bold text-white mb-6 flex items-center justify-between">
-        投资组合
+        {t('portfolio.title')}
         <span className="text-sm font-normal text-gray-400">
-          共 {assets.length} 项资产
+          {t('portfolio.totalAssets', { count: assets.length })}
         </span>
       </h2>
 
@@ -161,13 +164,13 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
       <div className="mt-6 pt-6 border-t border-white/10">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-gray-400 mb-1">投资收益率</p>
+            <p className="text-gray-400 mb-1">{t('portfolio.stats.totalEarnings')}</p>
             <p className="text-white font-medium">
               +{((totalValue - 100000) / 100000 * 100).toFixed(2)}%
             </p>
           </div>
           <div>
-            <p className="text-gray-400 mb-1">累计收益</p>
+            <p className="text-gray-400 mb-1">{t('portfolio.totalReturn')}</p>
             <p className="text-emerald-400 font-medium">
               +¥{(totalValue - 100000).toLocaleString()}
             </p>

@@ -85,6 +85,29 @@ STABLECOIN_CONTRACTS = [
 ]
 
 # ============================================
+# TreasuryMultisig - 国库多签（零签名者部署）
+# ============================================
+
+TREASURY_MULTISIG_CONTRACT = ContractConfig(
+    name="TreasuryMultisig",
+    contract_class_name="TreasuryMultisig",
+    scope="global",
+    contract_type="governance",
+    constructor_args={
+        "_signers": [],  # 零签名者，后续通过 Dev Tools 配置
+        "_required_signatures": 0,  # 零阈值，等待配置
+        "_address_provider": "",  # 部署时注入 AddressProvider 地址
+    },
+    skip_if_exists=True,
+    register_to_provider=True,
+    provider_key=ProviderKey.TREASURY_MULTISIG,
+    description="国库多签合约 - 2/3多签管理资金流出（零签名者部署，后续配置）",
+    dependency_type="dependent",
+    deploy_order=4,
+    required_deps=["AddressProvider"],  # 明确依赖 AddressProvider
+)
+
+# ============================================
 # Common 项目配置 (合并所有公共合约)
 # ============================================
 
@@ -98,6 +121,7 @@ COMMON_PROJECT = ProjectConfig(
         PROVIDER_CONTRACT,
         KYC_CONTRACT,
         *STABLECOIN_CONTRACTS,
+        TREASURY_MULTISIG_CONTRACT,  # 添加国库多签合约
     ],
 )
 
@@ -106,5 +130,6 @@ __all__ = [
     "PROVIDER_CONTRACT",
     "KYC_CONTRACT",
     "STABLECOIN_CONTRACTS",
+    "TREASURY_MULTISIG_CONTRACT",
     "COMMON_PROJECT",
 ]

@@ -14,7 +14,7 @@ export default function AdminError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("管理后台错误:", error);
+    console.error("Admin panel error:", error);
   }, [error]);
 
   return (
@@ -24,17 +24,17 @@ export default function AdminError({
           <ServerCrash className="h-7 w-7 text-red-400" />
         </div>
         <h2 className="mb-2 text-lg font-semibold text-white">
-          管理后台异常
+          Admin Panel Error
         </h2>
         <p className="mb-5 text-sm text-white/60">
-          后台管理页面加载失败，请稍后重试。
+          Failed to load the admin page. Please try again shortly.
         </p>
         <button
           onClick={reset}
           className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-bg-dark transition-all hover:shadow-[0_0_20px_theme(colors.primary-glow)]"
         >
           <RotateCcw className="h-4 w-4" />
-          重试
+          Retry
         </button>
       </div>
     </div>

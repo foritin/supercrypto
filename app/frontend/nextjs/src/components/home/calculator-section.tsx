@@ -2,6 +2,7 @@
 
 import { Check, Sparkles, Shield, Clock } from 'lucide-react';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { YieldCalculator } from '@/components/calculator/yield-calculator';
 import { cn } from '@/lib/utils';
@@ -15,14 +16,14 @@ import { cn } from '@/lib/utils';
 
 interface Checkpoint {
   icon: React.ReactNode;
-  text: string;
+  key: string;
 }
 
 const CHECKPOINTS: Checkpoint[] = [
-  { icon: <Shield className="w-4 h-4" />, text: 'No hidden fees' },
-  { icon: <Clock className="w-4 h-4" />, text: 'Instant withdrawal' },
-  { icon: <Sparkles className="w-4 h-4" />, text: 'Daily compounding' },
-  { icon: <Check className="w-4 h-4" />, text: 'Fully transparent' },
+  { icon: <Shield className="w-4 h-4" />, key: 'noHiddenFees' },
+  { icon: <Clock className="w-4 h-4" />, key: 'instantWithdrawal' },
+  { icon: <Sparkles className="w-4 h-4" />, key: 'dailyCompounding' },
+  { icon: <Check className="w-4 h-4" />, key: 'fullyTransparent' },
 ];
 
 interface CalculatorSectionProps {
@@ -32,10 +33,15 @@ interface CalculatorSectionProps {
 }
 
 export function CalculatorSection({
-  title = 'Calculate Your Future Wealth',
-  subtitle = 'See how compound interest grows your stablecoin portfolio over time.',
+  title,
+  subtitle,
   className,
 }: CalculatorSectionProps) {
+  const { t } = useTranslation();
+  
+  const displayTitle = title || t('home.calculator.title');
+  const displaySubtitle = subtitle || t('home.calculator.subtitle');
+
   return (
     <div
       className={cn(
@@ -54,17 +60,17 @@ export function CalculatorSection({
         {/* 标签 */}
         <span className="inline-flex items-center gap-2 text-gold text-sm font-semibold tracking-[2px] uppercase mb-6">
           <Sparkles className="w-4 h-4" />
-          Calculate Your Earnings
+          {t('home.calculator.badge')}
         </span>
 
         {/* 大标题 */}
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
-          {title}
+          {displayTitle}
         </h2>
 
         {/* 副标题 */}
         <p className="text-lg text-white/65 mb-10 leading-relaxed max-w-[500px]">
-          {subtitle}
+          {displaySubtitle}
         </p>
 
         {/* Checkpoints */}
@@ -77,7 +83,9 @@ export function CalculatorSection({
               <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center text-primary">
                 {checkpoint.icon}
               </div>
-              <span className="text-sm font-medium">{checkpoint.text}</span>
+              <span className="text-sm font-medium">
+                {t(`home.calculator.points.${checkpoint.key}`)}
+              </span>
             </div>
           ))}
         </div>
@@ -85,7 +93,7 @@ export function CalculatorSection({
         {/* 额外信息 */}
         <div className="mt-10 pt-8 border-t border-white/10">
           <p className="text-white/50 text-sm">
-            * APY rates are variable and subject to market conditions. Past performance does not guarantee future results.
+            {t('home.calculator.disclaimer')}
           </p>
         </div>
       </div>

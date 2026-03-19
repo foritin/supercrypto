@@ -44,10 +44,10 @@ const TxHashLink: React.FC<TxHashLinkProps> = ({
     try {
       await navigator.clipboard.writeText(txHash);
       setCopied(true);
-      notification.success('已复制交易哈希');
+      notification.success('Transaction hash copied');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      notification.error('复制失败');
+      notification.error('Copy failed');
     }
   };
 

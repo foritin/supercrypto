@@ -114,8 +114,8 @@ class DevToolsService:
 
             # 构建显示标签
             parts = [account.address[:6] + "..." + account.address[-4:]]
-            if account.tag:
-                parts.append(f"({account.tag})")
+            if account.roles:
+                parts.append(f"({','.join(account.roles)})")
             if kyc_status:
                 parts.append(f"[KYC: {kyc_status}]")
 
@@ -123,7 +123,7 @@ class DevToolsService:
                 TokenRecipient(
                     address=account.address,
                     kyc_status=kyc_status,
-                    tag=account.tag,
+                    roles=account.roles if account.roles else [],
                     label=" ".join(parts),
                 )
             )

@@ -59,7 +59,7 @@ export default function ProjectDetailPage() {
       refetch();
       refetchPlan();
     } catch (e) {
-      console.error('同步配置失败:', e);
+      console.error('Sync config failed:', e);
     } finally {
       setSyncing(false);
       setSyncType(null);
@@ -74,7 +74,7 @@ export default function ProjectDetailPage() {
       refetch();
       refetchPlan();
     } catch (e) {
-      console.error('同步绑定失败:', e);
+      console.error('Sync bindings failed:', e);
     } finally {
       setSyncing(false);
       setSyncType(null);
@@ -85,7 +85,7 @@ export default function ProjectDetailPage() {
     return (
       <div className="p-8 text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-        <p className="mt-4 text-muted-foreground">加载项目详情...</p>
+        <p className="mt-4 text-muted-foreground">Loading project details...</p>
       </div>
     );
   }
@@ -96,14 +96,14 @@ export default function ProjectDetailPage() {
         <Link href="/projects">
           <Button variant="outline" className="mb-4">
             <ArrowLeft className="h-4 w-4" />
-            返回项目列表
+            Back to Projects
           </Button>
         </Link>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>加载失败</AlertTitle>
+          <AlertTitle>Load failed</AlertTitle>
           <AlertDescription>
-            {error instanceof Error ? error.message : '项目不存在'}
+            {error instanceof Error ? error.message : 'Project not found'}
           </AlertDescription>
         </Alert>
       </div>
@@ -118,7 +118,7 @@ export default function ProjectDetailPage() {
           <Link href="/projects">
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4" />
-              返回
+              Back
             </Button>
           </Link>
           <h1 className="text-2xl font-bold capitalize">
@@ -138,7 +138,7 @@ export default function ProjectDetailPage() {
             ) : (
               <Database className="h-4 w-4" />
             )}
-            同步配置
+            Sync Config
           </Button>
           <Button
             variant="outline"
@@ -150,7 +150,7 @@ export default function ProjectDetailPage() {
             ) : (
               <Link2 className="h-4 w-4" />
             )}
-            同步绑定
+            Sync Bindings
           </Button>
         </div>
       </div>
@@ -169,7 +169,7 @@ export default function ProjectDetailPage() {
             <div className="flex items-center gap-3">
               <FileText className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">总合约数</p>
+                <p className="text-sm text-muted-foreground">Total Contracts</p>
                 <p className="text-2xl font-bold">{status.statistics.total_contracts}</p>
               </div>
             </div>
@@ -180,7 +180,7 @@ export default function ProjectDetailPage() {
             <div className="flex items-center gap-3">
               <Clock className="h-5 w-5 text-blue-500" />
               <div>
-                <p className="text-sm text-muted-foreground">已注册</p>
+                <p className="text-sm text-muted-foreground">Registered</p>
                 <p className="text-2xl font-bold text-blue-500">{status.statistics.registered_count}</p>
               </div>
             </div>

@@ -34,8 +34,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { GlowStatusBadge } from '@/components/ui/glow-status-badge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { AdminCard } from '@/components/layout/admin-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTable } from '@/components/ui/data-table'
@@ -71,7 +73,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 // Services and utilities
-import { ASSET_STATUS_BADGE } from '@/constants/status-config'
 import { notification } from '@/lib/notification'
 import { 
   assetService, 
@@ -99,9 +100,6 @@ const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
   { value: 'equity', label: ASSET_TYPE_NAMES.equity },
   { value: 'other', label: ASSET_TYPE_NAMES.other },
 ]
-
-// 使用共享状态徽章配置
-const STATUS_BADGE_VARIANTS = ASSET_STATUS_BADGE
 
 interface PaginatedData {
   items: AssetListItem[]
@@ -587,11 +585,20 @@ export function AssetAdminList() {
       accessorKey: 'status',
       header: t('admin.assets.status'),
       size: 100,
-      cell: ({ row }) => (
-        <Badge variant={STATUS_BADGE_VARIANTS[row.original.status]}>
-          {ASSET_STATUS_NAMES[row.original.status]}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const status = row.original.status
+        const variantMap: Record<string, 'success' | 'warning' | 'default' | 'error'> = {
+          active: 'success',
+          paused: 'warning',
+          sold_out: 'default',
+          closed: 'error',
+        }
+        return (
+          <GlowStatusBadge variant={variantMap[status] || 'default'}>
+            {ASSET_STATUS_NAMES[status]}
+          </GlowStatusBadge>
+        )
+      },
     },
     {
       accessorKey: 'subscription_mode',
@@ -797,10 +804,14 @@ export function AssetAdminList() {
   ]
 
   return (
-    <Card>
-      <CardHeader>
+    <>
+    <AdminCard>
+      <Card className="bg-transparent border-0">
+      <CardHeader className="border-b border-white/10 pb-4">
         <div className="flex justify-between items-center">
-          <CardTitle>{t('admin.assets.title')}</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <span className="font-semibold text-white">{t('admin.assets.title')}</span>
+          </CardTitle>
           <div className="flex gap-2">
             <Select
               value={statusFilter || 'all'}
@@ -875,6 +886,8 @@ export function AssetAdminList() {
           }}
         />
       </CardContent>
+      </Card>
+    </AdminCard>
 
       {/* Create Modal */}
       <CreateAssetWizard
@@ -1695,6 +1708,6 @@ export function AssetAdminList() {
           onUpdate={() => fetchAssets()}
         />
       )}
-    </Card>
+    </>
   )
 }

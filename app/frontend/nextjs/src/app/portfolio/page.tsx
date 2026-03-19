@@ -12,6 +12,7 @@ import {
   ExternalLink,
   ArrowRight,
   Info,
+  Loader2,
 } from 'lucide-react';
 import { useState, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
@@ -36,6 +37,8 @@ import {
   useUserStats,
   type PortfolioTransaction,
 } from '@/hooks/use-portfolio';
+import { useRedemptionDetail, useRequestRedemption, useUserRedemptions } from '@/hooks/use-redemptions';
+import { notification } from '@/lib/notification';
 import { cn, truncateAddress } from '@/lib/utils';
 import { type SubscriptionResponse } from '@/types/subscription';
 
@@ -50,6 +53,16 @@ function TransactionItem({ tx, index }: { tx: PortfolioTransaction; index: numbe
     stake: 'text-purple-400',
     unstake: 'text-orange-400',
   };
+
+  const statusStyle =
+    tx.status === 'confirmed' || tx.status === 'executed'
+      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+      : tx.status === 'pending' || tx.status === 'signing'
+        ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+        : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+
+  const statusLabel = tx.status === 'executed' ? 'confirmed' : tx.status;
+  const hasValidTxHash = /^0x[a-fA-F0-9]{64}$/.test(tx.tx_hash);
 
   return (
     <motion.div
@@ -70,23 +83,22 @@ function TransactionItem({ tx, index }: { tx: PortfolioTransaction; index: numbe
 
       <div className="flex items-center gap-6">
         <div className="text-white font-semibold">${parseFloat(tx.amount).toLocaleString()}</div>
-        <span className={cn(
-          'text-xs px-2 py-1 rounded-full border',
-          tx.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-          tx.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-          'bg-rose-500/10 text-rose-400 border-rose-500/20'
-        )}>
-          {tx.status}
+        <span className={cn('text-xs px-2 py-1 rounded-full border', statusStyle)}>
+          {statusLabel}
         </span>
-        <a
-          href={`https://etherscan.io/tx/${tx.tx_hash}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-gray-500 hover:text-gray-300 text-xs font-mono transition-colors flex items-center gap-1"
-        >
-          {truncateAddress(tx.tx_hash)}
-          <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-        </a>
+        {hasValidTxHash ? (
+          <a
+            href={`https://etherscan.io/tx/${tx.tx_hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-500 hover:text-gray-300 text-xs font-mono transition-colors flex items-center gap-1"
+          >
+            {truncateAddress(tx.tx_hash)}
+            <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </a>
+        ) : (
+          <span className="text-gray-500 text-xs font-mono">request #{tx.id}</span>
+        )}
       </div>
     </motion.div>
   );
@@ -109,6 +121,44 @@ function TrendingUpIcon({ className }: { className?: string }) {
   );
 }
 
+const TIMELINE_EVENT_LABELS: Record<string, string> = {
+  request_created: 'Request Created',
+  proposal_created: 'Proposal Created',
+  signature_submitted: 'Signature Submitted',
+  threshold_reached: 'Threshold Reached',
+  executed: 'Executed',
+  rejected: 'Rejected',
+}
+
+function getTimelineEventTone(eventType: string, status?: string) {
+  if (eventType === 'executed' || status === 'executed') {
+    return {
+      dot: 'bg-emerald-400',
+      chip: 'bg-emerald-500/10 text-emerald-400',
+      text: 'text-emerald-300',
+    };
+  }
+  if (eventType === 'rejected' || status === 'rejected') {
+    return {
+      dot: 'bg-rose-400',
+      chip: 'bg-rose-500/10 text-rose-400',
+      text: 'text-rose-300',
+    };
+  }
+  if (eventType === 'threshold_reached' || eventType === 'signature_submitted' || status === 'signing') {
+    return {
+      dot: 'bg-amber-400',
+      chip: 'bg-amber-500/10 text-amber-400',
+      text: 'text-amber-300',
+    };
+  }
+  return {
+    dot: 'bg-blue-400',
+    chip: 'bg-blue-500/10 text-blue-400',
+    text: 'text-blue-300',
+  };
+}
+
 export default function PortfolioPage() {
   const { isConnected } = useAccount();
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
@@ -117,13 +167,117 @@ export default function PortfolioPage() {
 
   const { data: subscriptionsData, isLoading: isLoadingSubscriptions } = useSubscriptions();
   const { data: userStats, isLoading: isLoadingStats } = useUserStats();
+  const {
+    data: userRedemptions = [],
+    isLoading: isLoadingRedemptions,
+    isError: isRedemptionsError,
+    error: redemptionsError,
+  } = useUserRedemptions();
+  const { mutateAsync: requestRedemption, isPending: isRedeeming } = useRequestRedemption();
 
   const subscriptions = subscriptionsData?.items ?? [];
+
+  const latestRedemptionBySubscription = useMemo(() => {
+    const map = new Map<number, (typeof userRedemptions)[number]>();
+    for (const redemption of userRedemptions) {
+      const current = map.get(redemption.subscriptionId);
+      if (!current || new Date(redemption.createdAt).getTime() > new Date(current.createdAt).getTime()) {
+        map.set(redemption.subscriptionId, redemption);
+      }
+    }
+    return map;
+  }, [userRedemptions]);
 
   const handleViewDetail = useCallback((sub: SubscriptionResponse) => {
     setSelectedSubscription(sub);
     setDetailModalOpen(true);
   }, []);
+
+  const handleRedeem = useCallback(async () => {
+    if (!selectedSubscription) return;
+
+    try {
+      await requestRedemption({ subscriptionId: selectedSubscription.id });
+      notification.success('Redemption submitted. Track progress below in this modal and in investment list.');
+    } catch (error) {
+      const err = error as { message?: string };
+      notification.error(err.message || 'Failed to submit redemption request');
+    }
+  }, [selectedSubscription, requestRedemption]);
+
+  const selectedSubscriptionRedemption = useMemo(() => {
+    if (!selectedSubscription) return null;
+    return latestRedemptionBySubscription.get(selectedSubscription.id) ?? null;
+  }, [latestRedemptionBySubscription, selectedSubscription]);
+
+  const selectedRedemptionDetailId = detailModalOpen && selectedSubscriptionRedemption
+    ? selectedSubscriptionRedemption.id
+    : '';
+  const {
+    data: selectedRedemptionDetail,
+    isLoading: isLoadingRedemptionDetail,
+  } = useRedemptionDetail(selectedRedemptionDetailId);
+
+  const selectedRedemptionTimeline = useMemo(() => {
+    if (selectedRedemptionDetail?.events?.length) {
+      return selectedRedemptionDetail.events;
+    }
+    if (!selectedSubscriptionRedemption) {
+      return [];
+    }
+
+    const fallbackEvents: Array<{
+      id: string;
+      eventType: 'request_created' | 'proposal_created' | 'executed' | 'rejected';
+      status?: 'pending' | 'signing' | 'executed' | 'rejected';
+      message: string;
+      createdAt: string;
+      txHash?: string;
+    }> = [
+      {
+        id: `fallback-request-${selectedSubscriptionRedemption.id}`,
+        eventType: 'request_created',
+        status: 'pending',
+        message: 'Redemption request submitted',
+        createdAt: selectedSubscriptionRedemption.createdAt,
+      },
+    ];
+
+    if (selectedSubscriptionRedemption.proposalTxHash) {
+      fallbackEvents.push({
+        id: `fallback-proposal-${selectedSubscriptionRedemption.id}`,
+        eventType: 'proposal_created',
+        status: selectedSubscriptionRedemption.status === 'pending' ? 'pending' : 'signing',
+        message: 'On-chain redemption proposal created',
+        createdAt: selectedSubscriptionRedemption.createdAt,
+        txHash: selectedSubscriptionRedemption.proposalTxHash,
+      });
+    }
+
+    if (selectedSubscriptionRedemption.status === 'executed') {
+      const executedTxHash = selectedSubscriptionRedemption.txHash;
+      fallbackEvents.push({
+        id: `fallback-executed-${selectedSubscriptionRedemption.id}`,
+        eventType: 'executed',
+        status: 'executed',
+        message: 'Redemption executed',
+        createdAt: selectedSubscriptionRedemption.completedAt || selectedSubscriptionRedemption.createdAt,
+        ...(executedTxHash ? { txHash: executedTxHash } : {}),
+      });
+    }
+
+    if (selectedSubscriptionRedemption.status === 'rejected') {
+      fallbackEvents.push({
+        id: `fallback-rejected-${selectedSubscriptionRedemption.id}`,
+        eventType: 'rejected',
+        status: 'rejected',
+        message: 'Redemption request rejected',
+        createdAt: selectedSubscriptionRedemption.completedAt || selectedSubscriptionRedemption.createdAt,
+      });
+    }
+
+    return fallbackEvents;
+  }, [selectedRedemptionDetail, selectedSubscriptionRedemption]);
 
   const portfolioTrend = useMemo(() => {
     if (!userStats?.total_invested || userStats.total_invested === 0) return undefined;
@@ -188,15 +342,33 @@ export default function PortfolioPage() {
       header: 'Status',
       cell: ({ row }) => {
         const status = row.original.status;
-        return (
+        const redemption = latestRedemptionBySubscription.get(row.original.id);
+        const redemptionStatus = redemption?.status;
+
+        const redemptionChip = redemptionStatus ? (
           <span className={cn(
-            'text-xs px-2 py-1 rounded-full',
-            status === 'active' ? 'bg-blue-500/10 text-blue-400' :
-            status === 'matured' ? 'bg-emerald-500/10 text-emerald-400' :
-            'bg-gray-500/10 text-gray-400'
+            'text-[10px] px-2 py-0.5 rounded-full',
+            redemptionStatus === 'pending' ? 'bg-blue-500/10 text-blue-400' :
+            redemptionStatus === 'signing' ? 'bg-amber-500/10 text-amber-400' :
+            redemptionStatus === 'executed' ? 'bg-emerald-500/10 text-emerald-400' :
+            'bg-rose-500/10 text-rose-400'
           )}>
-            {status}
+            {redemptionStatus === 'pending' ? 'reviewing' : redemptionStatus}
           </span>
+        ) : null;
+
+        return (
+          <div className="flex flex-col gap-1">
+            <span className={cn(
+              'text-xs px-2 py-1 rounded-full w-fit',
+              status === 'active' ? 'bg-blue-500/10 text-blue-400' :
+              status === 'matured' ? 'bg-emerald-500/10 text-emerald-400' :
+              'bg-gray-500/10 text-gray-400'
+            )}>
+              {status}
+            </span>
+            {redemptionChip}
+          </div>
         );
       },
     },
@@ -212,7 +384,7 @@ export default function PortfolioPage() {
         </button>
       ),
     },
-  ], [handleViewDetail]);
+  ], [handleViewDetail, latestRedemptionBySubscription]);
 
   // Empty state data - no mock data
   const emptyStats = { 
@@ -254,11 +426,24 @@ export default function PortfolioPage() {
           network: sub.environment,
         });
       }
+
+      const redemption = latestRedemptionBySubscription.get(sub.id);
+      if (redemption && !sub.redeem_tx_hash) {
+        txs.push({
+          id: `redeem-request-${redemption.id}`,
+          created_at: redemption.createdAt,
+          tx_type: 'redeem',
+          amount: redemption.amount,
+          status: redemption.status,
+          tx_hash: redemption.proposalTxHash || redemption.txHash || `request-${redemption.id}`,
+          network: sub.environment,
+        });
+      }
     }
     
     // 按时间倒序排列
     return txs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [subscriptions]);
+  }, [subscriptions, latestRedemptionBySubscription]);
 
   const renderContent = () => {
     // Show empty state when not connected or when loading
@@ -266,7 +451,7 @@ export default function PortfolioPage() {
     const subs = isConnected ? subscriptions : [];
     // 使用从认购记录构建的交易历史
     const txs = isConnected ? subscriptionTransactions : [];
-    const isLoading = isConnected && (isLoadingStats || isLoadingSubscriptions);
+    const isLoading = isConnected && (isLoadingStats || isLoadingSubscriptions || isLoadingRedemptions);
 
     return (
       <>
@@ -381,12 +566,15 @@ export default function PortfolioPage() {
                     exit={{ opacity: 0 }}
                     className="grid grid-cols-1 lg:grid-cols-2 gap-6"
                   >
-                    {subs.map((sub, index) => (
+                    {subs.map((sub, index) => {
+                      const redemption = latestRedemptionBySubscription.get(sub.id);
+                      return (
                       <InvestmentCard 
                         key={sub.id} 
                         name={sub.asset_name}
                         symbol={sub.asset_symbol}
                         status={sub.status}
+                        redemptionStatus={redemption?.status ?? null}
                         apy={sub.apy}
                         invested={sub.amount}
                         expectedReturn={sub.expected_interest}
@@ -397,7 +585,8 @@ export default function PortfolioPage() {
                         onViewDetail={() => handleViewDetail(sub)}
                         index={index}
                       />
-                    ))}
+                      );
+                    })}
                   </motion.div>
                 ) : (
                   <motion.div
@@ -463,6 +652,12 @@ export default function PortfolioPage() {
     );
   };
 
+  const selectedSubCanRedeem = Boolean(
+    selectedSubscription?.is_matured
+    && selectedSubscription?.status !== 'redeemed'
+    && (!selectedSubscriptionRedemption || selectedSubscriptionRedemption.status === 'rejected')
+  );
+
   return (
     <div className="min-h-screen bg-[#0a0b14] pt-24 pb-16 px-4 sm:px-6 relative overflow-hidden">
       {/* Background Effects */}
@@ -511,6 +706,15 @@ export default function PortfolioPage() {
         )}
 
         {/* Content */}
+        {isConnected && isRedemptionsError && (
+          <div className="mb-6 p-3 rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-300 text-sm">
+            Failed to load redemption history. Existing redemption progress may be temporarily unavailable.
+            {redemptionsError && (
+              <span className="ml-2 text-rose-200/70">({(redemptionsError as Error).message})</span>
+            )}
+          </div>
+        )}
+
         {isConnected ? <RequireWallet>{renderContent()}</RequireWallet> : renderContent()}
       </div>
 
@@ -541,12 +745,112 @@ export default function PortfolioPage() {
                   <div className="text-amber-400 font-semibold">+${selectedSubscription.expected_interest.toLocaleString()}</div>
                 </div>
               </div>
+
+              <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 space-y-2">
+                <div className="text-xs text-gray-400 uppercase tracking-wider">Redemption Timeline</div>
+                {selectedSubscriptionRedemption ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-300">Status</span>
+                      <span className={cn(
+                        'px-2 py-0.5 rounded-full text-xs font-medium',
+                        selectedSubscriptionRedemption.status === 'pending' && 'bg-blue-500/10 text-blue-400',
+                        selectedSubscriptionRedemption.status === 'signing' && 'bg-amber-500/10 text-amber-400',
+                        selectedSubscriptionRedemption.status === 'executed' && 'bg-emerald-500/10 text-emerald-400',
+                        selectedSubscriptionRedemption.status === 'rejected' && 'bg-rose-500/10 text-rose-400'
+                      )}>
+                        {selectedSubscriptionRedemption.status === 'pending' ? 'reviewing' : selectedSubscriptionRedemption.status}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {selectedSubscriptionRedemption.status === 'pending' && 'Request submitted. Waiting for treasury review.'}
+                      {selectedSubscriptionRedemption.status === 'signing' && `Multisig signing in progress (${selectedSubscriptionRedemption.signatureCount}/${selectedSubscriptionRedemption.requiredSignatures}).`}
+                      {selectedSubscriptionRedemption.status === 'executed' && 'Redemption completed. Funds already released.'}
+                      {selectedSubscriptionRedemption.status === 'rejected' && 'Request was rejected. You can submit a new redemption request.'}
+                    </div>
+                    {isLoadingRedemptionDetail ? (
+                      <div className="space-y-2 pt-1">
+                        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 bg-white/5 rounded-lg" />)}
+                      </div>
+                    ) : selectedRedemptionTimeline.length > 0 ? (
+                      <div className="pt-1 space-y-2">
+                        {selectedRedemptionTimeline.map((event, index) => {
+                          const tone = getTimelineEventTone(event.eventType, event.status);
+                          return (
+                            <div key={event.id} className="relative pl-5">
+                              {index < selectedRedemptionTimeline.length - 1 && (
+                                <div className="absolute left-[7px] top-4 bottom-[-10px] w-px bg-white/10" />
+                              )}
+                              <span className={cn('absolute left-0 top-1.5 h-3 w-3 rounded-full', tone.dot)} />
+                              <div className="rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="text-xs font-medium text-white">
+                                    {TIMELINE_EVENT_LABELS[event.eventType] || event.eventType}
+                                  </div>
+                                  <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full', tone.chip)}>
+                                    {(event.status || 'recorded').replace('_', ' ')}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-gray-400 mt-1">
+                                  {event.message || 'Event recorded'}
+                                </div>
+                                <div className="text-[10px] text-gray-500 mt-1.5 flex items-center justify-between gap-2">
+                                  <span>{new Date(event.createdAt).toLocaleString()}</span>
+                                  {event.txHash && /^0x[a-fA-F0-9]{64}$/.test(event.txHash) && (
+                                    <a
+                                      href={`https://etherscan.io/tx/${event.txHash}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={cn('font-mono hover:text-white transition-colors', tone.text)}
+                                    >
+                                      {truncateAddress(event.txHash)}
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500 pt-1">No timeline events yet.</div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-xs text-gray-400">
+                    {selectedSubscription.is_matured
+                      ? 'Matured and ready. Submit redemption to start multisig workflow.'
+                      : 'Not matured yet. Redemption can be requested after maturity.'}
+                  </div>
+                )}
+              </div>
             </div>
           )}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDetailModalOpen(false)} className="text-gray-400 hover:text-white">Close</Button>
-            {selectedSubscription?.is_matured && selectedSubscription?.status !== 'redeemed' && (
-              <Button className="bg-amber-500 text-black hover:bg-amber-500/90">Redeem</Button>
+            {selectedSubCanRedeem && (
+              <Button
+                onClick={handleRedeem}
+                disabled={isRedeeming}
+                className="bg-amber-500 text-black hover:bg-amber-500/90 disabled:opacity-60"
+              >
+                {isRedeeming ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Redeeming...
+                  </>
+                ) : (
+                  'Redeem'
+                )}
+              </Button>
+            )}
+            {!selectedSubCanRedeem && selectedSubscriptionRedemption && (
+              <Button
+                disabled
+                className="bg-white/10 text-gray-300 hover:bg-white/10"
+              >
+                {selectedSubscriptionRedemption.status === 'executed' ? 'Redeemed' : 'In Progress'}
+              </Button>
             )}
           </DialogFooter>
         </DialogContent>

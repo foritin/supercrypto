@@ -1,10 +1,11 @@
 const dev = {
   dev: {
     title: "开发者工具",
-    subtitle: "开发和测试工具 (生产环境不可用)",
+    subtitle: "用于账户治理与测试流程的运维工具。",
     notAvailable: "开发者工具在生产环境不可用",
-    warning: "开发环境",
-    warningDescription: "当前处于 {{env}} 环境。这些工具仅供开发/测试使用。",
+    notAvailableDescription: "该页面仅在开发和测试环境可用。",
+    warning: "操作安全提示",
+    warningDescription: "这些工具在所有环境均可使用。操作具有安全敏感性，可能影响真实账户或资产。请先确认目标网络与地址后再执行。",
     kyc: {
       title: "快速 KYC",
       description: "一键通过或重置 KYC 状态，用于测试。",
@@ -83,12 +84,36 @@ const dev = {
       sendButton: "发送 ETH",
       sending: "发送中...",
       success: "成功充值 {{amount}} ETH",
+      successWithRefreshHint: "成功充值 {{amount}} ETH。如果 MetaMask 余额未更新，请点击下方“刷新 MetaMask 余额”按钮。",
       oldBalance: "充值前余额",
       newBalance: "充值后余额",
+      rpcNodeLabel: "页面连接节点",
+      rpcMismatchWarning: "请确保 MetaMask 中的 Hardhat 网络 RPC URL 与此一致，否则余额不会同步。",
+      refreshHint: "如果 MetaMask 仍显示 0 ETH，请点击下方按钮刷新。",
+      refreshButton: "刷新 MetaMask 余额",
+      refreshingButton: "刷新中...",
+      refreshMetaMaskSuccess: "MetaMask 余额已刷新",
+      refreshMetaMaskDone: "MetaMask 已刷新",
+      refreshMetaMaskFailed: "刷新失败，请手动在 MetaMask 中切换网络后再切回 Hardhat。",
       note: "通过 Hardhat 直接设置余额，无需 Gas 费用。",
+    },
+    adminAccess: {
+      title: "管理员权限",
+      description: "管理 admin 权限并查看当前账户治理状态。",
+      viewOnlyTitle: "仅可查看",
+      viewOnlyDescription: "只有 contract_owner 可以修改 admin 权限。你可以在下方查看当前分布。",
+      adminUsers: "管理员用户",
+      nonAdminUsers: "非管理员用户",
+      grantSectionTitle: "授予管理员权限",
+      selectUser: "选择非管理员用户",
+      noEligibleUsers: "没有可授权用户",
+      grantButton: "授予 Admin",
+      grantSuccess: "已为 {{address}} 授予 admin 权限",
+      adminList: "当前管理员账户",
+      nonAdminList: "当前非管理员账户",
+      empty: "暂无账户",
     },
   },
 }
 
 export default dev
-

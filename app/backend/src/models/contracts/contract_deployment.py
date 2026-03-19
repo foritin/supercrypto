@@ -13,7 +13,7 @@ Contract Deployment Model
 - 部署信息: name, address, deployer_address, network, chain_id
 - 分类信息: scope, contract_type, project_name
 - 部署详情: tx_hash, abi_path, status
-- 主合约标记: is_primary, symbol
+- 主合约标记: is_primary
 - 状态信息: bindings, deploy_block
 """
 
@@ -106,12 +106,6 @@ class ContractDeployment(AbstractModel, TimestampMixin):
         default=False,
         description="是否为项目主合约（RWA Token），每个项目只能有一个主合约",
     )
-    symbol = fields.CharField(
-        max_length=20,
-        null=True,
-        description="Token Symbol，用于标识代币符号",
-    )
-
     # === 状态信息 (来自 ContractDeploymentStatus) ===
     bindings = fields.JSONField(
         null=True,
@@ -211,7 +205,6 @@ class ContractDeployment(AbstractModel, TimestampMixin):
             "abi_path": self.abi_path,
             "status": self.status.value if self.status else None,
             "is_primary": self.is_primary,
-            "symbol": self.symbol,
             "bindings": self.bindings,
             "deploy_block": self.deploy_block,
             "created_at": self.created_at.isoformat() if self.created_at else None,

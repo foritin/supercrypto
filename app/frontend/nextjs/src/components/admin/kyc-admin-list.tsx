@@ -106,7 +106,7 @@ function CopyableAddress({ address }: { address: string }) {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            {copied ? '已复制' : '复制地址'}
+            {copied ? 'Copied' : 'Copy address'}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

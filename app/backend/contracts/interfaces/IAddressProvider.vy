@@ -81,6 +81,14 @@ def get_vanke_liquidity_mining() -> address:
     """@notice 获取 Vanke LiquidityMining 地址"""
     ...
 
+# ============ 国库多签 Getter ============
+
+@view
+@external
+def get_treasury_multisig() -> address:
+    """@notice 获取国库多签合约地址"""
+    ...
+
 # ============ 注册信息查询 ============
 
 @view

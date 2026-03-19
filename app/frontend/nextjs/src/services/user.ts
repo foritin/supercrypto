@@ -3,13 +3,15 @@
  * 用户相关 API
  */
 import { API_BASE_URL } from '@/constants/api'
+import { ApiError, api } from '@/services/api'
+import { clearAuthData } from '@/utils/auth'
 // ApiResponseData 类型已在 types/api.d.ts 中全局声明
 
 // 当前用户信息
 export interface CurrentUser {
   address: string
   is_admin: boolean
-  tag: string | null
+  roles: string[]
   net_type: string
   kyc_status: string | null
 }
@@ -28,29 +30,18 @@ export const userService = {
     if (!walletAddress) return null
     
     try {
-      const url = `${API_BASE_URL}/user/auth/me`
-      
-      const token = localStorage.getItem('supercrypto-jwt')
-      if (!token) return null
-      
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+      const data = await api.get<{ object_data?: CurrentUser }>(`${API_BASE_URL}/user/auth/me`)
+      return data?.object_data ?? null
+    } catch (error) {
+      // 后端会话失效时，立即清理本地登录状态并触发全局退出
+      if (error instanceof ApiError && error.code === 401) {
+        clearAuthData()
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:logout', {
+            detail: { message: 'Session invalid. Please reconnect your wallet.' }
+          }))
+        }
       }
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers,
-      })
-      
-      const data = await response.json()
-      
-      if (data.code !== 0 && data.code !== 200) {
-        return null
-      }
-      
-      return data.data.object_data as CurrentUser
-    } catch {
       return null
     }
   },

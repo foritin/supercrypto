@@ -63,7 +63,7 @@ const STATUS_CONFIG: Record<AuditStatus, {
     bg: getStatusBgColor('success', 0.1),
     border: getStatusBgColor('success', 0.3),
     icon: <CheckCircle className="w-3.5 h-3.5" />, 
-    text: '成功',
+    text: 'Success',
     badgeVariant: 'default',
   },
   failed: { 
@@ -71,7 +71,7 @@ const STATUS_CONFIG: Record<AuditStatus, {
     bg: getStatusBgColor('error', 0.1),
     border: getStatusBgColor('error', 0.3),
     icon: <XCircle className="w-3.5 h-3.5" />, 
-    text: '失败',
+    text: 'Failed',
     badgeVariant: 'destructive',
   },
   pending: { 
@@ -79,7 +79,7 @@ const STATUS_CONFIG: Record<AuditStatus, {
     bg: getStatusBgColor('info', 0.1),
     border: getStatusBgColor('info', 0.3),
     icon: <Clock className="w-3.5 h-3.5" />, 
-    text: '待处理',
+    text: 'Pending',
     badgeVariant: 'secondary',
   },
   reverted: { 
@@ -87,7 +87,7 @@ const STATUS_CONFIG: Record<AuditStatus, {
     bg: getStatusBgColor('warning', 0.1),
     border: getStatusBgColor('warning', 0.3),
     icon: <XCircle className="w-3.5 h-3.5" />, 
-    text: '已回滚',
+    text: 'Reverted',
     badgeVariant: 'outline',
   },
 };
@@ -95,7 +95,7 @@ const STATUS_CONFIG: Record<AuditStatus, {
 // 格式化时间
 function formatDateTime(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleString('zh-CN', {
+  return date.toLocaleString('en-US', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -155,7 +155,7 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
             </div>
             <div className="flex-1 min-w-0">
               <SheetTitle className="text-xl font-semibold text-white mb-2">
-                {t('admin.audit.detail.title', '审计日志详情')}
+                {t('admin.audit.detail.title')}
               </SheetTitle>
               <SheetDescription asChild>
                 <div className="flex gap-2 flex-wrap items-center">
@@ -186,20 +186,20 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
         {/* 内容区域 - 可滚动 */}
         <div className="relative p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
           {/* 基本信息卡片 */}
-          <SectionCard title="基本信息" icon={<FileText size={16} />}>
-            <InfoRow label={t('admin.audit.detail.action', '操作')}>
+          <SectionCard title="Basic Information" icon={<FileText size={16} />}>
+            <InfoRow label={t('admin.audit.detail.action')}>
               <span className="text-primary font-medium">
                 {t(`admin.audit.action.${log.action.replace('.', '_')}`, log.action)}
               </span>
             </InfoRow>
-            <InfoRow label={t('admin.audit.detail.operatedAt', '操作时间')}>
+            <InfoRow label={t('admin.audit.detail.operatedAt')}>
               <div className="flex items-center gap-1.5">
                 <Clock size={14} className="text-white/45" />
                 {formatDateTime(log.operated_at)}
               </div>
             </InfoRow>
             {log.duration_ms !== null && (
-              <InfoRow label={t('admin.audit.detail.duration', '耗时')}>
+              <InfoRow label={t('admin.audit.detail.duration')}>
                 <span 
                   className={cn(
                     "tabular-nums",
@@ -214,14 +214,14 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
 
           {/* 操作者信息 */}
           {(log.operator_address || log.operator_id || log.operator_type) && (
-            <SectionCard title={t('admin.audit.detail.operatorInfo', '操作者信息')} icon={<User size={16} />}>
+            <SectionCard title={t('admin.audit.detail.operatorInfo')} icon={<User size={16} />}>
               {log.operator_address && (
-                <InfoRow label={t('admin.audit.detail.operatorAddress', '操作者地址')}>
+                <InfoRow label={t('admin.audit.detail.operatorAddress')}>
                   <AddressDisplay address={log.operator_address} showFull />
                 </InfoRow>
               )}
               {log.operator_type && (
-                <InfoRow label={t('admin.audit.detail.operatorType', '操作者类型')}>
+                <InfoRow label={t('admin.audit.detail.operatorType')}>
                   <Badge variant="secondary" className="bg-white/5 border-white/10">
                     {t(`admin.audit.operatorType.${log.operator_type}`, log.operator_type)}
                   </Badge>
@@ -232,21 +232,21 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
 
           {/* 目标信息 */}
           {(log.target_type || log.target_id || log.target_address) && (
-            <SectionCard title={t('admin.audit.detail.targetInfo', '目标信息')} icon={<Target size={16} />}>
+            <SectionCard title={t('admin.audit.detail.targetInfo')} icon={<Target size={16} />}>
               {log.target_type && (
-                <InfoRow label={t('admin.audit.detail.targetType', '目标类型')}>
+                <InfoRow label={t('admin.audit.detail.targetType')}>
                   {log.target_type}
                 </InfoRow>
               )}
               {log.target_id && (
-                <InfoRow label={t('admin.audit.detail.targetId', '目标 ID')}>
+                <InfoRow label={t('admin.audit.detail.targetId')}>
                   <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded">
                     {log.target_id}
                   </code>
                 </InfoRow>
               )}
               {log.target_address && (
-                <InfoRow label={t('admin.audit.detail.targetAddress', '目标地址')}>
+                <InfoRow label={t('admin.audit.detail.targetAddress')}>
                   <AddressDisplay address={log.target_address} showFull />
                 </InfoRow>
               )}
@@ -255,7 +255,7 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
 
           {/* 描述信息 */}
           {log.description && (
-            <SectionCard title={t('admin.audit.detail.description', '描述')} icon={<FileText size={16} />}>
+            <SectionCard title={t('admin.audit.detail.description')} icon={<FileText size={16} />}>
               <p className="m-0 text-white/85 leading-relaxed">
                 {log.description}
               </p>
@@ -264,11 +264,11 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
 
           {/* 变更数据 */}
           {(log.old_value || log.new_value) && (
-            <SectionCard title={t('admin.audit.detail.changes', '变更数据')} icon={<ArrowRight size={16} />}>
+            <SectionCard title={t('admin.audit.detail.changes')} icon={<ArrowRight size={16} />}>
               {log.old_value && (
                 <div className={cn(log.new_value && "mb-4")}>
                   <div className="text-[11px] text-white/45 mb-2 uppercase tracking-wider">
-                    {t('admin.audit.detail.oldValue', '变更前')}
+                    {t('admin.audit.detail.oldValue')}
                   </div>
                   <pre className="m-0 p-3 bg-red-500/5 border border-red-500/15 rounded-lg text-xs font-mono text-white/75 overflow-auto max-h-[120px]">
                     {JSON.stringify(log.old_value, null, 2)}
@@ -278,7 +278,7 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
               {log.new_value && (
                 <div>
                   <div className="text-[11px] text-white/45 mb-2 uppercase tracking-wider">
-                    {t('admin.audit.detail.newValue', '变更后')}
+                    {t('admin.audit.detail.newValue')}
                   </div>
                   <pre className="m-0 p-3 bg-green-500/5 border border-green-500/15 rounded-lg text-xs font-mono text-white/75 overflow-auto max-h-[120px]">
                     {JSON.stringify(log.new_value, null, 2)}
@@ -290,8 +290,8 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
 
           {/* 区块链信息 */}
           {log.tx_hash && (
-            <SectionCard title={t('admin.audit.detail.blockchainInfo', '区块链信息')} icon={<LinkIcon size={16} />}>
-              <InfoRow label={t('admin.audit.detail.txHash', '交易哈希')}>
+            <SectionCard title={t('admin.audit.detail.blockchainInfo')} icon={<LinkIcon size={16} />}>
+              <InfoRow label={t('admin.audit.detail.txHash')}>
                 <TxHashLink txHash={log.tx_hash} />
               </InfoRow>
             </SectionCard>
@@ -299,9 +299,9 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
 
           {/* 请求上下文 */}
           {(log.ip_address || log.user_agent || log.request_id) && (
-            <SectionCard title={t('admin.audit.detail.requestContext', '请求上下文')} icon={<Globe size={16} />}>
+            <SectionCard title={t('admin.audit.detail.requestContext')} icon={<Globe size={16} />}>
               {log.ip_address && (
-                <InfoRow label={t('admin.audit.detail.ipAddress', 'IP 地址')}>
+                <InfoRow label={t('admin.audit.detail.ipAddress')}>
                   <div className="flex items-center gap-1.5">
                     <Globe size={14} className="text-white/45" />
                     {log.ip_address}
@@ -309,7 +309,7 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
                 </InfoRow>
               )}
               {log.user_agent && (
-                <InfoRow label={t('admin.audit.detail.userAgent', '用户代理')}>
+                <InfoRow label={t('admin.audit.detail.userAgent')}>
                   <div className="flex items-center gap-1.5">
                     <Monitor size={14} className="text-white/45" />
                     <span className="max-w-[350px] truncate text-white/65 text-xs">
@@ -319,7 +319,7 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
                 </InfoRow>
               )}
               {log.request_id && (
-                <InfoRow label={t('admin.audit.detail.requestId', '请求 ID')}>
+                <InfoRow label={t('admin.audit.detail.requestId')}>
                   <div className="flex items-center gap-2">
                     <code className="text-[11px] bg-white/5 px-1.5 py-0.5 rounded">
                       {log.request_id}
@@ -342,17 +342,17 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
           {/* 错误信息 */}
           {(log.error_code || log.error_message) && (
             <SectionCard 
-              title={t('admin.audit.detail.errorInfo', '错误信息')} 
+              title={t('admin.audit.detail.errorInfo')} 
               icon={<AlertTriangle size={16} />}
               variant="error"
             >
               {log.error_code && (
-                <InfoRow label={t('admin.audit.detail.errorCode', '错误代码')}>
+                <InfoRow label={t('admin.audit.detail.errorCode')}>
                   <Badge variant="destructive">{log.error_code}</Badge>
                 </InfoRow>
               )}
               {log.error_message && (
-                <InfoRow label={t('admin.audit.detail.errorMessage', '错误消息')}>
+                <InfoRow label={t('admin.audit.detail.errorMessage')}>
                   <span className="text-red-500">{log.error_message}</span>
                 </InfoRow>
               )}
@@ -360,8 +360,8 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
           )}
 
           {/* 环境信息 */}
-          <SectionCard title="环境" icon={<Hash size={16} />}>
-            <InfoRow label={t('admin.audit.detail.environment', '环境')}>
+          <SectionCard title="Environment" icon={<Hash size={16} />}>
+            <InfoRow label={t('admin.audit.detail.environment')}>
               <Badge variant="secondary" className="bg-white/5 border-white/10">
                 {log.environment}
               </Badge>

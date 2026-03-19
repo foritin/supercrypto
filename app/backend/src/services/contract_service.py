@@ -9,6 +9,7 @@ Contract Service - 合约管理服务
   - Sync 分区: 同步与主合约管理
 """
 
+import asyncio
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -41,7 +42,6 @@ __all__ = [
     "validate_config",
     # 主服务
     "ContractService",
-    "get_contract_service",
 ]
 
 
@@ -238,6 +238,43 @@ class ContractService:
 
     def __init__(self, network: Optional[str] = None):
         self.network = network or SETTINGS.network
+        self._provider_confirm_timeout_seconds = 30
+        self._provider_confirm_poll_seconds = 1
+
+    @staticmethod
+    def _is_treasury_multisig_contract(contract: ContractDeployment) -> bool:
+        name_ok = "treasurymultisig" in (contract.name or "").lower()
+        type_ok = "governance" in str(contract.contract_type or "").lower()
+        return name_ok or type_ok
+
+    async def _get_treasury_target_contract(
+        self, treasury_contract_name: str
+    ) -> ContractDeployment:
+        contract = await ContractDeployment.filter(
+            name=treasury_contract_name,
+            network=self.network,
+            status=ContractStatus.ACTIVE,
+        ).first()
+
+        if not contract:
+            raise BusinessException(
+                error_code=ErrorCode.CONTRACT_DEPLOYMENT_NOT_FOUND,
+                detail=f"Contract '{treasury_contract_name}' not found",
+            )
+
+        if not contract.address or not self._is_valid_evm_address(contract.address):
+            raise BusinessException(
+                error_code=ErrorCode.CONTRACT_NOT_DEPLOYED,
+                detail=f"Contract '{treasury_contract_name}' has invalid address",
+            )
+
+        if not self._is_treasury_multisig_contract(contract):
+            raise BusinessException(
+                code=400,
+                detail="TREASURY can only be set to TreasuryMultisig contracts",
+            )
+
+        return contract
 
     # ============ Registry - Provider 注册/注销 ============
 
@@ -269,7 +306,7 @@ class ContractService:
                 error_code=ErrorCode.CONTRACT_ABI_NOT_FOUND,
                 detail=f"Failed to load ABI from {provider.abi_path}",
             )
-        return abi
+        return abi if isinstance(abi, list) else []
 
     async def get_config_and_key(
         self, contract_name: str, provider_key: Optional[str]
@@ -301,6 +338,67 @@ class ContractService:
     def _is_hardhat_network(self) -> bool:
         network_value = getattr(self.network, "value", self.network)
         return str(network_value).lower() == "hardhat"
+
+    @staticmethod
+    def _normalize_address(address: str) -> str:
+        return (address or ZERO_ADDRESS).lower()
+
+    async def _read_provider_registered_address(
+        self,
+        adapter,
+        provider_address: str,
+        key_hash: str,
+    ) -> str:
+        """读取链上 Provider key 对应地址，兼容 get_address / getAddress。"""
+        try:
+            return await adapter.call_function(
+                provider_address, "get_address", [key_hash]
+            )
+        except Exception:
+            return await adapter.call_function(
+                provider_address, "getAddress", [key_hash]
+            )
+
+    async def _confirm_provider_registration_state(
+        self,
+        provider_address: str,
+        provider_abi: list,
+        key_hash: str,
+        expected_address: str,
+        contract_name: str,
+        provider_key: str,
+    ) -> str:
+        """等待并确认链上 Provider 的 key 映射已达到目标地址。"""
+        expected = self._normalize_address(expected_address)
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + self._provider_confirm_timeout_seconds
+        last_seen = ZERO_ADDRESS
+
+        async with get_async_web3_adapter() as adapter:
+            adapter.register_contract(provider_address, provider_abi)
+
+            while loop.time() < deadline:
+                on_chain = await self._read_provider_registered_address(
+                    adapter=adapter,
+                    provider_address=provider_address,
+                    key_hash=key_hash,
+                )
+                last_seen = on_chain or ZERO_ADDRESS
+
+                if self._normalize_address(on_chain) == expected:
+                    return on_chain
+
+                await asyncio.sleep(self._provider_confirm_poll_seconds)
+
+        raise BusinessException(
+            error_code=ErrorCode.CONTRACT_NOT_REGISTERED,
+            detail=(
+                f"On-chain provider state not confirmed within "
+                f"{self._provider_confirm_timeout_seconds}s: "
+                f"contract={contract_name}, key={provider_key}, "
+                f"expected={expected_address}, actual={last_seen}"
+            ),
+        )
 
     async def prepare_register(
         self,
@@ -409,6 +507,17 @@ class ContractService:
                 f"confirm_register key mismatch, DB key applied: {contract_name}, input={provider_key}, db={effective_key}"
             )
         key_hash = config.provider_key_hash or compute_key_hash(effective_key)
+        provider_abi = await self._get_provider_abi(provider)
+
+        # 链上确认：不依赖周期任务兜底
+        on_chain_address = await self._confirm_provider_registration_state(
+            provider_address=provider.address,
+            provider_abi=provider_abi,
+            key_hash=key_hash,
+            expected_address=contract.address,
+            contract_name=contract_name,
+            provider_key=effective_key,
+        )
         now = datetime.now()
 
         # 查找现有记录（包括已删除的）
@@ -419,9 +528,9 @@ class ContractService:
         ).first()
 
         if existing:
-            existing.network = self.network
+            existing.network = provider.network
             existing.key_hash = key_hash
-            existing.registered_address = contract.address
+            existing.registered_address = on_chain_address
             existing.category = config.project_name if config else "unknown"
             existing.contract_name = contract_name
             existing.is_registered = True
@@ -429,8 +538,8 @@ class ContractService:
             # 恢复已删除的记录
             if existing.is_deleted:
                 existing.is_deleted = False
-                existing.deleted_at = None
-                existing.deleted_by = None
+                setattr(existing, "deleted_at", None)
+                setattr(existing, "deleted_by", None)
                 logger.info(
                     f"Restored previously unregistered contract: {contract_name}"
                 )
@@ -442,7 +551,7 @@ class ContractService:
                 key=effective_key,
                 network=self.network,
                 key_hash=key_hash,
-                registered_address=contract.address,
+                registered_address=on_chain_address,
                 category=config.project_name if config else "unknown",
                 contract_name=contract_name,
                 is_registered=True,
@@ -457,7 +566,7 @@ class ContractService:
             "status": "registered",
             "contract_name": contract_name,
             "provider_key": effective_key,
-            "address": contract.address,
+            "address": on_chain_address,
             "tx_hash": tx_hash,
         }
 
@@ -531,6 +640,17 @@ class ContractService:
             )
 
         key_hash = config.provider_key_hash or compute_key_hash(effective_key)
+        provider_abi = await self._get_provider_abi(provider)
+
+        # 链上确认：不依赖周期任务兜底
+        await self._confirm_provider_registration_state(
+            provider_address=provider.address,
+            provider_abi=provider_abi,
+            key_hash=key_hash,
+            expected_address=ZERO_ADDRESS,
+            contract_name=contract_name,
+            provider_key=effective_key,
+        )
 
         registry = await ProviderRegistry.filter(
             provider_address=provider.address,
@@ -593,8 +713,10 @@ class ContractService:
                 key_hash = compute_key_hash(key)
 
                 try:
-                    registered_addr = await adapter.call_function(
-                        provider.address, "getAddress", [key_hash]
+                    registered_addr = await self._read_provider_registered_address(
+                        adapter=adapter,
+                        provider_address=provider.address,
+                        key_hash=key_hash,
                     )
                 except Exception as e:
                     logger.warning(f"Failed to query Provider for key {key}: {e}")
@@ -628,6 +750,130 @@ class ContractService:
             "updated": updated_count,
             "created": created_count,
             "total": len(configs),
+        }
+
+    async def prepare_set_treasury(self, treasury_contract_name: str) -> Dict[str, Any]:
+        """准备设置 AddressProvider.TREASURY 的调用参数。"""
+        provider = await self.get_provider_contract()
+        provider_abi = await self._get_provider_abi(provider)
+        treasury_contract = await self._get_treasury_target_contract(
+            treasury_contract_name
+        )
+
+        key = "TREASURY"
+        key_hash = compute_key_hash(key)
+
+        return {
+            "provider_address": provider.address,
+            "function_name": "admin_set_address",
+            "key_hash": key_hash,
+            "contract_address": treasury_contract.address,
+            "contract_name": treasury_contract.name,
+            "provider_key": key,
+            "abi": provider_abi,
+        }
+
+    async def confirm_set_treasury(
+        self,
+        treasury_contract_name: str,
+        tx_hash: str,
+    ) -> Dict[str, Any]:
+        """确认 AddressProvider.TREASURY 设置完成并更新缓存。"""
+        provider = await self.get_provider_contract()
+        provider_abi = await self._get_provider_abi(provider)
+        treasury_contract = await self._get_treasury_target_contract(
+            treasury_contract_name
+        )
+
+        key = "TREASURY"
+        key_hash = compute_key_hash(key)
+
+        on_chain_address = await self._confirm_provider_registration_state(
+            provider_address=provider.address,
+            provider_abi=provider_abi,
+            key_hash=key_hash,
+            expected_address=treasury_contract.address,
+            contract_name=treasury_contract_name,
+            provider_key=key,
+        )
+
+        now = datetime.now()
+        existing = await ProviderRegistry.filter(
+            provider_address=provider.address,
+            chain_id=provider.chain_id,
+            key=key,
+        ).first()
+
+        if existing:
+            existing.network = provider.network
+            existing.key_hash = key_hash
+            existing.registered_address = on_chain_address
+            existing.category = "common"
+            existing.contract_name = treasury_contract.name
+            existing.is_registered = on_chain_address != ZERO_ADDRESS
+            existing.last_synced_at = now
+            if existing.is_deleted:
+                existing.is_deleted = False
+                setattr(existing, "deleted_at", None)
+                setattr(existing, "deleted_by", None)
+            await existing.save()
+        else:
+            await ProviderRegistry.create(
+                provider_address=provider.address,
+                chain_id=provider.chain_id,
+                key=key,
+                network=self.network,
+                key_hash=key_hash,
+                registered_address=on_chain_address,
+                category="common",
+                contract_name=treasury_contract.name,
+                is_registered=on_chain_address != ZERO_ADDRESS,
+                is_deleted=False,
+                last_synced_at=now,
+            )
+
+        return {
+            "status": "registered",
+            "provider_key": key,
+            "contract_name": treasury_contract.name,
+            "address": on_chain_address,
+            "tx_hash": tx_hash,
+        }
+
+    async def get_treasury_binding(self) -> Dict[str, Any]:
+        """读取 AddressProvider 上 TREASURY 与 TREASURY_MULTISIG 的链上地址。"""
+        provider = await self.get_provider_contract()
+        provider_abi = await self._get_provider_abi(provider)
+        treasury_key_hash = compute_key_hash("TREASURY")
+        treasury_multisig_key_hash = compute_key_hash("TREASURY_MULTISIG")
+
+        treasury = ZERO_ADDRESS
+        treasury_multisig = ZERO_ADDRESS
+
+        async with get_async_web3_adapter() as adapter:
+            adapter.register_contract(provider.address, provider_abi)
+            try:
+                treasury = await self._read_provider_registered_address(
+                    adapter=adapter,
+                    provider_address=provider.address,
+                    key_hash=treasury_key_hash,
+                )
+            except Exception:
+                treasury = ZERO_ADDRESS
+
+            try:
+                treasury_multisig = await self._read_provider_registered_address(
+                    adapter=adapter,
+                    provider_address=provider.address,
+                    key_hash=treasury_multisig_key_hash,
+                )
+            except Exception:
+                treasury_multisig = ZERO_ADDRESS
+
+        return {
+            "provider_address": provider.address,
+            "treasury": treasury or ZERO_ADDRESS,
+            "treasury_multisig": treasury_multisig or ZERO_ADDRESS,
         }
 
     # ============ Status - 状态查询 ============
@@ -700,7 +946,7 @@ class ContractService:
                 {
                     "name": contract.name,
                     "address": contract.address,
-                    "symbol": contract.symbol,
+                    "symbol": contract.name,
                     "scope": contract.scope.value if contract.scope else None,
                     "project_name": contract.project_name,
                 }
@@ -765,6 +1011,18 @@ class ContractService:
         global_contracts, project_contracts = [], {}
         needs_update_count = 0
 
+        treasury_registry = await ProviderRegistry.filter(
+            network=self.network,
+            key="TREASURY",
+            is_deleted=False,
+        ).first()
+        treasury_configured = bool(
+            treasury_registry
+            and treasury_registry.is_registered
+            and treasury_registry.registered_address
+            and treasury_registry.registered_address.lower() != ZERO_ADDRESS.lower()
+        )
+
         for config in configs:
             contract = contract_map.get(config.contract_name)
             db_addr = contract.address if contract else None
@@ -806,7 +1064,7 @@ class ContractService:
                 else None,
                 "is_deleted": registry.is_deleted if registry else False,
                 "is_primary": contract.is_primary if contract else False,
-                "symbol": contract.symbol if contract else None,
+                "symbol": contract.name if contract else None,
             }
 
             if config.scope == "global":
@@ -887,11 +1145,19 @@ class ContractService:
                 "all_registered": all_registered,
                 "no_missing_deps": no_missing_deps,
                 "has_primary": has_primary,
+                "treasury_configured": treasury_configured,
             }
 
             # 就绪状态映射
-            if all_registered and no_missing_deps and has_primary:
+            if (
+                treasury_configured
+                and all_registered
+                and no_missing_deps
+                and has_primary
+            ):
                 pg["project_readiness"] = "ready"
+            elif not treasury_configured:
+                pg["project_readiness"] = "not_ready"
             elif has_primary and (all_registered or no_missing_deps):
                 pg["project_readiness"] = "partially_ready"
             else:
@@ -1207,6 +1473,8 @@ class ContractService:
                 reasons.append("存在未注册的合约")
             if not readiness_details.get("no_missing_deps"):
                 reasons.append("存在未注册的依赖")
+            if not readiness_details.get("treasury_configured"):
+                reasons.append("未配置 TREASURY 地址")
 
             raise BusinessException(
                 code=400,

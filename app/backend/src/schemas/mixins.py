@@ -10,14 +10,14 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-class TimestampMixin(BaseModel):
+class TimestampMixin:
     """时间戳混入 - 用于包含创建和更新时间的Schema"""
 
     created_at: Optional[datetime] = Field(None, description="创建时间(UTC)")
     updated_at: Optional[datetime] = Field(None, description="更新时间(UTC)")
 
 
-class IDMixin(BaseModel):
+class IDMixin:
     """ID混入 - 用于包含ID的Schema"""
 
     id: int = Field(description="唯一ID")

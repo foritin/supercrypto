@@ -68,6 +68,10 @@ export function useCurrentUser() {
   return {
     user: data ?? null,
     isAdmin: data?.is_admin ?? false,
+    isContractOwner: Boolean(data?.roles?.includes('contract_owner')),
+    isMultisigSigner: Boolean(
+      data?.roles?.some((role) => role === 'multisig_signer' || role === 'contract_owner')
+    ),
     isLoading,
     error: error as Error | null,
     refetch,

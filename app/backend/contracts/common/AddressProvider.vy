@@ -41,6 +41,9 @@ VANKE_LIQUIDITY_MINING: constant(bytes32) = keccak256("VANKE_LIQUIDITY_MINING")
 # 国库地址 Key
 TREASURY: constant(bytes32) = keccak256("TREASURY")
 
+# 国库多签合约 Key
+TREASURY_MULTISIG: constant(bytes32) = keccak256("TREASURY_MULTISIG")
+
 # ============ 存储变量 ============
 
 owner: public(address)
@@ -225,6 +228,33 @@ def get_vanke_liquidity_mining() -> address:
 def get_treasury() -> address:
     """@notice 获取国库地址"""
     return self.addresses[TREASURY]
+
+
+@view
+@external
+def get_treasury_multisig() -> address:
+    """@notice 获取国库多签合约地址"""
+    return self.addresses[TREASURY_MULTISIG]
+
+
+@external
+def set_treasury_multisig(_address: address):
+    """
+    @notice 设置国库多签合约地址
+    @param _address TreasuryMultisig合约地址
+    @dev 仅owner可调用
+    """
+    assert msg.sender == self.owner, "Only owner"
+    
+    old_addr: address = self.addresses[TREASURY_MULTISIG]
+    self.addresses[TREASURY_MULTISIG] = _address
+    
+    # 如果是新类型，添加到注册列表
+    if old_addr == empty(address):
+        self.registered_types.append(TREASURY_MULTISIG)
+    
+    log AddressUpdated(TREASURY_MULTISIG, old_addr, _address)
+
 
 @view
 @external

@@ -16,7 +16,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("全局错误:", error);
+    console.error("Global error:", error);
   }, [error]);
 
   return (
@@ -26,10 +26,10 @@ export default function GlobalError({
           <AlertTriangle className="h-8 w-8 text-red-400" />
         </div>
         <h2 className="mb-2 text-xl font-semibold text-white">
-          出了点问题
+          Something went wrong
         </h2>
         <p className="mb-6 text-sm text-white/60">
-          页面遇到了意外错误，请尝试重新加载。如果问题持续存在，请联系技术支持。
+          The page encountered an unexpected error. Please try reloading. If the issue persists, contact support.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button
@@ -37,14 +37,14 @@ export default function GlobalError({
             className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-bg-dark transition-all hover:shadow-[0_0_20px_theme(colors.primary-glow)]"
           >
             <RotateCcw className="h-4 w-4" />
-            重试
+            Retry
           </button>
           <Link
             href="/"
             className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-6 py-2.5 text-sm font-medium text-white/80 transition-all hover:border-white/40 hover:bg-white/5"
           >
             <Home className="h-4 w-4" />
-            返回首页
+            Back to Home
           </Link>
         </div>
       </div>

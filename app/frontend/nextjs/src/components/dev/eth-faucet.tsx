@@ -77,7 +77,7 @@ export function EthFaucet() {
         await switchChain({ chainId: 1 })
         await new Promise(resolve => setTimeout(resolve, 1000))
         await switchChain({ chainId: 31337 })
-        notification.success('MetaMask 余额已刷新')
+        notification.success(t('dev.faucet.refreshMetaMaskSuccess'))
         return
       } catch (mainnetError) {
         console.log('Mainnet switch failed, trying alternative...', mainnetError)
@@ -93,11 +93,11 @@ export function EthFaucet() {
         await window.ethereum.request({
           method: 'eth_requestAccounts',
         })
-        notification.success('MetaMask 已刷新')
+        notification.success(t('dev.faucet.refreshMetaMaskDone'))
       }
     } catch (error) {
       console.error('Refresh failed:', error)
-      notification.error('刷新失败，请手动在 MetaMask 中切换网络后再切回 Hardhat')
+      notification.error(t('dev.faucet.refreshMetaMaskFailed'))
       // 确保回到 Hardhat
       try {
         await switchChain({ chainId: 31337 })
@@ -121,10 +121,7 @@ export function EthFaucet() {
       // 如果充值的是当前连接的钱包地址，提示刷新 MetaMask
       const isCurrentUser = address.toLowerCase() === currentAddress?.toLowerCase()
       if (isCurrentUser) {
-        notification.success(
-          `${t('dev.faucet.success', { amount: result.amount_eth })}。如果 MetaMask 余额未更新，请点击下方的"刷新 MetaMask 余额"按钮。`,
-          { duration: 5000 }
-        )
+        notification.success(t('dev.faucet.successWithRefreshHint', { amount: result.amount_eth }), { duration: 5000 })
       } else {
         notification.success(t('dev.faucet.success', { amount: result.amount_eth }))
       }
@@ -284,10 +281,10 @@ export function EthFaucet() {
             {/* RPC URL 诊断信息 */}
             <div className="mt-3 pt-3 border-t border-primary/10">
               <p className="text-xs text-muted-foreground">
-                页面连接节点: {HARDHAT_RPC_URL}
+                {t('dev.faucet.rpcNodeLabel')}: {HARDHAT_RPC_URL}
               </p>
               <p className="text-xs text-yellow-500 mt-1">
-                请确保 MetaMask 中的 Hardhat 网络 RPC URL 与此相同，否则余额不会同步
+                {t('dev.faucet.rpcMismatchWarning')}
               </p>
             </div>
 
@@ -295,7 +292,7 @@ export function EthFaucet() {
             <div className="mt-3 pt-3 border-t border-primary/10 flex flex-col gap-2">
               <span className="text-xs text-yellow-500 flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                如果 MetaMask 仍显示 0 ETH，请点击下方按钮刷新
+                {t('dev.faucet.refreshHint')}
               </span>
               <Button
                 variant="outline"
@@ -309,7 +306,7 @@ export function EthFaucet() {
                 ) : (
                   <RefreshCw className="h-3 w-3 mr-1" />
                 )}
-                {isSwitching ? '刷新中...' : '刷新 MetaMask 余额'}
+                {isSwitching ? t('dev.faucet.refreshingButton') : t('dev.faucet.refreshButton')}
               </Button>
             </div>
           </div>

@@ -29,7 +29,7 @@ class Account(AbstractModel, TimestampMixin, BlockableMixin, SoftDeleteMixin):
     # === 原有字段 ===
     address = fields.CharField(max_length=128, description="钱包地址")
     private_key = fields.CharField(max_length=256, description="私钥")
-    tag = fields.CharField(max_length=255, null=True, description="标签")
+    roles = fields.JSONField(default=list, description="账户角色列表: admin, treasury, multisig_signer, contract_owner")
     network = fields.CharEnumField(
         Network, max_length=20, default=Network.HARDHAT, description="网络类型"
     )
@@ -43,10 +43,6 @@ class Account(AbstractModel, TimestampMixin, BlockableMixin, SoftDeleteMixin):
         max_digits=36, decimal_places=18, default=0, description="余额（Wei单位）"
     )
     is_active = fields.BooleanField(default=True, description="是否激活")
-
-    is_deployer = fields.BooleanField(
-        default=False, description="是否为部署账户（特殊标记）"
-    )
 
     class Meta:
         table = "account"

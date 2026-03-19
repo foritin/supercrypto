@@ -114,6 +114,18 @@ export function ContractList({
     actions: contract.actions,
   });
 
+  const hasNotRegisteredInTable = useMemo(() => {
+    if (!filteredContractStatus) return false;
+    const list = [
+      ...(filteredContractStatus.global_contracts || []),
+      ...(filteredContractStatus.project_contracts?.flatMap((p) => p.contracts) || []),
+    ];
+    return list.some(
+      (contract) =>
+        contract.registration_status === 'not_registered' || Boolean(contract.is_deleted)
+    );
+  }, [filteredContractStatus]);
+
   return (
     <>
       {/* Page Header with Refresh Button */}
@@ -151,7 +163,7 @@ export function ContractList({
 
         <TabsContent value="table">
           {/* 状态图例 */}
-          <ContractStatusLegend />
+          <ContractStatusLegend hasNotRegistered={hasNotRegisteredInTable} />
 
           {/* 筛选栏 */}
           <ContractFilterBar

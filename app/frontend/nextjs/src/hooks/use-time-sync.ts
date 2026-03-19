@@ -5,7 +5,7 @@
  * 从后端获取 UTC 时间，计算偏移量，提供同步后的时间
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface TimeSyncState {
   serverTime: Date | null;

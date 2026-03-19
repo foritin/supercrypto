@@ -30,3 +30,25 @@ export { usePlatformInfo } from './use-platform-info'
 
 export { useStablecoinAddresses } from './use-stablecoin-addresses'
 
+// Treasury & Redemption hooks
+export {
+  useTreasuryConfig,
+  useRedemptionQueue,
+  useRedemptionDetail,
+  useTreasuryStats,
+  useMultisigStatus,
+  useInitTreasury,
+  useSignRedemption,
+  useRejectRedemption,
+  useIsMultisigSigner,
+  usePendingForCurrentUser,
+} from './use-treasury'
+
+export {
+  useUserRedemptions,
+  useRequestRedemption,
+  useRedemptionPreview,
+  type RedemptionPreview,
+  type UserRedemption,
+} from './use-redemptions'
+

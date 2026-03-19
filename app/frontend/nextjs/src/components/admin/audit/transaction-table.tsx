@@ -39,22 +39,22 @@ interface TransactionTableProps {
 
 // 交易类型标签
 const TX_TYPE_LABELS: Record<TransactionAuditType, string> = {
-  transfer: '转账',
-  token_transfer: 'Token 转账',
-  token_approve: 'Token 授权',
-  contract_deploy: '合约部署',
-  contract_call: '合约调用',
-  staking: '质押',
-  unstaking: '解除质押',
-  claim_reward: '领取奖励',
-  swap: '兑换',
-  other: '其他',
+  transfer: 'Transfer',
+  token_transfer: 'Token Transfer',
+  token_approve: 'Token Approval',
+  contract_deploy: 'Contract Deployment',
+  contract_call: 'Contract Call',
+  staking: 'Staking',
+  unstaking: 'Unstaking',
+  claim_reward: 'Claim Reward',
+  swap: 'Swap',
+  other: 'Other',
 };
 
 // 格式化时间
 function formatDateTime(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleString('zh-CN', {
+  return date.toLocaleString('en-US', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -76,7 +76,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   const columns: ColumnDef<TransactionAudit>[] = [
     {
       accessorKey: 'created_at',
-      header: t('admin.audit.txTable.time', '时间'),
+      header: t('admin.audit.txTable.time'),
       size: 160,
       cell: ({ row }) => (
         <span className="text-[13px] text-white/85">
@@ -86,7 +86,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
     },
     {
       accessorKey: 'tx_hash',
-      header: t('admin.audit.txTable.txHash', '交易哈希'),
+      header: t('admin.audit.txTable.txHash'),
       size: 160,
       cell: ({ row }) => (
         <TxHashLink txHash={row.original.tx_hash} chainId={row.original.chain_id} />
@@ -94,7 +94,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
     },
     {
       id: 'chain',
-      header: t('admin.audit.txTable.chain', '链'),
+      header: t('admin.audit.txTable.chain'),
       size: 100,
       cell: ({ row }) => (
         <ChainBadge chainId={row.original.chain_id} network={row.original.network} />
@@ -102,7 +102,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
     },
     {
       accessorKey: 'tx_type',
-      header: t('admin.audit.txTable.type', '类型'),
+      header: t('admin.audit.txTable.type'),
       size: 120,
       cell: ({ row }) => {
         const txType = row.original.tx_type;
@@ -115,13 +115,13 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
     },
     {
       accessorKey: 'from_address',
-      header: t('admin.audit.txTable.from', '发送方'),
+      header: t('admin.audit.txTable.from'),
       size: 150,
       cell: ({ row }) => <AddressDisplay address={row.original.from_address} />,
     },
     {
       accessorKey: 'to_address',
-      header: t('admin.audit.txTable.to', '接收方'),
+      header: t('admin.audit.txTable.to'),
       size: 150,
       cell: ({ row }) => {
         const toAddress = row.original.to_address;
@@ -134,7 +134,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
     },
     {
       id: 'amount',
-      header: t('admin.audit.txTable.amount', '金额'),
+      header: t('admin.audit.txTable.amount'),
       size: 140,
       cell: ({ row }) => {
         const record = row.original;
@@ -204,13 +204,13 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
     },
     {
       accessorKey: 'status',
-      header: t('admin.audit.txTable.status', '状态'),
+      header: t('admin.audit.txTable.status'),
       size: 110,
       cell: ({ row }) => <TxStatusBadge status={row.original.status} />,
     },
     {
       id: 'actions',
-      header: t('admin.audit.txTable.actions', '操作'),
+      header: t('admin.audit.txTable.actions'),
       size: 80,
       cell: ({ row }) => (
         <TooltipProvider>
@@ -226,7 +226,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {t('admin.audit.txTable.viewDetail', '查看详情')}
+              {t('admin.audit.txTable.viewDetail')}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -253,7 +253,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
         data={data}
         loading={loading}
         {...(paginationConfig ? { pagination: paginationConfig } : {})}
-        emptyMessage={t('admin.audit.txTable.total', '暂无交易记录')}
+        emptyMessage={t('admin.audit.txTable.total')}
       />
     </div>
   );

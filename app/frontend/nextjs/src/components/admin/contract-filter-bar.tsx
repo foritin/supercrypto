@@ -117,7 +117,7 @@ export function ContractFilterBar({
           <SelectContent>
             {STATUS_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {t(opt.labelKey, opt.value === 'all' ? '全部状态' : opt.value)}
+                {t(opt.labelKey, opt.value === 'all' ? 'All Statuses' : opt.value)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -134,7 +134,7 @@ export function ContractFilterBar({
           <SelectContent>
             {TYPE_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {t(opt.labelKey, opt.value === 'all' ? '全部类型' : opt.value)}
+                {t(opt.labelKey, opt.value === 'all' ? 'All Types' : opt.value)}
               </SelectItem>
             ))}
           </SelectContent>

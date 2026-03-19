@@ -47,7 +47,7 @@ async def get_current_user(
     response = CurrentUserResponse(
         address=wallet_address,
         is_admin=is_admin,
-        tag=account.tag if account else None,
+        roles=account.roles if account else [],
         net_type=network.value,
         kyc_status=kyc.status.value if kyc else None,
     )

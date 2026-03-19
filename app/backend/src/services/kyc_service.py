@@ -117,7 +117,9 @@ class KycService:
         }
         net_type = net_type_map.get(env, Network.HARDHAT)
 
-        admin = await Account.filter(tag="admin", network=net_type).first()
+        admin = await Account.filter(
+            roles__contains=["admin"], network=net_type
+        ).first()
         if not admin:
             raise ValueError(f"Admin account not found for {env} environment")
 
@@ -784,9 +786,15 @@ class KycService:
         if not kyc:
             raise BusinessException(code=404, message="KYC record not found")
         if kyc.status != KycStatus.APPROVED:
-            raise BusinessException(
-                code=400, message="KYC must be approved before admission"
-            )
+            # 兼容“审核通过待链上确认”语义：允许 status=PENDING + on_chain_sync_status=PENDING
+            if not (
+                kyc.status == KycStatus.PENDING
+                and kyc.on_chain_sync_status == OnChainSyncStatus.PENDING
+            ):
+                raise BusinessException(
+                    code=400,
+                    message="KYC must be reviewed and pending on-chain confirmation before admission",
+                )
         # B-03: 幂等性检查 — 同一 tx_hash 重复提交时直接返回，不重复处理
         if (
             kyc.on_chain_sync_status == OnChainSyncStatus.SYNCED
@@ -821,6 +829,8 @@ class KycService:
             )
         # chain_verified 为 None 时跳过验证（降级处理）
 
+        # 链上确认成功后才正式通过
+        kyc.status = KycStatus.APPROVED
         kyc.on_chain_sync_status = OnChainSyncStatus.SYNCED
         kyc.on_chain_tx_hash = tx_hash
         kyc.on_chain_synced_at = datetime.now(timezone.utc)
@@ -947,8 +957,9 @@ class KycService:
         """
         审核 KYC 申请 (管理员用)
 
-        审核通过后设置 on_chain_sync_status = PENDING，
+        审核通过后保持 status=PENDING，并设置 on_chain_sync_status=PENDING，
         等待管理员通过浏览器钱包手动发起链上准入交易。
+        仅在 record_admission 链上确认成功后，才将 status 置为 APPROVED 并入库。
 
         参数:
             kyc_id: KYC ID
@@ -975,12 +986,14 @@ class KycService:
         kyc.reviewer_address = reviewer_address.lower()
 
         if data.approved:
-            kyc.status = KycStatus.APPROVED
+            # 仅记录“审核通过待链上确认”，不提前置为 APPROVED
+            kyc.status = KycStatus.PENDING
             kyc.is_accredited = data.is_accredited
             kyc.on_chain_sync_status = OnChainSyncStatus.PENDING
             kyc.on_chain_tx_hash = None
             kyc.on_chain_synced_at = None
             kyc.on_chain_error = None
+            kyc.reject_reason = None
         else:
             kyc.status = KycStatus.REJECTED
             kyc.reject_reason = data.reject_reason
@@ -1021,7 +1034,11 @@ class KycService:
 
     async def quick_approve(self, wallet_address: str) -> KycFullResponse:
         """
-        快速通过 KYC (开发工具，仅 local/test 环境)
+        快速通过 KYC (开发工具)
+
+        该方法仅将 KYC 置为“审核通过待链上确认”状态，
+        不会由后端使用管理员私钥直接发链上交易。
+        前端应使用钱包调用合约 addInvestor() 后，再调用确认接口 record_admission。
 
         参数:
             wallet_address: 钱包地址
@@ -1039,30 +1056,170 @@ class KycService:
             )
 
         address = wallet_address.lower()
+        now = datetime.now(timezone.utc)
 
-        kyc = await AccountKyc.filter(address=address).first()
+        # 仅处理当前网络记录，避免跨网络误更新
+        kyc = await AccountKyc.filter(address=address, network=self.network).first()
+        was_synced = bool(kyc and kyc.on_chain_sync_status == OnChainSyncStatus.SYNCED)
+        was_pending_sync = bool(
+            kyc
+            and kyc.status == KycStatus.PENDING
+            and kyc.on_chain_sync_status == OnChainSyncStatus.PENDING
+        )
 
+        # 已通过且已链上同步，直接返回（幂等）
+        if (
+            kyc
+            and kyc.status == KycStatus.APPROVED
+            and (kyc.on_chain_sync_status == OnChainSyncStatus.SYNCED)
+        ):
+            return await self.to_full_response(kyc)
+
+        # 若链上已是 verified，可直接将数据库状态对齐为已通过
+        chain_verified = await self.is_verified(address)
         if kyc:
-            kyc.status = KycStatus.APPROVED
-            kyc.reviewed_at = datetime.now(timezone.utc)
+            kyc.reviewed_at = now
             kyc.is_accredited = True
-            kyc.on_chain_sync_status = OnChainSyncStatus.SYNCED
+            if not kyc.submitted_at:
+                kyc.submitted_at = now
+
+            if chain_verified:
+                kyc.status = KycStatus.APPROVED
+                kyc.on_chain_sync_status = OnChainSyncStatus.SYNCED
+                kyc.on_chain_tx_hash = kyc.on_chain_tx_hash or "ALREADY_VERIFIED"
+                kyc.on_chain_synced_at = now
+                kyc.on_chain_error = None
+            else:
+                kyc.status = KycStatus.PENDING
+                kyc.on_chain_sync_status = OnChainSyncStatus.PENDING
+                kyc.on_chain_tx_hash = None
+                kyc.on_chain_synced_at = None
+                kyc.on_chain_error = None
+
             await kyc.save()
         else:
             kyc = await AccountKyc.create(
                 address=address,
-                status=KycStatus.APPROVED,
-                submitted_at=datetime.now(timezone.utc),
-                reviewed_at=datetime.now(timezone.utc),
+                network=self.network,
+                status=KycStatus.APPROVED if chain_verified else KycStatus.PENDING,
+                submitted_at=now,
+                reviewed_at=now,
                 is_accredited=True,
-                on_chain_sync_status=OnChainSyncStatus.SYNCED,
+                country_code="US",
+                on_chain_sync_status=(
+                    OnChainSyncStatus.SYNCED
+                    if chain_verified
+                    else OnChainSyncStatus.PENDING
+                ),
+                on_chain_tx_hash="ALREADY_VERIFIED" if chain_verified else None,
+                on_chain_synced_at=now if chain_verified else None,
+                on_chain_error=None,
             )
+
+        # 审计：仅在状态首次进入“待链上确认”时记录 APPROVE
+        if not chain_verified and not was_pending_sync:
+            await KycAuditLog.create(
+                kyc_id=kyc.id,
+                action=KycAuditAction.APPROVE,
+                actor_address="dev-tools",
+                actor_role="system",
+                details={
+                    "source": "quick_approve_prepare",
+                    "approved": True,
+                    "requires_wallet_tx": True,
+                },
+            )
+
+        # 若链上已 verified 且此前未同步，补一条 ADMIT 审计
+        if chain_verified and not was_synced:
+            await KycAuditLog.create(
+                kyc_id=kyc.id,
+                action=KycAuditAction.ADMIT,
+                actor_address="dev-tools",
+                actor_role="system",
+                details={"source": "quick_approve", "tx_hash": "ALREADY_VERIFIED"},
+            )
+
+        return await self.to_full_response(kyc)
+
+    async def quick_record_admission(
+        self, wallet_address: str, tx_hash: str
+    ) -> KycFullResponse:
+        """
+        开发工具：确认钱包发起的 quick-approve 链上准入交易
+
+        参数:
+            wallet_address: 钱包地址
+            tx_hash: 前端钱包交易哈希
+        """
+        if self.network not in ("hardhat", "sepolia"):
+            raise BusinessException(
+                code=403,
+                message="Quick KYC admission confirm only allowed in hardhat/sepolia environment",
+            )
+
+        address = wallet_address.lower()
+        now = datetime.now(timezone.utc)
+        kyc = await AccountKyc.filter(address=address, network=self.network).first()
+        if not kyc:
+            raise BusinessException(code=404, message="KYC record not found")
+
+        # 幂等：相同 tx_hash 重复提交直接返回
+        if (
+            kyc.on_chain_sync_status == OnChainSyncStatus.SYNCED
+            and kyc.on_chain_tx_hash == tx_hash
+        ):
+            return await self.to_full_response(kyc)
+
+        chain_verified = await self.is_verified(address)
+        if not chain_verified:
+            kyc.on_chain_sync_status = OnChainSyncStatus.FAILED
+            kyc.on_chain_tx_hash = tx_hash
+            kyc.on_chain_error = (
+                "Quick approve confirm failed: investor not verified on-chain"
+            )
+            await kyc.save()
+            raise BusinessException(
+                code=400,
+                message="On-chain verification failed: investor not verified yet",
+            )
+
+        was_approved = kyc.status == KycStatus.APPROVED
+
+        kyc.status = KycStatus.APPROVED
+        kyc.reviewed_at = kyc.reviewed_at or now
+        kyc.is_accredited = True
+        kyc.on_chain_sync_status = OnChainSyncStatus.SYNCED
+        kyc.on_chain_tx_hash = tx_hash
+        kyc.on_chain_synced_at = now
+        kyc.on_chain_error = None
+        await kyc.save()
+
+        if not was_approved:
+            await KycAuditLog.create(
+                kyc_id=kyc.id,
+                action=KycAuditAction.APPROVE,
+                actor_address="dev-tools",
+                actor_role="system",
+                details={"source": "quick_approve_confirm", "approved": True},
+            )
+
+        await KycAuditLog.create(
+            kyc_id=kyc.id,
+            action=KycAuditAction.ADMIT,
+            actor_address="dev-tools",
+            actor_role="system",
+            details={"source": "quick_approve_confirm", "tx_hash": tx_hash},
+        )
 
         return await self.to_full_response(kyc)
 
     async def reset_kyc(self, wallet_address: str) -> bool:
         """
         重置 KYC 状态 (开发工具，仅 hardhat 环境)
+
+        仅在链上状态已解除（is_verified=False）后才允许清理数据库记录。
+        链上解除应由前端钱包签名发起 admin_remove_investor 交易完成。
 
         参数:
             wallet_address: 钱包地址
@@ -1079,6 +1236,13 @@ class KycService:
             )
 
         address = wallet_address.lower()
+
+        chain_verified = await self.is_verified(address)
+        if chain_verified:
+            raise BusinessException(
+                code=400,
+                message="Investor is still verified on-chain. Please revoke on-chain first using wallet signature.",
+            )
 
         deleted = await AccountKyc.filter(
             address=address, network=self.network
@@ -1980,10 +2144,14 @@ class KycService:
                     kyc.reviewer_address = reviewer_address.lower()
 
                     if request.action == "approve":
-                        kyc.status = KycStatus.APPROVED
+                        # 批量审核通过后保持待链上确认，避免提前入库为 APPROVED
+                        kyc.status = KycStatus.PENDING
                         kyc.is_accredited = request.is_accredited
                         kyc.on_chain_sync_status = OnChainSyncStatus.PENDING
+                        kyc.on_chain_tx_hash = None
+                        kyc.on_chain_synced_at = None
                         kyc.on_chain_error = None
+                        kyc.reject_reason = None
 
                         await create_kyc_audit_log(
                             kyc_id=kyc_id,

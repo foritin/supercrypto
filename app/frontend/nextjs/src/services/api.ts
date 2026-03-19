@@ -16,6 +16,65 @@ import { API_BASE_URL } from '@/constants/api'
 import { refreshAccessToken } from '@/services/auth'
 import { getJwtToken } from '@/utils/auth'
 
+const GENERIC_ERROR_MESSAGES = new Set([
+  'request failed',
+  'internal server error',
+  'validation error',
+  'network error',
+])
+
+function isGenericMessage(message?: string): boolean {
+  if (!message) return true
+  return GENERIC_ERROR_MESSAGES.has(message.trim().toLowerCase())
+}
+
+function extractDetailMessage(detail: unknown): string | undefined {
+  if (typeof detail === 'string') {
+    const trimmed = detail.trim()
+    return trimmed || undefined
+  }
+
+  if (Array.isArray(detail)) {
+    for (const item of detail) {
+      if (typeof item === 'string' && item.trim()) {
+        return item.trim()
+      }
+      if (item && typeof item === 'object') {
+        const obj = item as Record<string, unknown>
+        const msg = obj.msg ?? obj.message
+        if (typeof msg === 'string' && msg.trim()) {
+          return msg.trim()
+        }
+      }
+    }
+    return undefined
+  }
+
+  if (detail && typeof detail === 'object') {
+    const obj = detail as Record<string, unknown>
+    for (const key of ['msg', 'message', 'reason', 'error']) {
+      const value = obj[key]
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim()
+      }
+    }
+  }
+
+  return undefined
+}
+
+function resolveErrorMessage(responseData: Record<string, unknown>): string {
+  const dataObj = responseData.data as Record<string, unknown> | undefined
+  const message = (responseData.message as string) || (dataObj?.msg as string) || ''
+  const detailMessage = extractDetailMessage(responseData.detail)
+
+  if (!isGenericMessage(message)) {
+    return message
+  }
+
+  return detailMessage || message || 'Request failed'
+}
+
 
 /**
  * API Error
@@ -70,7 +129,7 @@ function requestReauth(message?: string): void {
   if (typeof window === 'undefined') return
 
   window.dispatchEvent(new CustomEvent('auth:reauth-required', {
-    detail: { message: message || '登录已过期，请重新连接钱包' }
+    detail: { message: message || 'Session expired. Please reconnect your wallet.' }
   }))
 }
 
@@ -106,7 +165,8 @@ axiosInstance.interceptors.response.use(
     const json: API.Response<unknown> = response.data
 
     if (json.code !== 0 && json.code !== 200) {
-      throw new ApiError(json.code, json.data?.msg || 'Request failed')
+      const msg = json.data?.msg
+      throw new ApiError(json.code, msg || 'Request failed')
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -124,7 +184,7 @@ axiosInstance.interceptors.response.use(
                              originalRequest.url?.includes('/public/auth/logout')
       
       if (isAuthEndpoint) {
-        return Promise.reject(new ApiError(401, '认证失败'))
+        return Promise.reject(new ApiError(401, 'Authentication failed'))
       }
       
       originalRequest._retry = true
@@ -143,13 +203,13 @@ axiosInstance.interceptors.response.use(
             return axiosInstance(originalRequest)
           } else {
             // Refresh 失败，请求用户确认重新登录
-            requestReauth('登录已过期，请重新连接钱包')
-            return Promise.reject(new ApiError(401, '登录已过期'))
+            requestReauth('Session expired. Please reconnect your wallet.')
+            return Promise.reject(new ApiError(401, 'Session expired'))
           }
         } catch {
           isRefreshing = false
-          requestReauth('登录已过期，请重新连接钱包')
-          return Promise.reject(new ApiError(401, '登录已过期'))
+          requestReauth('Session expired. Please reconnect your wallet.')
+          return Promise.reject(new ApiError(401, 'Session expired'))
         }
       } else {
         // 正在刷新中，等待刷新完成后重试
@@ -161,7 +221,7 @@ axiosInstance.interceptors.response.use(
           
           // 超时保护
           setTimeout(() => {
-            reject(new ApiError(401, '登录刷新超时'))
+            reject(new ApiError(401, 'Session refresh timeout'))
           }, 10000)
         })
       }
@@ -173,8 +233,8 @@ axiosInstance.interceptors.response.use(
     if (dataObjAny?.msg && (
         String(dataObjAny.msg).includes('Session revoked') ||
         String(dataObjAny.msg).includes('session_revoked'))) {
-      requestReauth('您已被管理员强制下线，请重新连接钱包')
-      return Promise.reject(new ApiError(401, '会话已被撤销'))
+      requestReauth('Your session was revoked by an administrator. Please reconnect your wallet.')
+      return Promise.reject(new ApiError(401, 'Session revoked'))
     }
 
     // 终态 401（刷新后仍失败 / 会话版本不匹配 / 会话不存在）
@@ -187,9 +247,9 @@ axiosInstance.interceptors.response.use(
 
       if (isTerminal401) {
         if (tokenStatus === 'session_not_found' || tokenStatus === 'version_mismatch') {
-          requestReauth('会话已失效，请重新连接钱包')
+          requestReauth('Session invalid. Please reconnect your wallet.')
         } else {
-          requestReauth('登录已过期，请重新连接钱包')
+          requestReauth('Session expired. Please reconnect your wallet.')
         }
       }
     }
@@ -200,8 +260,7 @@ axiosInstance.interceptors.response.use(
       // 支持两种错误格式：
       // 1. 业务异常格式: { code, message, error_code, detail, path }
       // 2. 标准 API 格式: { code, data: { msg } }
-      const dataObj = responseData.data as Record<string, unknown> | undefined
-      const errorMessage = (responseData.message as string) || (dataObj?.msg as string) || 'Request failed'
+      const errorMessage = resolveErrorMessage(responseData)
       const errorCode = typeof responseData.code === 'number' ? responseData.code : error.response.status
       const errorCodeNum = typeof responseData.error_code === 'number' ? responseData.error_code : undefined
       const detailObj = typeof responseData.detail === 'object' ? responseData.detail as Record<string, unknown> : undefined

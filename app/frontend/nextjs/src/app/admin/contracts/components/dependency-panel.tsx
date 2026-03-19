@@ -240,12 +240,12 @@ export function DependencyPanel({
       mode === "register"
         ? t(
             "admin.contracts.register.bindingProvider",
-            "正在为 {{name}} 绑定 AddressProvider...",
+            "Binding AddressProvider for {{name}}...",
             { name: contractName }
           )
         : t(
             "admin.contracts.unregister.clearingProvider",
-            "正在清理 {{name}} 的 AddressProvider...",
+            "Clearing AddressProvider for {{name}}...",
             { name: contractName }
           );
 
@@ -275,11 +275,11 @@ export function DependencyPanel({
           mode === "register"
             ? t(
                 "admin.contracts.register.bindVerifyFailed",
-                "已提交绑定交易，但未能立即验证 ADDRESS_PROVIDER，请刷新后重试。"
+                "Binding transaction submitted, but ADDRESS_PROVIDER could not be verified immediately. Please refresh and retry."
               )
             : t(
                 "admin.contracts.unregister.clearVerifyFailed",
-                "已提交清理交易，但未能立即验证 ADDRESS_PROVIDER，请刷新后确认。"
+                "Clear transaction submitted, but ADDRESS_PROVIDER could not be verified immediately. Please refresh to confirm."
               )
         );
       }
@@ -293,7 +293,7 @@ export function DependencyPanel({
         notification.warning(
           t(
             "admin.contracts.unregister.clearNotSupported",
-            "该合约不支持清空 AddressProvider（可能禁止设置为零地址），已仅执行 Provider 注销。"
+            "This contract does not support clearing AddressProvider (zero address may be forbidden). Provider unregistration was executed only."
           ) + ` (${message.split("\n")[0]})`
         );
         return false;
@@ -302,7 +302,7 @@ export function DependencyPanel({
       notification.error(
         t(
           "admin.contracts.register.bindFailed",
-          "已注册到 Provider，但绑定 AddressProvider 到目标合约失败：{{error}}",
+          "Registered in Provider, but failed to bind AddressProvider to target contract: {{error}}",
           { error: message.split("\n")[0] }
         )
       );
@@ -413,7 +413,7 @@ export function DependencyPanel({
       
       if (err.code === 4001 || err.message?.includes('rejected') || err.message?.includes('denied')) {
         notification.warning(
-          t("admin.contracts.register.rejected") || "用户取消了交易签名"
+          t("admin.contracts.register.rejected") || "Transaction signature was rejected by user"
         );
       } else {
         const errorMessage = err.shortMessage || err.message?.split('\n')[0] || "Unknown error";
@@ -429,7 +429,7 @@ export function DependencyPanel({
   // 处理解除注册合约
   const handleUnregisterFromProvider = async (contractName: string) => {
     if (!walletClient || !publicClient) {
-      notification.error(t("admin.contracts.unregister.walletNotConnected", "请先连接钱包"));
+      notification.error(t("admin.contracts.unregister.walletNotConnected", "Please connect your wallet first"));
       return;
     }
 
@@ -446,7 +446,7 @@ export function DependencyPanel({
       const owner = await verifyProviderAndOwner(prepareData.provider_address, "unregister");
       if (!owner) return;
 
-      notification.loading(t("admin.contracts.unregister.signing", "签名中..."), 0);
+      notification.loading(t("admin.contracts.unregister.signing", "Awaiting signature..."), 0);
 
       const hash = await walletClient.writeContract({
         address: prepareData.provider_address as `0x${string}`,
@@ -472,7 +472,7 @@ export function DependencyPanel({
       });
 
       notification.destroy();
-      notification.loading(t("admin.contracts.unregister.confirming", "确认交易中..."), 0);
+      notification.loading(t("admin.contracts.unregister.confirming", "Confirming transaction..."), 0);
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
@@ -501,7 +501,7 @@ export function DependencyPanel({
       notification.destroy();
       notification.success(
         t("admin.contracts.unregister.success", {
-          defaultValue: "解除注册成功: {{name}}, TX: {{tx}}",
+          defaultValue: "Unregistered successfully: {{name}}, TX: {{tx}}",
           name: contractName,
           tx: hash.slice(0, 10) + "...",
         })
@@ -515,13 +515,13 @@ export function DependencyPanel({
       
       if (err.code === 4001 || err.message?.includes('rejected') || err.message?.includes('denied')) {
         notification.warning(
-          t("admin.contracts.unregister.rejected") || "用户取消了交易签名"
+          t("admin.contracts.unregister.rejected") || "Transaction signature was rejected by user"
         );
       } else {
         const errorMessage = err.shortMessage || err.message?.split('\n')[0] || "Unknown error";
         notification.error(
           t("admin.contracts.unregister.failed", {
-            defaultValue: "解除注册失败: {{error}}",
+            defaultValue: "Unregister failed: {{error}}",
             error: errorMessage,
           })
         );
@@ -535,7 +535,7 @@ export function DependencyPanel({
   const handleSetPrimary = async () => {
     const contractId = selectedListContract?.id;
     if (!contractId) {
-      notification.error(t("admin.contracts.primary.noContractId", "合约 ID 不存在"));
+      notification.error(t("admin.contracts.primary.noContractId", "Contract ID is missing"));
       return;
     }
 
@@ -544,7 +544,7 @@ export function DependencyPanel({
       await contractAdminService.setPrimary(contractId);
       notification.success(
         t("admin.contracts.primary.setSuccess", {
-          defaultValue: "已将 {{name}} 设为主合约",
+          defaultValue: "Set {{name}} as primary contract",
           name: selectedListContract?.name,
         })
       );
@@ -554,7 +554,7 @@ export function DependencyPanel({
       const err = error as { message?: string };
       notification.error(
         t("admin.contracts.primary.setFailed", {
-          defaultValue: "设置主合约失败: {{error}}",
+          defaultValue: "Failed to set primary contract: {{error}}",
           error: err.message || "Unknown error",
         })
       );
@@ -567,7 +567,7 @@ export function DependencyPanel({
   const handleUnsetPrimary = async () => {
     const contractId = selectedListContract?.id;
     if (!contractId) {
-      notification.error(t("admin.contracts.primary.noContractId", "合约 ID 不存在"));
+      notification.error(t("admin.contracts.primary.noContractId", "Contract ID is missing"));
       return;
     }
 
@@ -576,7 +576,7 @@ export function DependencyPanel({
       await contractAdminService.unsetPrimary(contractId);
       notification.success(
         t("admin.contracts.primary.unsetSuccess", {
-          defaultValue: "已取消 {{name}} 的主合约标记",
+          defaultValue: "Unset primary flag for {{name}}",
           name: selectedListContract?.name,
         })
       );
@@ -586,7 +586,7 @@ export function DependencyPanel({
       const err = error as { message?: string };
       notification.error(
         t("admin.contracts.primary.unsetFailed", {
-          defaultValue: "取消主合约失败: {{error}}",
+          defaultValue: "Failed to unset primary contract: {{error}}",
           error: err.message || "Unknown error",
         })
       );

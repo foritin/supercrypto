@@ -363,6 +363,47 @@ const home = {
       content: "If you have any questions about this Privacy Policy or our data practices, please contact our Data Protection Officer at:",
     },
   },
+  featuredAssets: {
+    title: "Featured Assets",
+    viewAll: "View All",
+    backedBy: "Backed by Real World Assets",
+    annualYield: "Annual Yield",
+    investNow: "Invest Now",
+    lowRisk: "Low Risk",
+    mediumRisk: "Medium Risk",
+    highRisk: "High Risk",
+    months: "Months",
+    flexible: "Flexible",
+    minInvest: "Min",
+  },
+  calculator: {
+    badge: "Calculate Your Earnings",
+    title: "Calculate Your Future Wealth",
+    subtitle: "See how compound interest grows your stablecoin portfolio over time.",
+    points: {
+      noHiddenFees: "No hidden fees",
+      instantWithdrawal: "Instant withdrawal",
+      dailyCompounding: "Daily compounding",
+      fullyTransparent: "Fully transparent",
+    },
+    disclaimer: "* APY rates are variable and subject to market conditions. Past performance does not guarantee future results.",
+    yieldCalculator: {
+      title: "Yield Calculator",
+      subtitle: "Calculate your potential earnings with precision",
+      investmentAmount: "Investment Amount",
+      duration: "Duration (Days)",
+      totalValue: "Total Value",
+      profit: "Profit",
+      months: "months",
+    },
+  },
+  logoWall: {
+    title: "Powered by Leading Blockchains",
+    subtitle: "Multi-chain support for maximum flexibility and security",
+  },
+  infiniteMarquee: {
+    title: "Blockchain Ecosystem",
+  },
 }
 
 export default home

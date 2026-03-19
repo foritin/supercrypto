@@ -1,0 +1,701 @@
+openapi: 3.0.3
+info:
+  title: Treasury Multisig Redemption API
+  description: |
+    SuperCrypto Treasury Multisig Redemption System API
+    
+    ## Features
+    - Create redemption requests for matured subscriptions
+    - Multi-signature approval workflow (2/3 threshold)
+    - Admin queue management
+    - Real-time status tracking
+    
+    ## Authentication
+    All endpoints require JWT authentication via Bearer token.
+  version: 1.0.0
+  contact:
+    name: SuperCrypto API Team
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development
+  - url: https://api.supercrypto.com/api/v1
+    description: Production
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ============ User Endpoints ============
+  /user/subscriptions/{subscription_id}/redeem:
+    post:
+      summary: Request Redemption
+      description: |
+        Create a redemption request for a matured subscription.
+        This creates a multisig proposal that requires 2/3 signatures.
+      tags:
+        - User Redemptions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: subscription_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the matured subscription to redeem
+      responses:
+        '200':
+          description: Redemption request created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Subscription not matured or already redeemed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /user/subscriptions/redemptions:
+    get:
+      summary: List My Redemptions
+      description: Get redemption request history for the authenticated user
+      tags:
+        - User Redemptions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/RedemptionStatus'
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+          description: Items per page
+      responses:
+        '200':
+          description: List of redemption requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRedemptionResponse'
+
+  # ============ Admin Treasury Endpoints ============
+  /admin/treasury/queue:
+    get:
+      summary: Get Redemption Queue
+      description: Get all redemption requests for admin review
+      tags:
+        - Admin Treasury
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/RedemptionStatus'
+          description: Filter by status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+          description: Items per page
+      responses:
+        '200':
+          description: Paginated redemption queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRedemptionQueueResponse'
+        '403':
+          description: Admin permission required
+
+  /admin/treasury/queue/{redemption_id}:
+    get:
+      summary: Get Redemption Detail
+      description: Get detailed information about a redemption request
+      tags:
+        - Admin Treasury
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: redemption_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Redemption request ID
+      responses:
+        '200':
+          description: Redemption details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedemptionDetailResponse'
+        '404':
+          description: Redemption request not found
+
+  /admin/treasury/queue/{redemption_id}/sign:
+    post:
+      summary: Sign Redemption
+      description: |
+        Submit a signature for a redemption proposal.
+        Requires multisig signer or admin permission.
+      tags:
+        - Admin Treasury
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: redemption_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Redemption request ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TreasurySignRequest'
+      responses:
+        '200':
+          description: Signature submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Already signed or invalid status
+        '403':
+          description: Multisig signer permission required
+        '409':
+          description: Already signed this redemption
+
+  /admin/treasury/queue/{redemption_id}/reject:
+    post:
+      summary: Reject Redemption
+      description: Reject a pending redemption request
+      tags:
+        - Admin Treasury
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: redemption_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Redemption request ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedemptionRejectRequest'
+      responses:
+        '200':
+          description: Redemption rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /admin/treasury/multisig/status:
+    get:
+      summary: Get Multisig Status
+      description: Get current multisig contract status and signer information
+      tags:
+        - Admin Treasury
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Multisig status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultisigStatusResponse'
+
+  /admin/treasury/stats:
+    get:
+      summary: Get Treasury Stats
+      description: Get treasury statistics and metrics
+      tags:
+        - Admin Treasury
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Treasury statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreasuryStatsResponse'
+
+  # ============ Dev Tools Endpoints ============
+  /dev/treasury/init:
+    post:
+      summary: Initialize Treasury Multisig
+      description: |
+        Initialize the TreasuryMultisig contract with signers and threshold.
+        Only available in dev/test environment. Only deployer can call.
+      tags:
+        - Dev Tools Treasury
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TreasuryInitRequest'
+      responses:
+        '200':
+          description: Treasury initialized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Deployer permission required
+
+  /dev/treasury/config:
+    get:
+      summary: Get Treasury Config
+      description: Get current treasury multisig configuration
+      tags:
+        - Dev Tools Treasury
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Treasury configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreasuryConfigResponse'
+
+  /dev/treasury/signers:
+    post:
+      summary: Update Treasury Signers
+      description: |
+        Update the treasury multisig signers and threshold.
+        Only available in dev/test environment. Only deployer can call.
+      tags:
+        - Dev Tools Treasury
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSignersRequest'
+      responses:
+        '200':
+          description: Signers updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ============ Enums ============
+    RedemptionStatus:
+      type: string
+      enum:
+        - pending
+        - approved
+        - executed
+        - rejected
+      description: |
+        - pending: Waiting for admin approval
+        - approved: Multisig proposal created, waiting for signatures
+        - executed: Funds transferred successfully
+        - rejected: Redemption request rejected
+
+    # ============ Request Schemas ============
+    TreasurySignRequest:
+      type: object
+      required:
+        - tx_hash
+      properties:
+        tx_hash:
+          type: string
+          description: On-chain signature transaction hash
+          example: "0xabc123..."
+
+    RedemptionRejectRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+          description: Reason for rejection
+          example: "Insufficient treasury balance"
+
+    TreasuryInitRequest:
+      type: object
+      required:
+        - signer_addresses
+        - required_signatures
+      properties:
+        signer_addresses:
+          type: array
+          minItems: 3
+          maxItems: 10
+          items:
+            type: string
+          description: List of multisig signer addresses
+          example:
+            - "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+            - "0x8ba1f109551bD432803012645Hac136c82C3e8C9"
+            - "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+        required_signatures:
+          type: integer
+          minimum: 2
+          maximum: 10
+          default: 2
+          description: Number of signatures required to execute
+
+    UpdateSignersRequest:
+      type: object
+      required:
+        - signer_addresses
+        - required_signatures
+      properties:
+        signer_addresses:
+          type: array
+          minItems: 3
+          maxItems: 10
+          items:
+            type: string
+        required_signatures:
+          type: integer
+          minimum: 2
+          maximum: 10
+
+    # ============ Response Schemas ============
+    SuccessResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        msg:
+          type: string
+          example: "Success"
+        data:
+          type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 400
+        msg:
+          type: string
+          example: "Error message"
+        error_code:
+          type: integer
+
+    PaginationInfo:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+
+    PaginatedRedemptionResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        msg:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RedemptionRequestResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    PaginatedRedemptionQueueResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        msg:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RedemptionQueueItemResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    RedemptionRequestResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        subscription_id:
+          type: integer
+        wallet_address:
+          type: string
+        asset_id:
+          type: integer
+        asset_name:
+          type: string
+          nullable: true
+        asset_symbol:
+          type: string
+          nullable: true
+        principal:
+          type: number
+          format: float
+        interest:
+          type: number
+          format: float
+        total_amount:
+          type: number
+          format: float
+        proposal_id:
+          type: integer
+          nullable: true
+        proposal_tx_hash:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/RedemptionStatus'
+        executed_at:
+          type: string
+          format: date-time
+          nullable: true
+        execute_tx_hash:
+          type: string
+          nullable: true
+        environment:
+          type: string
+        signature_count:
+          type: integer
+        required_signatures:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RedemptionQueueItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        subscription_id:
+          type: integer
+        wallet_address:
+          type: string
+        asset_name:
+          type: string
+          nullable: true
+        asset_symbol:
+          type: string
+          nullable: true
+        principal:
+          type: number
+          format: float
+        interest:
+          type: number
+          format: float
+        total_amount:
+          type: number
+          format: float
+        status:
+          $ref: '#/components/schemas/RedemptionStatus'
+        proposal_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        signature_count:
+          type: integer
+        required_signatures:
+          type: integer
+
+    RedemptionDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        subscription_id:
+          type: integer
+        wallet_address:
+          type: string
+        asset_id:
+          type: integer
+        asset_name:
+          type: string
+          nullable: true
+        asset_symbol:
+          type: string
+          nullable: true
+        principal:
+          type: number
+          format: float
+        interest:
+          type: number
+          format: float
+        total_amount:
+          type: number
+          format: float
+        proposal_id:
+          type: integer
+          nullable: true
+        proposal_tx_hash:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/RedemptionStatus'
+        executed_at:
+          type: string
+          format: date-time
+          nullable: true
+        execute_tx_hash:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        environment:
+          type: string
+        signers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SignerInfoResponse'
+        signature_count:
+          type: integer
+        required_signatures:
+          type: integer
+        rejection_reason:
+          type: string
+          nullable: true
+
+    SignerInfoResponse:
+      type: object
+      properties:
+        address:
+          type: string
+        has_signed:
+          type: boolean
+        signed_at:
+          type: string
+          format: date-time
+          nullable: true
+        tx_hash:
+          type: string
+          nullable: true
+
+    MultisigStatusResponse:
+      type: object
+      properties:
+        contract_address:
+          type: string
+          nullable: true
+        signers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SignerInfoResponse'
+        signer_count:
+          type: integer
+        required_signatures:
+          type: integer
+        is_initialized:
+          type: boolean
+
+    TreasuryStatsResponse:
+      type: object
+      properties:
+        total_requests:
+          type: integer
+        pending_count:
+          type: integer
+        approved_count:
+          type: integer
+        executed_count:
+          type: integer
+        rejected_count:
+          type: integer
+        total_redeemed_amount:
+          type: number
+          format: float
+        average_signature_time_hours:
+          type: number
+          format: float
+          nullable: true
+
+    TreasuryConfigResponse:
+      type: object
+      properties:
+        contract_address:
+          type: string
+          nullable: true
+        signers:
+          type: array
+          items:
+            type: string
+        required_signatures:
+          type: integer
+        threshold_ratio:
+          type: string
+          example: "2/3"
+        is_initialized:
+          type: boolean

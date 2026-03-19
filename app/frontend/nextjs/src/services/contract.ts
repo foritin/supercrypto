@@ -424,6 +424,24 @@ export interface ConfirmUnregisterResponse {
   message: string;
 }
 
+// 准备设置 TREASURY 请求
+export interface PrepareSetTreasuryRequest {
+  treasury_contract_name: string;
+}
+
+// 确认设置 TREASURY 请求
+export interface ConfirmSetTreasuryRequest {
+  treasury_contract_name: string;
+  tx_hash: string;
+}
+
+// TREASURY 绑定状态
+export interface TreasuryBindingResponse {
+  provider_address: string;
+  treasury: string;
+  treasury_multisig: string;
+}
+
 // 合约验证结果
 export interface ContractValidationResult {
   address: string;
@@ -595,6 +613,42 @@ export const contractAdminService = {
       request
     );
     return response.object_data as ConfirmUnregisterResponse;
+  },
+
+  /**
+   * 准备设置 TREASURY（管理员）
+   */
+  async prepareSetTreasury(
+    request: PrepareSetTreasuryRequest
+  ): Promise<PrepareRegisterResponse> {
+    const response = await api.post<API.ResponseData<PrepareRegisterResponse>>(
+      ADMIN_PATHS.CONTRACT_TREASURY_PREPARE,
+      request
+    );
+    return response.object_data as PrepareRegisterResponse;
+  },
+
+  /**
+   * 确认设置 TREASURY（管理员）
+   */
+  async confirmSetTreasury(
+    request: ConfirmSetTreasuryRequest
+  ): Promise<ConfirmRegisterResponse> {
+    const response = await api.post<API.ResponseData<ConfirmRegisterResponse>>(
+      ADMIN_PATHS.CONTRACT_TREASURY_CONFIRM,
+      request
+    );
+    return response.object_data as ConfirmRegisterResponse;
+  },
+
+  /**
+   * 读取 TREASURY / TREASURY_MULTISIG 链上绑定状态（管理员）
+   */
+  async getTreasuryBinding(): Promise<TreasuryBindingResponse> {
+    const response = await api.get<API.ResponseData<TreasuryBindingResponse>>(
+      ADMIN_PATHS.CONTRACT_TREASURY_BINDING
+    );
+    return response.object_data as TreasuryBindingResponse;
   },
 
   /**

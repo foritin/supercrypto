@@ -3,7 +3,7 @@ Auth 领域 - Schema 定义
 认证相关的数据传输对象（DTO）
 """
 
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -106,7 +106,7 @@ class CurrentUserResponse(BaseModel):
 
     address: str = Field(..., description="钱包地址")
     is_admin: bool = Field(default=False, description="是否为管理员")
-    tag: Optional[str] = Field(None, description="标签")
+    roles: List[str] = Field(default_factory=list, description="角色列表")
     net_type: str = Field(default="hardhat", description="网络类型")
     kyc_status: Optional[str] = Field(None, description="KYC 状态")
 

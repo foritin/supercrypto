@@ -138,7 +138,7 @@ function WizardContent({
       }
 
       // 5. 成功处理
-      notification.success(t('admin.assets.createSuccess', '资产创建成功'))
+      notification.success(t('admin.assets.createSuccess'))
       reset()
       onSuccess()
       onClose()
@@ -146,7 +146,7 @@ function WizardContent({
       // 6. 失败处理 - 保留数据，显示错误
       const errMsg = error instanceof Error
         ? error.message
-        : t('admin.assets.createFailed', '创建失败')
+        : t('admin.assets.createFailed')
       notification.error(errMsg)
     } finally {
       setSubmitting(false)

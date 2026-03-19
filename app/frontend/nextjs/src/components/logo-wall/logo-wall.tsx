@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * ════════════════════════════════════════════════════════════════
@@ -36,6 +37,8 @@ export const LogoWall: React.FC<LogoWallProps> = ({
   className = '',
   style,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div
       className={`logo-wall ${className}`}
@@ -60,7 +63,7 @@ export const LogoWall: React.FC<LogoWallProps> = ({
               margin: 0,
             }}
           >
-            Powered by Leading Blockchains
+            {t('home.logoWall.title')}
           </h3>
         </div>
 
@@ -133,7 +136,7 @@ export const LogoWall: React.FC<LogoWallProps> = ({
               margin: 0,
             }}
           >
-            Multi-chain support for maximum flexibility and security
+            {t('home.logoWall.subtitle')}
           </p>
         </div>
       </div>

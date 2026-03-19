@@ -40,12 +40,12 @@ const typeLabels: Record<DependencyType, string> = {
 
 // 状态标签
 const statusLabels: Record<ContractStatus, string> = {
-  not_registered: '未注册',
-  registered: '已注册',
-  deployed: '已部署',
-  bound: '已绑定',
-  active: '已激活',
-  deprecated: '已废弃',
+  not_registered: 'Not Registered',
+  registered: 'Registered',
+  deployed: 'Deployed',
+  bound: 'Bound',
+  active: 'Active',
+  deprecated: 'Deprecated',
 };
 
 

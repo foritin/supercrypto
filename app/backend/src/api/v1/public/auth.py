@@ -154,7 +154,7 @@ async def login(
             AccountCreate(
                 address=data.address.lower(),
                 private_key="",
-                tag="normal",
+                roles=["user"],
                 network=data.network,
             )
         )

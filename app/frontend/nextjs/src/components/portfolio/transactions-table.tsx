@@ -2,6 +2,8 @@
 
 import { motion } from 'framer-motion';
 import { ExternalLink, Info, Download, TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
 import { cn, truncateAddress } from '@/lib/utils';
 
 export interface Transaction {
@@ -30,6 +32,8 @@ export function TransactionsTable({
   isMock = false,
   onExport 
 }: TransactionsTableProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -38,19 +42,19 @@ export function TransactionsTable({
           <div className="w-5 h-5 rounded-full bg-white/5 flex items-center justify-center">
             <Info className="w-3 h-3 text-gray-400" />
           </div>
-          <h2 className="text-lg font-bold text-white">Recent Transactions</h2>
+          <h2 className="text-lg font-bold text-white">{t('portfolio.table.recentTransactions')}</h2>
         </div>
         <div className="flex gap-2">
           {isMock && (
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 text-xs font-medium border border-amber-500/20">
-              <Info className="w-3.5 h-3.5" /> Mock Data
+              <Info className="w-3.5 h-3.5" /> {t('portfolio.dev.mockData')}
             </span>
           )}
           <button 
             onClick={onExport}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 text-xs font-medium border border-white/10 hover:bg-white/10 transition-colors"
           >
-            <Download className="w-3.5 h-3.5" /> Export
+            <Download className="w-3.5 h-3.5" /> {t('common.export')}
           </button>
         </div>
       </div>
@@ -60,11 +64,11 @@ export function TransactionsTable({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-              <th className="px-6 py-4 text-[10px] font-medium text-gray-500 uppercase tracking-wider">Asset/Type</th>
-              <th className="px-6 py-4 text-[10px] font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-4 text-[10px] font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-4 text-[10px] font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-4 text-[10px] font-medium text-gray-500 uppercase tracking-wider">TxID</th>
+              <th className="px-6 py-4 text-[10px] font-medium text-gray-500 uppercase tracking-wider">{t('portfolio.table.assetType')}</th>
+              <th className="px-6 py-4 text-[10px] font-medium text-gray-500 uppercase tracking-wider">{t('common.date')}</th>
+              <th className="px-6 py-4 text-[10px] font-medium text-gray-500 uppercase tracking-wider">{t('common.amount')}</th>
+              <th className="px-6 py-4 text-[10px] font-medium text-gray-500 uppercase tracking-wider">{t('common.status')}</th>
+              <th className="px-6 py-4 text-[10px] font-medium text-gray-500 uppercase tracking-wider">{t('portfolio.table.txId')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.04]">

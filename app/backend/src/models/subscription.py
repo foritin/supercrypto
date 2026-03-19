@@ -119,25 +119,40 @@ class Subscription(AbstractModel, TimestampMixin):
     def get_redeemable_interest(self, current_time: datetime = None) -> Decimal:
         """
         计算当前可赎回的收益 (T+1起息：未满1天返回0)
-        
+
         Args:
             current_time: 当前时间，默认为 UTC now
-            
+
         Returns:
             可赎回收益金额
         """
         if current_time is None:
             current_time = datetime.now(timezone.utc)
-        
+
         # 检查是否满1天
         if not self.start_date:
             return Decimal(0)
-        
+
         time_diff = current_time - self.start_date
         if time_diff.total_seconds() < 24 * 3600:  # 未满24小时
             return Decimal(0)
-        
-        # 已满1天，返回预期收益（实际赎回时由合约计算）
+
+        # 已赎回时优先返回已落库的实际收益
+        if self.actual_interest > 0:
+            return self.actual_interest
+
+        # 活期模式按实时持有时长计息，和链上 _calculate_interest 保持一致：
+        # interest = principal * apy * holding_seconds / (365d * 100)
+        if self.lock_period == 0:
+            holding_seconds = Decimal(str(time_diff.total_seconds()))
+            year_seconds = Decimal(365 * 24 * 3600)
+            return (
+                self.amount
+                * (self.apy / Decimal(100))
+                * (holding_seconds / year_seconds)
+            )
+
+        # 定期模式仍返回预期到期收益（到期后可全额赎回）
         return self.expected_interest
 
     @property
@@ -154,7 +169,10 @@ class Subscription(AbstractModel, TimestampMixin):
     @property
     def total_return(self) -> Decimal:
         """总回报 (本金 + 利息)"""
-        interest = (
-            self.actual_interest if self.actual_interest > 0 else self.expected_interest
-        )
+        if self.actual_interest > 0:
+            interest = self.actual_interest
+        elif self.lock_period == 0:
+            interest = self.get_redeemable_interest()
+        else:
+            interest = self.expected_interest
         return self.amount + interest

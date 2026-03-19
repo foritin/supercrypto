@@ -43,10 +43,10 @@ const AddressDisplay: React.FC<AddressDisplayProps> = ({
     try {
       await navigator.clipboard.writeText(address);
       setCopied(true);
-      notification.success('已复制地址');
+      notification.success('Address copied');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      notification.error('复制失败');
+      notification.error('Copy failed');
     }
   };
 

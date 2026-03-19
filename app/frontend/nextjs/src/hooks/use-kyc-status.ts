@@ -97,12 +97,13 @@ export function useQuickKycApprove() {
   const [isLoading, setIsLoading] = useState(false)
 
   const mutate = useCallback(
-    async (_?: unknown, options?: { onSuccess?: () => void; onError?: (error: Error) => void }) => {
-      if (!address) return
+    async (targetAddress?: string, options?: { onSuccess?: () => void; onError?: (error: Error) => void }) => {
+      const finalAddress = targetAddress || address
+      if (!finalAddress) return
 
       setIsLoading(true)
       try {
-        await kycService.quickApprove(address)
+        await kycService.quickApprove(finalAddress)
         options?.onSuccess?.()
       } catch (err) {
         options?.onError?.(err as Error)
@@ -129,12 +130,13 @@ export function useKycReset() {
   const [isLoading, setIsLoading] = useState(false)
 
   const mutate = useCallback(
-    async (_?: unknown, options?: { onSuccess?: () => void; onError?: (error: Error) => void }) => {
-      if (!address) return
+    async (targetAddress?: string, options?: { onSuccess?: () => void; onError?: (error: Error) => void }) => {
+      const finalAddress = targetAddress || address
+      if (!finalAddress) return
 
       setIsLoading(true)
       try {
-        await kycService.reset(address)
+        await kycService.reset(finalAddress)
         options?.onSuccess?.()
       } catch (err) {
         options?.onError?.(err as Error)

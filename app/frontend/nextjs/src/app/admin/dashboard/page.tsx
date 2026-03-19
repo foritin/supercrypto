@@ -1,12 +1,6 @@
 "use client";
 /**
- * ════════════════════════════════════════════════════════════════
- * 管理员仪表盘页面 - Enhancement Edition
- * Story 7.5-FE: 平台数据统计前端仪表盘
- * 
- * 风格: 高级、精简、协调的Web3仪表盘
- * 改进: 移除边条 + 统一图标风格 + 清晰布局
- * ════════════════════════════════════════════════════════════════
+ * 管理员仪表盘页面 - Contract Monitor Style
  */
 import { motion } from "framer-motion";
 import {
@@ -26,8 +20,9 @@ import { RequireAuth } from "@/components/auth";
 import { ActivityList } from "@/components/dashboard/activity-list";
 import { DashboardChart } from "@/components/dashboard/chart";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { V6Background } from "@/components/layout/v6-background";
+import { AdminLayout, AdminPageHeader, AdminCard } from "@/components/layout/admin-layout";
 import { DashboardSkeleton } from "@/components/ui/loading";
+import { Button } from "@/components/ui/button";
 import {
   adminService
 } from "@/services/admin";
@@ -82,7 +77,7 @@ export default function AdminDashboardPage() {
   const mockActivities = [
     {
       id: '1',
-      name: t("admin.dashboard.activities.subscription", "认购 USDT-BUSD 资产"),
+      name: t("admin.dashboard.activities.subscription", "Subscribed to USDT-BUSD asset"),
       date: '2025-12-17 14:30',
       amount: 5000,
       type: 'subscription' as const,
@@ -90,7 +85,7 @@ export default function AdminDashboardPage() {
     },
     {
       id: '2',
-      name: t("admin.dashboard.activities.staking", "质押 PLT 代币"),
+      name: t("admin.dashboard.activities.staking", "Staked PLT tokens"),
       date: '2025-12-17 12:15',
       amount: 1200,
       type: 'staking' as const,
@@ -98,7 +93,7 @@ export default function AdminDashboardPage() {
     },
     {
       id: '3',
-      name: t("admin.dashboard.activities.kycApproved", "KYC 审核通过"),
+      name: t("admin.dashboard.activities.kycApproved", "KYC approved"),
       date: '2025-12-17 10:45',
       amount: 0,
       type: 'kyc' as const,
@@ -106,7 +101,7 @@ export default function AdminDashboardPage() {
     },
     {
       id: '4',
-      name: t("admin.dashboard.activities.rewardDistributed", "奖励发放"),
+      name: t("admin.dashboard.activities.rewardDistributed", "Rewards distributed"),
       date: '2025-12-17 09:00',
       amount: 350,
       type: 'reward' as const,
@@ -114,7 +109,7 @@ export default function AdminDashboardPage() {
     },
     {
       id: '5',
-      name: t("admin.dashboard.activities.newUser", "新用户注册"),
+      name: t("admin.dashboard.activities.newUser", "New user registration"),
       date: '2025-12-17 08:20',
       amount: 0,
       type: 'user' as const,
@@ -124,66 +119,46 @@ export default function AdminDashboardPage() {
 
   // 图表数据
   const chartData = stats ? [
-    { name: '1月', value1: stats.tvl.total_tvl * 0.6, value2: stats.staking.total_staked * 0.5 },
-    { name: '2月', value1: stats.tvl.total_tvl * 0.65, value2: stats.staking.total_staked * 0.55 },
-    { name: '3月', value1: stats.tvl.total_tvl * 0.7, value2: stats.staking.total_staked * 0.6 },
-    { name: '4月', value1: stats.tvl.total_tvl * 0.75, value2: stats.staking.total_staked * 0.7 },
-    { name: '5月', value1: stats.tvl.total_tvl * 0.85, value2: stats.staking.total_staked * 0.8 },
-    { name: '6月', value1: stats.tvl.total_tvl * 0.95, value2: stats.staking.total_staked * 0.9 },
-    { name: '7月', value1: stats.tvl.total_tvl, value2: stats.staking.total_staked },
+    { name: 'Jan', value1: stats.tvl.total_tvl * 0.6, value2: stats.staking.total_staked * 0.5 },
+    { name: 'Feb', value1: stats.tvl.total_tvl * 0.65, value2: stats.staking.total_staked * 0.55 },
+    { name: 'Mar', value1: stats.tvl.total_tvl * 0.7, value2: stats.staking.total_staked * 0.6 },
+    { name: 'Apr', value1: stats.tvl.total_tvl * 0.75, value2: stats.staking.total_staked * 0.7 },
+    { name: 'May', value1: stats.tvl.total_tvl * 0.85, value2: stats.staking.total_staked * 0.8 },
+    { name: 'Jun', value1: stats.tvl.total_tvl * 0.95, value2: stats.staking.total_staked * 0.9 },
+    { name: 'Jul', value1: stats.tvl.total_tvl, value2: stats.staking.total_staked },
   ] : [];
 
   return (
     <RequireAuth admin>
-      {/* 高级背景 */}
-      <V6Background />
-
-      <div className="min-h-screen relative px-6 py-8 max-w-[1600px] mx-auto">
-        {/* 页面标题 */}
-        <motion.div
-          className="mb-8 flex items-center justify-between"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-1">
-              {t("admin.dashboard.pageTitle")}
-            </h1>
-            <p style={{ color: 'rgba(255, 255, 255, 0.50)' }}>
-              {/* Improved from 0.4 - 5.1:1 ✓ */}
-              {t("admin.dashboard.subtitle", "实时监控平台核心指标")}
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleRefresh}
-              disabled={isLoading}
-              className="premium-btn premium-btn-ghost"
-              aria-label={isLoading ? t("admin.dashboard.refreshing", "刷新中...") : t("admin.dashboard.refreshData")}
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
-              <span>{isLoading ? t("admin.dashboard.refreshing", "刷新中...") : t("admin.dashboard.refreshData")}</span>
-            </button>
-            <button
-              onClick={() => router.push("/admin/audit-logs")}
-              className="premium-btn premium-btn-gold"
-              aria-label={t("admin.auditLogs.title")}
-            >
-              <FileBarChart className="w-4 h-4" aria-hidden="true" />
-              <span>{t("admin.auditLogs.title")}</span>
-            </button>
-          </div>
-        </motion.div>
+      <AdminLayout>
+        <AdminPageHeader
+          title={t("admin.dashboard.pageTitle")}
+          subtitle={t("admin.dashboard.subtitle", "Monitor core platform metrics in real time")}
+          actions={
+            <>
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={isLoading}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? t("admin.dashboard.refreshing", "Refreshing...") : t("admin.dashboard.refreshData")}
+              </Button>
+              <Button
+                onClick={() => router.push("/admin/audit-logs")}
+              >
+                <FileBarChart className="w-4 h-4 mr-2" />
+                {t("admin.auditLogs.title")}
+              </Button>
+            </>
+          }
+        />
 
         {/* 错误提示 */}
         {error && (
           <motion.div
-            className="mb-6 rounded-xl border border-red-500/20 bg-red-500/10
-                       backdrop-blur-xl p-4 text-red-400"
+            className="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-red-400"
             role="alert"
-            aria-live="polite"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
@@ -191,13 +166,9 @@ export default function AdminDashboardPage() {
           </motion.div>
         )}
 
-        {/* 加载状态 - 使用骨架屏 */}
+        {/* 加载状态 */}
         {isLoading && !stats && (
-          <div
-            role="status"
-            aria-live="polite"
-            aria-label={t("admin.dashboard.loading", "加载中...")}
-          >
+          <div role="status" aria-label={t("admin.dashboard.loading", "Loading...")}>
             <DashboardSkeleton />
           </div>
         )}
@@ -227,7 +198,7 @@ export default function AdminDashboardPage() {
               />
 
               <StatCard
-                title={t("admin.dashboard.activeSubscriptions", "活跃认购")}
+                title={t("admin.dashboard.activeSubscriptions", "Active subscriptions")}
                 value={stats.active_subscriptions}
                 icon={FileText}
                 trend={{ value: 8, isPositive: true }}
@@ -251,11 +222,11 @@ export default function AdminDashboardPage() {
               <div className="lg:col-span-2 space-y-6">
                 {/* 图表 */}
                 <DashboardChart
-                  title={t("admin.dashboard.chart.title", "数据趋势")}
-                  subtitle={t("admin.dashboard.chart.subtitle", "TVL 与质押金额变化")}
+                  title={t("admin.dashboard.chart.title", "Trend chart")}
+                  subtitle={t("admin.dashboard.chart.subtitle", "TVL and staking amount changes")}
                   data={chartData}
                   label1={t("admin.dashboard.tvl")}
-                  label2={t("admin.dashboard.staking", "质押")}
+                  label2={t("admin.dashboard.staking", "Staking")}
                 />
 
                 {/* 活动列表 - 深色统一图标 */}
@@ -285,7 +256,7 @@ export default function AdminDashboardPage() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>  /* Improved from 0.5 - 5.1:1 ✓ */
-                        {t("admin.dashboard.totalAssets", "上线资产数")}
+                        {t("admin.dashboard.totalAssets", "Listed assets")}
                       </span>
                       <span className="text-xl font-bold premium-text-gold">
                         {stats.total_assets}
@@ -296,7 +267,7 @@ export default function AdminDashboardPage() {
                     
                     <div className="flex justify-between items-center">
                       <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>  /* Improved from 0.5 - 5.1:1 ✓ */
-                        {t("admin.dashboard.newUsers7d", "7日新增用户")}
+                        {t("admin.dashboard.newUsers7d", "New users (7d)")}
                       </span>
                       <span className="text-lg font-semibold premium-text-cyan">
                         +{stats.users.new_users_7d}
@@ -305,7 +276,7 @@ export default function AdminDashboardPage() {
                     
                     <div className="flex justify-between items-center">
                       <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>  /* Improved from 0.5 - 5.1:1 ✓ */
-                        {t("admin.dashboard.newUsers24h", "24h新增用户")}
+                        {t("admin.dashboard.newUsers24h", "New users (24h)")}
                       </span>
                       <span className="text-lg font-semibold premium-text-cyan">
                         +{stats.users.new_users_24h}
@@ -316,7 +287,7 @@ export default function AdminDashboardPage() {
                     
                     <div className="flex justify-between items-center">
                       <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>  /* Improved from 0.5 - 5.1:1 ✓ */
-                        {t("admin.dashboard.kycConversionRate", "KYC 通过率")}
+                        {t("admin.dashboard.kycConversionRate", "KYC pass rate")}
                       </span>
                       <span className="text-lg font-semibold text-white">
                         {stats.users.kyc_conversion_rate.toFixed(1)}%
@@ -326,10 +297,10 @@ export default function AdminDashboardPage() {
 
                   <div className="mt-6 grid grid-cols-2 gap-3">
                     <button className="premium-btn premium-btn-ghost text-xs">
-                      {t("admin.dashboard.detailedReport", "详细报告")}
+                      {t("admin.dashboard.detailedReport", "Detailed report")}
                     </button>
                     <button className="premium-btn premium-btn-gold text-xs">
-                      {t("admin.dashboard.exportData", "导出数据")}
+                      {t("admin.dashboard.exportData", "Export data")}
                     </button>
                   </div>
                 </motion.div>
@@ -342,7 +313,7 @@ export default function AdminDashboardPage() {
                   transition={{ delay: 0.4 }}
                 >
                   <h3 className="text-lg font-semibold text-white mb-5">
-                    {t("admin.dashboard.rewardsPool.title", "奖励池状态")}
+                    {t("admin.dashboard.rewardsPool.title", "Rewards pool status")}
                   </h3>
 
                   {/* 环形进度 */}
@@ -378,7 +349,7 @@ export default function AdminDashboardPage() {
                         </div>
                         <div className="text-xs mt-1" style={{ color: 'rgba(255, 255, 255, 0.50)' }}>
                           {/* Improved from 0.4 - 5.1:1 ✓ */}
-                          {t("admin.dashboard.rewardsPool.distributed", "已分发")}
+                          {t("admin.dashboard.rewardsPool.distributed", "Distributed")}
                         </div>
                       </div>
                     </div>
@@ -389,7 +360,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400" />
-                        <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t("admin.dashboard.rewardsPool.distributed", "已分发")}</span>
+                        <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t("admin.dashboard.rewardsPool.distributed", "Distributed")}</span>
                       </div>
                       <span className="text-sm font-medium text-white">
                         {(stats.staking.total_rewards_distributed / 1000000).toFixed(2)}M PLT
@@ -398,7 +369,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(255, 255, 255, 0.15)' }} />
-                        <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t("admin.dashboard.rewardsPool.remaining", "剩余")}</span>
+                        <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t("admin.dashboard.rewardsPool.remaining", "Remaining")}</span>
                       </div>
                       <span className="text-sm font-medium text-white">
                         {(stats.staking.rewards_pool_remaining / 1000000).toFixed(2)}M PLT
@@ -415,7 +386,7 @@ export default function AdminDashboardPage() {
                   transition={{ delay: 0.5 }}
                 >
                   <h3 className="text-lg font-semibold text-white mb-5">
-                    {t("admin.dashboard.stakingDistribution.title", "质押周期分布")}
+                    {t("admin.dashboard.stakingDistribution.title", "Staking period distribution")}
                   </h3>
 
                   <div className="space-y-4">
@@ -429,7 +400,7 @@ export default function AdminDashboardPage() {
                         <div key={period}>
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                              {period} {t("admin.dashboard.stakingDistribution.days", "天")}
+                              {period} {t("admin.dashboard.stakingDistribution.days", "days")}
                             </span>
                             <span className="text-sm font-semibold text-white">
                               {count}
@@ -452,7 +423,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
-      </div>
+      </AdminLayout>
     </RequireAuth>
   );
 }

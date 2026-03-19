@@ -72,18 +72,18 @@ export function useStablecoinAddresses(): UseStablecoinAddressesReturn {
     if (isLoaded) {
       if (!result.isFromBackend) {
         console.warn(
-          '[useStablecoinAddresses] ⚠️ 未从平台信息中获取到稳定币合约地址。\n' +
-          '可能原因：\n' +
-          '1. 数据库中未部署 MockUSDT/MockUSDC 合约\n' +
-          '2. 合约名称不匹配（应为 MockUSDT/USDT 或 MockUSDC/USDC）\n' +
-          '请检查 contract_deployment 表中是否有 scope=global, contract_type=stablecoin 的记录'
+          '[useStablecoinAddresses] ⚠️ Stablecoin contract addresses were not loaded from platform info.\n' +
+          'Possible causes:\n' +
+          '1. MockUSDT/MockUSDC contracts are not deployed in the database\n' +
+          '2. Contract names do not match (expected MockUSDT/USDT or MockUSDC/USDC)\n' +
+          'Please verify there is a record in contract_deployment with scope=global and contract_type=stablecoin'
         )
       } else {
         if (!result.addresses.MockUSDT) {
-          console.warn('[useStablecoinAddresses] ⚠️ MockUSDT 地址为空')
+          console.warn('[useStablecoinAddresses] ⚠️ MockUSDT address is empty')
         }
         if (!result.addresses.MockUSDC) {
-          console.warn('[useStablecoinAddresses] ⚠️ MockUSDC 地址为空')
+          console.warn('[useStablecoinAddresses] ⚠️ MockUSDC address is empty')
         }
       }
     }

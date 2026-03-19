@@ -363,6 +363,47 @@ const home = {
       content: "如果您对本隐私政策或我们的数据做法有任何疑问，请联系我们的数据保护官：",
     },
   },
+  featuredAssets: {
+    title: "精选资产",
+    viewAll: "查看全部",
+    backedBy: "由真实世界资产支持",
+    annualYield: "年化收益",
+    investNow: "立即投资",
+    lowRisk: "低风险",
+    mediumRisk: "中风险",
+    highRisk: "高风险",
+    months: "个月",
+    flexible: "灵活",
+    minInvest: "最低",
+  },
+  calculator: {
+    badge: "计算您的收益",
+    title: "计算您的未来财富",
+    subtitle: "了解复利如何让您的稳定币投资组合随时间增长",
+    points: {
+      noHiddenFees: "无隐藏费用",
+      instantWithdrawal: "即时提款",
+      dailyCompounding: "每日复利",
+      fullyTransparent: "完全透明",
+    },
+    disclaimer: "* 年化收益率会随市场条件变化。过往表现不代表未来结果。",
+    yieldCalculator: {
+      title: "收益计算器",
+      subtitle: "精准计算您的潜在收益",
+      investmentAmount: "投资金额",
+      duration: "期限（天）",
+      totalValue: "总价值",
+      profit: "收益",
+      months: "个月",
+    },
+  },
+  logoWall: {
+    title: "由领先区块链提供支持",
+    subtitle: "多链支持，实现最大的灵活性和安全性",
+  },
+  infiniteMarquee: {
+    title: "区块链生态系统",
+  },
 }
 
 export default home

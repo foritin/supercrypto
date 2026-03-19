@@ -47,7 +47,7 @@ class TokenRecipient(BaseModel):
 
     address: str = Field(..., description="钱包地址")
     kyc_status: Optional[str] = Field(None, description="KYC 状态")
-    tag: Optional[str] = Field(None, description="用户标签")
+    roles: List[str] = Field(default_factory=list, description="用户角色列表")
     label: str = Field(..., description="显示标签")
 
 

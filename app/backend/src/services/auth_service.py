@@ -71,11 +71,15 @@ class AuthService:
         # 查询 KYC 状态
         kyc = await AccountKyc.filter(address=wallet_address, network=network).first()
 
-        # 判断是否为管理员
-        is_admin = account.tag == "admin" if account and account.tag else False
+        # 判断是否为管理员（JSONField contains 使用数组参数）
+        is_admin = await Account.filter(
+            address=wallet_address,
+            network=network,
+            roles__contains=["admin"],
+        ).exists()
 
         if account:
-            logger.debug(f"找到账户: id={account.id}, tag={account.tag}")
+            logger.debug(f"找到账户: id={account.id}, roles={account.roles}")
         else:
             logger.debug(f"未找到账户: address={wallet_address[:10]}...")
 
