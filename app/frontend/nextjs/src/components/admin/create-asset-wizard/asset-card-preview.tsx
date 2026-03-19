@@ -11,8 +11,9 @@
 import { Building2, Landmark, Package, TrendingUp, HelpCircle, MapPin, Image as ImageIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import type { AssetCardPreviewProps } from './types'
 import type { AssetType } from '@/services/asset'
+
+import type { AssetCardPreviewProps } from './types'
 
 // ============ 常量定义 ============
 

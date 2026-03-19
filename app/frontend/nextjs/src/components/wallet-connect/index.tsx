@@ -1,21 +1,24 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useAccount, useDisconnect, useSignMessage, useBalance } from 'wagmi'
+import { ChevronDown, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { ChevronDown, Loader2 } from 'lucide-react'
-import { supportedChains } from '@/config/wagmi'
-import { truncateAddress } from '@/utils/format'
-import { clearAuthData, setWalletConnected, setWalletAddress, hasJwtToken, getAddressFromToken } from '@/utils/auth'
-import { logout, login } from '@/services/auth'
-import { cn } from '@/lib/utils'
+import { useAccount, useDisconnect, useSignMessage, useBalance } from 'wagmi'
+
 import { Skeleton } from '@/components/ui/skeleton'
+import { useCurrentUser } from '@/hooks'
+import { cn } from '@/lib/utils'
+import { logout, login } from '@/services/auth'
+import { KycStatus as KycStatusEnum } from '@/services/kyc'
+import { clearAuthData, setWalletConnected, setWalletAddress, hasJwtToken, getAddressFromToken } from '@/utils/auth'
+import { truncateAddress } from '@/utils/format'
+import { revokeCurrentDappPermissions } from '@/utils/wallet-permissions'
+
 import { AccountModal } from './account-modal'
 import type { KycStatus } from './account-modal'
-import { KycStatus as KycStatusEnum } from '@/services/kyc'
-import { useCurrentUser } from '@/hooks'
+
 
 /**
  * 将后端 KYC 状态映射为 UI 组件期望的状态
@@ -44,12 +47,14 @@ declare global {
     ethereum?: {
       on?: (event: string, handler: (...args: unknown[]) => void) => void
       removeListener?: (event: string, handler: (...args: unknown[]) => void) => void
+      request?: (args: { method: string; params?: unknown[] }) => Promise<unknown>
     }
   }
 }
 
 // 签名登录的固定消息
 const SIGN_MESSAGE = 'SlimCryptoAccess'
+const DEBUG_WALLET_CONNECTION = process.env.NEXT_PUBLIC_DEBUG_WALLET_CONNECTION === 'true'
 
 /**
  * WalletConnect Component
@@ -75,7 +80,7 @@ export function WalletConnect() {
   // 是否已认证（有有效的 JWT）
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   // 当前用户信息
-  const { user: currentUser, refetch: refetchUser } = useCurrentUser()
+  const { user: currentUser } = useCurrentUser()
   // 自定义 AccountModal 开关状态
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
   // 钱包连接时间
@@ -118,9 +123,54 @@ export function WalletConnect() {
     return false
   }, [address])
 
+  // 验证钱包连接状态（关键操作前调用）
+  // MetaMask 锁定时 eth_accounts 仍返回地址，需要使用 eth_requestAccounts 触发解锁弹窗
+  const verifyConnection = useCallback(async (): Promise<boolean> => {
+    if (typeof window === 'undefined' || !window.ethereum?.request) return false
+    
+    try {
+      if (DEBUG_WALLET_CONNECTION) {
+        console.log('[Wallet] Verifying connection before critical operation...')
+      }
+      // 使用 eth_requestAccounts 检测 MetaMask 状态
+      // 如果锁定，会弹出解锁窗口；如果未锁定，直接返回账户
+      const accounts = await window.ethereum.request({ 
+        method: 'eth_requestAccounts' 
+      }) as string[]
+      
+      if (!accounts || accounts.length === 0) {
+        if (DEBUG_WALLET_CONNECTION) {
+          console.log('[Wallet] No accounts available, disconnecting...')
+        }
+        clearAuthData()
+        setIsAuthenticated(false)
+        disconnect()
+        return false
+      }
+      
+      if (DEBUG_WALLET_CONNECTION) {
+        console.log('[Wallet] Connection verified')
+      }
+      return true
+    } catch (error) {
+      // 用户拒绝解锁或发生错误
+      if (DEBUG_WALLET_CONNECTION) {
+        console.log('[Wallet] Connection verification failed:', error)
+      }
+      return false
+    }
+  }, [disconnect])
+
   // 执行签名登录 (Requirement 7.5: 保留签名认证流程)
   const performSignIn = useCallback(async () => {
     if (!address || isSigningRef.current) return
+    
+    // 关键操作前验证连接（检测 MetaMask 是否锁定）
+    const isConnected = await verifyConnection()
+    if (!isConnected) {
+      toast.warning(t('wallet.error.unlockRequired'))
+      return
+    }
 
     isSigningRef.current = true
     setIsLoggingIn(true)
@@ -152,7 +202,7 @@ export function WalletConnect() {
       setIsLoggingIn(false)
       isSigningRef.current = false
     }
-  }, [address, chain?.id, chain?.name, signMessageAsync, disconnect, t])
+  }, [address, chain?.id, chain?.name, signMessageAsync, disconnect, t, verifyConnection])
 
   // 监听 MetaMask/EIP-1193 的 accountsChanged 事件
   // 当用户在钱包扩展中断开连接时，accounts 会变为空数组
@@ -169,6 +219,17 @@ export function WalletConnect() {
         setIsAuthenticated(false)
         wasConnectedRef.current = false
         // 触发 wagmi 的断开，确保状态同步
+        disconnect()
+        return
+      }
+
+      const nextAccount = accounts[0]?.toLowerCase()
+      const currentAccount = address?.toLowerCase()
+      if (nextAccount && currentAccount && nextAccount !== currentAccount) {
+        // 严格模式：账户切换后必须重新连接并重新签名，避免旧会话误用
+        clearAuthData()
+        setIsAuthenticated(false)
+        wasConnectedRef.current = false
         disconnect()
       }
     }
@@ -189,6 +250,35 @@ export function WalletConnect() {
       window.ethereum?.removeListener?.('disconnect', handleDisconnect)
     }
   }, [disconnect])
+
+  // Handle global forced logout (e.g. terminal 401 after refresh retry)
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      void revokeCurrentDappPermissions()
+      disconnect()
+      setIsAuthenticated(false)
+      wasConnectedRef.current = false
+      setConnectedAt(undefined)
+    }
+
+    window.addEventListener('auth:logout', handleAuthLogout)
+    return () => window.removeEventListener('auth:logout', handleAuthLogout)
+  }, [disconnect])
+
+  // ============================================================================
+  // MetaMask 锁定状态检测（已禁用被动轮询）
+  // ============================================================================
+  // 问题: MetaMask 锁定时 eth_accounts 和 wallet_getPermissions 仍返回正常值
+  // 结论: 无法通过被动轮询检测锁定状态（MetaMask 设计限制，保护用户隐私）
+  // 方案: 采用"关键操作前验证"（见 verifyConnection 函数）
+  // ============================================================================
+  
+  /* 
+  // 被动轮询检测（已禁用，原因如上）
+  useEffect(() => {
+    // ... 轮询检测逻辑已注释掉 ...
+  }, [isConnected, disconnect, t])
+  */
 
   // 钱包连接后自动签名登录
   useEffect(() => {
@@ -217,7 +307,7 @@ export function WalletConnect() {
     }
   }, [isConnected, address, isHydrated, checkAuthStatus, performSignIn, connectedAt])
 
-  // Detect account changes (Requirement 7.3) - 切换账户时重新签名登录
+  // Detect account changes (Requirement 7.3) - 严格模式：切换账户后断开并要求重新连接
   useEffect(() => {
     const previousAddress = previousAddressRef.current
 
@@ -228,33 +318,17 @@ export function WalletConnect() {
       setIsAuthenticated(false)
 
       // Notify user of account change
-      toast.info(t('wallet.accountChanged', {
+      toast.warning(t('wallet.accountChanged', {
         from: truncateAddress(previousAddress),
         to: truncateAddress(address)
       }))
 
-      // 触发新账户的签名登录
-      performSignIn()
+      disconnect()
     }
 
     // Update ref for next comparison
     previousAddressRef.current = address
-  }, [address, t, performSignIn])
-
-  // Get localized network name
-  const getNetworkName = (chainId: number | undefined): string => {
-    if (!chainId) return 'Unknown'
-    switch (chainId) {
-      case 1:
-        return t('wallet.network.mainnet')
-      case 11155111:
-        return t('wallet.network.sepolia')
-      case 31337:
-        return t('wallet.network.localhost')
-      default:
-        return chain?.name || 'Unknown'
-    }
-  }
+  }, [address, t, disconnect])
 
   // Handle disconnect - notify backend and clear local data (Requirement 7.8)
   async function handleDisconnect() {
@@ -265,6 +339,9 @@ export function WalletConnect() {
       // 即使后端通知失败也继续断开
       console.warn('Failed to notify backend of logout')
     }
+
+    // 尝试撤销当前站点的账户权限（仅部分钱包支持，如 MetaMask 扩展）
+    await revokeCurrentDappPermissions()
     
     // Disconnect wallet via wagmi
     disconnect()
@@ -286,7 +363,6 @@ export function WalletConnect() {
       {({
         account,
         chain: currentChain,
-        openAccountModal,
         openChainModal,
         openConnectModal,
         authenticationStatus,
@@ -469,14 +545,16 @@ export function WalletConnect() {
                     open={isAccountModalOpen}
                     onOpenChange={setIsAccountModalOpen}
                     address={account.address}
-                    balance={balanceData ? (Number(balanceData.value) / Math.pow(10, balanceData.decimals)).toFixed(4) : undefined}
-                    symbol={balanceData?.symbol}
                     isAuthenticated={isAuthenticated}
                     kycStatus={mapKycStatusToUi(currentUser?.kyc_status)}
                     chainId={currentChain.id}
-                    chainName={currentChain.name}
-                    connectorName={connector?.name}
-                    connectedAt={connectedAt}
+                    {...(balanceData
+                      ? { balance: (Number(balanceData.value) / Math.pow(10, balanceData.decimals)).toFixed(4) }
+                      : {})}
+                    {...(balanceData?.symbol ? { symbol: balanceData.symbol } : {})}
+                    {...(currentChain.name ? { chainName: currentChain.name } : {})}
+                    {...(connector?.name ? { connectorName: connector.name } : {})}
+                    {...(connectedAt ? { connectedAt } : {})}
                     onDisconnect={handleDisconnect}
                   >
                     {/* 地址按钮 - 作为 Popover 触发器 */}

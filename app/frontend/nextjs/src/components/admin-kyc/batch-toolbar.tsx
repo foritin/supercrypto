@@ -5,25 +5,20 @@
  * 批量操作工具栏 - KYC 批量操作
  */
 
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTranslation } from "react-i18next";
 import {
   CheckCircle2,
   XCircle,
   Download,
-  Trash2,
   ChevronDown,
   AlertTriangle,
   Loader2,
 } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -32,9 +27,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -42,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import type { KycItem } from "@/services/admin-kyc";
 
 interface BatchToolbarProps {
@@ -70,7 +69,6 @@ export function BatchToolbar({
   const { t } = useTranslation();
 
   const selectedCount = selectedItems.length;
-  const selectedIds = selectedItems.map((item) => item.id);
 
   // 可以批量通过的项目（状态为 pending）
   const canApprove = selectedItems.filter((item) => item.status === "pending");

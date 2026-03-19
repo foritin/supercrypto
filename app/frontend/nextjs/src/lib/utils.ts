@@ -50,3 +50,15 @@ export function truncateAddress(address: string, startLen = 6, endLen = 4): stri
   return `${address.slice(0, startLen)}...${address.slice(-endLen)}`;
 }
 
+/**
+ * Format currency with locale
+ * 格式化货币金额
+ */
+export function formatCurrency(value: number, currency = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}

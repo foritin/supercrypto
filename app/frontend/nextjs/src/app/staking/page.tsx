@@ -1,25 +1,25 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useAccount } from "wagmi";
 import { useTranslation } from "react-i18next";
+import { useAccount } from "wagmi";
 
 import { RequireKyc } from "@/components/auth";
-import { subscriptionService } from "@/services/subscription";
-import type { SubscriptionItem } from "@/types/subscription";
+import { notification } from "@/lib/notification";
 import { stakingService } from "@/services/staking";
+import { subscriptionService } from "@/services/subscription";
 import type {
   StakingResponse,
   StakingLimitResponse,
   StakingStatsResponse,
   StakingStatus,
 } from "@/types/staking";
-import { notification } from "@/lib/notification";
+import type { SubscriptionItem } from "@/types/subscription";
 
-import { StakingPools } from "./components/staking-pools";
-import { StakeForm } from "./components/stake-form";
 import { RewardsPanel } from "./components/rewards-panel";
+import { StakeForm } from "./components/stake-form";
 import { StakingHistory } from "./components/staking-history";
+import { StakingPools } from "./components/staking-pools";
 
 export default function StakingPage() {
   const { t } = useTranslation();

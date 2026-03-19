@@ -24,6 +24,14 @@ class AssetType(str, Enum):
     OTHER = "other"  # 其他
 
 
+class AssetSubscriptionMode(str, Enum):
+    """资产可用认购模式"""
+
+    CURRENT = "current"  # 仅活期
+    FIXED = "fixed"  # 仅定期
+    BOTH = "both"  # 活期 + 定期
+
+
 class MediaType(str, Enum):
     """媒体类型枚举 - MVP 核心分类"""
 

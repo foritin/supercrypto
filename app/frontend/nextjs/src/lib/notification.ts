@@ -24,7 +24,8 @@
  * @validates Requirements 6.1, 6.2, 6.3, 6.4, 6.7
  */
 
-import { toast, ExternalToast } from 'sonner'
+import type { ExternalToast } from 'sonner';
+import { toast } from 'sonner'
 
 /**
  * Options for notification methods

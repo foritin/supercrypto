@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+
 import "./globals.css";
-import { Providers } from "@/providers";
-import { MainLayout } from "@/components/layout/main-layout";
-import { ThemeProvider } from "@/contexts/theme-context";
 import { GlobalRiskDisclaimer } from "@/components/compliance";
 import { CookieConsent } from "@/components/cookie-consent";
 import { HtmlLangSync } from "@/components/html-lang-sync";
+import { MainLayout } from "@/components/layout/main-layout";
+import { ThemeProvider } from "@/contexts/theme-context";
+import { Providers } from "@/providers";
 
 /**
  * Display Font - Playfair Display

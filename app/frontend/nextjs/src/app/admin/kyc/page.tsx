@@ -14,9 +14,8 @@
  * - Real-time updates
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { motion } from "framer-motion";
-import { useTranslation } from "react-i18next";
 import {
   Search,
   Filter,
@@ -24,24 +23,27 @@ import {
   Shield,
   AlertTriangle,
   Eye,
-  CheckCircle2,
   XCircle,
   Download,
-  MoreHorizontal,
-  Calendar,
   Globe,
-  Clock,
   AlertOctagon,
-  Loader2,
 } from "lucide-react";
-import { ColumnDef } from "@tanstack/react-table";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AdmissionButton, shouldShowAdmissionButton } from "@/components/admin-kyc/admission-button";
+import { BatchToolbar } from "@/components/admin-kyc/batch-toolbar";
+import { KycStatsPanel } from "@/components/admin-kyc/kyc-stats-panel";
+import { ReviewStepperModal } from "@/components/admin-kyc/review-stepper-modal";
+import type { ReviewStepsData } from "@/components/admin-kyc/stepper-reducer";
+import { RequireAuth } from "@/components/auth";
+import { AdminLayout, AdminPageHeader, AdminCard } from "@/components/layout/admin-layout";
+import { GlowStatusBadge } from "@/components/ui/glow-status-badge";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { DataTable } from "@/components/ui/data-table";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DataTable } from "@/components/ui/data-table";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -49,24 +51,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
 import { notification } from "@/lib/notification";
-import { RequireAuth } from "@/components/auth";
-import { V6Background } from "@/components/layout/v6-background";
-
-import { KycStatsPanel } from "@/components/admin-kyc/kyc-stats-panel";
-import { ReviewStepperModal } from "@/components/admin-kyc/review-stepper-modal";
-import { BatchToolbar } from "@/components/admin-kyc/batch-toolbar";
-import { AdmissionButton, shouldShowAdmissionButton } from "@/components/admin-kyc/admission-button";
-import type { ReviewStepsData } from "@/components/admin-kyc/stepper-reducer";
-
+import { adminService } from "@/services/admin";
+import type { KycStatusType } from "@/services/admin";
 import {
   adminKycService,
   type KycStats,
@@ -78,26 +66,24 @@ import {
   getKycContractInfo,
 } from "@/services/admin-kyc";
 import { kycService } from "@/services/kyc";
-import { adminService } from "@/services/admin";
-import type { KycStatusType } from "@/services/admin";
 
-// 状态配置
-const STATUS_CONFIG: Record<KycStatusType, { color: string; bgColor: string; labelKey: string }> = {
-  not_started: { color: "text-gray-400", bgColor: "bg-gray-500/20", labelKey: "admin.kyc.page.statusNotStarted" },
-  pending: { color: "text-blue-400", bgColor: "bg-blue-500/20", labelKey: "admin.kyc.page.statusPending" },
-  approved: { color: "text-emerald-400", bgColor: "bg-emerald-500/20", labelKey: "admin.kyc.page.statusApproved" },
-  rejected: { color: "text-red-400", bgColor: "bg-red-500/20", labelKey: "admin.kyc.page.statusRejected" },
+// KYC Status to GlowStatusBadge variant mapping
+const KYC_STATUS_VARIANTS: Record<KycStatusType, { variant: 'default' | 'info' | 'success' | 'error'; labelKey: string; pulse?: boolean; glow?: boolean }> = {
+  not_started: { variant: 'default', labelKey: "admin.kyc.page.statusNotStarted" },
+  pending: { variant: 'info', labelKey: "admin.kyc.page.statusPending", pulse: true, glow: true },
+  approved: { variant: 'success', labelKey: "admin.kyc.page.statusApproved", glow: true },
+  rejected: { variant: 'error', labelKey: "admin.kyc.page.statusRejected" },
 };
 
-// 风险等级配置
-const RISK_CONFIG: Record<RiskLevel, { color: string; bgColor: string; labelKey: string; icon: typeof Shield }> = {
-  low: { color: "text-emerald-400", bgColor: "bg-emerald-500/20", labelKey: "admin.kyc.page.riskLow", icon: Shield },
-  medium: { color: "text-yellow-400", bgColor: "bg-yellow-500/20", labelKey: "admin.kyc.page.riskMedium", icon: AlertTriangle },
-  high: { color: "text-orange-400", bgColor: "bg-orange-500/20", labelKey: "admin.kyc.page.riskHigh", icon: AlertOctagon },
-  critical: { color: "text-red-400", bgColor: "bg-red-500/20", labelKey: "admin.kyc.page.riskCritical", icon: AlertOctagon },
+// Risk level to GlowStatusBadge variant mapping
+const RISK_VARIANTS: Record<RiskLevel, { variant: 'success' | 'warning' | 'orange' | 'error'; labelKey: string; icon: typeof Shield }> = {
+  low: { variant: 'success', labelKey: "admin.kyc.page.riskLow", icon: Shield },
+  medium: { variant: 'warning', labelKey: "admin.kyc.page.riskMedium", icon: AlertTriangle },
+  high: { variant: 'orange', labelKey: "admin.kyc.page.riskHigh", icon: AlertOctagon },
+  critical: { variant: 'error', labelKey: "admin.kyc.page.riskCritical", icon: AlertOctagon },
 };
 
-// 优先级配置
+// Priority configuration
 const PRIORITY_CONFIG: Record<ReviewPriority, { color: string; labelKey: string }> = {
   low: { color: "text-gray-400", labelKey: "admin.kyc.page.priorityLow" },
   normal: { color: "text-blue-400", labelKey: "admin.kyc.page.priorityNormal" },
@@ -128,7 +114,6 @@ export default function AdminKycPage() {
   // Review Panel
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false);
   const [selectedKyc, setSelectedKyc] = useState<KycDetail | null>(null);
-  const [selectedKycId, setSelectedKycId] = useState<number | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
 
   // Batch Selection
@@ -160,11 +145,11 @@ export default function AdminKycPage() {
       };
 
       const params: KycFilterParams = {
-        status: statusMap[activeTab],
-        search_query: searchQuery || undefined,
-        risk_level: riskFilter !== "all" ? riskFilter : undefined,
-        priority: priorityFilter !== "all" ? priorityFilter : undefined,
-        country_code: countryFilter !== "all" ? countryFilter : undefined,
+        ...(statusMap[activeTab] ? { status: statusMap[activeTab] } : {}),
+        ...(searchQuery ? { search_query: searchQuery } : {}),
+        ...(riskFilter !== "all" ? { risk_level: riskFilter } : {}),
+        ...(priorityFilter !== "all" ? { priority: priorityFilter } : {}),
+        ...(countryFilter !== "all" ? { country_code: countryFilter } : {}),
         page: pagination.page,
         page_size: pagination.pageSize,
         sort_by: "submitted_at",
@@ -216,7 +201,6 @@ export default function AdminKycPage() {
 
   // Open review panel
   const handleOpenReview = async (kycId: number) => {
-    setSelectedKycId(kycId);
     try {
       const detail = await adminKycService.getKycDetail(kycId);
       setSelectedKyc(detail);
@@ -234,10 +218,19 @@ export default function AdminKycPage() {
       await kycService.review(kycId, {
         approved: true,
         is_accredited: isAccredited,
-        review_steps: reviewSteps,
+        ...(reviewSteps ? { review_steps: reviewSteps } : {}),
       });
       notification.success(t("admin.kyc.page.approveSuccess"));
-      setReviewPanelOpen(false);
+      notification.warning(
+        t(
+          "admin.kyc.page.approveNeedAdmission",
+          "Review approved. Please continue with on-chain admission."
+        )
+      );
+      if (selectedKyc?.kyc.id === kycId) {
+        const detail = await adminKycService.getKycDetail(kycId);
+        setSelectedKyc(detail);
+      }
       loadKycList();
       loadStats();
     } catch (error) {
@@ -256,8 +249,8 @@ export default function AdminKycPage() {
         approved: false,
         is_accredited: false,
         reject_reason_code: reasonCode,
-        reject_reason: customReason,
-        review_steps: reviewSteps,
+        ...(customReason ? { reject_reason: customReason } : {}),
+        ...(reviewSteps ? { review_steps: reviewSteps } : {}),
       });
       notification.success(t("admin.kyc.page.rejectSuccess"));
       setReviewPanelOpen(false);
@@ -312,7 +305,7 @@ export default function AdminKycPage() {
           approved: false,
           is_accredited: false,
           reject_reason_code: reasonCode,
-          reject_reason: customReason,
+          ...(customReason ? { reject_reason: customReason } : {}),
         });
       }
       notification.success(t("admin.kyc.page.batchRejectSuccess", { count: ids.length }));
@@ -369,11 +362,15 @@ export default function AdminKycPage() {
         accessorKey: "status",
         header: () => t("admin.kyc.page.colStatus"),
         cell: ({ row }) => {
-          const config = STATUS_CONFIG[row.original.status];
+          const config = KYC_STATUS_VARIANTS[row.original.status];
           return (
-            <Badge className={`${config.bgColor} ${config.color} border-0`}>
+            <GlowStatusBadge 
+              variant={config.variant}
+              pulse={config.pulse}
+              glow={config.glow}
+            >
               {t(config.labelKey)}
-            </Badge>
+            </GlowStatusBadge>
           );
         },
       },
@@ -381,14 +378,14 @@ export default function AdminKycPage() {
         accessorKey: "risk_level",
         header: () => t("admin.kyc.page.colRisk"),
         cell: ({ row }) => {
-          const config = RISK_CONFIG[row.original.risk_level];
+          const config = RISK_VARIANTS[row.original.risk_level];
           const Icon = config.icon;
           return (
             <div className="flex items-center gap-1">
-              <Icon className={`w-3.5 h-3.5 ${config.color}`} />
-              <Badge className={`${config.bgColor} ${config.color} border-0 text-xs`}>
+              <Icon className={`w-3.5 h-3.5`} />
+              <GlowStatusBadge variant={config.variant}>
                 {t(config.labelKey)}
-              </Badge>
+              </GlowStatusBadge>
             </div>
           );
         },
@@ -483,39 +480,30 @@ export default function AdminKycPage() {
 
   return (
     <RequireAuth admin>
-      <V6Background />
-
-      <div className="min-h-screen relative px-6 py-8 max-w-[1600px] mx-auto">
-        {/* Header */}
-        <motion.div
-          className="mb-8 flex items-center justify-between"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-1">{t("admin.kyc.title")}</h1>
-            <p className="text-white/50">{t("admin.kyc.description")}</p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => {
-                loadStats();
-                loadKycList();
-              }}
-              disabled={loading}
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              {t("admin.kyc.page.refresh")}
-            </Button>
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              {t("admin.kyc.page.export")}
-            </Button>
-          </div>
-        </motion.div>
+      <AdminLayout>
+        <AdminPageHeader
+          title={t("admin.kyc.title")}
+          subtitle={t("admin.kyc.description")}
+          actions={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  loadStats();
+                  loadKycList();
+                }}
+                disabled={loading}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                {t("admin.kyc.page.refresh")}
+              </Button>
+              <Button variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                {t("admin.kyc.page.export")}
+              </Button>
+            </>
+          }
+        />
 
         {/* Stats Panel */}
         <motion.div
@@ -528,12 +516,8 @@ export default function AdminKycPage() {
         </motion.div>
 
         {/* Filters & Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <Card className="bg-[#0d1117]/80 border-white/10 backdrop-blur-sm">
+        <AdminCard delay={0.2}>
+          <Card className="bg-transparent border-0">
             <CardHeader className="pb-0">
               {/* Tabs & Search */}
               <div className="flex items-center justify-between flex-wrap gap-4">
@@ -635,7 +619,7 @@ export default function AdminKycPage() {
               />
             </CardContent>
           </Card>
-        </motion.div>
+        </AdminCard>
 
         {/* Review Stepper Modal */}
         <ReviewStepperModal
@@ -661,7 +645,7 @@ export default function AdminKycPage() {
           onBatchReject={handleBatchReject}
           rejectReasons={rejectReasons}
         />
-      </div>
+      </AdminLayout>
     </RequireAuth>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import { ShieldAlert, RotateCcw } from "lucide-react";
+import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * KYC 页面错误边界
@@ -13,8 +14,10 @@ export default function KycError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
-    console.error("KYC 页面错误:", error);
+    console.error("KYC page error:", error);
   }, [error]);
 
   return (
@@ -24,17 +27,17 @@ export default function KycError({
           <ShieldAlert className="h-7 w-7 text-red-400" />
         </div>
         <h2 className="mb-2 text-lg font-semibold text-white">
-          身份验证加载失败
+          {t("kyc.errorPage.title")}
         </h2>
         <p className="mb-5 text-sm text-white/60">
-          KYC 认证页面加载异常，请稍后重试。
+          {t("kyc.errorPage.description")}
         </p>
         <button
           onClick={reset}
           className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-bg-dark transition-all hover:shadow-[0_0_20px_theme(colors.primary-glow)]"
         >
           <RotateCcw className="h-4 w-4" />
-          重试
+          {t("kyc.errorPage.retry")}
         </button>
       </div>
     </div>

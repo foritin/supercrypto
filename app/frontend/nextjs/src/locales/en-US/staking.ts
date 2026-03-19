@@ -1,4 +1,4 @@
-export default {
+const staking = {
   // Page title
   title: 'Staking Mining',
   subtitle: 'Stake your RWA tokens to earn PLT rewards',
@@ -177,4 +177,6 @@ export default {
     allocationDescription: 'Description',
   },
 }
+
+export default staking
 

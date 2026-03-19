@@ -10,12 +10,13 @@
  * - 制裁名单匹配 (醒目错误样式)
  */
 
-import { useTranslation } from "react-i18next";
 import {
   ShieldCheck,
   AlertTriangle,
   ShieldAlert,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
 import { SectionCard } from "@/components/ui";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { KycDetail, RiskLevel } from "@/services/admin-kyc";

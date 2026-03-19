@@ -13,10 +13,11 @@
  * - 组件样式文件 ≤ 100 行
  */
 
-import { describe, test, expect } from 'vitest';
-import * as fc from 'fast-check';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import * as fc from 'fast-check';
+import { describe, test, expect } from 'vitest';
 
 // 文件路径和行数限制配置
 // 注意: 行数限制已根据实际需求调整，确保模块化的同时保持实用性

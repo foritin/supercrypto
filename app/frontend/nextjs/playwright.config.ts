@@ -14,7 +14,7 @@ export default defineConfig({
   // Fail fast in CI, allow retries locally
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  ...(process.env.CI ? { workers: 1 } : {}),
   
   // Reporters: HTML for visual review, list for terminal
   reporter: [

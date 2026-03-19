@@ -7,11 +7,12 @@
  * 通常放在 Footer 或隐私设置页面
  */
 
+import { Cookie, Shield, BarChart3, Target } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Cookie, Shield, BarChart3, Target } from 'lucide-react'
-import { cn } from '@/lib/utils'
+
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { Checkbox } from '@/components/ui/checkbox'
+import { cn } from '@/lib/utils'
+
 import {
   loadPreferences,
   savePreferences,
@@ -88,7 +90,7 @@ function CookieCategoryCard({
         <Checkbox
           checked={enabled}
           disabled={required}
-          onCheckedChange={onToggle}
+          {...(onToggle ? { onCheckedChange: onToggle } : {})}
           className={cn(
             'w-5 h-5 rounded border-2',
             'data-[state=checked]:bg-primary data-[state=checked]:border-primary',
@@ -110,6 +112,7 @@ export function CookieSettingsButton({
   const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
   const [preferences, setPreferences] = useState<CookiePreferences>(DEFAULT_PREFERENCES)
+  const buttonVariant = variant === 'default' ? 'primary' : variant
 
   // 打开设置时加载当前偏好
   const handleOpen = () => {
@@ -133,7 +136,7 @@ export function CookieSettingsButton({
   return (
     <>
       <Button
-        variant={variant}
+        variant={buttonVariant}
         size={size}
         onClick={handleOpen}
         className={cn(

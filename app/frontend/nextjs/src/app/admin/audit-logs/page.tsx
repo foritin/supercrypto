@@ -4,14 +4,11 @@
  * 使用新的审计组件和服务
  * 已迁移到 shadcn/ui + Tailwind CSS
  */
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { RequireAdmin } from "@/components/auth";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
 import {
   AuditStats,
   AuditLogFilters,
@@ -23,6 +20,10 @@ import {
   type AuditFilters,
   DEFAULT_AUDIT_FILTERS,
 } from "@/components/admin/audit";
+import { RequireAdmin } from "@/components/auth";
+import { AdminLayout, AdminPageHeader, AdminCard } from "@/components/layout/admin-layout";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { auditService } from "@/services/audit";
 import type {
   AuditLog,
@@ -35,7 +36,6 @@ import type {
 
 export default function AuditLogsPage() {
   const { t } = useTranslation();
-  const router = useRouter();
 
   // Tab 状态
   const [activeTab, setActiveTab] = useState<"general" | "transactions">("general");
@@ -111,7 +111,7 @@ export default function AuditLogsPage() {
       const err = error as { response?: { status?: number } };
       if (err.response?.status !== 401 && err.response?.status !== 403) {
         console.error("Failed to fetch audit logs:", error);
-        toast.error(t("admin.audit.loadError", "加载审计日志失败"));
+        toast.error(t("admin.audit.loadError", "Failed to load audit logs"));
       }
       setLogs([]);
     } finally {
@@ -138,7 +138,7 @@ export default function AuditLogsPage() {
       const err = error as { response?: { status?: number } };
       if (err.response?.status !== 401 && err.response?.status !== 403) {
         console.error("Failed to fetch transactions:", error);
-        toast.error(t("admin.audit.loadTxError", "加载交易记录失败"));
+        toast.error(t("admin.audit.loadTxError", "Failed to load transaction logs"));
       }
       setTransactions([]);
     } finally {
@@ -242,29 +242,24 @@ export default function AuditLogsPage() {
 
   return (
     <RequireAdmin>
-      <div className="max-w-[1600px] mx-auto p-6">
-        {/* 页面标题 */}
-        <div className="mb-6 flex justify-between items-start">
-          <div>
-            <h2 className="text-2xl font-semibold text-white mb-2">
-              {t("admin.audit.pageTitle", "审计日志")}
-            </h2>
-            <p className="text-white/65">
-              {t("admin.audit.pageSubtitle", "查看所有系统操作和交易记录")}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <AuditExport currentFilters={exportFilters as any} />
-            <Button
-              variant="outline"
-              onClick={handleRefresh}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              {t("common.refresh", "刷新")}
-            </Button>
-          </div>
-        </div>
+      <AdminLayout>
+        <AdminPageHeader
+          title={t("admin.audit.pageTitle", "Audit Logs")}
+          subtitle={t("admin.audit.pageSubtitle", "View all system operations and transaction records")}
+          actions={
+            <>
+              <AuditExport currentFilters={exportFilters} />
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={isLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                {t("common.refresh", "Refresh")}
+              </Button>
+            </>
+          }
+        />
 
         {/* 统计卡片 */}
         <AuditStats
@@ -281,10 +276,10 @@ export default function AuditLogsPage() {
         >
           <TabsList className="mb-4">
             <TabsTrigger value="general">
-              {t("admin.audit.tabs.general", "通用日志")}
+              {t("admin.audit.tabs.general", "General Logs")}
             </TabsTrigger>
             <TabsTrigger value="transactions">
-              {t("admin.audit.tabs.transactions", "交易日志")}
+              {t("admin.audit.tabs.transactions", "Transaction Logs")}
             </TabsTrigger>
           </TabsList>
 
@@ -345,7 +340,7 @@ export default function AuditLogsPage() {
           }}
           transaction={selectedTx}
         />
-      </div>
+      </AdminLayout>
     </RequireAdmin>
   );
 }

@@ -9,6 +9,7 @@
 """
 
 import asyncio
+import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import List, Optional, Tuple
@@ -16,21 +17,31 @@ from typing import List, Optional, Tuple
 from falib.utils.config import SETTINGS
 from falib.utils.log import get_logger
 from tortoise.exceptions import IntegrityError
+from web3 import AsyncHTTPProvider, AsyncWeb3
+from web3.exceptions import TransactionNotFound
 
+from src.common.adapters import get_async_redis_adapter
 from src.common.exceptions import BusinessException
 from src.common.utils import calculate_total_pages
 from src.infra.lock_service import DistributedLockService, LockAcquireError
 from src.models.asset import Asset
+from src.models.contracts.contract_deployment import ContractDeployment
 from src.models.subscription import Subscription
-from src.schemas.enums import SubscriptionStatus
+from src.schemas.enums import ChainID, ContractStatus, SubscriptionStatus
+from src.schemas.enums.asset import AssetSubscriptionMode
 from src.schemas.subscription import (
+    SubscriptionConfirmRequest,
     SubscriptionCreateRequest,
+    SubscriptionPendingRequest,
+    SubscriptionPendingResponse,
     SubscriptionPreviewRequest,
     SubscriptionPreviewResponse,
     SubscriptionResponse,
+    TransactionReceiptResponse,
 )
 
 logger = get_logger("business.subscription.service")
+PENDING_ORDER_TTL_SECONDS = 15 * 60
 
 
 class SubscriptionService:
@@ -66,6 +77,186 @@ class SubscriptionService:
         """获取当前网络"""
         return SETTINGS.network
 
+    @property
+    def rpc_url(self) -> str:
+        """获取 RPC URL"""
+        return SETTINGS.CRYPTO.MAINNET_URL
+
+    def _pending_order_key(self, order_id: str) -> str:
+        return f"subscription:pending:{self.network}:{order_id}"
+
+    async def _get_subscription_contract_address(self, chain_id: int) -> Optional[str]:
+        """获取当前网络下订阅合约地址"""
+        try:
+            network = ChainID.from_value_to_name(chain_id)
+        except ValueError:
+            return None
+        deployment = await ContractDeployment.filter(
+            name="VankeSubscription",
+            network=network,
+            chain_id=chain_id,
+            status=ContractStatus.ACTIVE,
+        ).first()
+        return deployment.address.lower() if deployment else None
+
+    async def create_pending_order(
+        self,
+        wallet_address: str,
+        data: SubscriptionPendingRequest,
+    ) -> SubscriptionPendingResponse:
+        """创建待确认认购订单（存储在 Redis）"""
+        asset = await Asset.filter(id=data.asset_id, environment=self.network).first()
+        if not asset:
+            raise BusinessException(code=404, message="Asset not found")
+
+        self._validate_lock_period_for_asset_mode(asset, data.lock_period)
+
+        now = datetime.now(timezone.utc)
+        if asset.subscription_start_at and now < asset.subscription_start_at:
+            raise BusinessException(
+                code=400, message="Subscription has not started yet"
+            )
+        if asset.subscription_end_at and now >= asset.subscription_end_at:
+            raise BusinessException(code=400, message="Subscription period has ended")
+        if not asset.is_available:
+            raise BusinessException(
+                code=400, message="Asset is not available for subscription"
+            )
+        if data.amount < asset.min_subscription:
+            raise BusinessException(
+                code=400,
+                message=f"Minimum subscription amount is {asset.min_subscription}",
+            )
+        if data.amount > asset.remaining_amount:
+            raise BusinessException(
+                code=400,
+                message=(
+                    "Subscription amount exceeds remaining supply "
+                    f"({asset.remaining_amount})"
+                ),
+            )
+
+        order_id = str(uuid.uuid4())
+        expires_at = now + timedelta(seconds=PENDING_ORDER_TTL_SECONDS)
+        payload = {
+            "order_id": order_id,
+            "wallet_address": wallet_address.lower(),
+            "asset_id": data.asset_id,
+            "amount": str(data.amount),
+            "token_type": data.token_type.value,
+            "lock_period": int(data.lock_period),
+            "created_at": now.isoformat(),
+            "expires_at": expires_at.isoformat(),
+        }
+
+        async with get_async_redis_adapter() as redis:
+            await redis.set_json(self._pending_order_key(order_id), payload)
+            await redis.expire(
+                self._pending_order_key(order_id), PENDING_ORDER_TTL_SECONDS
+            )
+
+        return SubscriptionPendingResponse(
+            order_id=order_id,
+            status="pending_confirmation",
+            expires_at=expires_at,
+        )
+
+    async def get_transaction_receipt(self, tx_hash: str) -> TransactionReceiptResponse:
+        """查询链上交易回执状态"""
+        web3 = AsyncWeb3(AsyncHTTPProvider(self.rpc_url))
+        tx_hash = tx_hash.lower()
+
+        try:
+            receipt = await web3.eth.get_transaction_receipt(tx_hash)
+        except TransactionNotFound:
+            return TransactionReceiptResponse(status="pending")
+
+        status = "success" if int(receipt.get("status", 0)) == 1 else "failed"
+        block_number = receipt.get("blockNumber")
+        latest_block = await web3.eth.block_number
+        confirmations = (
+            max(0, int(latest_block) - int(block_number) + 1)
+            if block_number is not None
+            else None
+        )
+
+        return TransactionReceiptResponse(
+            status=status,
+            block_number=int(block_number) if block_number is not None else None,
+            gas_used=str(receipt.get("gasUsed", 0)),
+            effective_gas_price=str(receipt.get("effectiveGasPrice", 0)),
+            confirmations=confirmations,
+        )
+
+    async def confirm_pending_order(
+        self,
+        wallet_address: str,
+        data: SubscriptionConfirmRequest,
+        using_db=None,
+    ) -> tuple[SubscriptionResponse, bool]:
+        """确认待处理订单并落库认购记录（返回: 响应, 是否新建）"""
+        tx_hash = data.tx_hash.lower()
+
+        existing = (
+            await Subscription.filter(tx_hash=tx_hash, environment=self.network)
+            .prefetch_related("asset")
+            .first()
+        )
+        if existing:
+            return await self._to_response(existing), False
+
+        async with get_async_redis_adapter() as redis:
+            order_key = self._pending_order_key(data.order_id)
+            order = await redis.get_json(order_key)
+
+        if not order:
+            raise BusinessException(
+                code=404, message="Pending order not found or expired"
+            )
+        if order.get("wallet_address") != wallet_address.lower():
+            raise BusinessException(
+                code=403, message="Order does not belong to current user"
+            )
+
+        expires_at = datetime.fromisoformat(order["expires_at"])
+        if expires_at < datetime.now(timezone.utc):
+            raise BusinessException(code=400, message="Pending order expired")
+
+        receipt = await self.get_transaction_receipt(tx_hash)
+        if receipt.status == "pending":
+            raise BusinessException(code=409, message="Transaction is still pending")
+        if receipt.status != "success":
+            raise BusinessException(code=400, message="On-chain transaction failed")
+
+        web3 = AsyncWeb3(AsyncHTTPProvider(self.rpc_url))
+        chain_id = await web3.eth.chain_id
+        expected_contract = await self._get_subscription_contract_address(int(chain_id))
+        if expected_contract:
+            tx = await web3.eth.get_transaction(tx_hash)
+            tx_to = tx.get("to")
+            if not tx_to or str(tx_to).lower() != expected_contract:
+                raise BusinessException(
+                    code=400,
+                    message="Transaction target contract mismatch",
+                )
+
+        create_data = SubscriptionCreateRequest(
+            asset_id=int(order["asset_id"]),
+            amount=Decimal(str(order["amount"])),
+            token_type=order["token_type"],
+            lock_period=int(order["lock_period"]),
+            tx_hash=tx_hash,
+        )
+
+        result = await self.create_subscription(
+            wallet_address, create_data, using_db=using_db
+        )
+
+        async with get_async_redis_adapter() as redis:
+            await redis.delete(self._pending_order_key(data.order_id))
+
+        return result, True
+
     async def preview_subscription(
         self, data: SubscriptionPreviewRequest
     ) -> SubscriptionPreviewResponse:
@@ -88,6 +279,8 @@ class SubscriptionService:
             raise BusinessException(
                 code=400, message="Asset is not available for subscription"
             )
+
+        self._validate_lock_period_for_asset_mode(asset, data.lock_period)
 
         # 检查最小认购金额
         if data.amount < asset.min_subscription:
@@ -233,10 +426,21 @@ class SubscriptionService:
         if not asset:
             raise BusinessException(code=404, message="Asset not found")
 
+        # 检查认购时间窗口 (更精确的错误消息)
+        now = datetime.now(timezone.utc)
+        if asset.subscription_start_at and now < asset.subscription_start_at:
+            raise BusinessException(
+                code=400, message="Subscription has not started yet"
+            )
+        if asset.subscription_end_at and now >= asset.subscription_end_at:
+            raise BusinessException(code=400, message="Subscription period has ended")
+
         if not asset.is_available:
             raise BusinessException(
                 code=400, message="Asset is not available for subscription"
             )
+
+        self._validate_lock_period_for_asset_mode(asset, data.lock_period)
 
         # 检查剩余额度
         if data.amount > asset.remaining_amount:
@@ -456,10 +660,11 @@ class SubscriptionService:
         for sub in subscriptions:
             if sub.status in [SubscriptionStatus.ACTIVE, SubscriptionStatus.MATURED]:
                 total_invested += sub.amount
-                total_value += sub.total_return
-                total_earnings += sub.expected_interest
+                # 未赎回前不计入预期收益：当前价值按本金计算
+                total_value += sub.amount
                 active_count += 1
             elif sub.status == SubscriptionStatus.REDEEMED:
+                # 已赎回后才计入已实现收益
                 total_earnings += sub.actual_interest
 
         return {
@@ -492,6 +697,24 @@ class SubscriptionService:
                 else asset.apy_3m * Decimal("0.6")
             )
 
+    def _validate_lock_period_for_asset_mode(
+        self, asset: Asset, lock_period: int
+    ) -> None:
+        """根据资产认购模式校验锁定期参数"""
+        mode = getattr(asset, "subscription_mode", AssetSubscriptionMode.BOTH)
+
+        if mode == AssetSubscriptionMode.CURRENT and lock_period != 0:
+            raise BusinessException(
+                code=400,
+                message="This asset only supports current product (lock_period must be 0)",
+            )
+
+        if mode == AssetSubscriptionMode.FIXED and lock_period == 0:
+            raise BusinessException(
+                code=400,
+                message="This asset only supports fixed-term product (lock_period must be 3/6/12)",
+            )
+
     async def _to_response(self, subscription: Subscription) -> SubscriptionResponse:
         """转换为响应"""
         # 确保已加载关联的 asset
@@ -499,6 +722,13 @@ class SubscriptionService:
             await subscription.fetch_related("asset")
 
         asset = subscription.asset
+
+        if subscription.actual_interest > 0:
+            display_interest = subscription.actual_interest
+        elif subscription.lock_period == 0:
+            display_interest = subscription.get_redeemable_interest()
+        else:
+            display_interest = subscription.expected_interest
 
         return SubscriptionResponse(
             id=subscription.id,
@@ -513,9 +743,9 @@ class SubscriptionService:
             rwa_token_amount=float(subscription.rwa_token_amount),
             start_date=subscription.start_date,
             end_date=subscription.end_date,
-            expected_interest=float(subscription.expected_interest),
+            expected_interest=float(display_interest),
             actual_interest=float(subscription.actual_interest),
-            total_return=float(subscription.total_return),
+            total_return=float(subscription.amount + display_interest),
             days_remaining=subscription.days_remaining,
             is_matured=subscription.is_matured,
             status=subscription.status,

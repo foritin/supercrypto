@@ -12,7 +12,6 @@ export { BatchToolbar } from "./batch-toolbar";
 export { VideoPlayer } from "./video-player";
 export { AdmissionButton, shouldShowAdmissionButton } from "./admission-button";
 export { OnChainStatusPanel } from "./onchain-status-panel";
-export { KYC_MANAGER_ABI } from "@/constants/abis/kyc-manager-abi";
 
 // Types re-export
 export type {

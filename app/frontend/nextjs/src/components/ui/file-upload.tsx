@@ -1,8 +1,9 @@
 'use client'
 
-import * as React from 'react'
-import { cn } from '@/lib/utils'
 import { Upload, X, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react'
+import * as React from 'react'
+
+import { cn } from '@/lib/utils'
 import { uploadKycDocument, type KycDocumentType } from '@/services/kyc'
 
 /**
@@ -251,7 +252,10 @@ const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
       (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files
         if (files && files.length > 0) {
-          handleFileUpload(files[0])
+          const file = files.item(0)
+          if (file) {
+            handleFileUpload(file)
+          }
         }
         // 重置 input 以允许重复选择同一文件
         event.target.value = ''
@@ -303,7 +307,10 @@ const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
 
         const files = event.dataTransfer.files
         if (files && files.length > 0) {
-          handleFileUpload(files[0])
+          const file = files.item(0)
+          if (file) {
+            handleFileUpload(file)
+          }
         }
       },
       [disabled, isUploading, handleFileUpload]
@@ -395,7 +402,6 @@ const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
         aria-label={computedAriaLabel}
         aria-disabled={disabled}
         aria-describedby={error ? `file-upload-error-${errorId}` : undefined}
-        aria-invalid={!!error}
         aria-busy={isUploading}
       >
         {/* 隐藏的文件输入 */}

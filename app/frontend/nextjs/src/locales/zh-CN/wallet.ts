@@ -8,6 +8,7 @@ const wallet = {
     signing: "签名中...",
     loggingIn: "登录中...",
     loginSuccess: "登录成功",
+    metamaskLocked: "检测到 MetaMask 已锁定，请重新连接",
     switchNetwork: "切换网络",
     copyAddress: "复制地址",
     viewOnExplorer: "在浏览器查看",

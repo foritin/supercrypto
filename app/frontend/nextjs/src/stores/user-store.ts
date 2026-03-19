@@ -1,8 +1,8 @@
 'use client';
 
+import { type Address } from 'viem';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { type Address } from 'viem';
 
 export type KycStatus = 
   | 'not_started' 
@@ -172,7 +172,7 @@ export const useUserStore = create<UserState>()(
             : null,
         })),
 
-      rejectKyc: (reason) =>
+      rejectKyc: (_reason) =>
         set((state) => ({
           profile: state.profile
             ? {

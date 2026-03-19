@@ -22,7 +22,7 @@ router = APIRouter()
 @router.get(
     "/registry/projects",
     summary="List Available Projects",
-    description="Get all projects defined in the configuration file",
+    description="Get all projects from ContractConfig",
 )
 async def list_registry_projects(
     _admin=Depends(require_admin),
@@ -30,8 +30,8 @@ async def list_registry_projects(
     """
     获取可用项目列表
 
-    从 config.yaml 中读取 project_registry.projects 配置
+    从 ContractConfig 表读取 project_name 去重列表
     """
     loader = get_project_registry_service()
-    projects = loader.list_projects()
+    projects = await loader.list_projects()
     return create_success_response(list_data=projects)

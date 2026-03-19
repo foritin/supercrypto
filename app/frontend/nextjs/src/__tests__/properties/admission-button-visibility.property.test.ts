@@ -14,8 +14,9 @@
  * Feature: kyc-onchain-admission, Property 6: Admission button visibility follows state rules
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
+
 import { shouldShowAdmissionButton } from '@/components/admin-kyc/admission-button'
 
 // ============ 类型定义 ============

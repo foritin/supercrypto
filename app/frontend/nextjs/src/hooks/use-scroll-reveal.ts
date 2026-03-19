@@ -20,7 +20,7 @@ export function useScrollReveal() {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        if (entry?.isIntersecting) {
           setIsVisible(true);
           // 一旦显示就停止观察
           observer.unobserve(element);
@@ -57,7 +57,7 @@ export function useScrollRevealDelay(delay: number = 0) {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        if (entry?.isIntersecting) {
           // 延迟显示
           setTimeout(() => {
             setIsVisible(true);

@@ -13,53 +13,44 @@
  * @author UI/UX Pro Max
  */
 
-import { useState, useCallback, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import {
   FileText,
   User,
   Scan,
   ShieldCheck,
-  ShieldAlert,
   Eye,
   ZoomIn,
   ZoomOut,
   RotateCw,
-  Maximize2,
   X,
   ChevronLeft,
   ChevronRight,
   Play,
-  Pause,
   Clock,
   CheckCircle,
   XCircle,
   AlertTriangle,
   Fingerprint,
-  Camera,
   Video,
-  Split,
   ArrowRightLeft,
-  Download,
-  Check,
   Copy,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { useState, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { SectionCard } from "@/components/ui/section-card";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { SectionCard } from "@/components/ui/section-card";
-import { InfoRow } from "@/components/ui/info-row";
 
 // ============================================================================
 // Types
@@ -112,9 +103,6 @@ interface DocumentReviewPanelProps {
   ocrData?: OCRData | null;
   facialComparison?: FacialComparison | null;
   riskChecks?: RiskCheck[];
-  onApprove?: () => void;
-  onReject?: () => void;
-  isProcessing?: boolean;
 }
 
 // ============================================================================
@@ -476,14 +464,12 @@ function ImageViewerModal({
   onClose,
   images,
   initialIndex,
-  ocrData,
   facialComparison,
 }: {
   isOpen: boolean;
   onClose: () => void;
   images: Document[];
   initialIndex: number;
-  ocrData?: OCRData | null;
   facialComparison?: FacialComparison | null;
 }) {
   const { t } = useTranslation();
@@ -508,6 +494,8 @@ function ImageViewerModal({
   const currentImage = images[currentIndex];
   const idFrontImage = images.find((img) => img.type === "id_front");
   const selfieImage = images.find((img) => img.type === "selfie" || img.type === "face_image");
+  const leftImage = idFrontImage ?? images[0];
+  const rightImage = selfieImage ?? images[1] ?? images[0];
 
   const handlePrev = () => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
@@ -617,18 +605,22 @@ function ImageViewerModal({
                     {compareMode && images.length >= 2 ? (
                       <div className="h-full flex gap-4 p-5">
                         <div className="flex-1 flex flex-col min-w-0">
-                          <span className="text-sm text-white/50 mb-2 text-center">
-                            {(idFrontImage || images[0]).label}
-                          </span>
-                          <div className="flex-1 relative rounded-xl overflow-hidden border border-white/10 bg-black/30">
-                            <Image
-                              src={(idFrontImage || images[0]).url}
-                              alt="Left"
-                              fill
-                              unoptimized
-                              className="object-contain p-2"
-                            />
-                          </div>
+                          {leftImage && (
+                            <>
+                              <span className="text-sm text-white/50 mb-2 text-center">
+                                {leftImage.label}
+                              </span>
+                              <div className="flex-1 relative rounded-xl overflow-hidden border border-white/10 bg-black/30">
+                                <Image
+                                  src={leftImage.url}
+                                  alt="Left"
+                                  fill
+                                  unoptimized
+                                  className="object-contain p-2"
+                                />
+                              </div>
+                            </>
+                          )}
                         </div>
                         {/* Center divider with match info */}
                         <div className="flex flex-col items-center justify-center gap-2 px-2 shrink-0">
@@ -645,18 +637,22 @@ function ImageViewerModal({
                           <div className="w-px h-16 bg-white/10" />
                         </div>
                         <div className="flex-1 flex flex-col min-w-0">
-                          <span className="text-sm text-white/50 mb-2 text-center">
-                            {(selfieImage || images[1]).label}
-                          </span>
-                          <div className="flex-1 relative rounded-xl overflow-hidden border border-white/10 bg-black/30">
-                            <Image
-                              src={(selfieImage || images[1]).url}
-                              alt="Right"
-                              fill
-                              unoptimized
-                              className="object-contain p-2"
-                            />
-                          </div>
+                          {rightImage && (
+                            <>
+                              <span className="text-sm text-white/50 mb-2 text-center">
+                                {rightImage.label}
+                              </span>
+                              <div className="flex-1 relative rounded-xl overflow-hidden border border-white/10 bg-black/30">
+                                <Image
+                                  src={rightImage.url}
+                                  alt="Right"
+                                  fill
+                                  unoptimized
+                                  className="object-contain p-2"
+                                />
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -756,9 +752,6 @@ export function DocumentReviewPanel({
   ocrData,
   facialComparison,
   riskChecks,
-  onApprove,
-  onReject,
-  isProcessing,
 }: DocumentReviewPanelProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -895,12 +888,12 @@ export function DocumentReviewPanel({
 
       {/* OCR Data */}
       <motion.div variants={itemVariants}>
-        <OCRCard data={ocrData} />
+        <OCRCard {...(ocrData ? { data: ocrData } : {})} />
       </motion.div>
 
       {/* Risk Checks */}
       <motion.div variants={itemVariants}>
-        <RiskCheckList checks={riskChecks} />
+        <RiskCheckList {...(riskChecks ? { checks: riskChecks } : {})} />
       </motion.div>
 
       {/* Image Viewer Modal */}
@@ -909,8 +902,7 @@ export function DocumentReviewPanel({
         onClose={() => setViewerOpen(false)}
         images={imageList}
         initialIndex={selectedIndex}
-        ocrData={ocrData}
-        facialComparison={facialComparison}
+        {...(facialComparison ? { facialComparison } : {})}
       />
 
       {/* Video Player Modal */}

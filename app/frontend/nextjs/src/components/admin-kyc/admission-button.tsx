@@ -11,18 +11,18 @@
  * @validates Requirements 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
  */
 
+import { ShieldCheck } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useConnection, useWalletClient, usePublicClient } from 'wagmi'
-import { parseAbi } from 'viem'
-import { ShieldCheck } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { useCurrentUser } from '@/hooks'
 import { useTransactionTimeout } from '@/hooks/use-tx-timeout'
 import { notification } from '@/lib/notification'
 import { recordAdmission } from '@/services/admin-kyc'
-import { KYC_MANAGER_ABI } from '@/constants/abis/kyc-manager-abi'
+import { usePlatformInfoStore } from '@/stores/platform-info-store'
+
 import { savePendingTx, clearPendingTx, getPendingTx } from './tx-recovery'
 
 // ============ Types ============
@@ -160,12 +160,22 @@ export function AdmissionButton({
         return
       }
 
-      // Step 3: 链上验证 verifiers() 调用
-      const abi = parseAbi(KYC_MANAGER_ABI)
+      // Step 3: 从 platformInfoStore 获取 KYC ABI
+      let kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
+      if (!kycAbi || kycAbi.length === 0) {
+        await usePlatformInfoStore.getState().refresh()
+        kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
+      }
+      if (!kycAbi || kycAbi.length === 0) {
+        notification.error('KYC ABI not found in platform info')
+        setTxStatus('failed')
+        return
+      }
 
+      // Step 3b: 链上验证 verifiers() 调用
       const isVerifier = await publicClient.readContract({
         address: contractAddress as `0x${string}`,
-        abi,
+        abi: kycAbi,
         functionName: 'verifiers',
         args: [address as `0x${string}`],
       })
@@ -176,13 +186,13 @@ export function AdmissionButton({
         return
       }
 
-      // Step 4: 发起链上交易 - addInvestor
+      // Step 4: 发起链上交易 - admin_add_investor
       setTxStatus('signing')
 
       const hash = await walletClient.writeContract({
         address: contractAddress as `0x${string}`,
-        abi,
-        functionName: 'addInvestor',
+        abi: kycAbi,
+        functionName: 'admin_add_investor',
         args: [
           walletAddress as `0x${string}`,
           countryCode || '',

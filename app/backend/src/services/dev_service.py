@@ -13,6 +13,9 @@ from src.schemas.dev import ResetableDataInfo, ResetDataType, TokenRecipient
 
 logger = get_logger("business.dev.service")
 
+# ETH 水龙头限额配置
+FAUCET_MAX_AMOUNT_ETH = 10000.0  # 单次最大充值限额
+
 
 class DevToolsService:
     """开发者工具服务"""
@@ -111,8 +114,8 @@ class DevToolsService:
 
             # 构建显示标签
             parts = [account.address[:6] + "..." + account.address[-4:]]
-            if account.tag:
-                parts.append(f"({account.tag})")
+            if account.roles:
+                parts.append(f"({','.join(account.roles)})")
             if kyc_status:
                 parts.append(f"[KYC: {kyc_status}]")
 
@@ -120,7 +123,7 @@ class DevToolsService:
                 TokenRecipient(
                     address=account.address,
                     kyc_status=kyc_status,
-                    tag=account.tag,
+                    roles=account.roles if account.roles else [],
                     label=" ".join(parts),
                 )
             )
@@ -141,10 +144,27 @@ class DevToolsService:
 
         返回:
             充值结果
+
+        异常:
+            ValueError: 当充值金额超过限额或无效时
         """
         import httpx
 
         from src.models.chain import Chain
+
+        # 验证充值金额
+        if amount_eth <= 0:
+            raise ValueError(
+                f"Invalid amount: {amount_eth} ETH. Amount must be greater than 0."
+            )
+
+        # 检查限额
+        if amount_eth > FAUCET_MAX_AMOUNT_ETH:
+            raise ValueError(
+                f"Amount exceeds faucet limit: {amount_eth} ETH requested, "
+                f"but maximum allowed is {FAUCET_MAX_AMOUNT_ETH} ETH. "
+                f"Please reduce the amount and try again."
+            )
 
         chain = await Chain.get_by_chain_id(31337)
         if not chain:
@@ -182,6 +202,19 @@ class DevToolsService:
                 },
             )
             result = resp.json()
+
+            if "error" not in result:
+                # 强制挖一个新块，让 MetaMask 能通过区块轮询检测到余额变化
+                # hardhat_setBalance 只修改状态不产生区块，MetaMask 无法感知
+                await client.post(
+                    rpc_url,
+                    json={
+                        "jsonrpc": "2.0",
+                        "method": "evm_mine",
+                        "params": [],
+                        "id": 3,
+                    },
+                )
 
         if "error" in result:
             logger.error(f"Faucet failed: {result['error']}")

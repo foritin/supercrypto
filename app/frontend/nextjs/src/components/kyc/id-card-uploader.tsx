@@ -9,11 +9,12 @@
  * - 添加完整的i18n支持
  */
 
+import { CreditCard, FileText, Car, Upload, ImageIcon } from 'lucide-react'
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
+
 import { FileUpload, type FileUploadError } from '@/components/ui/file-upload'
-import { CreditCard, FileText, Car, Upload, ImageIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { KycDocumentType } from '@/services/kyc'
 
 export type IdType = 'passport' | 'id_card' | 'driver_license'
@@ -31,22 +32,24 @@ export interface IDCardUploaderProps {
 
 interface IdTypeConfig {
   icon: React.ReactNode
-  documentType: KycDocumentType
 }
 
 const ID_TYPE_CONFIG: Record<IdType, IdTypeConfig> = {
   passport: {
     icon: <FileText className="w-5 h-5" />,
-    documentType: 'id_front',
   },
   id_card: {
     icon: <CreditCard className="w-5 h-5" />,
-    documentType: 'id_front',
   },
   driver_license: {
     icon: <Car className="w-5 h-5" />,
-    documentType: 'id_front',
   },
+}
+
+function getDocumentType(idType: IdType, side: IdSide): KycDocumentType {
+  if (idType === 'passport') return 'passport_front'
+  if (idType === 'id_card') return side === 'front' ? 'id_card_front' : 'id_card_back'
+  return side === 'front' ? 'drivers_license_front' : 'drivers_license_back'
 }
 
 export const IDCardUploader: React.FC<IDCardUploaderProps> = ({
@@ -63,6 +66,7 @@ export const IDCardUploader: React.FC<IDCardUploaderProps> = ({
   const labelId = React.useId()
 
   const idTypeConfig = ID_TYPE_CONFIG[idType]
+  const documentType = getDocumentType(idType, side)
 
   // 获取翻译键
   const getTranslationKey = (key: string) => {
@@ -100,15 +104,15 @@ export const IDCardUploader: React.FC<IDCardUploaderProps> = ({
       {/* 上传区域 - 重新设计 */}
       <div className="relative">
         <FileUpload
-          documentType={idTypeConfig.documentType}
-          value={value}
+          documentType={documentType}
           onUpload={handleUpload}
           onError={handleError}
-          onRemove={onRemove}
           disabled={disabled}
           height="180px"
           className="sm:h-[220px]"
           aria-label={t(getTranslationKey('ariaLabel'))}
+          {...(onRemove ? { onRemove } : {})}
+          {...(value ? { value } : {})}
           placeholder={
             <div className="flex flex-col items-center gap-3 text-muted-foreground px-4" id={hintId}>
               {/* 上传图标 */}

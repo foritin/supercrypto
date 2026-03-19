@@ -17,31 +17,12 @@
  * 
  * @validates Requirements 8.2
  */
+import type { ColumnDef } from '@tanstack/react-table'
+import { CheckCircle, XCircle, Eye, RefreshCw, Loader2, Copy, Check } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ColumnDef } from '@tanstack/react-table'
-import { CheckCircle, XCircle, Eye, RefreshCw, Loader2, Copy, Check } from 'lucide-react'
 
 // shadcn/ui components
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,21 +33,38 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DataTable } from '@/components/ui/data-table'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { DataTable } from '@/components/ui/data-table'
-
 // Services and utilities
-import { notification } from '@/lib/notification'
+import { KYC_STATUS_BADGE } from '@/constants/status-config'
 import { useKycList, useKycReview } from '@/hooks/use-kyc-admin'
+import { notification } from '@/lib/notification'
 import { KycStatus } from '@/services/kyc'
 import type { KycFullResponse } from '@/services/kyc'
 import { truncateAddress } from '@/utils/format'
-import { KYC_STATUS_BADGE } from '@/constants/status-config'
 
 // KYC Detail Modal
 import { KycDetailModal } from './kyc-detail-modal'
@@ -108,7 +106,7 @@ function CopyableAddress({ address }: { address: string }) {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            {copied ? '已复制' : '复制地址'}
+            {copied ? 'Copied' : 'Copy address'}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -137,9 +135,9 @@ export function KycAdminList() {
   }>({ open: false, kycId: null })
   
   const { data, isLoading, refetch } = useKycList({
-    status: statusFilter,
     page,
     page_size: pageSize,
+    ...(statusFilter ? { status: statusFilter } : {}),
   })
   
   const { mutate: review, isPending: isReviewing } = useKycReview()
@@ -233,7 +231,7 @@ export function KycAdminList() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        variant="default"
+                        variant="primary"
                         size="sm"
                         onClick={() => openReviewModal(record, 'approve')}
                       >
@@ -306,8 +304,8 @@ export function KycAdminList() {
       id: reviewModal.kyc.id,
       data: {
         approved: reviewModal.action === 'approve',
-        reject_reason: reviewModal.action === 'reject' ? rejectReason : undefined,
         is_accredited: reviewModal.action === 'approve',
+        ...(reviewModal.action === 'reject' ? { reject_reason: rejectReason } : {}),
       },
     }, {
       onSuccess: () => {

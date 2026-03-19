@@ -11,10 +11,11 @@
  */
 'use client'
 
+import { Plus, X } from 'lucide-react'
 import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, X } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -22,23 +23,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { notification } from '@/lib/notification'
-
+import { cn } from '@/lib/utils'
 import {
   assetService,
   type AssetCreateRequest,
   type ProjectContractInfo,
 } from '@/services/asset'
 
-import { WizardProvider, useWizard } from './wizard-context'
 import { StepIndicator } from './step-indicator'
 import { BasicInfoStep } from './steps/basic-info-step'
 import { FinancialStep } from './steps/financial-step'
 import { MediaStep } from './steps/media-step'
 import { PreviewStep } from './steps/preview-step'
 import { WIZARD_STEPS, type CreateAssetWizardProps } from './types'
+import { WizardProvider, useWizard } from './wizard-context'
 
 // ============ 内部组件 ============
 
@@ -77,14 +76,15 @@ function WizardContent({
         name: formData.name,
         symbol: formData.symbol.toUpperCase(),
         asset_type: formData.asset_type,
-        description: formData.description,
-        location: formData.location,
+        subscription_mode: formData.subscription_mode,
         total_supply: formData.total_supply,
         min_subscription: formData.min_subscription || 100,
         current_price: formData.current_price || 1,
         apy_3m: formData.apy_3m,
         apy_6m: formData.apy_6m,
         apy_12m: formData.apy_12m,
+        ...(formData.description ? { description: formData.description } : {}),
+        ...(formData.location ? { location: formData.location } : {}),
       }
 
       const newAsset = await assetService.createAsset(createData)
@@ -108,11 +108,12 @@ function WizardContent({
 
       // 3. 上传封面图
       const coverFile = formData.coverFile
-      if (coverFile && coverFile.length > 0 && coverFile[0].originFileObj) {
+      const firstCoverFile = coverFile?.[0]
+      if (firstCoverFile?.originFileObj) {
         try {
           await assetService.uploadMedia(
             newAsset.id,
-            coverFile[0].originFileObj,
+            firstCoverFile.originFileObj,
             'cover'
           )
         } catch (e) {
@@ -137,7 +138,7 @@ function WizardContent({
       }
 
       // 5. 成功处理
-      notification.success(t('admin.assets.createSuccess', '资产创建成功'))
+      notification.success(t('admin.assets.createSuccess'))
       reset()
       onSuccess()
       onClose()
@@ -145,7 +146,7 @@ function WizardContent({
       // 6. 失败处理 - 保留数据，显示错误
       const errMsg = error instanceof Error
         ? error.message
-        : t('admin.assets.createFailed', '创建失败')
+        : t('admin.assets.createFailed')
       notification.error(errMsg)
     } finally {
       setSubmitting(false)

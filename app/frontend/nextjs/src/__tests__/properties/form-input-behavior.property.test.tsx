@@ -14,12 +14,13 @@
  * - 4.6: WHEN migrating Checkbox components, THE Form_Handler SHALL replace Ant Design Checkbox with shadcn/ui Checkbox component
  */
 
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import fc from 'fast-check'
 import { render, cleanup, fireEvent } from '@testing-library/react'
+import fc from 'fast-check'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
 
 // Feature: frontend-shadcn-migration, Property 10: Form Input Component Behavior Equivalence
 describe('Property 10: Form Input Component Behavior Equivalence', () => {
@@ -84,7 +85,14 @@ describe('Property 10: Form Input Component Behavior Equivalence', () => {
             expect(onChange).toHaveBeenCalled()
             
             // Verify the event contains the correct value
-            const event = onChange.mock.calls[0][0]
+            const firstCall = onChange.mock.calls[0]
+            if (!firstCall) {
+              return
+            }
+            const event = firstCall[0]
+            if (!event) {
+              return
+            }
             expect(event.target.value).toBe(newValue)
             
             // Verify the new value is reflected in the input
@@ -270,7 +278,14 @@ describe('Property 10: Form Input Component Behavior Equivalence', () => {
             expect(onChange).toHaveBeenCalled()
             
             // Verify the event contains the correct value
-            const event = onChange.mock.calls[0][0]
+            const firstCall = onChange.mock.calls[0]
+            if (!firstCall) {
+              return
+            }
+            const event = firstCall[0]
+            if (!event) {
+              return
+            }
             expect(event.target.value).toBe(newValue)
             
             // Verify the new value is reflected
@@ -476,7 +491,11 @@ describe('Property 10: Form Input Component Behavior Equivalence', () => {
           fc.array(fc.boolean(), { minLength: 2, maxLength: 10 }),
           (checkedStates) => {
             const onCheckedChange = vi.fn()
-            let currentChecked = checkedStates[0]
+            const firstState = checkedStates[0]
+            if (firstState === undefined) {
+              return
+            }
+            let currentChecked = firstState
             
             const { container, rerender } = render(
               <Checkbox 
@@ -494,7 +513,11 @@ describe('Property 10: Form Input Component Behavior Equivalence', () => {
             
             // Simulate multiple state changes via controlled updates
             for (let i = 1; i < checkedStates.length; i++) {
-              currentChecked = checkedStates[i]
+              const nextChecked = checkedStates[i]
+              if (nextChecked === undefined) {
+                continue
+              }
+              currentChecked = nextChecked
               rerender(
                 <Checkbox 
                   checked={currentChecked}

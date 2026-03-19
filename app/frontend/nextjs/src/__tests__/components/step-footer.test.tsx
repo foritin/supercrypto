@@ -8,8 +8,9 @@
  * - 按钮点击触发正确回调
  */
 
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+
 import { StepFooter } from "@/components/admin-kyc/step-footer";
 
 // Mock react-i18next

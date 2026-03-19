@@ -307,7 +307,7 @@ async def review_kyc(
 ):
     """审核 KYC 申请 — 通过或拒绝，同步更新链上状态"""
     result = await service.review(kyc_id, data, reviewer_address=admin_address)
-    action = "approved" if data.approved else "rejected"
+    action = "approved (pending on-chain confirmation)" if data.approved else "rejected"
     audit_action = AuditAction.KYC_APPROVE if data.approved else AuditAction.KYC_REJECT
 
     await audit_service.log_async(

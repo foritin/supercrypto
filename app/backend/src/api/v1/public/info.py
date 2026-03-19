@@ -74,7 +74,7 @@ async def get_base_info(
     获取基础信息（Redis 缓存 + ETag 支持）
 
     - **chain_info**: 链配置（chain_id, rpc_url 等）
-    - **address_info**: 所有已部署合约地址及 ABI
+    - **address_info**: 当前网络活跃合约地址及 ABI
     - Redis 缓存 TTL: 5 分钟（多 Worker 共享）
     - 支持 If-None-Match → 304 Not Modified（节省带宽）
     """

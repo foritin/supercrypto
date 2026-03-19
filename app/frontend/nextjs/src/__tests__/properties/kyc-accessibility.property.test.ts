@@ -12,8 +12,8 @@
  * - 9.2: THE KYC_System SHALL 使用 aria-describedby 关联错误提示
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
 
 // ============ 类型定义 ============
 
@@ -222,8 +222,8 @@ function validateFieldAccessibility(
     hasLabel: hasValidLabelAssociation(field),
     labelAssociation: getLabelAssociationType(field),
     hasAriaDescribedBy: hasError ? !!field.errorId : true,
-    ariaDescribedById: hasError ? field.errorId : undefined,
     hasAriaInvalid: hasError, // 有错误时应该设置 aria-invalid
+    ...(hasError && field.errorId ? { ariaDescribedById: field.errorId } : {}),
   }
 }
 
@@ -713,7 +713,6 @@ describe('边界情况测试', () => {
       name: 'testField',
       type: 'input',
       required: true,
-      labelFor: undefined,
       errorId: 'test-field-error',
     }
 
@@ -733,7 +732,6 @@ describe('边界情况测试', () => {
       type: 'input',
       required: true,
       labelFor: 'test-field',
-      errorId: undefined,
     }
 
     const hasError = true
@@ -753,7 +751,6 @@ describe('边界情况测试', () => {
       type: 'input',
       required: true,
       labelFor: 'test-field',
-      errorId: undefined,
     }
 
     const hasError = false

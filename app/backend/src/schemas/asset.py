@@ -9,7 +9,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.schemas.base import PaginationParams
-from src.schemas.enums import AssetStatus, AssetType
+from src.schemas.enums import AssetStatus, AssetSubscriptionMode, AssetType
 
 
 class AssetBase(BaseModel):
@@ -19,6 +19,10 @@ class AssetBase(BaseModel):
     symbol: str = Field(..., max_length=20, description="代币符号")
     description: Optional[str] = Field(None, description="资产描述")
     asset_type: AssetType = Field(default=AssetType.REAL_ESTATE, description="资产类型")
+    subscription_mode: AssetSubscriptionMode = Field(
+        default=AssetSubscriptionMode.BOTH,
+        description="认购模式: current/fixed/both",
+    )
     image_url: Optional[str] = Field(None, max_length=500, description="资产图片URL")
     document_url: Optional[str] = Field(None, max_length=500, description="文档URL")
     location: Optional[str] = Field(None, max_length=300, description="资产位置")
@@ -30,6 +34,12 @@ class AssetCreateRequest(AssetBase):
     total_supply: Decimal = Field(..., ge=0, description="总募资额")
     min_subscription: Decimal = Field(default=100, ge=0, description="最小认购金额")
     current_price: Decimal = Field(default=0, ge=0, description="当前价格")
+    subscription_start_at: Optional[datetime] = Field(
+        None, description="认购开始时间 (UTC)"
+    )
+    subscription_end_at: Optional[datetime] = Field(
+        None, description="认购截止时间 (UTC)"
+    )
     apy_3m: Decimal = Field(default=0, ge=0, le=100, description="3个月APY(%)")
     apy_6m: Decimal = Field(default=0, ge=0, le=100, description="6个月APY(%)")
     apy_12m: Decimal = Field(default=0, ge=0, le=100, description="12个月APY(%)")
@@ -52,12 +62,19 @@ class AssetUpdateRequest(BaseModel):
     symbol: Optional[str] = Field(None, max_length=20)
     description: Optional[str] = None
     asset_type: Optional[AssetType] = None
+    subscription_mode: Optional[AssetSubscriptionMode] = None
     image_url: Optional[str] = None
     document_url: Optional[str] = None
     location: Optional[str] = None
     total_supply: Optional[Decimal] = Field(None, ge=0)
     min_subscription: Optional[Decimal] = Field(None, ge=0)
     current_price: Optional[Decimal] = Field(None, ge=0)
+    subscription_start_at: Optional[datetime] = Field(
+        None, description="认购开始时间 (UTC)"
+    )
+    subscription_end_at: Optional[datetime] = Field(
+        None, description="认购截止时间 (UTC)"
+    )
     apy_3m: Optional[Decimal] = Field(None, ge=0, le=100)
     apy_6m: Optional[Decimal] = Field(None, ge=0, le=100)
     apy_12m: Optional[Decimal] = Field(None, ge=0, le=100)
@@ -88,6 +105,7 @@ class AssetListItem(BaseModel):
     name: str
     symbol: str
     asset_type: AssetType
+    subscription_mode: AssetSubscriptionMode
     image_url: Optional[str]
     cover_image_url: Optional[str] = Field(
         None, description="封面图预签名 URL（从 AssetMedia 获取）"
@@ -98,6 +116,8 @@ class AssetListItem(BaseModel):
     apy_3m: float
     apy_6m: float
     apy_12m: float
+    subscription_start_at: Optional[datetime] = None
+    subscription_end_at: Optional[datetime] = None
     status: AssetStatus
     total_supply: float
     subscribed_amount: float
@@ -121,10 +141,12 @@ class AssetDetailResponse(BaseModel):
     """资产详情响应"""
 
     id: int
+    chain_id: Optional[int] = Field(None, description="主合约链 ID")
     name: str
     symbol: str
     description: Optional[str]
     asset_type: AssetType
+    subscription_mode: AssetSubscriptionMode
     image_url: Optional[str]
     document_url: Optional[str]
     location: Optional[str]
@@ -139,6 +161,10 @@ class AssetDetailResponse(BaseModel):
     min_subscription: float
     remaining_amount: float
     subscription_progress: float
+
+    # 认购时间窗口
+    subscription_start_at: Optional[datetime] = None
+    subscription_end_at: Optional[datetime] = None
 
     # APY
     apy_3m: float
@@ -192,6 +218,7 @@ class AssetListQuery(PaginationParams):
 
     status: Optional[AssetStatus] = None
     asset_type: Optional[AssetType] = None
+    subscription_mode: Optional[AssetSubscriptionMode] = None
 
 
 class ContractBindingItem(BaseModel):

@@ -16,28 +16,14 @@
  * - @ant-design/icons -> lucide-react
  */
 
-import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useTranslation } from 'react-i18next'
-import { ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
+import { format, formatDistanceToNow } from 'date-fns'
 import { Search, LogOut, RefreshCw, User, AlertTriangle } from 'lucide-react'
+import { useState } from 'react'
 
 import { RequireAdmin } from '@/components/auth'
-import { adminSessionService, UserSession } from '@/services/admin-sessions'
-import { truncateAddress } from '@/utils/format'
-import { notification } from '@/lib/notification'
-
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { DataTable } from '@/components/ui/data-table'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { AdminLayout, AdminPageHeader, AdminCard } from '@/components/layout/admin-layout'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,12 +34,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { GlowStatusBadge } from '@/components/ui/glow-status-badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { DataTable } from '@/components/ui/data-table'
+import { Input } from '@/components/ui/input'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { notification } from '@/lib/notification'
+import type { UserSession } from '@/services/admin-sessions';
+import { adminSessionService } from '@/services/admin-sessions'
+import { truncateAddress } from '@/utils/format'
 
-import { format, formatDistanceToNow } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
 
 export default function AdminSessionsPage() {
-  const { t } = useTranslation()
   const queryClient = useQueryClient()
   
   const [page, setPage] = useState(1)
@@ -68,24 +66,25 @@ export default function AdminSessionsPage() {
   // 获取会话列表
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-sessions', page, pageSize, search],
-    queryFn: () => adminSessionService.listActiveSessions({
-      page,
-      page_size: pageSize,
-      search: search || undefined,
-    }),
+    queryFn: () =>
+      adminSessionService.listActiveSessions({
+        page,
+        page_size: pageSize,
+        ...(search ? { search } : {}),
+      }),
   })
   
   // 强制下线
   const revokeMutation = useMutation({
     mutationFn: adminSessionService.revokeUserSession,
     onSuccess: (result) => {
-      notification.success(result.msg || '用户已强制下线')
+      notification.success(result.msg || 'User session revoked')
       queryClient.invalidateQueries({ queryKey: ['admin-sessions'] })
       setRevokeDialogOpen(false)
       setSessionToRevoke(null)
     },
     onError: () => {
-      notification.error('操作失败')
+      notification.error('Operation failed')
     },
   })
   
@@ -122,7 +121,7 @@ export default function AdminSessionsPage() {
   const columns: ColumnDef<UserSession>[] = [
     {
       accessorKey: 'wallet_address',
-      header: '钱包地址',
+      header: 'Wallet Address',
       size: 180,
       cell: ({ row }) => (
         <TooltipProvider>
@@ -141,7 +140,7 @@ export default function AdminSessionsPage() {
     },
     {
       accessorKey: 'login_at',
-      header: '登录时间',
+      header: 'Login Time',
       size: 180,
       cell: ({ row }) => (
         <TooltipProvider>
@@ -160,29 +159,29 @@ export default function AdminSessionsPage() {
     },
     {
       accessorKey: 'last_active_at',
-      header: '最后活跃',
+      header: 'Last Active',
       size: 150,
       cell: ({ row }) => (
-        <Badge className="bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30">
-          {formatDistanceToNow(new Date(row.original.last_active_at), { addSuffix: true, locale: zhCN })}
-        </Badge>
+        <GlowStatusBadge variant="success" glow>
+          {formatDistanceToNow(new Date(row.original.last_active_at), { addSuffix: true })}
+        </GlowStatusBadge>
       ),
     },
     {
       accessorKey: 'ip_address',
-      header: 'IP 地址',
+      header: 'IP Address',
       size: 140,
       cell: ({ row }) => row.original.ip_address || '-',
     },
     {
       accessorKey: 'user_agent',
-      header: '浏览器',
+      header: 'Browser',
       size: 100,
       cell: ({ row }) => parseUserAgent(row.original.user_agent),
     },
     {
       id: 'actions',
-      header: '操作',
+      header: 'Actions',
       size: 120,
       cell: ({ row }) => (
         <Button
@@ -192,7 +191,7 @@ export default function AdminSessionsPage() {
           disabled={revokeMutation.isPending}
         >
           <LogOut className="h-4 w-4 mr-1" />
-          强制下线
+          Revoke
         </Button>
       ),
     },
@@ -205,18 +204,19 @@ export default function AdminSessionsPage() {
   return (
     <RequireAdmin>
       <TooltipProvider>
-        <div className="p-6">
+        <AdminLayout>
           {/* 主卡片 */}
-          <Card className="border-white/10 bg-[rgba(17,25,22,0.8)]">
-            <CardHeader className="bg-black/20 border-b border-white/10 pb-4">
+          <AdminCard>
+            <Card className="bg-transparent border-0">
+              <CardHeader className="border-b border-white/10 pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <User className="h-5 w-5" />
-                  <span>活跃用户会话</span>
+                  <span>Active User Sessions</span>
                   {data?.pagination && (
-                    <Badge variant="secondary" className="ml-2 bg-blue-500/20 text-blue-400 border-blue-500/30">
-                      {data.pagination.total} 个活跃会话
-                    </Badge>
+                    <GlowStatusBadge variant="info" className="ml-2">
+                      {data.pagination.total} active sessions
+                    </GlowStatusBadge>
                   )}
                 </CardTitle>
                 
@@ -224,7 +224,7 @@ export default function AdminSessionsPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="搜索钱包地址"
+                      placeholder="Search wallet address"
                       value={searchInput}
                       onChange={(e) => setSearchInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -232,7 +232,7 @@ export default function AdminSessionsPage() {
                     />
                   </div>
                   <Button variant="outline" onClick={handleSearch}>
-                    搜索
+                    Search
                   </Button>
                   <Button 
                     variant="outline"
@@ -240,7 +240,7 @@ export default function AdminSessionsPage() {
                     disabled={isLoading}
                   >
                     <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-                    刷新
+                    Refresh
                   </Button>
                 </div>
               </div>
@@ -251,7 +251,7 @@ export default function AdminSessionsPage() {
                 columns={columns}
                 data={data?.list_data || []}
                 loading={isLoading}
-                emptyMessage="暂无活跃会话"
+                emptyMessage="No active sessions"
                 pagination={{
                   pageIndex: page - 1,
                   pageSize: pageSize,
@@ -260,59 +260,62 @@ export default function AdminSessionsPage() {
                   onPageSizeChange: () => {},
                 }}
               />
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </AdminCard>
           
           {/* 说明卡片 */}
-          <Card className="mt-4 border-yellow-500/30 bg-yellow-500/10">
+          <AdminCard className="mt-4">
+            <Card className="bg-transparent border-0">
             <CardContent className="py-4">
               <div className="text-white/65 text-sm">
                 <div className="flex items-center gap-2 text-yellow-400 font-medium mb-2">
                   <AlertTriangle className="h-4 w-4" />
-                  注意事项：
+                  Notes:
                 </div>
                 <ul className="list-disc list-inside space-y-1 ml-6">
-                  <li>强制下线会撤销用户的所有登录会话</li>
-                  <li>被下线的用户下次请求会收到 401 错误，需要重新连接钱包登录</li>
-                  <li>此操作会记录到审计日志</li>
+                  <li>Revoke will invalidate all active sessions for the user.</li>
+                  <li>The user will receive 401 on next request and must reconnect the wallet.</li>
+                  <li>This action is recorded in the audit logs.</li>
                 </ul>
               </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </AdminCard>
           
           {/* 强制下线确认对话框 */}
           <AlertDialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>确认强制下线</AlertDialogTitle>
+                <AlertDialogTitle>Confirm Revoke Session</AlertDialogTitle>
                 <AlertDialogDescription asChild>
                   <div>
                     <p>
-                      确定要强制下线用户{' '}
+                      Are you sure you want to revoke sessions for{' '}
                       <strong className="text-primary">
                         {sessionToRevoke ? truncateAddress(sessionToRevoke.wallet_address) : ''}
                       </strong>{' '}
-                      吗？
+                      ?
                     </p>
                     <p className="text-white/45 mt-2">
-                      该用户的所有会话将被撤销，需要重新连接钱包登录。
+                      All sessions for this user will be invalidated, and wallet reconnection will be required.
                     </p>
                   </div>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleRevokeConfirm}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   disabled={revokeMutation.isPending}
                 >
-                  {revokeMutation.isPending ? '处理中...' : '确认下线'}
+                  {revokeMutation.isPending ? 'Processing...' : 'Confirm'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </div>
+        </AdminLayout>
       </TooltipProvider>
     </RequireAdmin>
   )

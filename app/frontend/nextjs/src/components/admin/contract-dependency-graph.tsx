@@ -11,7 +11,9 @@
  */
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useQuery,
+} from '@tanstack/react-query';
 import {
   ReactFlow,
   Background,
@@ -25,13 +27,15 @@ import {
   type NodeTypes,
   MarkerType,
 } from '@xyflow/react';
+import { AlertCircle, Copy, Check } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
 import '@xyflow/react/dist/style.css';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Copy, Check } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { contractGraphService, GraphNode } from '@/services/contract-graph';
+import type { GraphNode } from '@/services/contract-graph';
+import { contractGraphService } from '@/services/contract-graph';
 
 // Web3 配色方案
 const WEB3_COLORS = {
@@ -95,7 +99,7 @@ function CopyableAddress({ address }: { address: string }) {
     <button
       onClick={handleCopy}
       className="flex items-center gap-1 text-[8px] font-mono text-white/50 hover:text-white/70 transition-colors"
-      title={copied ? '已复制' : '复制地址'}
+      title={copied ? 'Copied' : 'Copy address'}
     >
       <span>{address.slice(0, 8)}...{address.slice(-6)}</span>
       {copied ? (
@@ -235,9 +239,9 @@ function Web3ContractNode({ data }: { data: GraphNode }) {
 
         {/* 状态文本 */}
         <span className="text-[9px] text-white/60">
-          {data.status === 'ready' ? '已就绪' : 
-           data.status === 'missing_deps' ? '缺少依赖' :
-           data.status === 'not_registered' ? '未注册' : '未部署'}
+           {data.status === 'ready' ? 'Ready' : 
+            data.status === 'missing_deps' ? 'Missing dependencies' :
+            data.status === 'not_registered' ? 'Not registered' : 'Not deployed'}
         </span>
       </div>
 
@@ -281,8 +285,6 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
     if (!graphData) return [];
 
     const nodes: Node[] = [];
-    const nodeWidth = 200;
-    const nodeHeight = 100;
     const horizontalSpacing = 300; // 水平间距
     const verticalSpacing = 180; // 垂直间距
     const projectSpacing = 400; // 项目组之间的间距
@@ -351,8 +353,8 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
     const projectNames = Object.keys(projectGroups).sort();
     let xOffset = 100;
 
-    projectNames.forEach((project, projectIndex) => {
-      const projectNodes = projectGroups[project];
+    projectNames.forEach((project) => {
+      const projectNodes = projectGroups[project] ?? [];
 
       // 按层级和依赖关系排序
       const sortedNodes = [...projectNodes].sort((a, b) => {
@@ -372,7 +374,6 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
       });
 
       // 计算项目内节点位置
-      const maxLevel = Math.max(...Object.keys(levelGroups).map(Number));
       const projectStartX = xOffset;
 
       Object.entries(levelGroups).forEach(([levelStr, levelNodes]) => {
@@ -391,7 +392,7 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
             id: nodeData.id,
             type: 'contract',
             position: { x, y },
-            data: nodeData,
+            data: nodeData as unknown as Record<string, unknown>,
             sourcePosition: Position.Bottom,
             targetPosition: Position.Top,
           });
@@ -429,7 +430,7 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
       }
 
       // 标签文本
-      const labelText = isRegistered ? '已注册' : '未注册';
+      const labelText = isRegistered ? 'Registered' : 'Not registered';
       const labelColor = isRegistered ? '#10B981' : '#F59E0B';
 
       return {
@@ -499,7 +500,7 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
   }, [initialEdges, setEdges]);
 
   // 节点点击处理 - 添加高亮效果
-  const onNodeClickHandler = useCallback((event: React.MouseEvent, node: Node) => {
+  const onNodeClickHandler = useCallback((_event: React.MouseEvent, node: Node) => {
     const connectedNodeIds = new Set<string>([node.id]);
 
     edges.forEach((edge) => {
@@ -559,9 +560,9 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
       >
         <Alert variant="destructive" className="max-w-md bg-red-500/10 border-red-500/30">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>加载失败</AlertTitle>
+          <AlertTitle>Load failed</AlertTitle>
           <AlertDescription>
-            {(error as Error).message || '无法加载合约依赖关系图数据'}
+            {(error as Error).message || 'Failed to load contract dependency graph data'}
           </AlertDescription>
         </Alert>
       </div>
@@ -578,7 +579,7 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
           background: WEB3_COLORS.background.dark,
         }}
       >
-        <span className="text-white/50">暂无合约数据</span>
+        <span className="text-white/50">No contract data</span>
       </div>
     );
   }
@@ -612,7 +613,7 @@ export function ContractDependencyGraph({ onNodeClick }: ContractDependencyGraph
       <div className="mb-4 p-3 rounded-xl border border-white/10 backdrop-blur-lg" style={{ background: 'rgba(15, 15, 26, 0.6)' }}>
         <div className="flex flex-wrap items-center gap-6">
           <span className="text-white/70 text-xs">
-            <strong>连线说明：</strong>
+            <strong>Edge Legend:</strong>
           </span>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">

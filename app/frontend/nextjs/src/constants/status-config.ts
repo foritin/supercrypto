@@ -4,8 +4,8 @@
  * 消除各组件中重复的 STATUS_BADGE_VARIANTS 定义
  */
 
-import type { KycStatus } from '@/services/kyc'
 import type { AssetStatus } from '@/services/asset'
+import type { KycStatus } from '@/services/kyc'
 
 /**
  * KYC 状态 → Badge variant 映射

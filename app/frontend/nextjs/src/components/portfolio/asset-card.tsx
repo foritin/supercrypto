@@ -1,12 +1,13 @@
 'use client';
 
-import * as React from 'react';
-import { Card } from '@/components/ui/card';
+import { Clock, TrendingUp, ArrowUpRight, ChevronRight } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Clock, TrendingUp, ArrowUpRight, ChevronRight } from 'lucide-react';
+
 
 export interface AssetCardProps {
   id: string;

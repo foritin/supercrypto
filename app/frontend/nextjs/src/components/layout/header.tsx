@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
 import {
   Settings,
   Wrench,
   Menu as MenuIcon,
-  ChevronDown,
   ChevronRight,
   Wallet,
   BookOpen,
@@ -25,22 +23,13 @@ import {
   Landmark,
   type LucideIcon,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { RemoveScroll } from "react-remove-scroll";
-import { WalletConnect } from "@/components/wallet-connect";
-import { LanguageSwitcher } from "@/components/web3/language-switcher";
-import { useCurrentUser } from "@/hooks";
-import { useGodMode } from "@/hooks/use-god-mode";
-import { cn } from "@/lib/utils";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+
+import { Button } from "@/components/ui/button";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -50,8 +39,19 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WalletConnect } from "@/components/wallet-connect";
+import { LanguageSwitcher } from "@/components/web3/language-switcher";
+import { useCurrentUser } from "@/hooks";
+import { useGodMode } from "@/hooks/use-god-mode";
+import { cn } from "@/lib/utils";
 
 // Environment check - only show dev tools in development environment
 const ENV = process.env.NEXT_PUBLIC_ENV || "development";

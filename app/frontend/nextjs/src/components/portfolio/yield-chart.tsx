@@ -1,5 +1,6 @@
 'use client';
 
+import { TrendingUp, DollarSign } from 'lucide-react';
 import * as React from 'react';
 import {
   AreaChart,
@@ -14,15 +15,15 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { Card } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { TrendingUp, DollarSign } from 'lucide-react';
 
 export type ChartType = 'area' | 'line' | 'bar';
 export type TimeRange = '7d' | '30d' | '90d' | '1y' | 'all';
 
-interface YieldDataPoint {
+export interface YieldDataPoint {
   date: string;
   timestamp: number;
   value: number;
@@ -40,6 +41,18 @@ interface YieldChartProps {
   className?: string;
   height?: number;
   title?: string;
+}
+
+interface TooltipPayloadEntry {
+  color?: string;
+  name?: string;
+  value?: number;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadEntry[];
+  label?: string;
 }
 
 // Mock data
@@ -74,17 +87,17 @@ const timeRanges: { value: TimeRange; label: string }[] = [
   { value: 'all', label: 'ALL' },
 ];
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload || payload.length === 0) return null;
   return (
     <div className="glass border border-primary/30 rounded-xl p-4 shadow-xl">
       <p className="text-white/60 text-sm mb-2">{label}</p>
       <div className="space-y-2">
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry, index: number) => (
           <div key={index} className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
             <span className="text-white/70 text-sm">{entry.name}:</span>
-            <span className="text-white font-semibold">${entry.value.toLocaleString()}</span>
+            <span className="text-white font-semibold">${(entry.value ?? 0).toLocaleString()}</span>
           </div>
         ))}
       </div>
@@ -120,6 +133,7 @@ export function YieldChart({
     if (filteredData.length === 0) return null;
     const first = filteredData[0];
     const last = filteredData[filteredData.length - 1];
+    if (!first || !last) return null;
     const totalYield = last.value - first.invested;
     const yieldPercentage = ((totalYield / first.invested) * 100);
     return { totalYield, yieldPercentage, currentValue: last.value };

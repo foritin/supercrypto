@@ -10,9 +10,10 @@
  * - 审核日志
  */
 
-import { get, post, put } from "./api";
-import type { KycStatusType, OnChainSyncStatus } from "./admin";
 import type { ReviewStepsData } from "@/components/admin-kyc/stepper-reducer";
+
+import type { KycStatusType, OnChainSyncStatus } from "./admin";
+import { get, post, put } from "./api";
 
 // ============ Types ============
 

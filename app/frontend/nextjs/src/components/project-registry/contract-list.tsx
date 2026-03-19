@@ -6,13 +6,15 @@
 
 'use client';
 
-import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { useState } from 'react';
+
 import { Badge } from '@/components/ui/badge';
-import { ContractStatusBadge } from './project-status-badge';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { ContractStatusInfo, DependencyType } from '@/types/project-registry';
+
+import { ContractStatusBadge } from './project-status-badge';
 
 interface ContractListProps {
   contracts: ContractStatusInfo[];
@@ -28,10 +30,10 @@ const typeColors: Record<DependencyType, string> = {
 };
 
 const typeLabels: Record<DependencyType, string> = {
-  primary: '主合约',
-  required: '必须',
-  business: '业务',
-  optional: '可选',
+  primary: 'Primary',
+  required: 'Required',
+  business: 'Business',
+  optional: 'Optional',
 };
 
 // 依赖类型对应的 Badge 样式
@@ -98,11 +100,11 @@ export function ContractList({
 
               <div className="flex items-center gap-2">
                 {isBlocking && (
-                  <Badge variant="destructive">阻塞中</Badge>
+                  <Badge variant="destructive">Blocked</Badge>
                 )}
                 {isDeployable && !contract.is_deployed && (
                   <Badge className="bg-green-500/20 text-green-400 border-green-500/40">
-                    可部署
+                    Deployable
                   </Badge>
                 )}
                 <ContractStatusBadge status={contract.status} />
@@ -115,7 +117,7 @@ export function ContractList({
                 {/* 地址 */}
                 {contract.address && (
                   <div className="mb-2">
-                    <span className="text-muted-foreground">地址: </span>
+                    <span className="text-muted-foreground">Address: </span>
                     <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded">
                       {contract.address.slice(0, 10)}...{contract.address.slice(-8)}
                     </code>
@@ -125,7 +127,7 @@ export function ContractList({
                 {/* 缺失必须依赖 */}
                 {contract.missing_required_deps.length > 0 && (
                   <div className="mb-2">
-                    <span className="text-red-400">缺失必须依赖: </span>
+                    <span className="text-red-400">Missing required deps: </span>
                     <div className="inline-flex flex-wrap gap-1">
                       {contract.missing_required_deps.map((dep) => (
                         <Badge key={dep} variant="destructive" className="text-xs">

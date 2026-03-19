@@ -6,8 +6,8 @@
  * Feature: kyc-face-liveness-storage
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // ============================================================================
 // Helper: Generate hex string (fast-check v4 doesn't have hexaString)
@@ -125,6 +125,9 @@ describe('Property 1: Base64 Image Upload Round-Trip', () => {
         // Verify the request was made with correct parameters
         expect(mockPost).toHaveBeenCalled()
         const lastCall = mockPost.mock.calls[mockPost.mock.calls.length - 1]
+        if (!lastCall) {
+          return true
+        }
         expect(lastCall[1]).toEqual({
           image_data: imageData,
           document_type: documentType,
@@ -177,6 +180,9 @@ describe('Property 1: Base64 Image Upload Round-Trip', () => {
         // Verify the request was made with correct parameters
         expect(mockPost).toHaveBeenCalled()
         const lastCall = mockPost.mock.calls[mockPost.mock.calls.length - 1]
+        if (!lastCall) {
+          return true
+        }
         expect(lastCall[1]).toEqual({
           image_data: imageData,
           document_type: documentType,
@@ -229,7 +235,11 @@ describe('Property 1: Base64 Image Upload Round-Trip', () => {
 
           // Verify request structure
           expect(mockPost).toHaveBeenCalledTimes(1)
-          const [endpoint, body] = mockPost.mock.calls[0]
+          const firstCall = mockPost.mock.calls[0]
+          if (!firstCall) {
+            return true
+          }
+          const [endpoint, body] = firstCall
 
           // Endpoint should be the upload-base64 path
           expect(endpoint).toBe('/user/kyc/upload-base64')
@@ -342,7 +352,19 @@ describe('Property 3: Submission Field Mapping', () => {
   it('property: faceImagePath should correctly map to face_image_url in API request', () => {
     fc.assert(
       fc.property(kycFormDataArb, (formData) => {
-        const apiRequest = buildKycApiRequest(formData)
+        const normalizedFormData = {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          dateOfBirth: formData.dateOfBirth,
+          nationality: formData.nationality,
+          documentType: formData.documentType,
+          documentNumber: formData.documentNumber,
+          documentExpiry: formData.documentExpiry,
+          ...(formData.faceImagePath ? { faceImagePath: formData.faceImagePath } : {}),
+          ...(formData.livenessVideoPath ? { livenessVideoPath: formData.livenessVideoPath } : {}),
+        }
+
+        const apiRequest = buildKycApiRequest(normalizedFormData)
 
         if (formData.faceImagePath) {
           // When faceImagePath is set, face_image_url should have the same value
@@ -365,7 +387,19 @@ describe('Property 3: Submission Field Mapping', () => {
   it('property: livenessVideoPath should correctly map to liveness_video_url in API request', () => {
     fc.assert(
       fc.property(kycFormDataArb, (formData) => {
-        const apiRequest = buildKycApiRequest(formData)
+        const normalizedFormData = {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          dateOfBirth: formData.dateOfBirth,
+          nationality: formData.nationality,
+          documentType: formData.documentType,
+          documentNumber: formData.documentNumber,
+          documentExpiry: formData.documentExpiry,
+          ...(formData.faceImagePath ? { faceImagePath: formData.faceImagePath } : {}),
+          ...(formData.livenessVideoPath ? { livenessVideoPath: formData.livenessVideoPath } : {}),
+        }
+
+        const apiRequest = buildKycApiRequest(normalizedFormData)
 
         if (formData.livenessVideoPath) {
           // When livenessVideoPath is set, liveness_video_url should have the same value
@@ -401,8 +435,8 @@ describe('Property 3: Submission Field Mapping', () => {
             documentType: 'passport',
             documentNumber: 'ABC123456',
             documentExpiry: '2030-01-01',
-            faceImagePath: includeFace ? facePath : undefined,
-            livenessVideoPath: includeVideo ? videoPath : undefined,
+            ...(includeFace ? { faceImagePath: facePath } : {}),
+            ...(includeVideo ? { livenessVideoPath: videoPath } : {}),
           }
 
           const apiRequest = buildKycApiRequest(formData)
@@ -480,8 +514,8 @@ describe('Property 3: Submission Field Mapping', () => {
             documentType: 'passport',
             documentNumber: 'ABC123456',
             documentExpiry: '2030-01-01',
-            faceImagePath: faceValue as string | undefined,
-            livenessVideoPath: videoValue as string | undefined,
+            ...((faceValue as string | undefined) ? { faceImagePath: faceValue as string } : {}),
+            ...((videoValue as string | undefined) ? { livenessVideoPath: videoValue as string } : {}),
           }
 
           const apiRequest = buildKycApiRequest(formData)

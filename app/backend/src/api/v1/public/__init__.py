@@ -16,6 +16,7 @@ from src.api.v1.public import (
     kyc,
     staking,
     subscriptions,
+    time,
 )
 
 router = APIRouter()
@@ -47,3 +48,6 @@ router.include_router(staking.router, prefix="/staking", tags=["Public Staking"]
 router.include_router(
     subscriptions.router, prefix="/subscriptions", tags=["Public Subscriptions"]
 )
+
+# 时间 - UTC 时间同步
+router.include_router(time.router, prefix="/time", tags=["Public Time"])

@@ -10,12 +10,13 @@
  * - KYC 流程三步骤完成逻辑 (人脸拍照、活体检测、手持证照)
  */
 
-import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, it, expect, vi, afterEach } from "vitest";
+
 import { ReviewPanel } from "@/components/admin-kyc/review-panel";
-import type { KycDetail, RiskLevel, ReviewPriority } from "@/services/admin-kyc";
 import type { KycStatusType } from "@/services/admin";
+import type { KycDetail, RiskLevel, ReviewPriority } from "@/services/admin-kyc";
 
 // ============================================================================
 // Mocks
@@ -63,8 +64,6 @@ function createMockKycDetail(
     id_front: "https://example.com/id_front.jpg",
     id_back: "https://example.com/id_back.jpg",
     selfie: "https://example.com/selfie.jpg",
-    face_image: undefined,
-    liveness_video: undefined,
     ...overrides.documents,
   };
 
@@ -155,7 +154,6 @@ describe("Admin Review Panel Integration - Requirements 3.1, 4.1", () => {
      * **Validates: Requirements 3.1**
      */
     it("should render all tabs in the review panel", async () => {
-      const user = userEvent.setup();
       const kycDetail = createMockKycDetail({
         documents: {
           face_image: "https://example.com/face_image.jpg",
@@ -182,7 +180,7 @@ describe("Admin Review Panel Integration - Requirements 3.1, 4.1", () => {
         documents: {
           id_front: "https://example.com/id_front.jpg",
           id_back: "https://example.com/id_back.jpg",
-          selfie: undefined, // No selfie so face_image label is used
+          selfie: "", // No selfie so face_image label is used
           face_image: "https://example.com/face_image.jpg",
         },
       });
@@ -258,9 +256,7 @@ describe("Admin Review Panel Integration - Requirements 3.1, 4.1", () => {
     it("should not display face_image when not present in documents", async () => {
       const user = userEvent.setup();
       const kycDetail = createMockKycDetail({
-        documents: {
-          face_image: undefined,
-        },
+        documents: {},
       });
 
       render(<ReviewPanel kycDetail={kycDetail} {...defaultReviewPanelProps} />);
@@ -280,9 +276,7 @@ describe("Admin Review Panel Integration - Requirements 3.1, 4.1", () => {
     it("should not display liveness_video when not present in documents", async () => {
       const user = userEvent.setup();
       const kycDetail = createMockKycDetail({
-        documents: {
-          liveness_video: undefined,
-        },
+        documents: {},
       });
 
       render(<ReviewPanel kycDetail={kycDetail} {...defaultReviewPanelProps} />);

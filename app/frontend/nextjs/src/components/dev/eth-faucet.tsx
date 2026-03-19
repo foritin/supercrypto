@@ -4,13 +4,13 @@
  * Developer tool for sending ETH to addresses via Hardhat
  * Only available to admin users in hardhat environment
  */
+import { Fuel, Send, RefreshCw, User, AlertTriangle, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Fuel, Send, RefreshCw, User, AlertTriangle, Loader2 } from 'lucide-react'
-import { useAccount } from 'wagmi'
+import { useAccount, useSwitchChain } from 'wagmi'
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -19,16 +19,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { HARDHAT_RPC_URL } from '@/config/wagmi'
+import { useCurrentUser, useNativeBalance } from '@/hooks'
 import { notification } from '@/lib/notification'
 import { devToolsService, type TokenRecipient } from '@/services/dev-tools'
-import { useCurrentUser } from '@/hooks'
+
+// EIP-1193 Provider 类型扩展
+declare global {
+  interface Window {
+    ethereum?: {
+      on?: (event: string, handler: (...args: unknown[]) => void) => void
+      removeListener?: (event: string, handler: (...args: unknown[]) => void) => void
+      request?: (args: { method: string; params?: unknown[] }) => Promise<unknown>
+    }
+  }
+}
 
 export function EthFaucet() {
   const { t } = useTranslation()
-  const { isConnected } = useAccount()
+  const { isConnected, address: currentAddress } = useAccount()
   const { isAdmin } = useCurrentUser()
+  const { refetch: refetchBalance } = useNativeBalance()
   const [address, setAddress] = useState('')
-  const [amount, setAmount] = useState('10')
+  const [amount, setAmount] = useState('100')
   const [isSending, setIsSending] = useState(false)
   const [lastResult, setLastResult] = useState<{ old: number; new: number } | null>(null)
 
@@ -53,6 +66,47 @@ export function EthFaucet() {
     if (isAdmin) fetchRecipients()
   }, [isAdmin])
 
+  // 获取切换网络函数
+  const { switchChain, isPending: isSwitching } = useSwitchChain()
+
+  // 刷新 MetaMask 余额（通过切换网络再切回）
+  const handleRefreshMetaMask = async () => {
+    try {
+      // 方案1: 尝试使用 Mainnet -> Hardhat（Mainnet 通常已配置）
+      try {
+        await switchChain({ chainId: 1 })
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        await switchChain({ chainId: 31337 })
+        notification.success(t('dev.faucet.refreshMetaMaskSuccess'))
+        return
+      } catch (mainnetError) {
+        console.log('Mainnet switch failed, trying alternative...', mainnetError)
+      }
+
+      // 方案2: 如果 Mainnet 失败，尝试直接重新连接 Hardhat
+      // 先断开再连接，强制刷新
+      await switchChain({ chainId: 31337 })
+
+      // 方案3: 使用 provider 强制刷新
+      if (typeof window !== 'undefined' && window.ethereum?.request) {
+        // 调用 eth_requestAccounts 刷新账户状态
+        await window.ethereum.request({
+          method: 'eth_requestAccounts',
+        })
+        notification.success(t('dev.faucet.refreshMetaMaskDone'))
+      }
+    } catch (error) {
+      console.error('Refresh failed:', error)
+      notification.error(t('dev.faucet.refreshMetaMaskFailed'))
+      // 确保回到 Hardhat
+      try {
+        await switchChain({ chainId: 31337 })
+      } catch {
+        // 忽略
+      }
+    }
+  }
+
   const handleSend = async () => {
     if (!address || !parseFloat(amount)) return
     setIsSending(true)
@@ -63,7 +117,17 @@ export function EthFaucet() {
         amount_eth: parseFloat(amount),
       })
       setLastResult({ old: result.old_balance_eth, new: result.new_balance_eth })
-      notification.success(t('dev.faucet.success', { amount: result.amount_eth }))
+
+      // 如果充值的是当前连接的钱包地址，提示刷新 MetaMask
+      const isCurrentUser = address.toLowerCase() === currentAddress?.toLowerCase()
+      if (isCurrentUser) {
+        notification.success(t('dev.faucet.successWithRefreshHint', { amount: result.amount_eth }), { duration: 5000 })
+      } else {
+        notification.success(t('dev.faucet.success', { amount: result.amount_eth }))
+      }
+
+      // Refresh wallet balance after faucet success
+      await refetchBalance()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('common.error')
       notification.error(message)
@@ -186,7 +250,7 @@ export function EthFaucet() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               min={0.1}
-              max={1000}
+              max={10000}
               step={1}
               disabled={isSending}
               className="flex-1"
@@ -213,6 +277,37 @@ export function EthFaucet() {
                   {lastResult.new.toFixed(4)} <span className="text-sm font-normal">ETH</span>
                 </span>
               </div>
+            </div>
+            {/* RPC URL 诊断信息 */}
+            <div className="mt-3 pt-3 border-t border-primary/10">
+              <p className="text-xs text-muted-foreground">
+                {t('dev.faucet.rpcNodeLabel')}: {HARDHAT_RPC_URL}
+              </p>
+              <p className="text-xs text-yellow-500 mt-1">
+                {t('dev.faucet.rpcMismatchWarning')}
+              </p>
+            </div>
+
+            {/* MetaMask 刷新提示和按钮 */}
+            <div className="mt-3 pt-3 border-t border-primary/10 flex flex-col gap-2">
+              <span className="text-xs text-yellow-500 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                {t('dev.faucet.refreshHint')}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshMetaMask}
+                disabled={isSwitching}
+                className="w-full text-xs"
+              >
+                {isSwitching ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                )}
+                {isSwitching ? t('dev.faucet.refreshingButton') : t('dev.faucet.refreshButton')}
+              </Button>
             </div>
           </div>
         )}

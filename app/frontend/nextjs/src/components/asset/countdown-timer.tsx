@@ -1,8 +1,8 @@
 "use client";
 
+import { Clock, Hourglass, AlertCircle } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Clock, Hourglass, AlertCircle } from "lucide-react";
 
 interface CountdownTimerProps {
   /** 认购开始时间 */
@@ -93,17 +93,18 @@ export function CountdownTimer({ startTime, endTime, className = "" }: Countdown
     const state = calculateState();
     setCountdownState(state);
 
-    if (state?.targetTime) {
+    if (state && state.type !== "ended") {
       setTimeLeft(calculateTimeLeft(state.targetTime));
     }
   }, [startTime, endTime, t]);
 
   // 每秒更新倒计时
   useEffect(() => {
-    if (!countdownState?.targetTime) return;
+    if (!countdownState || countdownState.type === "ended") return;
+    const targetTime = countdownState.targetTime;
 
     const timer = setInterval(() => {
-      const newTimeLeft = calculateTimeLeft(countdownState.targetTime);
+      const newTimeLeft = calculateTimeLeft(targetTime);
       setTimeLeft(newTimeLeft);
 
       // 倒计时结束，重新计算状态

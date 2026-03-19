@@ -130,7 +130,7 @@ export const staleTimePresets = {
 };
 
 // Prefetch helper for common data
-export function prefetchCommonData(queryClient: QueryClient) {
+export function prefetchCommonData(_queryClient: QueryClient) {
   // Prefetch asset list on app start
   // This will be populated when the query is used
 }

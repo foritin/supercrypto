@@ -18,6 +18,8 @@ export interface ReadinessDetails {
   no_missing_deps: boolean;
   /** 已设置主合约 */
   has_primary: boolean;
+  /** 已配置 TREASURY 地址 */
+  treasury_configured: boolean;
 }
 
 // ===== 绑定的 Asset 信息 =====
@@ -88,6 +90,9 @@ export type {
   PrepareUnregisterResponse,
   ConfirmUnregisterRequest,
   ConfirmUnregisterResponse,
+  PrepareSetTreasuryRequest,
+  ConfirmSetTreasuryRequest,
+  TreasuryBindingResponse,
   ContractValidationResult,
   ContractValidationResponse,
 } from '@/services/contract'

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * 下载 TensorFlow.js WASM 后端文件
  * 用于本地部署 WASM 文件，提升加载速度

@@ -1,16 +1,11 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
 import { Copy, Check, ExternalLink, LogOut, RotateCcw, ChevronDown, Wallet, Network, Shield, Hash, User, Clock } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
+import React, { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useEnsName, usePublicClient } from 'wagmi'
-import { cn, getExplorerUrl } from '@/lib/utils'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +17,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { cn, getExplorerUrl } from '@/lib/utils'
 import { truncateAddress } from '@/utils/format'
+
 import type { KycStatus } from './styles'
 
 // 背景图 - NASA 地球夜景

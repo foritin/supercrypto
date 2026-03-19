@@ -7,31 +7,32 @@
  * Migrated from Ant Design to shadcn/ui
  * @validates Requirements 16.13
  */
-import { useState, useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import {
   DollarSign,
   Send,
   RefreshCw,
   Plus,
   User,
-  Wallet,
   AlertTriangle,
   Loader2,
   Check,
   Circle,
 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { parseUnits, formatUnits } from "viem";
 import {
   useAccount,
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
   useChainId,
+  useBalance,
 } from "wagmi";
-import { parseUnits, formatUnits } from "viem";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -40,17 +41,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import { notification } from "@/lib/notification";
 import {
   MOCK_TOKEN_INFO,
   MOCK_TOKEN_ABI,
   type MockTokenType,
 } from "@/contracts/mock-token";
-import { devToolsService, type TokenRecipient } from "@/services/dev-tools";
 import { useCurrentUser, useStablecoinAddresses } from "@/hooks";
-import { transactionAuditService } from "@/services/transaction-audit";
+import { notification } from "@/lib/notification";
 import { truncateAddress } from "@/lib/utils";
+import { devToolsService, type TokenRecipient } from "@/services/dev-tools";
+import { transactionAuditService } from "@/services/transaction-audit";
 
 type MintStep =
   | "idle"
@@ -102,7 +102,18 @@ export function MockTokenMint() {
     }
   }, [isAdmin]);
 
-  // Read admin balance (手动 refetch，不再自动轮询)
+  // Read admin ETH balance (用于检查是否有 gas)
+  const {
+    data: ethBalance,
+    isLoading: isEthBalanceLoading,
+  } = useBalance({
+    address: address as `0x${string}` | undefined,
+    query: {
+      enabled: !!address,
+    },
+  });
+
+  // Read admin token balance (手动 refetch，不再自动轮询)
   const {
     data: adminBalance,
     isLoading: isBalanceLoading,
@@ -116,6 +127,9 @@ export function MockTokenMint() {
       enabled: !!address,
     },
   });
+
+  // 检查是否有足够的 ETH 支付 gas
+  const hasEthForGas = ethBalance && ethBalance.value > 0n;
 
   // Read recipient balance (手动 refetch，不再自动轮询)
   const { data: recipientBalance, refetch: refetchRecipientBalance } =
@@ -135,12 +149,11 @@ export function MockTokenMint() {
   const {
     writeContract,
     data: txHash,
-    isPending: isWriting,
     reset: resetWrite,
   } = useWriteContract();
 
   // Wait for transaction
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+  const { isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({
       hash: txHash,
     });
@@ -500,6 +513,40 @@ export function MockTokenMint() {
           </Select>
         </div>
 
+        {/* Address Warning */}
+        {!isAddressesLoading && !tokenAddress && (
+          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span className="font-medium text-yellow-500">
+                  合约地址未配置
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  请检查后端服务是否正常运行，并确认 contract_deployment 表中已部署 {tokenInfo.symbol} 合约
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ETH Balance Warning - 如果没有 ETH 支付 gas */}
+        {!isEthBalanceLoading && !hasEthForGas && (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span className="font-medium text-red-500">
+                  ETH 余额不足
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  铸造代币需要支付 gas 费用。请先到“水龙头”标签页给当前账户充值 ETH。
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Admin Balance */}
         <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
           <div className="grid grid-cols-2 gap-4">
@@ -656,7 +703,7 @@ export function MockTokenMint() {
         {/* Mint & Transfer Button */}
         <Button
           onClick={handleMintAndTransfer}
-          disabled={!parsedMintAmount || parsedMintAmount <= 0 || !selectedRecipient || isProcessing || isAddressesLoading}
+          disabled={!parsedMintAmount || parsedMintAmount <= 0 || !selectedRecipient || isProcessing || isAddressesLoading || !hasEthForGas}
           className="w-full h-11"
         >
           {isProcessing ? (

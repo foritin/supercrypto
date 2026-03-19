@@ -173,7 +173,7 @@ export async function recordContractCall(params: {
       tx_type: params.txType || TransactionType.CONTRACT_CALL,
       contract_name: params.contractName,
       function_name: params.functionName,
-      function_args: params.functionArgs,
+      ...(params.functionArgs ? { function_args: params.functionArgs } : {}),
       description: params.description || `Call ${params.contractName}.${params.functionName}`,
     });
   } catch (error) {

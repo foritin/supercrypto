@@ -29,21 +29,21 @@ class AuditLog(AbstractModel):
 
     # 基本信息
     category = fields.CharEnumField(
-        AuditCategory, max_length=50, description="审计类别", index=True
+        AuditCategory, max_length=50, description="审计类别", db_index=True
     )
     action = fields.CharEnumField(
-        AuditAction, max_length=100, description="操作类型", index=True
+        AuditAction, max_length=100, description="操作类型", db_index=True
     )
     status = fields.CharEnumField(
         AuditStatus,
         max_length=20,
         default=AuditStatus.SUCCESS,
         description="操作状态",
-        index=True,
+        db_index=True,
     )
 
     # 操作主体信息
-    operator_id = fields.IntField(null=True, description="操作者账户ID", index=True)
+    operator_id = fields.IntField(null=True, description="操作者账户ID", db_index=True)
     operator_address = fields.CharField(
         max_length=128, null=True, description="操作者钱包地址"
     )
@@ -52,9 +52,9 @@ class AuditLog(AbstractModel):
     )
 
     # 操作目标信息
-    target_id = fields.IntField(null=True, description="目标对象ID", index=True)
+    target_id = fields.IntField(null=True, description="目标对象ID", db_index=True)
     target_type = fields.CharField(
-        max_length=50, null=True, description="目标对象类型", index=True
+        max_length=50, null=True, description="目标对象类型", db_index=True
     )
     target_address = fields.CharField(
         max_length=128, null=True, description="目标钱包地址"
@@ -71,23 +71,23 @@ class AuditLog(AbstractModel):
 
     # 请求信息
     ip_address = fields.CharField(
-        max_length=45, null=True, description="操作IP地址", index=True
+        max_length=45, null=True, description="操作IP地址", db_index=True
     )
     user_agent = fields.CharField(max_length=500, null=True, description="用户代理")
     request_id = fields.CharField(
-        max_length=64, null=True, description="请求ID", index=True
+        max_length=64, null=True, description="请求ID", db_index=True
     )
 
     # 区块链相关（如果适用）
     tx_hash = fields.CharField(
-        max_length=128, null=True, description="交易哈希", index=True
+        max_length=128, null=True, description="交易哈希", db_index=True
     )
     block_number = fields.BigIntField(null=True, description="区块高度")
     gas_used = fields.BigIntField(null=True, description="Gas消耗")
 
     # 时间信息
     operated_at = fields.DatetimeField(
-        default=get_utc_time, description="操作时间(UTC)", index=True
+        default=get_utc_time, description="操作时间(UTC)", db_index=True
     )
     duration_ms = fields.IntField(null=True, description="操作耗时(毫秒)")
 
@@ -100,7 +100,7 @@ class AuditLog(AbstractModel):
         max_length=32,
         default="hardhat",
         description="环境: hardhat/sepolia/mainnet",
-        index=True,
+        db_index=True,
     )
 
     class Meta:

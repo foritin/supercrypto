@@ -8,8 +8,9 @@
  * **Validates: Requirements 2.2**
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
+
 import { truncateAddress } from '@/lib/utils'
 
 // 生成有效的以太坊地址 (0x + 40 hex chars)

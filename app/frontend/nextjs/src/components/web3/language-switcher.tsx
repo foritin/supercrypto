@@ -1,16 +1,17 @@
 'use client'
-import { useState, useEffect } from 'react'
 import { Globe } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { SUPPORTED_LANGUAGES, LANGUAGE_NAMES, type SupportedLanguage } from '@/providers/i18n-provider'
+
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SUPPORTED_LANGUAGES, LANGUAGE_NAMES, type SupportedLanguage } from '@/providers/i18n-provider'
 
 export function LanguageSwitcher({ ariaLabel }: { ariaLabel?: string }) {
   const { i18n } = useTranslation()

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { RiskDisclosureContent } from "./RiskDisclosureContent";
 
 export const metadata: Metadata = {

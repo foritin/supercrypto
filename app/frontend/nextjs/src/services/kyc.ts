@@ -8,8 +8,8 @@
  * - 管理员接口：/admin/kyc/*（审核、列表）
  * - 开发工具：/kyc/dev/*
  */
-import { api } from '@/services/api'
 import { PUBLIC_PATHS, USER_PATHS, ADMIN_PATHS, DEV_PATHS } from '@/constants/api-paths'
+import { api } from '@/services/api'
 
 // ============================================================================
 // KYC 文件上传类型定义
@@ -306,12 +306,13 @@ export async function applyKyc(data: KycApplyRequest): Promise<KycFullResponse> 
  * @returns 更新后的状态
  */
 export async function updateKycStatus(targetStatus: string): Promise<{ status: string }> {
-  const formData = new FormData()
-  formData.append('target_status', targetStatus)
+  const requestBody = {
+    target_status: targetStatus,
+  }
 
   const response = await api.post<API.ResponseData<{ status: string }>>(
     USER_PATHS.KYC_STATUS_UPDATE,
-    formData
+    requestBody
   )
   return response.object_data as { status: string }
 }
@@ -402,6 +403,20 @@ export async function quickApproveKyc(walletAddress: string): Promise<KycFullRes
 }
 
 /**
+ * Confirm quick approve KYC after wallet tx is mined (dev only)
+ */
+export async function confirmQuickApproveKyc(
+  walletAddress: string,
+  txHash: string
+): Promise<KycFullResponse> {
+  const response = await api.post<API.ResponseData<KycFullResponse>>(
+    DEV_PATHS.KYC_QUICK_APPROVE_CONFIRM(walletAddress),
+    { tx_hash: txHash }
+  )
+  return response.object_data as KycFullResponse
+}
+
+/**
  * Reset KYC (dev only)
  */
 export async function resetKyc(
@@ -436,5 +451,6 @@ export const kycService = {
 
   // 开发工具
   quickApprove: quickApproveKyc,
+  confirmQuickApprove: confirmQuickApproveKyc,
   reset: resetKyc,
 }

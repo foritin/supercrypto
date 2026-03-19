@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { z } from 'zod';
 import { useAccount } from 'wagmi';
+import { z } from 'zod';
+
 import { applyKyc, kycService, type KycApplyRequest, type KycDocumentInfo, type KycIdType } from '@/services/kyc';
 
 // 计算年龄的辅助函数
@@ -107,6 +108,7 @@ export interface KycState {
   submittedAt: number | null;
   reviewedAt: number | null;
   rejectionReason: string | null;
+  onChainSyncStatus: string | null;
   
   // Draft
   lastSaved: number | null;
@@ -160,6 +162,7 @@ const initialState: KycState = {
   submittedAt: null,
   reviewedAt: null,
   rejectionReason: null,
+  onChainSyncStatus: null,
   lastSaved: null,
   isDirty: false,
   errors: {},
@@ -229,10 +232,11 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
             submittedAt: response.submitted_at ? new Date(response.submitted_at).getTime() : null,
             reviewedAt: response.reviewed_at ? new Date(response.reviewed_at).getTime() : null,
             rejectionReason: response.reject_reason,
+            onChainSyncStatus: response.on_chain_sync_status || null,
           }));
           return; // 不加载本地草稿
         }
-      } catch (error) {
+      } catch {
         // 404 或其他错误表示没有 KYC 记录，继续加载草稿
         console.log('[KYC] No backend KYC record, will load draft if exists');
       }
@@ -258,7 +262,7 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
             for (const [key, value] of Object.entries(parsed.formData)) {
               // 只保留非空值（但保留 false 布尔值）
               if (value !== '' && value !== undefined && value !== null) {
-                cleanedFormData[key as keyof KycFormData] = value as KycFormData[keyof KycFormData];
+                (cleanedFormData as Record<string, unknown>)[key] = value;
               }
             }
           }
@@ -313,6 +317,8 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
 
       return () => clearTimeout(timer);
     }
+
+    return undefined;
   }, [state.formData, state.isDirty, address]);
 
   const updateFormData = React.useCallback((data: Partial<KycFormData>) => {
@@ -547,7 +553,7 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
         if (parsed.formData) {
           for (const [key, value] of Object.entries(parsed.formData)) {
             if (value !== '' && value !== undefined && value !== null) {
-              cleanedFormData[key as keyof KycFormData] = value as KycFormData[keyof KycFormData];
+              (cleanedFormData as Record<string, unknown>)[key] = value;
             }
           }
         }
@@ -602,7 +608,7 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
         const idTypeMap: Record<string, KycIdType> = {
           'passport': 'passport',
           'national_id': 'id_card',
-          'drivers_license': 'driver_license',
+          'drivers_license': 'drivers_license',
         };
         
         // 获取上传的文件路径
@@ -625,7 +631,7 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
             id_number: data.documentNumber || '',
             document_expiry: data.documentExpiry || '',
             id_front_url: frontUrl,
-            id_back_url: backUrl,
+            ...(backUrl ? { id_back_url: backUrl } : {}),
           });
         }
       }
@@ -637,15 +643,11 @@ export function KycProvider({ children }: { children: React.ReactNode }) {
       const request: KycApplyRequest = {
         full_name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
         date_of_birth: data.dateOfBirth || '',
-        country_code: data.nationality?.toUpperCase().slice(0, 2),
+        country_code: (data.nationality || '').toUpperCase().slice(0, 2),
         documents,
-        // 映射 selfiePath 到 selfie_url (Requirements 6.3)
-        // selfiePath 是手持证照上传后的 MinIO 路径
-        selfie_url: data.selfiePath || undefined,
-        // 映射 faceImagePath 到 face_image_url (Requirements 6.3)
-        face_image_url: data.faceImagePath || undefined,
-        // 映射 livenessVideoPath 到 liveness_video_url (Requirements 6.4)
-        liveness_video_url: data.livenessVideoPath || undefined,
+        ...(data.selfiePath ? { selfie_url: data.selfiePath } : {}),
+        ...(data.faceImagePath ? { face_image_url: data.faceImagePath } : {}),
+        ...(data.livenessVideoPath ? { liveness_video_url: data.livenessVideoPath } : {}),
       };
       
       console.log('[KYC] Submitting request:', request);

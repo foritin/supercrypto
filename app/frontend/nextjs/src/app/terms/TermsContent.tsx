@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
 import { FileText, Scale, Users, Shield, AlertCircle, Globe, Wallet } from "lucide-react";
+import React from "react";
 import { useTranslation } from "react-i18next";
-import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+
 import { PageBadge } from "@/components/ui/page-badge";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 
 /**
  * ════════════════════════════════════════════════════════════════
@@ -110,28 +111,28 @@ export function TermsContent() {
                     <li className="flex gap-2">
                       <span className="text-primary">•</span>
                       <span>
-                        <strong className="text-white/90">"Platform"</strong>{" "}
+                        <strong className="text-white/90">&quot;Platform&quot;</strong>{" "}
                         {t("terms.definitions.platform", "refers to the SuperCrypto website, applications, and all related services.")}
                       </span>
                     </li>
                     <li className="flex gap-2">
                       <span className="text-primary">•</span>
                       <span>
-                        <strong className="text-white/90">"User"</strong>{" "}
+                        <strong className="text-white/90">&quot;User&quot;</strong>{" "}
                         {t("terms.definitions.user", "refers to any individual or entity accessing or using the Platform.")}
                       </span>
                     </li>
                     <li className="flex gap-2">
                       <span className="text-primary">•</span>
                       <span>
-                        <strong className="text-white/90">"Assets"</strong>{" "}
+                        <strong className="text-white/90">&quot;Assets&quot;</strong>{" "}
                         {t("terms.definitions.assets", "refers to tokenized real-world assets available on the Platform.")}
                       </span>
                     </li>
                     <li className="flex gap-2">
                       <span className="text-primary">•</span>
                       <span>
-                        <strong className="text-white/90">"Wallet"</strong>{" "}
+                        <strong className="text-white/90">&quot;Wallet&quot;</strong>{" "}
                         {t("terms.definitions.wallet", "refers to your digital wallet used to interact with the Platform.")}
                       </span>
                     </li>

@@ -5,10 +5,13 @@
  */
 'use client';
 
-import React from 'react';
 import { Search, X } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import React from 'react';
 import { type DateRange } from 'react-day-picker';
+import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -17,11 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
+import type { 
+  AuditAction} from '@/types/audit';
 import { 
   AuditCategory, 
-  AuditAction, 
   AuditStatus,
 } from '@/types/audit';
 
@@ -104,7 +106,7 @@ export const AuditLogFilters: React.FC<AuditLogFiltersProps> = ({
         <div className="relative w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={t('admin.audit.filters.searchPlaceholder', '搜索操作者/目标/描述')}
+            placeholder={t('admin.audit.filters.searchPlaceholder')}
             className="pl-9"
             value={filters.search}
             onChange={(e) => handleFieldChange('search', e.target.value)}
@@ -117,12 +119,12 @@ export const AuditLogFilters: React.FC<AuditLogFiltersProps> = ({
           onValueChange={(value) => handleFieldChange('category', value as AuditCategory | 'all')}
         >
           <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder={t('admin.audit.filters.categoryPlaceholder', '选择类别')} />
+            <SelectValue placeholder={t('admin.audit.filters.categoryPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             {CATEGORY_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {t(opt.labelKey, opt.value === 'all' ? '全部类别' : opt.value)}
+                {t(opt.labelKey, opt.value === 'all' ? 'All categories' : opt.value)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -134,12 +136,12 @@ export const AuditLogFilters: React.FC<AuditLogFiltersProps> = ({
           onValueChange={(value) => handleFieldChange('status', value as AuditStatus | 'all')}
         >
           <SelectTrigger className="w-[120px]">
-            <SelectValue placeholder={t('admin.audit.filters.statusPlaceholder', '选择状态')} />
+            <SelectValue placeholder={t('admin.audit.filters.statusPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {t(opt.labelKey, opt.value === 'all' ? '全部状态' : opt.value)}
+                {t(opt.labelKey, opt.value === 'all' ? 'All statuses' : opt.value)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -151,12 +153,12 @@ export const AuditLogFilters: React.FC<AuditLogFiltersProps> = ({
           onValueChange={(value) => handleFieldChange('operatorType', value)}
         >
           <SelectTrigger className="w-[120px]">
-            <SelectValue placeholder={t('admin.audit.filters.operatorTypePlaceholder', '操作者类型')} />
+            <SelectValue placeholder={t('admin.audit.filters.operatorTypePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             {OPERATOR_TYPE_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {t(opt.labelKey, opt.value === 'all' ? '全部类型' : opt.value)}
+                {t(opt.labelKey, opt.value === 'all' ? 'All types' : opt.value)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -164,17 +166,17 @@ export const AuditLogFilters: React.FC<AuditLogFiltersProps> = ({
 
         {/* 时间范围 */}
         <DateRangePicker
-          value={filters.dateRange}
           onChange={(range) => handleFieldChange('dateRange', range)}
-          placeholder={t('admin.audit.filters.dateRangePlaceholder', '选择日期范围')}
+          placeholder={t('admin.audit.filters.dateRangePlaceholder')}
           className="w-[260px]"
           dateFormat="yyyy-MM-dd"
+          {...(filters.dateRange ? { value: filters.dateRange } : {})}
         />
 
         {/* 重置按钮 */}
         <Button variant="outline" onClick={onReset}>
           <X className="h-4 w-4 mr-1" />
-          {t('admin.audit.filters.reset', '重置')}
+          {t('admin.audit.filters.reset')}
         </Button>
       </div>
     </div>

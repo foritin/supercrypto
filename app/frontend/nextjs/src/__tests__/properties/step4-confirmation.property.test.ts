@@ -16,8 +16,9 @@
  * - 6.3: WHEN 用户未勾选所有必要复选框 THEN KYC_System SHALL 禁用"提交"按钮
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
+
 import {
   step4Schema,
   validateStep4,
@@ -86,6 +87,12 @@ const validKycFormDataArb = fc.record({
   // Step 2: 证件信息
   idType: fc.constantFrom<KycIdType>('passport', 'id_card', 'driver_license'),
   idNumber: fc.string({ minLength: 1, maxLength: 50 }),
+  documentExpiry: fc.date({ min: new Date('2026-01-01'), max: new Date('2035-12-31') }).map((d) => {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }),
   idFrontUrl: fc.webUrl(),
   idBackUrl: fc.webUrl(),
   // Step 3: 自拍验证

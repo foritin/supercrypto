@@ -1,15 +1,16 @@
 'use client';
 
+import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
+import { QueryClientProvider } from '@tanstack/react-query';
 import * as React from 'react';
 import { WagmiProvider, http } from 'wagmi';
-import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
 import { mainnet, sepolia, arbitrum } from 'wagmi/chains';
+
 import '@rainbow-me/rainbowkit/styles.css';
 import { createQueryClient } from '@/lib/query-client';
-import { QueryClientProvider } from '@tanstack/react-query';
 
 // Hardhat 开发网络 RPC URL
-const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://YOUR_RPC_HOST:8545';
+const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://127.0.0.1:8545';
 
 // 自定义 Hardhat 链配置
 // 注意: 如需启用 Multicall3 批量调用，需先在 Hardhat 节点部署 Multicall3 合约
@@ -35,6 +36,14 @@ const customHardhat = {
 
 const IS_PRODUCTION = process.env.NEXT_PUBLIC_ENV === 'production';
 
+const createBatchedHttp = (url?: string) =>
+  http(url, {
+    batch: {
+      wait: 30,
+      batchSize: 20,
+    },
+  });
+
 // 根据环境选择支持的网络列表
 const chains = IS_PRODUCTION 
   ? [mainnet, arbitrum] as const
@@ -42,8 +51,8 @@ const chains = IS_PRODUCTION
 
 // 显式指定 RPC transport，确保 wagmi 能正确连接到 Hardhat 节点
 const transports = IS_PRODUCTION
-  ? { [mainnet.id]: http(), [arbitrum.id]: http() }
-  : { [customHardhat.id]: http(HARDHAT_RPC_URL), [sepolia.id]: http() };
+  ? { [mainnet.id]: createBatchedHttp(), [arbitrum.id]: createBatchedHttp() }
+  : { [customHardhat.id]: createBatchedHttp(HARDHAT_RPC_URL), [sepolia.id]: createBatchedHttp() };
 
 // RainbowKit + Wagmi 配置
 const config = getDefaultConfig({

@@ -9,10 +9,11 @@
  * 滚动条样式、选中文本样式和焦点可见样式。
  */
 
-import { describe, test, expect } from 'vitest';
-import * as fc from 'fast-check';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import * as fc from 'fast-check';
+import { describe, test, expect } from 'vitest';
 
 // 读取 base.css 文件内容
 const basePath = path.join(__dirname, '../../styles/base.css');

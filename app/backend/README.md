@@ -172,7 +172,7 @@ API 采用四层路由结构，按认证级别组织：
 |------|------|
 | auth | 当前用户信息 |
 | kyc | 提交 KYC 申请 |
-| subscriptions | 创建认购、我的认购列表 |
+| subscriptions | 认购 V1/V2（pending、receipt、confirm、列表） |
 | staking | 创建质押、我的质押列表 |
 | transactions_audit | 用户交易审计记录 |
 

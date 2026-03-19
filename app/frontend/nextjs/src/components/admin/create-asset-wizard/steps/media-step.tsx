@@ -10,16 +10,16 @@
  */
 'use client'
 
+import { ArrowRight, ArrowLeft, Upload, X, AlertCircle, SkipForward, Image as ImageIcon } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, ArrowLeft, Upload, X, AlertCircle, SkipForward, Image as ImageIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-import { useWizard } from '../wizard-context'
 import type { StepComponentProps, UploadFileItem } from '../types'
 import { MEDIA_CATEGORIES } from '../types'
+import { useWizard } from '../wizard-context'
 
 // ============ 常量定义 ============
 
@@ -82,16 +82,17 @@ function DropZone({
 }: DropZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const zoneRef = useRef<HTMLDivElement>(null)
 
   // Auto focus support for accessibility
   useEffect(() => {
-    if (autoFocus && buttonRef.current) {
+    if (autoFocus && zoneRef.current) {
       const timer = setTimeout(() => {
-        buttonRef.current?.focus()
+        zoneRef.current?.focus()
       }, 100)
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [autoFocus])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -118,9 +119,10 @@ function DropZone({
     const files = Array.from(e.dataTransfer.files).filter(file => 
       file.type.startsWith('image/')
     )
+    const firstFile = files[0]
     
     if (files.length > 0) {
-      onFilesSelected(multiple ? files : [files[0]])
+      onFilesSelected(multiple ? files : firstFile ? [firstFile] : [])
     }
   }, [disabled, multiple, onFilesSelected])
 
@@ -149,16 +151,17 @@ function DropZone({
   }, [onFilesSelected])
 
   return (
-    <button
-      ref={buttonRef}
-      type="button"
+    <div
+      ref={zoneRef}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
       id={id}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      disabled={disabled}
+      aria-disabled={disabled || undefined}
       aria-label={ariaLabel}
       className={cn(
         'relative transition-all duration-200 text-left',
@@ -181,7 +184,7 @@ function DropZone({
         aria-hidden="true"
       />
       {children}
-    </button>
+    </div>
   )
 }
 
@@ -369,11 +372,13 @@ export function MediaStep({ onNext, onPrev, onSkip }: StepComponentProps) {
     if (files.length === 0) return
     
     const file = files[0]
+    if (!file) return
     if (!validateFile(file)) return
     
     // 清理旧的预览 URL
-    if (coverFile[0]?.preview) {
-      URL.revokeObjectURL(coverFile[0].preview)
+    const currentCoverFile = coverFile[0]
+    if (currentCoverFile?.preview) {
+      URL.revokeObjectURL(currentCoverFile.preview)
     }
     
     const newFile = createUploadFileItem(file, 'cover')
@@ -415,8 +420,9 @@ export function MediaStep({ onNext, onPrev, onSkip }: StepComponentProps) {
    * 移除封面图
    */
   const handleRemoveCover = useCallback(() => {
-    if (coverFile[0]?.preview) {
-      URL.revokeObjectURL(coverFile[0].preview)
+    const currentCoverFile = coverFile[0]
+    if (currentCoverFile?.preview) {
+      URL.revokeObjectURL(currentCoverFile.preview)
     }
     setCoverFile([])
   }, [coverFile])
@@ -497,12 +503,12 @@ export function MediaStep({ onNext, onPrev, onSkip }: StepComponentProps) {
                 label={t('admin.assets.wizard.media.dragOrClick')} 
                 sublabel={t('admin.assets.wizard.media.supportedFormats')}
               />
-            ) : (
+            ) : coverFile[0] ? (
               <ImagePreview
                 file={coverFile[0]}
                 onRemove={handleRemoveCover}
               />
-            )}
+            ) : null}
           </DropZone>
         </div>
 

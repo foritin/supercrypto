@@ -16,10 +16,6 @@
  * @validates Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useConnection, useWalletClient, usePublicClient } from 'wagmi'
-import { parseAbi } from 'viem'
 import {
   ShieldCheck,
   ShieldOff,
@@ -28,9 +24,12 @@ import {
   Snowflake,
   RefreshCw,
 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useConnection, useWalletClient, usePublicClient } from 'wagmi'
 
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -45,7 +44,8 @@ import { useTransactionTimeout } from '@/hooks/use-tx-timeout'
 import { notification } from '@/lib/notification'
 import { recordRevocation } from '@/services/admin-kyc'
 import type { KycDetail } from '@/services/admin-kyc'
-import { KYC_MANAGER_ABI } from '@/constants/abis/kyc-manager-abi'
+import { usePlatformInfoStore } from '@/stores/platform-info-store'
+
 import { savePendingTx, clearPendingTx, getPendingTx } from './tx-recovery'
 
 // ============ Types ============
@@ -72,6 +72,16 @@ interface InvestorInfo {
   frozen: boolean
 }
 
+type InvestorInfoObject = {
+  verified: boolean
+  country: string
+  accreditedInvestor: boolean
+  addedTime: bigint
+  verificationTime: bigint
+  expiryTime: bigint
+  frozen: boolean
+}
+
 /** 交易状态 */
 type TxStatus = 'idle' | 'verifying' | 'signing' | 'confirming' | 'recording' | 'success' | 'failed'
 
@@ -86,6 +96,59 @@ function formatTimestamp(timestamp: bigint): string {
     return '-'
   }
   return new Date(Number(timestamp) * 1000).toLocaleString()
+}
+
+function parseInvestorInfo(result: unknown): InvestorInfo {
+  if (Array.isArray(result)) {
+    const tuple = result as unknown[]
+    if (tuple.length >= 7) {
+      const [verified, country, accreditedInvestor, addedTime, verificationTime, expiryTime, frozen] = tuple
+      if (
+        typeof verified === 'boolean' &&
+        typeof country === 'string' &&
+        typeof accreditedInvestor === 'boolean' &&
+        typeof addedTime === 'bigint' &&
+        typeof verificationTime === 'bigint' &&
+        typeof expiryTime === 'bigint' &&
+        typeof frozen === 'boolean'
+      ) {
+        return {
+          verified,
+          country,
+          accreditedInvestor,
+          addedTime,
+          verificationTime,
+          expiryTime,
+          frozen,
+        }
+      }
+    }
+  }
+
+  if (result && typeof result === 'object') {
+    const info = result as Partial<InvestorInfoObject>
+    if (
+      typeof info.verified === 'boolean' &&
+      typeof info.country === 'string' &&
+      typeof info.accreditedInvestor === 'boolean' &&
+      typeof info.addedTime === 'bigint' &&
+      typeof info.verificationTime === 'bigint' &&
+      typeof info.expiryTime === 'bigint' &&
+      typeof info.frozen === 'boolean'
+    ) {
+      return {
+        verified: info.verified,
+        country: info.country,
+        accreditedInvestor: info.accreditedInvestor,
+        addedTime: info.addedTime,
+        verificationTime: info.verificationTime,
+        expiryTime: info.expiryTime,
+        frozen: info.frozen,
+      }
+    }
+  }
+
+  throw new Error('Unexpected investor info shape')
 }
 
 // ============ Sub-components ============
@@ -210,28 +273,24 @@ export function OnChainStatusPanel({
     setError(null)
 
     try {
-      const abi = parseAbi(KYC_MANAGER_ABI)
+      let kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
+      if (!kycAbi || kycAbi.length === 0) {
+        await usePlatformInfoStore.getState().refresh()
+        kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
+      }
+      if (!kycAbi || kycAbi.length === 0) {
+        setError('KYC ABI not found in platform info')
+        return
+      }
 
       const result = await publicClient.readContract({
         address: contractAddress as `0x${string}`,
-        abi,
-        functionName: 'getInvestorInfo',
+        abi: kycAbi,
+        functionName: 'get_investor_info',
         args: [kyc.wallet_address as `0x${string}`],
       })
 
-      // result is a struct (tuple) from Vyper — viem returns it as an array
-      const tuple = result as readonly [boolean, string, boolean, bigint, bigint, bigint, boolean]
-      const [verified, country, accreditedInvestor, addedTime, verificationTime, expiryTime, frozen] = tuple
-
-      setInvestorInfo({
-        verified,
-        country,
-        accreditedInvestor,
-        addedTime,
-        verificationTime,
-        expiryTime,
-        frozen,
-      })
+      setInvestorInfo(parseInvestorInfo(result))
     } catch (err) {
       const errorMessage = (err as Error).message || ''
       setError(errorMessage.slice(0, 200))
@@ -268,12 +327,21 @@ export function OnChainStatusPanel({
         return
       }
 
-      // Step 3: 链上验证 verifiers() 调用
-      const abi = parseAbi(KYC_MANAGER_ABI)
+      // Step 3: 从 platformInfoStore 获取 KYC ABI
+      let kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
+      if (!kycAbi || kycAbi.length === 0) {
+        await usePlatformInfoStore.getState().refresh()
+        kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
+      }
+      if (!kycAbi || kycAbi.length === 0) {
+        notification.error('KYC ABI not found in platform info')
+        setTxStatus('failed')
+        return
+      }
 
       const isVerifier = await publicClient.readContract({
         address: contractAddress as `0x${string}`,
-        abi,
+        abi: kycAbi,
         functionName: 'verifiers',
         args: [address as `0x${string}`],
       })
@@ -284,13 +352,13 @@ export function OnChainStatusPanel({
         return
       }
 
-      // Step 4: 发起链上交易 - removeInvestor
+      // Step 4: 发起链上交易 - admin_remove_investor
       setTxStatus('signing')
 
       const hash = await walletClient.writeContract({
         address: contractAddress as `0x${string}`,
-        abi,
-        functionName: 'removeInvestor',
+        abi: kycAbi,
+        functionName: 'admin_remove_investor',
         args: [
           kyc.wallet_address as `0x${string}`,
           revocationReason || t('admin.kyc.onchain.defaultRevocationReason'),

@@ -3,10 +3,11 @@
  * ABI and addresses for MockUSDT and MockUSDC
  */
 
-// 合约地址 (优先从环境变量读取，回退到 deploy_info 默认值)
+// 合约地址 (优先从环境变量读取，否则为空)
+// 注意：必须从后端或环境变量获取，不要硬编码，避免地址不匹配导致的错误
 export const MOCK_TOKEN_ADDRESSES = {
-  MockUSDT: (process.env.NEXT_PUBLIC_MOCK_USDT_ADDRESS || '0xb09da8a5B236fE0295A345035287e80bb0008290') as `0x${string}`,
-  MockUSDC: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS || '0x5095d3313C76E8d29163e40a0223A5816a8037D8') as `0x${string}`,
+  MockUSDT: (process.env.NEXT_PUBLIC_MOCK_USDT_ADDRESS || '') as `0x${string}`,
+  MockUSDC: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS || '') as `0x${string}`,
 } as const
 
 // Token metadata

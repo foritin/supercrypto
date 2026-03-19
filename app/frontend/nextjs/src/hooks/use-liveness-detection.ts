@@ -625,6 +625,7 @@ export function useLivenessDetection(
       actionStartTime: 0,
       actionDetected: false,
       baselinePose: null,
+      consecutiveDetections: 0,
     };
     setState({
       isReady: false,

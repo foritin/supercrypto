@@ -12,9 +12,10 @@
  * - 各步骤条件渲染 (OCR 数据有/无、风险详情有/无)
  */
 
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, screen, cleanup, within } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+
 import { ReviewStepperModal } from "@/components/admin-kyc/review-stepper-modal";
 import type { KycDetail, RiskLevel, ReviewPriority } from "@/services/admin-kyc";
 
@@ -114,12 +115,12 @@ vi.mock("framer-motion", () => ({
     }) => {
       // Filter out motion-specific props
       const {
-        variants,
-        initial,
-        animate,
-        exit,
-        transition,
-        custom,
+        variants: _variants,
+        initial: _initial,
+        animate: _animate,
+        exit: _exit,
+        transition: _transition,
+        custom: _custom,
         ...htmlProps
       } = props;
       return <div {...htmlProps}>{children}</div>;
@@ -130,8 +131,8 @@ vi.mock("framer-motion", () => ({
 // Mock next/image for DocumentReviewPanel
 vi.mock("next/image", () => ({
   default: (props: Record<string, unknown>) => {
-    const { fill, unoptimized, ...rest } = props;
-    // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+    const { fill: _fill, unoptimized: _unoptimized, ...rest } = props;
+    // eslint-disable-next-line jsx-a11y/alt-text
     return <img {...rest} />;
   },
 }));
@@ -489,8 +490,8 @@ describe("ReviewStepperModal", () => {
       const kycDetail = createMockKycDetail({
         risk_details: {
           factors: [
-            { description: "高风险国家", score: 30 },
-            { description: "大额交易", score: 15 },
+            { type: "jurisdiction", description: "高风险国家", score: 30 },
+            { type: "transaction", description: "大额交易", score: 15 },
           ],
           pep_matches: [],
           sanction_matches: [],

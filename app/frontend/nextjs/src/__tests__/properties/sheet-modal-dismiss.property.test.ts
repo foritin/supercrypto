@@ -16,8 +16,8 @@
  * and verifies it with fast-check without rendering React components.
  */
 
-import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
+import { describe, it, expect } from 'vitest';
 
 // Pure function that simulates the zoom logic from ImageViewerModal
 // Zoom out: setZoom((z) => Math.max(0.5, z - 0.25))

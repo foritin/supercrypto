@@ -15,22 +15,19 @@
  * @validates Requirements 2.1, 2.2, 2.3, 2.4, 6.4, 6.5, 6.6
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useTranslation } from 'react-i18next'
 import {
   ChevronLeft,
   ChevronRight,
-  X,
   Loader2,
   CheckCircle,
   AlertCircle,
   Clock,
   Check,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,14 +38,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-
-import { KycStepper } from './kyc-stepper'
-import { KycWizardContent } from './kyc-wizard-content'
-import { Step1BasicInfo } from './steps/step1-basic-info'
-import { Step2DocumentUpload } from './steps/step2-document-upload'
-import { Step3SelfieVerification } from './steps/step3-selfie-verification'
-import { Step4Confirmation } from './steps/step4-confirmation'
-
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
   type KycWizardFormData,
   kycWizardDefaultValues,
@@ -58,6 +49,14 @@ import {
   validateStep4,
 } from '@/lib/validations/kyc-wizard'
 import { applyKyc, type KycApplyRequest } from '@/services/kyc'
+
+import { KycStepper } from './kyc-stepper'
+import { KycWizardContent } from './kyc-wizard-content'
+import { Step1BasicInfo } from './steps/step1-basic-info'
+import { Step2DocumentUpload } from './steps/step2-document-upload'
+import { Step3SelfieVerification } from './steps/step3-selfie-verification'
+import { Step4Confirmation } from './steps/step4-confirmation'
+
 
 // ============ 类型定义 ============
 
@@ -158,6 +157,14 @@ function clearStorage(): void {
  * 将表单数据转换为 API 请求格式 (多证件版本)
  */
 function toApiRequest(data: KycWizardFormData): KycApplyRequest {
+  const idTypeMap = {
+    passport: 'passport',
+    id_card: 'id_card',
+    driver_license: 'drivers_license',
+  } as const
+
+  const mappedIdType = idTypeMap[data.idType]
+
   return {
     full_name: data.fullName,
     date_of_birth: data.dateOfBirth,
@@ -165,11 +172,11 @@ function toApiRequest(data: KycWizardFormData): KycApplyRequest {
     // 多证件格式：将单证件数据包装成数组
     documents: [
       {
-        id_type: data.idType,
+        id_type: mappedIdType,
         id_number: data.idNumber,
         document_expiry: data.documentExpiry,
         id_front_url: data.idFrontUrl,
-        id_back_url: data.idType === 'passport' ? undefined : data.idBackUrl,
+        ...(data.idType !== 'passport' && data.idBackUrl ? { id_back_url: data.idBackUrl } : {}),
       },
     ],
     selfie_url: data.selfieUrl,
@@ -388,14 +395,6 @@ export function KycWizard({
   }, [currentStep])
 
   /**
-   * 处理取消
-   * Requirements 2.4: 用户在任意步骤点击"取消"，弹窗确认后退出向导
-   */
-  const handleCancel = useCallback(() => {
-    setShowCancelDialog(true)
-  }, [])
-
-  /**
    * 确认取消
    */
   const confirmCancel = useCallback(() => {
@@ -520,7 +519,7 @@ export function KycWizard({
       infoConfirmed: formData.infoConfirmed,
     })
     updateStepValidation(3, step4Result.success)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [])
 
   // ============ 渲染步骤内容 ============
@@ -688,7 +687,7 @@ export function KycWizard({
                 aria-label={t('kyc.navigation.previousAriaLabel')}
               >
                 <ChevronLeft className="w-4 h-4" aria-hidden="true" />
-                <span className="text-sm">{t('kyc.navigation.back', 'Back')}</span>
+                <span className="text-sm">{t('kyc.navigation.back')}</span>
               </Button>
             )}
           </div>
@@ -711,11 +710,11 @@ export function KycWizard({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                    <span>{t('kyc.confirmation.submitting', 'Submitting...')}</span>
+                    <span>{t('kyc.confirmation.submitting')}</span>
                   </>
                 ) : (
                   <>
-                    <span>{t('kyc.confirmation.submit', 'Submit')}</span>
+                    <span>{t('kyc.confirmation.submit')}</span>
                     <CheckCircle className="w-4 h-4" aria-hidden="true" />
                   </>
                 )}
@@ -730,9 +729,9 @@ export function KycWizard({
                   'bg-primary hover:bg-primary/90 text-bg-dark font-medium',
                   'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30'
                 )}
-                aria-label={t('kyc.navigation.continueAriaLabel', 'Continue to next step')}
+                aria-label={t('kyc.navigation.continueAriaLabel')}
               >
-                <span>{t('kyc.navigation.continue', 'Continue')}</span>
+                <span>{t('kyc.navigation.continue')}</span>
                 <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </Button>
             )}

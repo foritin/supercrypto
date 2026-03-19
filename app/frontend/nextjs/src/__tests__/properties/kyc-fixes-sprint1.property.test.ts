@@ -12,8 +12,9 @@
  * Feature: kyc-fixes-sprint1
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect, beforeEach } from 'vitest'
+
 import { shouldShowAdmissionButton } from '@/components/admin-kyc/admission-button'
 import {
   savePendingTx,

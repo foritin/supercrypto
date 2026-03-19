@@ -1,6 +1,8 @@
 'use client'
 
 import { create } from 'zustand'
+
+import { validateBackendNetworkOrThrow } from '@/lib/network-guard'
 import type {
   ChainInfo,
   AddressInfo,
@@ -61,6 +63,7 @@ export const usePlatformInfoStore = create<PlatformInfoState>()((set, get) => ({
     try {
       console.debug('[PlatformInfo] fetching /public/info ...')
       const data = await fetchPlatformInfo()
+      validateBackendNetworkOrThrow(data.chain_info?.network)
       console.debug('[PlatformInfo] loaded:', data.chain_info?.chain_name, `(${data.address_info?.length} contracts)`)
       set({
         chainInfo: data.chain_info,

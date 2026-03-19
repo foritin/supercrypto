@@ -12,6 +12,7 @@
  * const label = useConstantLabel('asset_type', 'real_estate', 'zh')
  */
 import { useQuery } from '@tanstack/react-query'
+
 import { constantsService, type ConstantItem } from '@/services/constants'
 
 /** 缓存时间: 5 分钟 */

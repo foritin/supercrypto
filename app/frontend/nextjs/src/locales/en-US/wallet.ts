@@ -8,6 +8,7 @@ const wallet = {
     signing: "Signing...",
     loggingIn: "Logging in...",
     loginSuccess: "Login successful",
+    metamaskLocked: "MetaMask locked detected, please reconnect",
     switchNetwork: "Switch Network",
     copyAddress: "Copy Address",
     viewOnExplorer: "View on Explorer",

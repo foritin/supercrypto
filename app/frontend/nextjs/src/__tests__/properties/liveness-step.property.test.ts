@@ -6,8 +6,8 @@
  * Feature: kyc-media-display-and-selfie
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
 
 // ============================================================================
 // Helper: Generate hex string (fast-check v4 doesn't have hexaString)
@@ -343,7 +343,6 @@ describe('Property 4: Three-Step Completion Gate', () => {
     fc.assert(
       fc.property(
         selfieBase64Arb,
-        selfiePathArb,
         (selfieBase64) => {
           const state = {
             capturedImage: null, // Missing face photo

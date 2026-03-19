@@ -4,13 +4,14 @@
  */
 'use client';
 
-import React from 'react';
-import { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { DataTable } from '@/components/ui/data-table';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTable } from '@/components/ui/data-table';
 import {
   Tooltip,
   TooltipContent,
@@ -18,6 +19,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { AuditLog, AuditCategory, AuditAction, AuditStatus } from '@/types/audit';
+
 import { AddressDisplay } from './web3/address-display';
 
 interface AuditLogTableProps {
@@ -89,7 +91,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
   const columns: ColumnDef<AuditLog>[] = [
     {
       accessorKey: 'operated_at',
-      header: t('admin.audit.table.time', '操作时间'),
+      header: t('admin.audit.table.time'),
       size: 180,
       cell: ({ row }) => (
         <span className="text-[13px] text-white/85">
@@ -99,7 +101,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
     },
     {
       id: 'operator',
-      header: t('admin.audit.table.operator', '操作者'),
+      header: t('admin.audit.table.operator'),
       size: 180,
       cell: ({ row }) => {
         const record = row.original;
@@ -128,7 +130,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
     },
     {
       accessorKey: 'category',
-      header: t('admin.audit.table.category', '类别'),
+      header: t('admin.audit.table.category'),
       size: 100,
       cell: ({ row }) => {
         const category = row.original.category as AuditCategory;
@@ -142,7 +144,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
     },
     {
       accessorKey: 'action',
-      header: t('admin.audit.table.action', '操作'),
+      header: t('admin.audit.table.action'),
       size: 150,
       cell: ({ row }) => {
         const action = row.original.action as AuditAction;
@@ -155,7 +157,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
     },
     {
       id: 'target',
-      header: t('admin.audit.table.target', '目标'),
+      header: t('admin.audit.table.target'),
       size: 180,
       cell: ({ row }) => {
         const record = row.original;
@@ -180,7 +182,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
     },
     {
       accessorKey: 'status',
-      header: t('admin.audit.table.status', '状态'),
+      header: t('admin.audit.table.status'),
       size: 100,
       cell: ({ row }) => {
         const status = row.original.status as AuditStatus;
@@ -195,7 +197,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
     },
     {
       accessorKey: 'description',
-      header: t('admin.audit.table.description', '描述'),
+      header: t('admin.audit.table.description'),
       cell: ({ row }) => {
         const description = row.original.description;
         if (!description) {
@@ -219,7 +221,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
     },
     {
       id: 'actions',
-      header: t('admin.audit.table.actions', '操作'),
+      header: t('admin.audit.table.actions'),
       size: 80,
       cell: ({ row }) => (
         <TooltipProvider>
@@ -235,7 +237,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {t('admin.audit.table.viewDetail', '查看详情')}
+              {t('admin.audit.table.viewDetail')}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -261,8 +263,8 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
         columns={columns}
         data={data}
         loading={loading}
-        pagination={paginationConfig}
-        emptyMessage={t('admin.audit.table.empty', '暂无审计日志')}
+        {...(paginationConfig ? { pagination: paginationConfig } : {})}
+        emptyMessage={t('admin.audit.table.empty')}
       />
     </div>
   );

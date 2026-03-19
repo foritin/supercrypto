@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
 import { Shield, DollarSign, Globe } from 'lucide-react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
+
 import { GlassCard } from '@/components/ui';
 import { cn } from '@/lib/utils';
 

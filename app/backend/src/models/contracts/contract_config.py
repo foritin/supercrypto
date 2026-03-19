@@ -50,7 +50,7 @@ class ContractConfig(AbstractModel, TimestampMixin):
 
     project_name = fields.CharField(
         max_length=100,
-        index=True,
+        db_index=True,
         description="项目名称: common, stablecoin, vanke, mock 等",
     )
 
@@ -58,7 +58,7 @@ class ContractConfig(AbstractModel, TimestampMixin):
     provider_key = fields.CharField(
         max_length=100,
         null=True,
-        index=True,
+        db_index=True,
         description="对应的 Provider Key 名称，如 VANKE_RWA_TOKEN",
     )
 

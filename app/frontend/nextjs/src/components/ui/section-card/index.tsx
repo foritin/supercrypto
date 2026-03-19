@@ -8,6 +8,7 @@
  * - 支持 default/error 两种变体
  */
 import React from 'react';
+
 import { cn } from '@/lib/utils';
 
 export interface SectionCardProps {

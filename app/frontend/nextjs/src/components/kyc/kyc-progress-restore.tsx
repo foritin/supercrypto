@@ -7,11 +7,12 @@
  * 如果有，显示提示让用户选择恢复或重新开始
  */
 
+import { RotateCcw, RefreshCw, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { RotateCcw, RefreshCw, X, Clock } from 'lucide-react'
-import { cn } from '@/lib/utils'
+
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 // ============ 类型定义 ============
 
@@ -139,7 +140,9 @@ export function KycProgressRestore({
 
   if (!isVisible || !savedProgress) return null
 
-  const timeAgo = formatTimeAgo(savedProgress.timestamp, t)
+  const timeAgo = formatTimeAgo(savedProgress.timestamp, (key, options) =>
+    String(t(key, options as Record<string, unknown>))
+  )
   const stepNames = [
     t('kyc.steps.personal.title'),
     t('kyc.steps.document.title'),
@@ -167,7 +170,7 @@ export function KycProgressRestore({
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 className="font-medium text-white text-sm">
-                {t('kyc.restore.title', 'Resume Your Progress?')}
+                {t('kyc.restore.title')}
               </h3>
               <p className="text-xs text-white/60 mt-1">
                 {t('kyc.restore.description', {
@@ -194,7 +197,7 @@ export function KycProgressRestore({
               className="h-8 px-3 bg-primary hover:bg-primary/90 text-bg-dark text-xs"
             >
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-              {t('kyc.restore.resume', 'Resume')}
+              {t('kyc.restore.resume')}
             </Button>
             <Button
               size="sm"
@@ -202,7 +205,7 @@ export function KycProgressRestore({
               onClick={handleClear}
               className="h-8 px-3 text-white/60 hover:text-white hover:bg-white/5 text-xs"
             >
-              {t('kyc.restore.restart', 'Start Over')}
+              {t('kyc.restore.restart')}
             </Button>
           </div>
         </div>

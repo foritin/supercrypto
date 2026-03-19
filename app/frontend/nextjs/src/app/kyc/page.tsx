@@ -1,17 +1,18 @@
 'use client';
 
-import * as React from 'react';
+import { CheckCircle, FileText, Shield, User, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
 import { Card } from '@/components/ui/card';
 import { StepIndicator } from '@/components/ui/step-indicator';
 import { KycProvider, useKycContext, type KycStatus } from '@/contexts/kyc-context';
-import { BasicInfoStep } from './steps/basic-info-step';
-import { IdentityStep } from './steps/identity-step';
-import { LivenessStep } from './steps/liveness-step';
-import { ConfirmationStep } from './steps/confirmation-step';
+
 import { KycLanding } from './components/kyc-landing';
 import { KycStatusPanel } from './components/kyc-status-panel';
-import { CheckCircle, FileText, Shield, User, RotateCcw } from 'lucide-react';
+import { BasicInfoStep } from './steps/basic-info-step';
+import { ConfirmationStep } from './steps/confirmation-step';
+import { IdentityStep } from './steps/identity-step';
+import { LivenessStep } from './steps/liveness-step';
 
 const steps = [
   { 
@@ -69,7 +70,7 @@ const statusMessages: Record<KycStatus, { title: string; description: string }> 
 
 function KycContent() {
   const { t } = useTranslation();
-  const { currentStep, status, showLanding, formData, lastSaved, goToStep, reset, isLoading } = useKycContext();
+  const { currentStep, status, showLanding, lastSaved, goToStep, reset, isLoading } = useKycContext();
 
   const renderStep = () => {
     switch (currentStep) {
@@ -135,15 +136,15 @@ function KycContent() {
             <div className="flex-1 flex justify-end">
               <button
                 onClick={() => {
-                  if (confirm(t('kyc.resetConfirm', 'Are you sure you want to clear all entered data? This action cannot be undone.'))) {
+                  if (confirm(t('kyc.resetConfirm'))) {
                     reset();
                   }
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white/60 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                title={t('kyc.reset', 'Clear all data')}
+                title={t('kyc.reset')}
               >
                 <RotateCcw className="h-4 w-4" />
-                <span className="hidden sm:inline">{t('kyc.reset', 'Reset')}</span>
+                <span className="hidden sm:inline">{t('kyc.reset')}</span>
               </button>
             </div>
           </div>
@@ -152,7 +153,7 @@ function KycContent() {
           </p>
           {lastSaved && (
             <p className="text-sm text-primary mt-2 text-center">
-              {t('kyc.draftSaved', 'Draft saved {{time}}', {
+              {t('kyc.draftSaved', {
                 time: new Date(lastSaved).toLocaleTimeString(),
               })}
             </p>
@@ -162,7 +163,7 @@ function KycContent() {
         {/* Step Indicator */}
         <Card className="p-6 mb-6 glass border-primary/20">
           <StepIndicator
-            steps={steps.map((s, i) => ({
+            steps={steps.map((s) => ({
               id: s.id,
               title: s.title,
               description: s.description,

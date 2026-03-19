@@ -11,13 +11,15 @@
  * - 4.8: IF a form submission fails due to validation, THEN THE Form_Handler SHALL highlight invalid fields and prevent submission
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import fc from 'fast-check'
-import { render, screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { render, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import fc from 'fast-check'
+import { useForm } from 'react-hook-form'
+import { describe, it, expect, vi } from 'vitest'
 import { z } from 'zod'
+
+import { Button } from '@/components/ui/button'
 import {
   Form,
   FormField,
@@ -27,7 +29,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { createAssetSchema } from '@/lib/validations/asset'
 import { kycApplySchema } from '@/lib/validations/kyc'
 import { priceUpdateSchema } from '@/lib/validations/price'
@@ -561,7 +562,11 @@ describe('Property 4: Form Validation Error Display', () => {
               // Verify form submission was called with valid data
               expect(onSubmit).toHaveBeenCalledTimes(1)
               // Check that the first argument contains the expected name
-              expect(onSubmit.mock.calls[0][0]).toEqual({ name: validName })
+              const firstCall = onSubmit.mock.calls[0]
+              if (!firstCall) {
+                return
+              }
+              expect(firstCall[0]).toEqual({ name: validName })
             })
 
             // Verify no error messages are displayed

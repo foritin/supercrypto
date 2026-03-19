@@ -5,7 +5,7 @@ import { mainnet, sepolia, arbitrum, type Chain } from 'wagmi/chains'
 const IS_PRODUCTION = process.env.NEXT_PUBLIC_ENV === 'production'
 
 // Hardhat 开发网络 RPC URL - 优先环境变量，默认远程开发服务器
-const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://YOUR_RPC_HOST:8545'
+const HARDHAT_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ?? 'http://127.0.0.1:8545'
 
 // 自定义 Hardhat 链配置
 // 注意: 如需启用 Multicall3 批量调用，需先在 Hardhat 节点部署 Multicall3 合约
@@ -72,6 +72,14 @@ export function getRpcUrl(chainId: number): string {
 // 导出 Hardhat RPC URL 供其他模块使用
 export { HARDHAT_RPC_URL }
 
+const createBatchedHttp = (url?: string) =>
+  http(url, {
+    batch: {
+      wait: 30,
+      batchSize: 20,
+    },
+  })
+
 // 注意: 主要 wagmi 配置现在通过 RainbowKit 的 getDefaultConfig 在 providers/web3-provider.tsx 中创建
 // 这个文件保留用于:
 // 1. 链配置常量导出
@@ -82,10 +90,10 @@ export { HARDHAT_RPC_URL }
 export const wagmiConfig = createConfig({
   chains: supportedChains as unknown as readonly [Chain, ...Chain[]],
   transports: {
-    [mainnet.id]: http(),
-    [arbitrum.id]: http(),
-    [sepolia.id]: http(),
-    [customHardhat.id]: http(HARDHAT_RPC_URL),
+    [mainnet.id]: createBatchedHttp(),
+    [arbitrum.id]: createBatchedHttp(),
+    [sepolia.id]: createBatchedHttp(),
+    [customHardhat.id]: createBatchedHttp(HARDHAT_RPC_URL),
   },
   ssr: true,
 })

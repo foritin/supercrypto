@@ -1,13 +1,21 @@
 "use client";
 
+import { Wallet, TrendingUp, Clock, CheckCircle, PauseCircle, Flame, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Wallet, TrendingUp, Clock, CheckCircle, PauseCircle, Flame } from "lucide-react";
+
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Button } from "@/components/ui/button";
 import { ProgressEnhanced } from "@/components/ui/progress-enhanced";
-import { AnimatedNumber } from "@/components/ui/animated-number";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { AssetDetail, AssetStatus } from "@/services/asset";
+
 import { CountdownTimer } from "./countdown-timer";
 import { InvestorStats } from "./investor-stats";
-import type { AssetDetail, AssetStatus } from "@/services/asset";
 
 interface InvestPanelProps {
   asset: AssetDetail;
@@ -114,6 +122,17 @@ export function InvestPanel({
   const { t } = useTranslation();
   const progress = (asset.subscribed_amount / asset.total_supply) * 100;
 
+  // 客户端检查认购时间是否已过期
+  const isSubscriptionExpired = (() => {
+    if (!asset.subscription_end_at) return false;
+    return new Date() >= new Date(asset.subscription_end_at);
+  })();
+
+  const isSubscriptionNotStarted = (() => {
+    if (!asset.subscription_start_at) return false;
+    return new Date() < new Date(asset.subscription_start_at);
+  })();
+
   // 获取按钮状态
   const getButtonState = () => {
     if (!isConnected) {
@@ -129,6 +148,20 @@ export function InvestPanel({
         disabled: false,
         hint: null,
         action: onGoToKyc,
+      };
+    }
+    if (isSubscriptionExpired) {
+      return {
+        text: t("assets.invest.subscriptionEnded"),
+        disabled: true,
+        hint: t("assets.invest.subscriptionEndedHint"),
+      };
+    }
+    if (isSubscriptionNotStarted) {
+      return {
+        text: t("assets.invest.subscriptionNotStarted"),
+        disabled: true,
+        hint: t("assets.invest.subscriptionNotStartedHint"),
       };
     }
     if (asset.status !== "active") {
@@ -158,23 +191,12 @@ export function InvestPanel({
         <StatusBadge status={asset.status as AssetStatus} progress={progress} t={t} />
       </div>
 
-      {/* 倒计时 - 创建紧迫感 */}
-      {/* 注意：当后端添加 subscription_start_time 和 subscription_end_time 字段后，
-          取消下面的注释并传入实际时间 */}
-      {/*
-      <div className="mb-5">
-        <CountdownTimer
-          startTime={asset.subscription_start_time}
-          endTime={asset.subscription_end_time}
-        />
-      </div>
-      */}
-      
-      {/* 演示模式：模拟倒计时效果 */}
-      {asset.status === "active" && (
+      {/* 倒计时 - 使用真实的认购时间窗口 */}
+      {(asset.subscription_start_at || asset.subscription_end_at) && (
         <div className="mb-5">
           <CountdownTimer
-            endTime={new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000)}
+            {...(asset.subscription_start_at ? { startTime: asset.subscription_start_at } : {})}
+            {...(asset.subscription_end_at ? { endTime: asset.subscription_end_at } : {})}
           />
         </div>
       )}
@@ -249,7 +271,7 @@ export function InvestPanel({
       </div>
 
       {/* 关键数据网格 */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-3 mb-4">
         <StatCard 
           label={t("assets.financials.expectedReturn")} 
           value={asset.apy_12m} 
@@ -261,6 +283,29 @@ export function InvestPanel({
           value={asset.current_price} 
           format="usd" 
         />
+      </div>
+
+      {/* T+1 起息提示 */}
+      <div className="mb-5 flex justify-center">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium cursor-help transition-colors hover:bg-blue-500/15">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{t("subscription:subscription.yield.tPlusOneBadge")}</span>
+                <Info className="h-3 w-3 opacity-60" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent 
+              side="bottom" 
+              className="max-w-[280px] bg-[#0B1426] border-white/10"
+            >
+              <p className="text-sm text-white/70">
+                {t("subscription:subscription.yield.tPlusOneTooltip")}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* 认购按钮 */}
@@ -288,7 +333,7 @@ export function InvestPanel({
       {isConnected && !isKycApproved && (
         <p className="text-center mt-3 text-sm text-white/40">
           <Button
-            variant="link"
+            variant="ghost"
             className="text-primary p-0 h-auto hover:underline"
             onClick={onGoToKyc}
           >

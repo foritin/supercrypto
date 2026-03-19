@@ -11,11 +11,12 @@
  * - 根据用户选择控制第三方脚本加载
  */
 
+import { Cookie, X, ChevronRight, Shield, BarChart3, Target } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Cookie, X, ChevronRight, Shield, BarChart3, Target } from 'lucide-react'
-import { cn } from '@/lib/utils'
+
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { Checkbox } from '@/components/ui/checkbox'
+import { cn } from '@/lib/utils'
 
 // ============ 类型定义 ============
 
@@ -149,12 +150,12 @@ function CookieCategoryCard({
         <Checkbox
           checked={enabled}
           disabled={required}
-          onCheckedChange={onToggle}
           className={cn(
             'w-5 h-5 rounded border-2',
             'data-[state=checked]:bg-primary data-[state=checked]:border-primary',
             required && 'opacity-50 cursor-not-allowed'
           )}
+          {...(onToggle ? { onCheckedChange: onToggle } : {})}
         />
       </div>
     </div>
@@ -183,6 +184,8 @@ export function CookieConsent({ className }: CookieConsentProps) {
       }, 1500)
       return () => clearTimeout(timer)
     }
+
+    return undefined
   }, [])
 
   // 接受全部
@@ -411,4 +414,3 @@ export default CookieConsent
 
 // 导出工具函数供其他组件使用
 export { loadPreferences, savePreferences, DEFAULT_PREFERENCES }
-export type { CookiePreferences }

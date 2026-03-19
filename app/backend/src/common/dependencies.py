@@ -37,6 +37,9 @@ from src.services.audit_service import AuditService, TransactionAuditService
 from src.services.auth_service import AuthService
 from src.services.chain_service import ChainService
 from src.services.contract_service import ContractService
+from src.services.deploy_config_loader_service import (
+    get_config_loader as get_deploy_config_loader,
+)
 from src.services.dev_service import DevToolsService
 from src.services.kyc_service import KycService
 from src.services.project_registry_service import ProjectRegistryService
@@ -44,8 +47,12 @@ from src.services.staking_service import StakingService
 from src.services.storage_service import StorageService
 from src.services.subscription_service import SubscriptionService
 from src.services.transaction_service import TransactionService
+from src.services.treasury_service import TreasuryService
 
 # ============ 模块级单例 ============
+
+# Treasury Service 单例
+treasury_service = TreasuryService()
 
 # 无状态 & 有内部缓存 → 全局共享
 admin_service = AdminService()
@@ -138,6 +145,10 @@ def get_project_registry_service(network: str = "hardhat") -> ProjectRegistrySer
     return _registry_instances[network]
 
 
+# 别名：供部署脚本使用
+get_config_loader = get_deploy_config_loader
+
+
 # ============ Session ============
 def get_session_service() -> SessionService:
     """依赖注入：获取会话服务（单例）"""
@@ -171,3 +182,9 @@ def get_transaction_service() -> TransactionService:
 def get_transaction_audit_service() -> TransactionAuditService:
     """依赖注入：获取交易审计服务（单例）"""
     return transaction_audit_service
+
+
+# ============ Treasury ============
+def get_treasury_service() -> TreasuryService:
+    """依赖注入：获取国库服务（单例）"""
+    return treasury_service

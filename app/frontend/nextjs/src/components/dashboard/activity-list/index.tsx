@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { motion } from 'framer-motion';
 import {
   FileText,
@@ -9,6 +8,8 @@ import {
   Gift,
   User,
 } from 'lucide-react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * ════════════════════════════════════════════════════════════════
@@ -49,16 +50,18 @@ const typeColors = {
   user: 'gold',          // 金色
 };
 
-const statusConfig = {
-  success: { label: '成功', className: 'premium-badge-success' },
-  pending: { label: '处理中', className: 'premium-badge-gold' },
-  failed: { label: '失败', className: 'premium-badge-gold' },
-};
-
 export const ActivityList: React.FC<ActivityListProps> = ({
   title,
   activities,
 }) => {
+  const { t } = useTranslation();
+
+  const statusConfig = {
+    success: { label: t('common.success'), className: 'premium-badge-success' },
+    pending: { label: t('common.processing'), className: 'premium-badge-gold' },
+    failed: { label: t('common.error'), className: 'premium-badge-gold' },
+  };
+
   return (
     <motion.div
       className="premium-card"
@@ -73,7 +76,7 @@ export const ActivityList: React.FC<ActivityListProps> = ({
           className="text-sm transition-colors hover:text-white"
           style={{ color: 'rgba(201, 169, 98, 0.8)' }}
         >
-          查看全部 →
+          {t('common.viewAll')} →
         </button>
       </div>
 
@@ -127,4 +130,3 @@ export const ActivityList: React.FC<ActivityListProps> = ({
     </motion.div>
   );
 };
-

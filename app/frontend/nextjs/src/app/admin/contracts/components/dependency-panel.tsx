@@ -1,22 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAccount, useWalletClient, usePublicClient, useSwitchChain, useChainId } from "wagmi";
 
-import {
-  contractAdminService,
-  ADDRESS_PROVIDER_ABI,
-} from "@/services/contract";
-import type { ContractStatusItem } from "@/types/contract";
-import { transactionAuditService } from "@/services/transaction-audit";
-import { notification } from "@/lib/notification";
 
 import { ContractDetailPanel } from "@/components/admin/contract-detail-panel";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +16,38 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { GraphNode } from "@/services/contract-graph";
+import { Input } from "@/components/ui/input";
+import { getExpectedBackendNetwork, normalizeNetworkName } from "@/lib/network-guard";
+import { notification } from "@/lib/notification";
+import { contractAdminService } from "@/services/contract";
+import type { GraphNode } from "@/services/contract-graph";
+import { transactionAuditService } from "@/services/transaction-audit";
+import { usePlatformInfoStore } from "@/stores/platform-info-store";
+import type { ContractStatusItem } from "@/types/contract";
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const NETWORK_CHAIN_ID_MAP: Record<string, number> = {
+  hardhat: 31337,
+  arbitrum: 42161,
+  "arbitrum-sepolia": 421614,
+};
+
+const ADDRESS_PROVIDER_BINDING_ABI = [
+  {
+    type: "function",
+    name: "admin_set_address_provider",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_address_provider", type: "address" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "ADDRESS_PROVIDER",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+] as const;
 
 interface DependencyPanelProps {
   detailPanelOpen: boolean;
@@ -51,6 +74,9 @@ export function DependencyPanel({
   const [isRegistering, setIsRegistering] = useState(false);
   const [isUnregistering, setIsUnregistering] = useState(false);
   const [isSettingPrimary, setIsSettingPrimary] = useState(false);
+  const [externalAddressModalOpen, setExternalAddressModalOpen] = useState(false);
+  const [externalAddressInput, setExternalAddressInput] = useState("");
+  const [pendingRegisterContract, setPendingRegisterContract] = useState<string | null>(null);
 
   // Reset modal state
   const [resetModalOpen, setResetModalOpen] = useState(false);
@@ -58,22 +84,55 @@ export function DependencyPanel({
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [isResetting, setIsResetting] = useState(false);
 
-  // 检查并切换到 Hardhat 网络
-  const ensureHardhatNetwork = async (): Promise<boolean> => {
-    const HARDHAT_CHAIN_ID = 31337;
-    if (chain?.id !== HARDHAT_CHAIN_ID) {
+  const backendNetwork = normalizeNetworkName(
+    usePlatformInfoStore.getState().chainInfo?.network || getExpectedBackendNetwork()
+  );
+  const expectedChainId = backendNetwork ? NETWORK_CHAIN_ID_MAP[backendNetwork] : undefined;
+  const isHardhatBackend = backendNetwork === "hardhat";
+
+  const isStablecoinContract = (contractName: string): boolean => {
+    if (selectedListContract?.name === contractName && selectedListContract.contract_type === "stablecoin") {
+      return true;
+    }
+    const upperName = contractName.toUpperCase();
+    return upperName.includes("USDT") || upperName.includes("USDC");
+  };
+
+  const isValidEvmAddress = (value: string): boolean => /^0x[a-fA-F0-9]{40}$/.test(value.trim());
+
+  // 检查并切换到后端期望网络
+  const ensureExpectedNetwork = async (): Promise<boolean> => {
+    if (!expectedChainId) {
+      notification.error(
+        t("admin.contracts.register.switchFailed") ||
+          "Cannot determine target network from backend configuration."
+      );
+      return false;
+    }
+
+    if (chain?.id !== expectedChainId) {
       try {
-        notification.loading(t("admin.contracts.register.switchingNetwork") || "Switching to Hardhat network...", 0);
-        await switchChainAsync({ chainId: HARDHAT_CHAIN_ID });
+        const networkLabel = backendNetwork || "target";
+        notification.loading(
+          t("admin.contracts.register.switchingNetwork") || `Switching to ${networkLabel} network...`,
+          0
+        );
+        await switchChainAsync({ chainId: expectedChainId });
         notification.destroy();
         return true;
       } catch (switchError) {
         notification.destroy();
         const err = switchError as { code?: number; message?: string };
         if (err.code === 4001 || err.message?.includes('rejected')) {
-          notification.warning(t("admin.contracts.register.switchRejected") || "Network switch rejected. Please switch to Hardhat network manually.");
+          notification.warning(
+            t("admin.contracts.register.switchRejected") ||
+              `Network switch rejected. Please switch to ${backendNetwork || "target"} network manually.`
+          );
         } else {
-          notification.error(t("admin.contracts.register.switchFailed") || "Failed to switch network. Please switch to Hardhat network manually in MetaMask.");
+          notification.error(
+            t("admin.contracts.register.switchFailed") ||
+              `Failed to switch network. Please switch to ${backendNetwork || "target"} network manually in wallet.`
+          );
         }
         return false;
       }
@@ -101,11 +160,22 @@ export function DependencyPanel({
       return null;
     }
 
+    let providerAbi = usePlatformInfoStore.getState().getAbi("AddressProvider");
+    if (!providerAbi || providerAbi.length === 0) {
+      // Store cache may be stale — refresh once and retry
+      await usePlatformInfoStore.getState().refresh();
+      providerAbi = usePlatformInfoStore.getState().getAbi("AddressProvider");
+    }
+    if (!providerAbi || providerAbi.length === 0) {
+      notification.error("AddressProvider ABI not found in platform info");
+      return null;
+    }
+
     let owner: string;
     try {
       owner = await publicClient.readContract({
         address: providerAddress as `0x${string}`,
-        abi: ADDRESS_PROVIDER_ABI,
+        abi: providerAbi,
         functionName: "owner",
       }) as string;
     } catch (ownerError) {
@@ -130,19 +200,144 @@ export function DependencyPanel({
     return owner;
   };
 
+  const getContractAbiByName = async (contractName: string) => {
+    let abi = usePlatformInfoStore.getState().getAbi(contractName);
+    if (!abi || abi.length === 0) {
+      await usePlatformInfoStore.getState().refresh();
+      abi = usePlatformInfoStore.getState().getAbi(contractName);
+    }
+    return abi;
+  };
+
+  const supportsSetAddressProvider = (abi: unknown): boolean => {
+    if (!Array.isArray(abi)) return false;
+    return abi.some(
+      (item) =>
+        typeof item === "object" &&
+        item !== null &&
+        "type" in item &&
+        (item as { type?: string }).type === "function" &&
+        "name" in item &&
+        (item as { name?: string }).name === "admin_set_address_provider"
+    );
+  };
+
+  const syncContractAddressProvider = async ({
+    contractName,
+    contractAddress,
+    providerAddress,
+    mode,
+  }: {
+    contractName: string;
+    contractAddress: string;
+    providerAddress: string;
+    mode: "register" | "unregister";
+  }): Promise<boolean> => {
+    if (!walletClient || !publicClient) return false;
+
+    const targetAddress = mode === "register" ? providerAddress : ZERO_ADDRESS;
+    const actionText =
+      mode === "register"
+        ? t(
+            "admin.contracts.register.bindingProvider",
+            "Binding AddressProvider for {{name}}...",
+            { name: contractName }
+          )
+        : t(
+            "admin.contracts.unregister.clearingProvider",
+            "Clearing AddressProvider for {{name}}...",
+            { name: contractName }
+          );
+
+    try {
+      notification.loading(actionText, 0);
+
+      const hash = await walletClient.writeContract({
+        address: contractAddress as `0x${string}`,
+        abi: ADDRESS_PROVIDER_BINDING_ABI,
+        functionName: "admin_set_address_provider",
+        args: [targetAddress as `0x${string}`],
+      });
+
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      const currentProvider = (await publicClient.readContract({
+        address: contractAddress as `0x${string}`,
+        abi: ADDRESS_PROVIDER_BINDING_ABI,
+        functionName: "ADDRESS_PROVIDER",
+      })) as string;
+
+      const ok = currentProvider.toLowerCase() === targetAddress.toLowerCase();
+
+      notification.destroy();
+      if (!ok) {
+        notification.warning(
+          mode === "register"
+            ? t(
+                "admin.contracts.register.bindVerifyFailed",
+                "Binding transaction submitted, but ADDRESS_PROVIDER could not be verified immediately. Please refresh and retry."
+              )
+            : t(
+                "admin.contracts.unregister.clearVerifyFailed",
+                "Clear transaction submitted, but ADDRESS_PROVIDER could not be verified immediately. Please refresh to confirm."
+              )
+        );
+      }
+      return ok;
+    } catch (error) {
+      notification.destroy();
+      const err = error as { message?: string; shortMessage?: string };
+      const message = err.shortMessage || err.message || "Unknown error";
+
+      if (mode === "unregister") {
+        notification.warning(
+          t(
+            "admin.contracts.unregister.clearNotSupported",
+            "This contract does not support clearing AddressProvider (zero address may be forbidden). Provider unregistration was executed only."
+          ) + ` (${message.split("\n")[0]})`
+        );
+        return false;
+      }
+
+      notification.error(
+        t(
+          "admin.contracts.register.bindFailed",
+          "Registered in Provider, but failed to bind AddressProvider to target contract: {{error}}",
+          { error: message.split("\n")[0] }
+        )
+      );
+      return false;
+    }
+  };
+
   // 处理注册合约到 Provider
-  const handleRegisterToProvider = async (contractName: string) => {
+  const handleRegisterToProvider = async (
+    contractName: string,
+    externalAddress?: string
+  ) => {
     if (!walletClient || !publicClient) {
       notification.error(t("admin.contracts.register.walletNotConnected"));
       return;
     }
 
-    if (!(await ensureHardhatNetwork())) return;
+    if (!(await ensureExpectedNetwork())) return;
+
+    const trimmedExternalAddress = externalAddress?.trim();
+    if (trimmedExternalAddress && !isValidEvmAddress(trimmedExternalAddress)) {
+      notification.error(
+        t(
+          "admin.contracts.register.externalAddressInvalid",
+          "External contract address format invalid (must be 0x + 40 hex)."
+        )
+      );
+      return;
+    }
 
     setIsRegistering(true);
     try {
       const prepareData = await contractAdminService.prepareRegister({
         contract_name: contractName,
+        ...(trimmedExternalAddress ? { external_address: trimmedExternalAddress } : {}),
       });
 
       console.log("[Register] prepareData:", prepareData);
@@ -192,6 +387,16 @@ export function DependencyPanel({
         tx_hash: hash,
       });
 
+      const contractAbi = await getContractAbiByName(contractName);
+      if (supportsSetAddressProvider(contractAbi)) {
+        await syncContractAddressProvider({
+          contractName,
+          contractAddress: prepareData.contract_address,
+          providerAddress: prepareData.provider_address,
+          mode: "register",
+        });
+      }
+
       notification.destroy();
       notification.success(
         t("admin.contracts.register.success", {
@@ -208,7 +413,7 @@ export function DependencyPanel({
       
       if (err.code === 4001 || err.message?.includes('rejected') || err.message?.includes('denied')) {
         notification.warning(
-          t("admin.contracts.register.rejected") || "用户取消了交易签名"
+          t("admin.contracts.register.rejected") || "Transaction signature was rejected by user"
         );
       } else {
         const errorMessage = err.shortMessage || err.message?.split('\n')[0] || "Unknown error";
@@ -224,11 +429,11 @@ export function DependencyPanel({
   // 处理解除注册合约
   const handleUnregisterFromProvider = async (contractName: string) => {
     if (!walletClient || !publicClient) {
-      notification.error(t("admin.contracts.unregister.walletNotConnected", "请先连接钱包"));
+      notification.error(t("admin.contracts.unregister.walletNotConnected", "Please connect your wallet first"));
       return;
     }
 
-    if (!(await ensureHardhatNetwork())) return;
+    if (!(await ensureExpectedNetwork())) return;
 
     setIsUnregistering(true);
     try {
@@ -241,7 +446,7 @@ export function DependencyPanel({
       const owner = await verifyProviderAndOwner(prepareData.provider_address, "unregister");
       if (!owner) return;
 
-      notification.loading(t("admin.contracts.unregister.signing", "签名中..."), 0);
+      notification.loading(t("admin.contracts.unregister.signing", "Awaiting signature..."), 0);
 
       const hash = await walletClient.writeContract({
         address: prepareData.provider_address as `0x${string}`,
@@ -267,7 +472,7 @@ export function DependencyPanel({
       });
 
       notification.destroy();
-      notification.loading(t("admin.contracts.unregister.confirming", "确认交易中..."), 0);
+      notification.loading(t("admin.contracts.unregister.confirming", "Confirming transaction..."), 0);
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
@@ -283,10 +488,20 @@ export function DependencyPanel({
         tx_hash: hash,
       });
 
+      const contractAbi = await getContractAbiByName(contractName);
+      if (supportsSetAddressProvider(contractAbi)) {
+        await syncContractAddressProvider({
+          contractName,
+          contractAddress: prepareData.contract_address,
+          providerAddress: prepareData.provider_address,
+          mode: "unregister",
+        });
+      }
+
       notification.destroy();
       notification.success(
         t("admin.contracts.unregister.success", {
-          defaultValue: "解除注册成功: {{name}}, TX: {{tx}}",
+          defaultValue: "Unregistered successfully: {{name}}, TX: {{tx}}",
           name: contractName,
           tx: hash.slice(0, 10) + "...",
         })
@@ -300,13 +515,13 @@ export function DependencyPanel({
       
       if (err.code === 4001 || err.message?.includes('rejected') || err.message?.includes('denied')) {
         notification.warning(
-          t("admin.contracts.unregister.rejected") || "用户取消了交易签名"
+          t("admin.contracts.unregister.rejected") || "Transaction signature was rejected by user"
         );
       } else {
         const errorMessage = err.shortMessage || err.message?.split('\n')[0] || "Unknown error";
         notification.error(
           t("admin.contracts.unregister.failed", {
-            defaultValue: "解除注册失败: {{error}}",
+            defaultValue: "Unregister failed: {{error}}",
             error: errorMessage,
           })
         );
@@ -320,7 +535,7 @@ export function DependencyPanel({
   const handleSetPrimary = async () => {
     const contractId = selectedListContract?.id;
     if (!contractId) {
-      notification.error(t("admin.contracts.primary.noContractId", "合约 ID 不存在"));
+      notification.error(t("admin.contracts.primary.noContractId", "Contract ID is missing"));
       return;
     }
 
@@ -329,7 +544,7 @@ export function DependencyPanel({
       await contractAdminService.setPrimary(contractId);
       notification.success(
         t("admin.contracts.primary.setSuccess", {
-          defaultValue: "已将 {{name}} 设为主合约",
+          defaultValue: "Set {{name}} as primary contract",
           name: selectedListContract?.name,
         })
       );
@@ -339,7 +554,7 @@ export function DependencyPanel({
       const err = error as { message?: string };
       notification.error(
         t("admin.contracts.primary.setFailed", {
-          defaultValue: "设置主合约失败: {{error}}",
+          defaultValue: "Failed to set primary contract: {{error}}",
           error: err.message || "Unknown error",
         })
       );
@@ -352,7 +567,7 @@ export function DependencyPanel({
   const handleUnsetPrimary = async () => {
     const contractId = selectedListContract?.id;
     if (!contractId) {
-      notification.error(t("admin.contracts.primary.noContractId", "合约 ID 不存在"));
+      notification.error(t("admin.contracts.primary.noContractId", "Contract ID is missing"));
       return;
     }
 
@@ -361,7 +576,7 @@ export function DependencyPanel({
       await contractAdminService.unsetPrimary(contractId);
       notification.success(
         t("admin.contracts.primary.unsetSuccess", {
-          defaultValue: "已取消 {{name}} 的主合约标记",
+          defaultValue: "Unset primary flag for {{name}}",
           name: selectedListContract?.name,
         })
       );
@@ -371,7 +586,7 @@ export function DependencyPanel({
       const err = error as { message?: string };
       notification.error(
         t("admin.contracts.primary.unsetFailed", {
-          defaultValue: "取消主合约失败: {{error}}",
+          defaultValue: "Failed to unset primary contract: {{error}}",
           error: err.message || "Unknown error",
         })
       );
@@ -419,6 +634,53 @@ export function DependencyPanel({
     handleResetExecute();
   };
 
+  const openExternalAddressModal = (contractName: string) => {
+    setPendingRegisterContract(contractName);
+    const currentAddress = selectedListContract?.name === contractName ? selectedListContract.address : null;
+    setExternalAddressInput(
+      currentAddress && currentAddress !== ZERO_ADDRESS && isValidEvmAddress(currentAddress)
+        ? currentAddress
+        : ""
+    );
+    setExternalAddressModalOpen(true);
+  };
+
+  const startRegisterFlow = (contractName: string) => {
+    if (!isHardhatBackend && isStablecoinContract(contractName)) {
+      openExternalAddressModal(contractName);
+      return;
+    }
+    handleRegisterToProvider(contractName);
+  };
+
+  const confirmExternalAddressAndRegister = () => {
+    const contractName = pendingRegisterContract;
+    if (!contractName) return;
+
+    const value = externalAddressInput.trim();
+    if (!value) {
+      notification.error(
+        t(
+          "admin.contracts.register.externalAddressRequired",
+          "Please input external token contract address first."
+        )
+      );
+      return;
+    }
+    if (!isValidEvmAddress(value)) {
+      notification.error(
+        t(
+          "admin.contracts.register.externalAddressInvalid",
+          "External contract address format invalid (must be 0x + 40 hex)."
+        )
+      );
+      return;
+    }
+
+    setExternalAddressModalOpen(false);
+    handleRegisterToProvider(contractName, value);
+  };
+
   return (
     <>
       {/* Contract Detail Panel */}
@@ -429,7 +691,7 @@ export function DependencyPanel({
         onUpdateDependency={() => {
           const contractName = selectedNode?.id || selectedListContract?.name;
           if (contractName) {
-            handleRegisterToProvider(contractName);
+            startRegisterFlow(contractName);
           }
         }}
         onUnregister={() => {
@@ -499,6 +761,54 @@ export function DependencyPanel({
               disabled={isResetting}
             >
               {isResetting ? t("common.loading") : t("admin.contracts.resetModal.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={externalAddressModalOpen}
+        onOpenChange={(open) => {
+          setExternalAddressModalOpen(open);
+          if (!open) {
+            setPendingRegisterContract(null);
+            setExternalAddressInput("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {t("admin.contracts.detail.registerToProvider")}
+            </DialogTitle>
+          </DialogHeader>
+
+          <p className="text-sm text-white/65">
+            {t(
+              "admin.contracts.register.externalAddressPrompt",
+              "This is a non-hardhat network. Please input real external stablecoin contract address before registration."
+            )}
+          </p>
+
+          <Input
+            value={externalAddressInput}
+            onChange={(e) => setExternalAddressInput(e.target.value)}
+            placeholder="0x..."
+          />
+
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setExternalAddressModalOpen(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={confirmExternalAddressAndRegister}
+              disabled={isRegistering}
+            >
+              {isRegistering ? t("common.loading") : t("admin.contracts.detail.registerToProvider")}
             </Button>
           </DialogFooter>
         </DialogContent>

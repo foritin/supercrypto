@@ -69,6 +69,11 @@ export const USER_PATHS = {
   SUBSCRIPTION_DETAIL: (id: number) => `/user/subscriptions/${id}`,
   SUBSCRIPTION_STATS: '/user/subscriptions/stats',
   SUBSCRIPTION_REDEEM: (id: number) => `/user/subscriptions/${id}/redeem`,
+  REDEMPTIONS: '/user/subscriptions/redemptions',
+  REDEMPTION_DETAIL: (id: string | number) => `/user/subscriptions/redemptions/${id}`,
+  SUBSCRIPTION_PENDING: '/user/subscriptions/pending',
+  SUBSCRIPTION_CONFIRM: '/user/subscriptions/confirm',
+  SUBSCRIPTION_RECEIPT: (txHash: string) => `/user/subscriptions/receipt/${txHash}`,
 
   // 质押
   STAKING: '/user/staking',
@@ -96,8 +101,7 @@ export const ADMIN_PATHS = {
   ASSETS: '/admin/assets',
   ASSET_DETAIL: (id: number) => `/admin/assets/${id}`,
   ASSET_STATUS: (id: number) => `/admin/assets/${id}/status`,
-  ASSET_PRICE: (id: number, price: number, source = 'manual') =>
-    `/admin/assets/${id}/price?price=${price}&source=${source}`,
+  ASSET_PRICE: (id: number) => `/admin/assets/${id}/price`,
   ASSET_PROJECTS: '/admin/assets/projects/available',
   ASSET_BIND_PROJECT: (id: number) => `/admin/assets/${id}/bind-project`,
   ASSET_UNBIND: (id: number) => `/admin/assets/${id}/unbind`,
@@ -118,8 +122,12 @@ export const ADMIN_PATHS = {
   CONTRACT_RESET_ALL: '/admin/contracts/reset/all',
   CONTRACT_REGISTER_PREPARE: '/admin/contracts/register/prepare',
   CONTRACT_REGISTER_CONFIRM: '/admin/contracts/register/confirm',
+  CONTRACT_REGISTER_UPDATE_ADDRESS: '/admin/contracts/address',
   CONTRACT_UNREGISTER_PREPARE: '/admin/contracts/unregister/prepare',
   CONTRACT_UNREGISTER_CONFIRM: '/admin/contracts/unregister/confirm',
+  CONTRACT_TREASURY_PREPARE: '/admin/contracts/treasury/prepare',
+  CONTRACT_TREASURY_CONFIRM: '/admin/contracts/treasury/confirm',
+  CONTRACT_TREASURY_BINDING: '/admin/contracts/treasury',
   CONTRACT_VALIDATE: '/admin/contracts/validate',
   CONTRACT_SET_PRIMARY: (id: number) => `/admin/contracts/${id}/set-primary`,
   CONTRACT_UNSET_PRIMARY: (id: number) => `/admin/contracts/${id}/unset-primary`,
@@ -159,6 +167,7 @@ export const ADMIN_PATHS = {
   // 账户管理
   ACCOUNTS: '/admin/accounts',
   ACCOUNT_BY_ADDRESS: (address: string) => `/admin/accounts/address/${address}`,
+  ACCOUNT_ROLES_UPDATE: (address: string) => `/admin/accounts/address/${address}/roles`,
   ACCOUNT_DELETE: (address: string) => `/admin/accounts/address/${address}`,
 
   // 交易管理
@@ -169,10 +178,19 @@ export const ADMIN_PATHS = {
   TRANSACTION_WALLET_HISTORY: (walletId: number) => `/admin/transactions/wallet/${walletId}/history`,
   TRANSACTION_STATS: '/admin/transactions/stats',
   TRANSACTION_EXPORT: '/admin/transactions/export',
+
+  // Treasury
+  TREASURY_QUEUE: '/admin/treasury/queue',
+  TREASURY_QUEUE_DETAIL: (id: number) => `/admin/treasury/queue/${id}`,
+  TREASURY_QUEUE_SIGN: (id: number) => `/admin/treasury/queue/${id}/sign`,
+  TREASURY_QUEUE_EXECUTE: (id: number) => `/admin/treasury/queue/${id}/execute`,
+  TREASURY_QUEUE_REJECT: (id: number) => `/admin/treasury/queue/${id}/reject`,
+  TREASURY_MULTISIG_STATUS: '/admin/treasury/multisig/status',
+  TREASURY_STATS: '/admin/treasury/stats',
 } as const
 
 // ============================================================================
-// 开发工具 (仅开发环境)
+// 开发工具 / 运维工具
 // ============================================================================
 
 export const DEV_PATHS = {
@@ -184,8 +202,15 @@ export const DEV_PATHS = {
   // ETH 水龙头
   FAUCET: '/dev/faucet',
 
+  // Treasury 开发工具
+  TREASURY_INIT: '/dev/treasury/init',
+  TREASURY_INIT_PREPARE: '/dev/treasury/init/prepare',
+  TREASURY_INIT_CONFIRM: '/dev/treasury/init/confirm',
+  TREASURY_CONFIG: '/dev/treasury/config',
+
   // KYC 开发工具
   KYC_QUICK_APPROVE: (address: string) => `/kyc/dev/quick-approve/${address}`,
+  KYC_QUICK_APPROVE_CONFIRM: (address: string) => `/kyc/dev/quick-approve/${address}/confirm`,
   KYC_RESET: (address: string) => `/kyc/dev/reset/${address}`,
 } as const
 
@@ -200,4 +225,3 @@ export const API_PATHS = {
   ADMIN: ADMIN_PATHS,
   DEV: DEV_PATHS,
 } as const
-

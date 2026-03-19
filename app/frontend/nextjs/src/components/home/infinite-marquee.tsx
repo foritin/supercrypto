@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import { useTranslation } from 'react-i18next';
+
 import { cn } from '@/lib/utils';
 
 /**
@@ -35,28 +36,27 @@ interface InfiniteMarqueeProps {
 export function InfiniteMarquee({
   row1Items,
   row2Items,
-  title = 'Powered by Leading Blockchains',
-  subtitle = 'Multi-chain support for maximum flexibility and security',
+  title,
+  subtitle,
   speed = 30,
   pauseOnHover = true,
   className,
 }: InfiniteMarqueeProps) {
-  // 复制数组以实现无缝循环
-  const row1Extended = [...row1Items, ...row1Items];
-  const row2Extended = [...row2Items, ...row2Items];
-
+  const { t } = useTranslation();
+  const displayTitle = title || t('home.logoWall.title');
+  const displaySubtitle = subtitle || t('home.logoWall.subtitle');
   return (
     <section className={cn('py-20 overflow-hidden', className)}>
       {/* Header */}
       <div className="text-center mb-12 px-6">
         <span className="text-primary text-sm font-semibold uppercase tracking-[2px] mb-4 block">
-          Blockchain Ecosystem
+          {t('home.infiniteMarquee.title')}
         </span>
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-          {title}
+          {displayTitle}
         </h2>
         <p className="text-lg text-white/65 max-w-[600px] mx-auto text-center">
-          {subtitle}
+          {displaySubtitle}
         </p>
       </div>
 
@@ -129,7 +129,7 @@ function MarqueeLogoItem({ item }: { item: MarqueeItem }) {
       )}
       title={item.name}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      { }
       <img
         src={item.logo}
         alt={item.name}

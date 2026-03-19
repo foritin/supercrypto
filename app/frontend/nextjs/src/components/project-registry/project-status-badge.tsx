@@ -16,11 +16,11 @@ interface ProjectStatusBadgeProps {
 }
 
 const readinessConfig: Record<ProjectReadiness, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' }> = {
-  not_ready: { label: '未就绪', variant: 'destructive' },
-  partially_ready: { label: '部分就绪', variant: 'warning' },
-  fully_ready: { label: '完全就绪', variant: 'success' },
-  unknown: { label: '未知', variant: 'secondary' },
-  error: { label: '错误', variant: 'destructive' },
+  not_ready: { label: 'Not Ready', variant: 'destructive' },
+  partially_ready: { label: 'Partially Ready', variant: 'warning' },
+  fully_ready: { label: 'Fully Ready', variant: 'success' },
+  unknown: { label: 'Unknown', variant: 'secondary' },
+  error: { label: 'Error', variant: 'destructive' },
 };
 
 export function ProjectStatusBadge({ readiness }: ProjectStatusBadgeProps) {
@@ -41,12 +41,12 @@ interface ContractStatusBadgeProps {
 }
 
 const statusConfig: Record<ContractStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' }> = {
-  not_registered: { label: '未注册', variant: 'secondary' },
-  registered: { label: '已注册', variant: 'default' },
-  deployed: { label: '已部署', variant: 'outline' },
-  bound: { label: '已绑定', variant: 'default' },
-  active: { label: '已激活', variant: 'success' },
-  deprecated: { label: '已废弃', variant: 'destructive' },
+  not_registered: { label: 'Not Registered', variant: 'secondary' },
+  registered: { label: 'Registered', variant: 'default' },
+  deployed: { label: 'Deployed', variant: 'outline' },
+  bound: { label: 'Bound', variant: 'default' },
+  active: { label: 'Active', variant: 'success' },
+  deprecated: { label: 'Deprecated', variant: 'destructive' },
 };
 
 export function ContractStatusBadge({ status }: ContractStatusBadgeProps) {

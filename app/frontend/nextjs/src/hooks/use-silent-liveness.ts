@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
 import type { LivenessAction as ActionType } from '@sssxyd/face-liveness-detector';
+import { useRef, useEffect, useState, useCallback } from 'react';
 
 // Re-export types for convenience
 export type { LivenessAction as ActionType } from '@sssxyd/face-liveness-detector';
@@ -206,14 +206,19 @@ export function useSilentLiveness(
         }));
       });
 
-      engine.on('detector-action', (data: { action: ActionType; status: 'started' | 'completed' | 'timeout' }) => {
+      engine.on('detector-action', (data) => {
         if (!mountedRef.current) return;
+
+        const actionStatus =
+          data.status === 'started' || data.status === 'completed' || data.status === 'timeout'
+            ? data.status
+            : null;
         
         console.log('[SilentLiveness] Action:', data);
         setState(prev => ({
           ...prev,
           currentAction: data.action,
-          actionStatus: data.status,
+          actionStatus,
         }));
       });
 
@@ -357,18 +362,18 @@ export function useSilentLiveness(
  */
 export function getDetectionMessage(code: DetectionCode | null): string {
   const messages: Record<DetectionCode, string> = {
-    VIDEO_NO_FACE: '未检测到人脸',
-    MULTIPLE_FACE: '检测到多张人脸',
-    FACE_TOO_SMALL: '请靠近一点',
-    FACE_TOO_LARGE: '请退后一点',
-    FACE_NOT_FRONTAL: '请正对摄像头',
-    FACE_LOW_QUALITY: '光线不足，请调整',
-    FACE_IMAGE_CAPTURED: '正在验证...',
-    FACE_NOT_MOVING: '请稍微移动',
-    PHOTO_ATTACK_DETECTED: '检测到非真人',
-    READY: '检测中...',
+    VIDEO_NO_FACE: 'No face detected',
+    MULTIPLE_FACE: 'Multiple faces detected',
+    FACE_TOO_SMALL: 'Move closer',
+    FACE_TOO_LARGE: 'Move back a little',
+    FACE_NOT_FRONTAL: 'Look at the camera',
+    FACE_LOW_QUALITY: 'Low light detected, please adjust',
+    FACE_IMAGE_CAPTURED: 'Verifying...',
+    FACE_NOT_MOVING: 'Move slightly',
+    PHOTO_ATTACK_DETECTED: 'Non-live face detected',
+    READY: 'Detecting...',
   };
-  return code ? messages[code] || '检测中...' : '准备中...';
+  return code ? messages[code] || 'Detecting...' : 'Preparing...';
 }
 
 /**
@@ -377,10 +382,10 @@ export function getDetectionMessage(code: DetectionCode | null): string {
 export function getActionName(action: ActionType | null): string {
   if (!action) return '';
   const names: Record<ActionType, string> = {
-    blink: '请眨眼',
-    mouth_open: '请张嘴',
-    nod_down: '请点头',
-    nod_up: '请抬头',
+    blink: 'Blink your eyes',
+    mouth_open: 'Open your mouth',
+    nod_down: 'Nod down',
+    nod_up: 'Lift your head',
   };
   return names[action] || action;
 }

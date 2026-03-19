@@ -1,14 +1,16 @@
 "use client";
 
-import { Suspense } from "react";
 import { usePathname } from "next/navigation";
-import { Header } from "./header";
-import { Footer } from "./footer";
-import { ContentWrapper } from "./content-wrapper";
-import { PageSkeleton } from "./page-skeleton";
-import { Web3Background } from "./web3-background";
-import { TriggeredLightFlow } from "./triggered-light-flow";
+import { Suspense } from "react";
 import type { ReactNode } from "react";
+
+import { ContentWrapper } from "./content-wrapper";
+import { Footer } from "./footer";
+import { Header } from "./header";
+import { PageSkeleton } from "./page-skeleton";
+import { TriggeredLightFlow } from "./triggered-light-flow";
+import { Web3Background } from "./web3-background";
+
 
 /**
  * MainLayout - 渐进式渲染布局（使用 Tailwind CSS）

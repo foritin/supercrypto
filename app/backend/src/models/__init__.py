@@ -23,6 +23,11 @@ from src.models.kyc import (
     AccountKycDocument,
 )
 from src.models.kyc_audit_log import KycAuditLog
+from src.models.redemption import (
+    RedemptionEvent,
+    RedemptionRequest,
+    RedemptionSignature,
+)
 from src.models.staking import (
     RewardClaim,
     StakingLimit,
@@ -39,6 +44,10 @@ __all__ = [
     "TimestampMixin",
     # Account
     "Account",
+    # Redemption
+    "RedemptionRequest",
+    "RedemptionSignature",
+    "RedemptionEvent",
     # Chain
     "Chain",
     # KYC

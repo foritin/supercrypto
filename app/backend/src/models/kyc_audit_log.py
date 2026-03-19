@@ -39,12 +39,12 @@ class KycAuditLog(AbstractModel, TimestampMixin):
     action = fields.CharEnumField(
         KycAuditAction,
         max_length=20,
-        index=True,
+        db_index=True,
         description="操作类型",
     )
     actor_address = fields.CharField(
         max_length=42,
-        index=True,
+        db_index=True,
         description="操作者地址",
     )
     actor_role = fields.CharField(

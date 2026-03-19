@@ -183,6 +183,10 @@ const assets = {
       toInvest: "to invest",
       notAvailable: "Not Available",
       notAvailableHint: "This asset is currently not available for subscription",
+      subscriptionEnded: "Subscription Ended",
+      subscriptionEndedHint: "The subscription period for this asset has ended",
+      subscriptionNotStarted: "Coming Soon",
+      subscriptionNotStartedHint: "The subscription period has not started yet",
       // Status badges
       statusBadge: {
         active: "Now Open",

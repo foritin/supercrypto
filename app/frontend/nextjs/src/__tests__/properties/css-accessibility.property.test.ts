@@ -12,9 +12,10 @@
  * - @media print 打印样式
  */
 
-import { describe, test, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import { describe, test, expect } from 'vitest';
 
 // 读取所有样式文件
 const stylesDir = path.join(__dirname, '../../styles');

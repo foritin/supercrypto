@@ -1,10 +1,11 @@
 const dev = {
   dev: {
     title: "Developer Tools",
-    subtitle: "Tools for development and testing (not available in production)",
+    subtitle: "Operational tools for account governance and testing workflows.",
     notAvailable: "Developer tools are not available in production",
-    warning: "Development Environment",
-    warningDescription: "You are currently in {{env}} environment. These tools are for development/testing only.",
+    notAvailableDescription: "This page is only available in development and testing environments.",
+    warning: "Operational Safety Notice",
+    warningDescription: "These tools are available in all environments. Operations are security-sensitive and may affect real accounts or assets. Verify target network and addresses before proceeding.",
     kyc: {
       title: "Quick KYC",
       description: "Instantly approve or reset KYC status for testing.",
@@ -83,12 +84,36 @@ const dev = {
       sendButton: "Send ETH",
       sending: "Sending...",
       success: "Successfully sent {{amount}} ETH",
+      successWithRefreshHint: "Successfully sent {{amount}} ETH. If your MetaMask balance does not update, click \"Refresh MetaMask Balance\" below.",
       oldBalance: "Balance Before",
       newBalance: "Balance After",
+      rpcNodeLabel: "Page RPC Node",
+      rpcMismatchWarning: "Please ensure the Hardhat RPC URL in MetaMask matches this one, otherwise balance may not sync.",
+      refreshHint: "If MetaMask still shows 0 ETH, click the button below to refresh.",
+      refreshButton: "Refresh MetaMask Balance",
+      refreshingButton: "Refreshing...",
+      refreshMetaMaskSuccess: "MetaMask balance refreshed",
+      refreshMetaMaskDone: "MetaMask refreshed",
+      refreshMetaMaskFailed: "Refresh failed. Please switch network in MetaMask and switch back to Hardhat.",
       note: "Sets balance directly via Hardhat, no gas required.",
+    },
+    adminAccess: {
+      title: "Admin Access",
+      description: "Grant admin permissions and review account governance status.",
+      viewOnlyTitle: "View Only",
+      viewOnlyDescription: "Only contract_owner can modify admin permissions. You can review the current distribution below.",
+      adminUsers: "Admin Users",
+      nonAdminUsers: "Non-Admin Users",
+      grantSectionTitle: "Grant Admin Permission",
+      selectUser: "Select a non-admin user",
+      noEligibleUsers: "No eligible users",
+      grantButton: "Grant Admin",
+      grantSuccess: "Granted admin role to {{address}}",
+      adminList: "Current Admin Accounts",
+      nonAdminList: "Current Non-Admin Accounts",
+      empty: "No accounts",
     },
   },
 }
 
 export default dev
-

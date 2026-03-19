@@ -1,15 +1,17 @@
 'use client';
 
+import { ArrowLeft, ArrowRight, MapPin, FileText, Calendar, Home, ChevronLeft, Save } from 'lucide-react';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useKycContext, type KycFormData } from '@/contexts/kyc-context';
-import { DocumentUpload } from '../components/document-upload';
+
 import { CountrySelect } from '../components/country-select';
-import { FormField, FormInput } from '../components/form-field';
-import { ArrowLeft, ArrowRight, MapPin, FileText, Calendar, Home, ChevronLeft, Save } from 'lucide-react';
+import { DocumentUpload } from '../components/document-upload';
+import { FormInput } from '../components/form-field';
 
 const documentTypes = [
   { value: 'passport', label: 'Passport', icon: '🛂' },
@@ -103,7 +105,7 @@ export function IdentityStep() {
       : docPathFields[currentDocType]?.back;
     
     if (pathField) {
-      updateFormData({ [pathField]: undefined });
+      updateFormData({ [pathField]: '' });
     }
   };
 
@@ -158,7 +160,7 @@ export function IdentityStep() {
     if (isComplete) {
       return {
         type: 'success' as const,
-        message: t('kyc.identity.uploadComplete', 'Document upload complete'),
+          message: t('kyc.identity.uploadComplete'),
       };
     }
     
@@ -169,26 +171,26 @@ export function IdentityStep() {
       if (!frontPath) {
         return {
           type: 'warning' as const,
-          message: t('kyc.identity.errors.passportRequired', 'Please upload your passport data page'),
+          message: t('kyc.identity.errors.passportRequired'),
         };
       }
     } else {
       if (!frontPath && !backPath) {
         return {
           type: 'warning' as const,
-          message: t('kyc.identity.errors.bothSidesRequired', 'Please upload both front and back of your document'),
+          message: t('kyc.identity.errors.bothSidesRequired'),
         };
       }
       if (!frontPath) {
         return {
           type: 'warning' as const,
-          message: t('kyc.identity.errors.frontRequired', 'Please upload the front of your document'),
+          message: t('kyc.identity.errors.frontRequired'),
         };
       }
       if (!backPath) {
         return {
           type: 'warning' as const,
-          message: t('kyc.identity.errors.backRequired', 'Please upload the back of your document'),
+          message: t('kyc.identity.errors.backRequired'),
         };
       }
     }
@@ -219,18 +221,18 @@ export function IdentityStep() {
             <button
               onClick={showLandingPage}
               className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-              title={t('kyc.backToOverview', 'Back to Overview')}
+              title={t('kyc.backToOverview')}
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <h3 className="text-xl font-semibold text-white">
-              {t('kyc.identity.title', 'Address & Identity')}
+              {t('kyc.identity.title')}
             </h3>
           </div>
           {lastSaved && (
             <span className="flex items-center gap-1 text-xs text-primary">
               <Save className="h-3 w-3" />
-              {t('kyc.autoSaved', 'Auto-saved')}
+              {t('kyc.autoSaved')}
             </span>
           )}
         </div>
@@ -240,12 +242,12 @@ export function IdentityStep() {
           <div className="space-y-4">
             <h4 className="text-lg font-medium text-white flex items-center gap-2">
               <Home className="h-5 w-5 text-primary" />
-              {t('kyc.identity.address', 'Residential Address')}
+              {t('kyc.identity.address')}
             </h4>
 
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                {t('kyc.identity.addressLine1', 'Address Line 1')}
+                {t('kyc.identity.addressLine1')}
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
@@ -264,7 +266,7 @@ export function IdentityStep() {
 
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                {t('kyc.identity.addressLine2', 'Address Line 2 (Optional)')}
+                {t('kyc.identity.addressLine2')}
               </label>
               <Input
                 value={formData.addressLine2 || ''}
@@ -277,7 +279,7 @@ export function IdentityStep() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
-                  {t('kyc.identity.city', 'City')}
+                  {t('kyc.identity.city')}
                 </label>
                 <Input
                   value={formData.city || ''}
@@ -293,7 +295,7 @@ export function IdentityStep() {
 
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
-                  {t('kyc.identity.state', 'State/Province')}
+                  {t('kyc.identity.state')}
                 </label>
                 <Input
                   value={formData.state || ''}
@@ -309,7 +311,7 @@ export function IdentityStep() {
 
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">
-                  {t('kyc.identity.postalCode', 'Postal Code')}
+                  {t('kyc.identity.postalCode')}
                 </label>
                 <Input
                   value={formData.postalCode || ''}
@@ -326,7 +328,7 @@ export function IdentityStep() {
 
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                {t('kyc.identity.country', 'Country')}
+                {t('kyc.identity.country')}
               </label>
               <CountrySelect
                 value={formData.country || ''}
@@ -344,19 +346,19 @@ export function IdentityStep() {
           <div className="pt-6 border-t border-white/10">
             <h4 className="text-lg font-medium text-white flex items-center gap-2 mb-4">
               <FileText className="h-5 w-5 text-primary" />
-              {t('kyc.identity.document', 'Identity Document')}
+              {t('kyc.identity.document')}
             </h4>
 
             {/* Document Type Selection */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-white/80 mb-3">
-                {t('kyc.identity.documentType', 'Document Type')}
+                {t('kyc.identity.documentType')}
               </label>
               <div className="grid grid-cols-3 gap-3">
                 {documentTypes.map((type) => (
                   <button
                     key={type.value}
-                    onClick={() => updateFormData({ documentType: type.value as typeof formData.documentType })}
+                    onClick={() => updateFormData({ documentType: type.value as NonNullable<KycFormData['documentType']> })}
                     className={`p-4 rounded-xl border-2 text-center transition-all ${
                       formData.documentType === type.value
                         ? 'border-primary bg-primary/10'
@@ -382,7 +384,7 @@ export function IdentityStep() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-2">
-                    {t('kyc.identity.documentNumber', 'Document Number')}
+                    {t('kyc.identity.documentNumber')}
                   </label>
                   <Input
                     value={formData.documentNumber || ''}
@@ -398,7 +400,7 @@ export function IdentityStep() {
 
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-2">
-                    {t('kyc.identity.documentExpiry', 'Expiry Date')}
+                    {t('kyc.identity.documentExpiry')}
                   </label>
                   <FormInput
                     type="date"
@@ -425,8 +427,8 @@ export function IdentityStep() {
                     documentType={formData.documentType}
                     onUpload={(file, filePath) => handleFileUpload('front', file, filePath)}
                     onRemove={() => handleFileRemove('front')}
-                    uploadedFile={(currentLocalFiles as { front?: File }).front}
-                    uploadedPath={currentFrontPath}
+                    {...((currentLocalFiles as { front?: File }).front ? { uploadedFile: (currentLocalFiles as { front?: File }).front } : {})}
+                    {...(currentFrontPath ? { uploadedPath: currentFrontPath } : {})}
                   />
                   {formData.documentType !== 'passport' && (
                     <DocumentUpload
@@ -434,8 +436,10 @@ export function IdentityStep() {
                       documentType={formData.documentType}
                       onUpload={(file, filePath) => handleFileUpload('back', file, filePath)}
                       onRemove={() => handleFileRemove('back')}
-                      uploadedFile={(currentLocalFiles as { front?: File; back?: File }).back}
-                      uploadedPath={currentBackPath}
+                      {...((currentLocalFiles as { front?: File; back?: File }).back
+                        ? { uploadedFile: (currentLocalFiles as { front?: File; back?: File }).back }
+                        : {})}
+                      {...(currentBackPath ? { uploadedPath: currentBackPath } : {})}
                     />
                   )}
                 </div>
@@ -457,23 +461,23 @@ export function IdentityStep() {
             {/* 多证件上传提示 */}
             <div className="mt-4 p-4 rounded-lg bg-white/5 border border-white/10">
               <p className="text-sm text-white/60">
-                <span className="text-primary font-medium">💡 {t('kyc.identity.uploadTip.title', 'Tip')}:</span>{' '}
-                {t('kyc.identity.uploadTip.description', 'You only need to upload one type of document to continue. However, uploading multiple document types can speed up the verification process.')}
+                <span className="text-primary font-medium">💡 {t('kyc.identity.uploadTip.title')}:</span>{' '}
+                {t('kyc.identity.uploadTip.description')}
               </p>
               
               {/* 已完成的证件类型统计 */}
               {completedDocCount > 0 && (
                 <div className="mt-3 flex items-center gap-2">
                   <span className="text-xs text-white/40">
-                    {t('kyc.identity.uploadStatus', 'Upload status')}:
+                    {t('kyc.identity.uploadStatus')}:
                   </span>
                   <div className="flex gap-2">
                     {(['passport', 'national_id', 'drivers_license'] as const).map((docType) => {
                       const isComplete = isDocTypeComplete(docType);
                       const labels = {
-                        passport: t('kyc.idTypes.passport', 'Passport'),
-                        national_id: t('kyc.idTypes.idCard', 'ID Card'),
-                        drivers_license: t('kyc.idTypes.driverLicense', 'Driver License'),
+                        passport: t('kyc.idTypes.passport'),
+                        national_id: t('kyc.idTypes.idCard'),
+                        drivers_license: t('kyc.idTypes.driverLicense'),
                       };
                       return (
                         <span
@@ -505,7 +509,7 @@ export function IdentityStep() {
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          {t('common.back', 'Back')}
+          {t('common.back')}
         </Button>
 
         <Button
@@ -515,7 +519,7 @@ export function IdentityStep() {
           disabled={isContinueDisabled}
           className="gap-2"
         >
-          {t('common.continue', 'Continue')}
+          {t('common.continue')}
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>

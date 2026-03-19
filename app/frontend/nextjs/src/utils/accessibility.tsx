@@ -5,7 +5,7 @@
  * ════════════════════════════════════════════════════════════════
  */
 
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 /**
  * VisuallyHidden - 视觉隐藏但屏幕阅读器可访问

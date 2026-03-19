@@ -1,7 +1,5 @@
 "use client";
 
-import React from "react";
-import { useTranslation } from "react-i18next";
 import {
   Shield,
   Lock,
@@ -12,9 +10,12 @@ import {
   ExternalLink,
   CheckCircle,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import React from "react";
+import { useTranslation } from "react-i18next";
+
 import { PageBadge } from "@/components/ui/page-badge";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { cn } from "@/lib/utils";
 
 interface SecurityCardProps {
   icon: React.ReactNode;

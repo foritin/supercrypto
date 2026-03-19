@@ -21,8 +21,8 @@
  * full component rendering with actual wallet connections.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock localStorage for testing
 const localStorageMock = (() => {
@@ -344,7 +344,7 @@ describe('Property 9: Wallet Connection State Consistency', () => {
           ethereumAddressArb,
           chainIdArb,
           chainIdArb,
-          (address, oldChainId, newChainId) => {
+          (address, _oldChainId, _newChainId) => {
             localStorageMock.clear()
             
             // Setup connected state
@@ -371,7 +371,7 @@ describe('Property 9: Wallet Connection State Consistency', () => {
           ethereumAddressArb,
           chainIdArb,
           chainIdArb,
-          (address, oldChainId, newChainId) => {
+          (address, _oldChainId, _newChainId) => {
             localStorageMock.clear()
             
             // Setup authenticated state
@@ -468,7 +468,7 @@ describe('Property 9: Wallet Connection State Consistency', () => {
         fc.property(
           ethereumAddressArb,
           fc.string({ minLength: 10, maxLength: 100 }),
-          (address, sessionId) => {
+          (address, _sessionId) => {
             localStorageMock.clear()
             
             // Setup full authenticated state

@@ -4,7 +4,8 @@
  * Admin hooks for KYC management
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { kycService, KycStatus, type KycFullResponse, type KycReviewRequest, type PaginatedResponse } from '@/services/kyc'
+
+import { kycService, type KycStatus, type KycReviewRequest } from '@/services/kyc';
 
 /**
  * Hook to list KYC records (admin)

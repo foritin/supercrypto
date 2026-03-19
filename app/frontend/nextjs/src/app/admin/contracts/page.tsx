@@ -11,16 +11,18 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { GraphNode } from "@/services/contract-graph";
 
-import { useCurrentUser } from "@/hooks";
-import { RequireAdmin } from "@/components/auth";
-import { contractAdminService } from "@/services/contract";
-import type { ContractStatusItem, ContractStatusResponse } from "@/types/contract";
 import { type ContractFilters, DEFAULT_FILTERS } from "@/components/admin/contract-filter-bar";
+import { RequireAdmin } from "@/components/auth";
+import { useCurrentUser } from "@/hooks";
+import { AdminLayout } from "@/components/layout/admin-layout";
+import { contractAdminService } from "@/services/contract";
+import type { GraphNode } from "@/services/contract-graph";
+import type { ContractStatusItem, ContractStatusResponse } from "@/types/contract";
 
 import { ContractList } from "./components/contract-list";
 import { DependencyPanel } from "./components/dependency-panel";
+import { TreasuryBindingPanel } from "./components/treasury-binding-panel";
 
 export default function AdminContractsPage() {
   const { isAdmin } = useCurrentUser();
@@ -80,7 +82,7 @@ export default function AdminContractsPage() {
 
   return (
     <RequireAdmin>
-      <div className="max-w-[1400px] mx-auto">
+      <AdminLayout>
         {/* 合约列表视图 (表格/树形) */}
         <ContractList
           contractStatus={contractStatus}
@@ -101,7 +103,12 @@ export default function AdminContractsPage() {
           selectedListContract={selectedListContract}
           onSuccess={handleSuccess}
         />
-      </div>
+
+        <TreasuryBindingPanel
+          contractStatus={contractStatus}
+          onSuccess={fetchContractStatus}
+        />
+      </AdminLayout>
     </RequireAdmin>
   );
 }

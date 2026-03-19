@@ -1,8 +1,8 @@
 'use client';
 
+import { type Hash, type Address } from 'viem';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { type Hash, type Address } from 'viem';
 
 export type TransactionStatus = 
   | 'pending' 

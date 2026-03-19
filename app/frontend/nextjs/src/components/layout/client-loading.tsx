@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, type ReactNode } from "react";
+
 import { useAppReady } from "@/providers/app-ready-provider";
 
 interface ClientLoadingProps {
@@ -31,6 +32,7 @@ export function ClientLoading({ children }: ClientLoadingProps) {
       }, 400); // 与 CSS 动画时间匹配
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [isReady]);
 
   // 水合完成前，隐藏渲染 children（防止水合不匹配）

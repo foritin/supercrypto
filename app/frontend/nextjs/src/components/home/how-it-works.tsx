@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
 import { Wallet, ShieldCheck, TrendingUp, Coins, ArrowRight } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { cn } from "@/lib/utils";
+
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * HowItWorks 组件 - 增强版
@@ -124,7 +125,7 @@ export function HowItWorks({ className }: HowItWorksProps) {
                 style={{
                   background:
                     activeStep > index
-                      ? `linear-gradient(90deg, ${item.color} 0%, ${STEPS[index + 1].color} 100%)`
+                      ? `linear-gradient(90deg, ${item.color} 0%, ${STEPS[index + 1]?.color ?? item.color} 100%)`
                       : `linear-gradient(90deg, ${item.color}40 0%, rgba(255,255,255,0.1) 100%)`,
                   boxShadow:
                     activeStep > index

@@ -1,11 +1,10 @@
 "use client"
 
-import * as React from "react"
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
+import * as React from "react"
 import { type DateRange, type SelectRangeEventHandler } from "react-day-picker"
 
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -13,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 export interface DateRangePickerProps {
   /** The selected date range */
@@ -151,13 +151,13 @@ const DateRangePicker = React.forwardRef<HTMLButtonElement, DateRangePickerProps
         >
           <Calendar
             mode="range"
-            selected={value}
             onSelect={handleSelect}
             disabled={disabled}
-            fromDate={fromDate}
-            toDate={toDate}
             numberOfMonths={numberOfMonths}
             initialFocus
+            {...(value ? { selected: value } : {})}
+            {...(fromDate ? { fromDate } : {})}
+            {...(toDate ? { toDate } : {})}
             className={cn(
               // Web3 dark theme styling for calendar
               "[&_.rdp-day_button]:text-[var(--text-primary)]",

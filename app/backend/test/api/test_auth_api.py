@@ -16,6 +16,7 @@ import asyncio
 import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import jwt
 from httpx import ASGITransport, AsyncClient
 
 
@@ -69,6 +70,78 @@ def _mock_session_service():
 
 class TestLoginEndpoint:
     """POST /api/v1/public/auth/token 登录测试"""
+
+    def test_login_uses_access_expiry_and_refresh_cookie_lifetime(self):
+        """登录响应的 expires_in_mins 应为 access 过期时间，cookie Max-Age 应为 refresh 过期时间"""
+
+        async def _test():
+            app = _get_app()
+            mock_ss = _mock_session_service()
+            mock_account_service = MagicMock()
+            mock_account_service.get_or_none = AsyncMock(return_value=MagicMock())
+            mock_account_service.create = AsyncMock()
+            mock_settings = MagicMock()
+            mock_settings.environment = "dev"
+            mock_settings.BACKDOOR = "test-backdoor-password"
+            mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES = 15
+            mock_settings.REFRESH_TOKEN_EXPIRE_MINUTES = 10080
+            mock_settings.CHAIN = MagicMock()
+            mock_settings.CHAIN.NETWORK = "hardhat"
+            mock_settings.NETWORK = "hardhat"
+
+            from src.common.dependencies import get_account_service
+
+            app.dependency_overrides[get_account_service] = lambda: mock_account_service
+
+            try:
+                with (
+                    patch("src.api.v1.public.auth.SETTINGS", mock_settings),
+                    patch("src.api.v1.public.auth.session_service", mock_ss),
+                    patch("src.security.deps.session_service", mock_ss),
+                ):
+                    transport = ASGITransport(app=app)
+                    async with AsyncClient(
+                        transport=transport, base_url="http://test"
+                    ) as client:
+                        resp = await client.post(
+                            "/api/v1/public/auth/token",
+                            json={
+                                "address": "0x" + "a" * 40,
+                                "signature": "0xanything",
+                                "backdoor": "test-backdoor-password",
+                                "chain_id": 31337,
+                                "chain_name": "Hardhat",
+                            },
+                        )
+
+                        assert resp.status_code == 200, (
+                            f"登录应成功，实际: {resp.status_code}, body: {resp.text}"
+                        )
+                        data = resp.json()
+                        object_data = data.get("data", {}).get("object_data", {})
+
+                        assert object_data.get("expires_in_mins") == 15, (
+                            "expires_in_mins 应使用 ACCESS_TOKEN_EXPIRE_MINUTES"
+                        )
+
+                        access_payload = jwt.decode(
+                            object_data["access_token"],
+                            options={"verify_signature": False},
+                            algorithms=["HS256"],
+                        )
+                        refresh_payload = jwt.decode(
+                            object_data["refresh_token"],
+                            options={"verify_signature": False},
+                            algorithms=["HS256"],
+                        )
+
+                        assert refresh_payload["exp"] > access_payload["exp"], (
+                            "refresh token 过期时间应晚于 access token"
+                        )
+            finally:
+                app.dependency_overrides.pop(get_account_service, None)
+
+        run_async(_test())
 
     def test_login_requires_signature(self):
         """登录需要有效签名 — 无签名或无效签名应返回 401"""

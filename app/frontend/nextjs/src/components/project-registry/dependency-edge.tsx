@@ -6,18 +6,21 @@
 
 'use client';
 
-import { memo } from 'react';
 import {
+  type Edge,
   type EdgeProps,
   getSmoothStepPath,
   EdgeLabelRenderer,
   BaseEdge,
 } from '@xyflow/react';
+import { memo } from 'react';
 
 
 interface DependencyEdgeData {
   label?: string;
 }
+
+type DependencyFlowEdge = Edge<Record<string, unknown>, 'dependency'>;
 
 function DependencyEdgeComponent({
   sourceX,
@@ -29,7 +32,8 @@ function DependencyEdgeComponent({
   style = {},
   markerEnd,
   data,
-}: EdgeProps<DependencyEdgeData>) {
+}: EdgeProps<DependencyFlowEdge>) {
+  const edgeData = data as DependencyEdgeData | undefined;
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -44,11 +48,11 @@ function DependencyEdgeComponent({
     <>
       <BaseEdge
         path={edgePath}
-        markerEnd={markerEnd}
+        {...(markerEnd ? { markerEnd } : {})}
         style={style}
       />
 
-      {data?.label && (
+      {edgeData?.label && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -63,7 +67,7 @@ function DependencyEdgeComponent({
               border: '1px solid #e5e7eb',
             }}
           >
-            {data.label}
+            {edgeData.label}
           </div>
         </EdgeLabelRenderer>
       )}

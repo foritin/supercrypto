@@ -91,6 +91,7 @@ from src.services.subscription_service import SubscriptionService
 # transaction
 # ============================================================
 from src.services.transaction_service import TransactionService
+from src.services.treasury_service import TreasuryService
 
 __all__ = [
     "AccountService",
@@ -108,4 +109,5 @@ __all__ = [
     "SubscriptionService",
     "TransactionAuditService",
     "TransactionService",
+    "TreasuryService",
 ]

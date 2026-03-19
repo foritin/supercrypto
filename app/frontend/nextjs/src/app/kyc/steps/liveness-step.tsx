@@ -1,13 +1,15 @@
 'use client';
 
+import { ArrowLeft, ArrowRight, Shield, AlertCircle, ChevronLeft, Loader2, CheckCircle2, XCircle, Camera, RefreshCw, Upload, Video } from 'lucide-react';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useKycContext } from '@/contexts/kyc-context';
-import { ArrowLeft, ArrowRight, Shield, AlertCircle, ChevronLeft, Loader2, CheckCircle2, XCircle, Camera, RefreshCw, Upload, Video } from 'lucide-react';
 import { toast } from 'sonner';
-import { useLivenessDetection, ActionType } from '@/hooks/use-liveness-detection';
+
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useKycContext } from '@/contexts/kyc-context';
+import type { ActionType } from '@/hooks/use-liveness-detection';
+import { useLivenessDetection } from '@/hooks/use-liveness-detection';
 import { uploadBase64Image, uploadLivenessVideo } from '@/services/kyc';
 
 // 椭圆框配置
@@ -72,7 +74,7 @@ export function LivenessStep() {
     if (formData.faceImagePath) return 'success';
     return 'idle';
   });
-  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [, setUploadError] = React.useState<string | null>(null);
   // 保留 base64 图片用于重试 (Task 5.3)
   const [pendingUploadImage, setPendingUploadImage] = React.useState<string | null>(null);
 
@@ -82,7 +84,7 @@ export function LivenessStep() {
     if (formData.livenessVideoPath) return 'success';
     return 'idle';
   });
-  const [videoUploadError, setVideoUploadError] = React.useState<string | null>(null);
+  const [, setVideoUploadError] = React.useState<string | null>(null);
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const recordedChunksRef = React.useRef<Blob[]>([]);
   const [pendingVideoBlob, setPendingVideoBlob] = React.useState<Blob | null>(null);
@@ -96,10 +98,17 @@ export function LivenessStep() {
   const progressIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const videoRef = React.useRef<HTMLVideoElement>(null);
+  const [videoElement, setVideoElement] = React.useState<HTMLVideoElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
+  const cameraRequestSeqRef = React.useRef(0);
   const detectorRef = React.useRef<unknown>(null);
   const detectionIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const setVideoRef = React.useCallback((node: HTMLVideoElement | null) => {
+    videoRef.current = node;
+    setVideoElement(node);
+  }, []);
 
   // 活体检测完成回调
   const handleLivenessComplete = React.useCallback(() => {
@@ -112,7 +121,7 @@ export function LivenessStep() {
     stopVideoRecording();
     
     stopCamera();
-    toast.success(t('kyc.liveness.success', '活体检测通过'));
+    toast.success(t('kyc.liveness.success'));
   }, [updateFormData, t]);
 
   // 开始视频录制
@@ -130,7 +139,7 @@ export function LivenessStep() {
       
       if (!webmSupported) {
         console.log('[LivenessStep] ⚠️ Browser does not support WebM recording, skipping video capture');
-        toast.warning(t('kyc.liveness.webmNotSupported', '您的浏览器不支持 WebM 视频录制，活体检测视频将不会被保存'));
+        toast.warning(t('kyc.liveness.webmNotSupported'));
         return;
       }
 
@@ -216,7 +225,7 @@ export function LivenessStep() {
     } catch (error) {
       console.error('[LivenessStep] ❌ Liveness video upload failed:', error);
       
-      let errorMessage = t('kyc.liveness.videoUploadError', '视频上传失败，请重试');
+      let errorMessage = t('kyc.liveness.videoUploadError');
       if (error instanceof Error) {
         errorMessage = error.message;
       }
@@ -224,7 +233,7 @@ export function LivenessStep() {
       setVideoUploadStatus('error');
       setVideoUploadError(errorMessage);
       // 视频上传失败不阻止流程，只显示警告
-      toast.warning(t('kyc.liveness.videoUploadWarning', '活体检测视频上传失败，但不影响验证结果'));
+      toast.warning(t('kyc.liveness.videoUploadWarning'));
       
       return null;
     }
@@ -233,13 +242,13 @@ export function LivenessStep() {
   // 重试视频上传
   const handleRetryVideoUpload = React.useCallback(async () => {
     if (!pendingVideoBlob) {
-      toast.error(t('kyc.liveness.noVideoToRetry', '没有待上传的视频'));
+      toast.error(t('kyc.liveness.noVideoToRetry'));
       return;
     }
 
     const filePath = await uploadVideoToMinIO(pendingVideoBlob);
     if (filePath) {
-      toast.success(t('kyc.liveness.videoUploadSuccess', '视频上传成功'));
+      toast.success(t('kyc.liveness.videoUploadSuccess'));
     }
   }, [pendingVideoBlob, uploadVideoToMinIO, t]);
 
@@ -253,14 +262,42 @@ export function LivenessStep() {
 
   // 摄像头相关函数
   const requestCameraAccess = React.useCallback(async () => {
+    const requestSeq = ++cameraRequestSeqRef.current;
+
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraPermission('denied');
+        toast.error(t('kyc.liveness.cameraNotSupported'));
+        return;
+      }
+
+      // 防止残留流占用摄像头设备
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
       });
+
+      // 请求已过期（StrictMode 双挂载/快速切换场景），立即释放该流避免设备被占用
+      if (requestSeq !== cameraRequestSeqRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+
       streamRef.current = stream;
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => setCameraReady(true);
+        const video = videoRef.current;
+        video.onloadedmetadata = () => setCameraReady(true);
+        video.srcObject = stream;
+        try {
+          await video.play();
+          setCameraReady(true);
+        } catch (playError) {
+          console.warn('[LivenessStep] video.play() failed, waiting metadata event:', playError);
+        }
       }
       setCameraPermission('granted');
     } catch (err) {
@@ -271,6 +308,7 @@ export function LivenessStep() {
   }, [t]);
 
   const stopCamera = React.useCallback(() => {
+    cameraRequestSeqRef.current += 1;
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -321,10 +359,26 @@ export function LivenessStep() {
     const detector = detectorRef.current;
     if (!video || !detector || video.readyState < 2) return;
 
+    type VideoDetection = {
+      detections?: Array<{
+        boundingBox?: {
+          originX: number;
+          originY: number;
+          width: number;
+          height: number;
+        };
+      }>;
+    };
+
+    type DetectForVideoLike = {
+      detectForVideo: (video: HTMLVideoElement, timestamp: number) => VideoDetection;
+    };
+
     try {
-      const detections = (detector as any).detectForVideo(video, performance.now());
-      if (detections.detections?.length > 0) {
-        const bbox = detections.detections[0]?.boundingBox;
+      const detections = (detector as unknown as DetectForVideoLike).detectForVideo(video, performance.now());
+      const detectedList = detections.detections ?? [];
+      if (detectedList.length > 0) {
+        const bbox = detectedList[0]?.boundingBox;
         if (bbox) {
           const faceCenterX = (bbox.originX + bbox.width / 2) / video.videoWidth;
           const faceCenterY = (bbox.originY + bbox.height / 2) / video.videoHeight;
@@ -386,6 +440,36 @@ export function LivenessStep() {
     }
   }, [activeMode, requestCameraAccess]);
 
+  // 兜底：当 video 节点重建（StrictMode/HMR/模式切换）时，确保已存在的流重新绑定到当前节点
+  React.useEffect(() => {
+    if (activeMode === 'none') return;
+
+    const video = videoElement;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+
+    if (video.srcObject !== stream) {
+      video.srcObject = stream;
+    }
+
+    const ensurePlaying = async () => {
+      try {
+        await video.play();
+        setCameraReady(true);
+      } catch {
+        // 忽略自动播放失败，等待 metadata 事件
+      }
+    };
+
+    if (video.readyState >= 1) {
+      void ensurePlaying();
+    } else {
+      video.onloadedmetadata = () => {
+        void ensurePlaying();
+      };
+    }
+  }, [activeMode, videoElement]);
+
   // 清理
   React.useEffect(() => {
     return () => {
@@ -415,7 +499,7 @@ export function LivenessStep() {
       console.error('[LivenessStep] ❌ Face image upload failed:', error);
       
       // 提取错误信息 (Task 5.3)
-      let errorMessage = t('kyc.liveness.uploadError', '上传失败，请重试');
+      let errorMessage = t('kyc.liveness.uploadError');
       if (error instanceof Error) {
         errorMessage = error.message;
       }
@@ -431,7 +515,7 @@ export function LivenessStep() {
   // 重试上传 (Task 5.3)
   const handleRetryUpload = React.useCallback(async () => {
     if (!pendingUploadImage) {
-      toast.error(t('kyc.liveness.noImageToRetry', '没有待上传的图片'));
+      toast.error(t('kyc.liveness.noImageToRetry'));
       return;
     }
 
@@ -442,7 +526,7 @@ export function LivenessStep() {
         faceImage: pendingUploadImage, 
         faceImagePath: filePath 
       });
-      toast.success(t('kyc.liveness.uploadSuccess', '图片上传成功'));
+      toast.success(t('kyc.liveness.uploadSuccess'));
     }
   }, [pendingUploadImage, uploadFaceImage, updateFormData, t]);
 
@@ -509,7 +593,7 @@ export function LivenessStep() {
         faceImage: imageData, 
         faceImagePath: filePath 
       });
-      toast.success(t('kyc.liveness.photoSuccess', '照片拍摄并上传成功'));
+      toast.success(t('kyc.liveness.photoSuccess'));
     } else {
       // 上传失败，只保存 base64 用于预览和重试 (Task 5.3)
       updateFormData({ faceImage: imageData });
@@ -584,7 +668,7 @@ export function LivenessStep() {
   // 重试手持证照上传 (Task 7.2)
   const handleRetrySelfieUpload = React.useCallback(async () => {
     if (!selfieImage) {
-      toast.error(t('kyc.liveness.noImageToRetry', '没有待上传的图片'));
+      toast.error(t('kyc.liveness.noImageToRetry'));
       return;
     }
 
@@ -593,11 +677,11 @@ export function LivenessStep() {
       const response = await uploadBase64Image(selfieImage, 'selfie');
       setSelfieUploadStatus('success');
       updateFormData({ selfie: selfieImage, selfiePath: response.file_path });
-      toast.success(t('kyc.liveness.uploadSuccess', '图片上传成功'));
+      toast.success(t('kyc.liveness.uploadSuccess'));
     } catch (error) {
       console.error('[LivenessStep] ❌ Selfie upload retry failed:', error);
       setSelfieUploadStatus('error');
-      toast.error(t('kyc.liveness.uploadError', '上传失败，请重试'));
+      toast.error(t('kyc.liveness.uploadError'));
     }
   }, [selfieImage, updateFormData, t]);
 
@@ -628,28 +712,28 @@ export function LivenessStep() {
       
       setSelfieUploadStatus('success');
       updateFormData({ selfie: imageData, selfiePath: response.file_path });
-      toast.success(t('kyc.liveness.selfieSuccess', '手持证照拍摄并上传成功'));
+      toast.success(t('kyc.liveness.selfieSuccess'));
     } catch (error) {
       console.error('[LivenessStep] ❌ Selfie upload failed:', error);
       setSelfieUploadStatus('error');
       // 保存 base64 用于预览和重试
       updateFormData({ selfie: imageData });
-      toast.error(t('kyc.liveness.uploadError', '上传失败，请重试'));
+      toast.error(t('kyc.liveness.uploadError'));
     }
   }, [updateFormData, stopCamera, t]);
 
   // 继续下一步 (Task 7.4: 更新验证逻辑，包含手持证照)
   const handleContinue = () => {
     if (!capturedImage || !livenessVerified || !selfieImage) {
-      toast.error(t('kyc.liveness.allThreeRequired', '请完成照片拍摄、活体检测和手持证照'));
+      toast.error(t('kyc.liveness.allThreeRequired'));
       return;
     }
     if (uploadStatus !== 'success') {
-      toast.error(t('kyc.liveness.uploadRequired', '请等待照片上传完成'));
+      toast.error(t('kyc.liveness.uploadRequired'));
       return;
     }
     if (selfieUploadStatus !== 'success') {
-      toast.error(t('kyc.liveness.selfieUploadRequired', '请等待手持证照上传完成'));
+      toast.error(t('kyc.liveness.selfieUploadRequired'));
       return;
     }
     saveDraft();
@@ -658,11 +742,11 @@ export function LivenessStep() {
 
   const getActionName = (type: ActionType): string => {
     const names: Record<ActionType, string> = {
-      blink: t('kyc.liveness.actions.blink', '请眨眼'),
-      open_mouth: t('kyc.liveness.actions.openMouth', '请张嘴'),
-      turn_left: t('kyc.liveness.actions.turnLeft', '请向左转头'),
-      turn_right: t('kyc.liveness.actions.turnRight', '请向右转头'),
-      nod: t('kyc.liveness.actions.nod', '请点头'),
+      blink: t('kyc.liveness.actions.blink'),
+      open_mouth: t('kyc.liveness.actions.openMouth'),
+      turn_left: t('kyc.liveness.actions.turnLeft'),
+      turn_right: t('kyc.liveness.actions.turnRight'),
+      nod: t('kyc.liveness.actions.nod'),
     };
     return names[type];
   };
@@ -673,13 +757,13 @@ export function LivenessStep() {
   };
 
   const getInstructionText = () => {
-    if (faceDetectionLoading) return t('kyc.liveness.faceDetection.loading', '加载中...');
-    if (!faceDetected) return t('kyc.liveness.faceDetection.noFace', '未检测到人脸');
-    if (faceSizeStatus === 'too_small') return t('kyc.liveness.faceDetection.tooFar', '请靠近一点');
-    if (faceSizeStatus === 'too_large') return t('kyc.liveness.faceDetection.tooClose', '请远离一点');
-    if (!faceInFrame) return t('kyc.liveness.faceDetection.notInFrame', '请将脸部移入框内');
+    if (faceDetectionLoading) return t('kyc.liveness.faceDetection.loading');
+    if (!faceDetected) return t('kyc.liveness.faceDetection.noFace');
+    if (faceSizeStatus === 'too_small') return t('kyc.liveness.faceDetection.tooFar');
+    if (faceSizeStatus === 'too_large') return t('kyc.liveness.faceDetection.tooClose');
+    if (!faceInFrame) return t('kyc.liveness.faceDetection.notInFrame');
     if (autoCountdown > 0) return `${autoCountdown} 秒后自动拍照...`;
-    return t('kyc.liveness.faceDetection.ready', '准备就绪');
+    return t('kyc.liveness.faceDetection.ready');
   };
 
   const getFrameColor = () => {
@@ -715,8 +799,8 @@ export function LivenessStep() {
             <ChevronLeft className="h-5 w-5" />
           </button>
           <div>
-            <h3 className="text-xl font-semibold text-white">{t('kyc.liveness.title', '人脸验证')}</h3>
-            <p className="text-sm text-white/60">{t('kyc.liveness.subtitle', '请完成以下两个步骤以验证身份')}</p>
+            <h3 className="text-xl font-semibold text-white">{t('kyc.liveness.title')}</h3>
+            <p className="text-sm text-white/60">{t('kyc.liveness.subtitle')}</p>
           </div>
         </div>
 
@@ -758,21 +842,21 @@ export function LivenessStep() {
               )}
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-white">{t('kyc.liveness.step1Title', '拍摄照片')}</span>
+                  <span className="font-medium text-white">{t('kyc.liveness.step1Title')}</span>
                   {capturedImage && uploadStatus === 'success' && <CheckCircle2 className="h-4 w-4 text-green-400" />}
                   {capturedImage && uploadStatus === 'uploading' && <Loader2 className="h-4 w-4 text-amber-400 animate-spin" />}
                   {capturedImage && uploadStatus === 'error' && <XCircle className="h-4 w-4 text-red-400" />}
                 </div>
                 <p className="text-sm text-white/60">
                   {capturedImage && uploadStatus === 'success'
-                    ? t('kyc.liveness.photoComplete', '照片已上传') 
+                    ? t('kyc.liveness.photoComplete') 
                     : capturedImage && uploadStatus === 'uploading'
-                      ? t('kyc.liveness.photoUploading', '上传中...')
+                      ? t('kyc.liveness.photoUploading')
                       : capturedImage && uploadStatus === 'error'
-                        ? t('kyc.liveness.photoUploadFailed', '上传失败')
+                        ? t('kyc.liveness.photoUploadFailed')
                         : activeMode === 'photo' 
-                          ? t('kyc.liveness.photoInProgress', '拍摄中...') 
-                          : t('kyc.liveness.photoWaiting', '点击开始')}
+                          ? t('kyc.liveness.photoInProgress') 
+                          : t('kyc.liveness.photoWaiting')}
                 </p>
               </div>
               {/* 重试按钮 (Task 5.3) */}
@@ -780,7 +864,7 @@ export function LivenessStep() {
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleRetryUpload(); }}
                   className="p-2 rounded-lg hover:bg-white/10 text-amber-400 hover:text-amber-300"
-                  title={t('kyc.liveness.retryUpload', '重新上传')}
+                  title={t('kyc.liveness.retryUpload')}
                 >
                   <Upload className="h-4 w-4" />
                 </button>
@@ -789,7 +873,7 @@ export function LivenessStep() {
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleRetakePhoto(); }}
                   className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white"
-                  title={t('kyc.liveness.retake', '重新拍照')}
+                  title={t('kyc.liveness.retake')}
                 >
                   <RefreshCw className="h-4 w-4" />
                 </button>
@@ -838,7 +922,7 @@ export function LivenessStep() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-white">{t('kyc.liveness.step2Title', '活体检测')}</span>
+                  <span className="font-medium text-white">{t('kyc.liveness.step2Title')}</span>
                   {livenessVerified && videoUploadStatus === 'success' && <CheckCircle2 className="h-4 w-4 text-green-400" />}
                   {livenessVerified && videoUploadStatus === 'uploading' && <Loader2 className="h-4 w-4 text-amber-400 animate-spin" />}
                   {livenessVerified && videoUploadStatus === 'error' && <AlertCircle className="h-4 w-4 text-amber-400" />}
@@ -846,14 +930,14 @@ export function LivenessStep() {
                 </div>
                 <p className="text-sm text-white/60">
                   {livenessVerified && videoUploadStatus === 'success'
-                    ? t('kyc.liveness.livenessComplete', '检测已通过') 
+                    ? t('kyc.liveness.livenessComplete') 
                     : livenessVerified && videoUploadStatus === 'uploading'
-                      ? t('kyc.liveness.videoUploading', '视频上传中...')
+                      ? t('kyc.liveness.videoUploading')
                       : livenessVerified && videoUploadStatus === 'error'
-                        ? t('kyc.liveness.videoUploadFailed', '视频上传失败')
+                        ? t('kyc.liveness.videoUploadFailed')
                         : activeMode === 'liveness' 
-                          ? t('kyc.liveness.livenessInProgress', '检测中...') 
-                          : t('kyc.liveness.livenessWaiting', '点击开始')}
+                          ? t('kyc.liveness.livenessInProgress') 
+                          : t('kyc.liveness.livenessWaiting')}
                 </p>
               </div>
               {/* 重试视频上传按钮 */}
@@ -861,7 +945,7 @@ export function LivenessStep() {
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleRetryVideoUpload(); }}
                   className="p-2 rounded-lg hover:bg-white/10 text-amber-400 hover:text-amber-300"
-                  title={t('kyc.liveness.retryVideoUpload', '重新上传视频')}
+                  title={t('kyc.liveness.retryVideoUpload')}
                 >
                   <Upload className="h-4 w-4" />
                 </button>
@@ -870,7 +954,7 @@ export function LivenessStep() {
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleRetryLiveness(); }}
                   className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white"
-                  title={t('kyc.liveness.retry', '重新检测')}
+                  title={t('kyc.liveness.retry')}
                 >
                   <RefreshCw className="h-4 w-4" />
                 </button>
@@ -914,21 +998,21 @@ export function LivenessStep() {
               )}
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-white">{t('kyc.liveness.step3Title', '手持证照')}</span>
+                  <span className="font-medium text-white">{t('kyc.liveness.step3Title')}</span>
                   {selfieImage && selfieUploadStatus === 'success' && <CheckCircle2 className="h-4 w-4 text-green-400" />}
                   {selfieImage && selfieUploadStatus === 'uploading' && <Loader2 className="h-4 w-4 text-amber-400 animate-spin" />}
                   {selfieImage && selfieUploadStatus === 'error' && <XCircle className="h-4 w-4 text-red-400" />}
                 </div>
                 <p className="text-sm text-white/60">
                   {selfieImage && selfieUploadStatus === 'success'
-                    ? t('kyc.liveness.selfieComplete', '照片已上传') 
+                    ? t('kyc.liveness.selfieComplete') 
                     : selfieImage && selfieUploadStatus === 'uploading'
-                      ? t('kyc.liveness.selfieUploading', '上传中...')
+                      ? t('kyc.liveness.selfieUploading')
                       : selfieImage && selfieUploadStatus === 'error'
-                        ? t('kyc.liveness.selfieUploadFailed', '上传失败')
+                        ? t('kyc.liveness.selfieUploadFailed')
                         : activeMode === 'selfie' 
-                          ? t('kyc.liveness.selfieInProgress', '拍摄中...') 
-                          : t('kyc.liveness.selfieWaiting', '点击开始')}
+                          ? t('kyc.liveness.selfieInProgress') 
+                          : t('kyc.liveness.selfieWaiting')}
                 </p>
               </div>
               {/* 重试上传按钮 */}
@@ -936,7 +1020,7 @@ export function LivenessStep() {
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleRetrySelfieUpload(); }}
                   className="p-2 rounded-lg hover:bg-white/10 text-amber-400 hover:text-amber-300"
-                  title={t('kyc.liveness.retryUpload', '重新上传')}
+                  title={t('kyc.liveness.retryUpload')}
                 >
                   <Upload className="h-4 w-4" />
                 </button>
@@ -945,7 +1029,7 @@ export function LivenessStep() {
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleRetakeSelfie(); }}
                   className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white"
-                  title={t('kyc.liveness.retakeSelfie', '重新拍照')}
+                  title={t('kyc.liveness.retakeSelfie')}
                 >
                   <RefreshCw className="h-4 w-4" />
                 </button>
@@ -961,7 +1045,7 @@ export function LivenessStep() {
             <div className="space-y-4">
               <div className="relative rounded-2xl overflow-hidden bg-black">
                 <video 
-                  ref={videoRef} 
+                  ref={setVideoRef} 
                   autoPlay 
                   playsInline 
                   muted 
@@ -1005,7 +1089,7 @@ export function LivenessStep() {
                 onClick={() => { stopCamera(); setActiveMode('none'); }}
                 className="w-full text-sm text-white/60 hover:text-white py-2"
               >
-                {t('common.cancel', '取消')}
+                {t('common.cancel')}
               </button>
             </div>
           )}
@@ -1015,7 +1099,7 @@ export function LivenessStep() {
             <div className="space-y-4">
               <div className="relative rounded-2xl overflow-hidden bg-black">
                 <video 
-                  ref={videoRef} 
+                  ref={setVideoRef} 
                   autoPlay 
                   playsInline 
                   muted 
@@ -1035,7 +1119,7 @@ export function LivenessStep() {
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                     <div className="text-center">
                       <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-                      <p className="text-white/80">{t('kyc.liveness.preparing', '准备中...')}</p>
+                      <p className="text-white/80">{t('kyc.liveness.preparing')}</p>
                     </div>
                   </div>
                 )}
@@ -1073,7 +1157,7 @@ export function LivenessStep() {
                 onClick={() => { stopLivenessDetection(); stopVideoRecording(); stopCamera(); setActiveMode('none'); }}
                 className="w-full text-sm text-white/60 hover:text-white py-2"
               >
-                {t('common.cancel', '取消')}
+                {t('common.cancel')}
               </button>
             </div>
           )}
@@ -1086,12 +1170,12 @@ export function LivenessStep() {
                 <div className="flex items-start gap-3">
                   <Camera className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                   <div className="text-sm text-primary/90">
-                    <p className="font-medium text-primary mb-1">{t('kyc.liveness.selfieGuide.title', '拍摄指引')}:</p>
-                    <p>{t('kyc.liveness.selfieGuide.instruction', '请手持证件拍摄照片')}</p>
+                    <p className="font-medium text-primary mb-1">{t('kyc.liveness.selfieGuide.title')}:</p>
+                    <p>{t('kyc.liveness.selfieGuide.instruction')}</p>
                     <ul className="mt-2 space-y-1 list-disc list-inside text-primary/70">
-                      <li>{t('kyc.liveness.selfieGuide.tip1', '将证件正面朝向摄像头')}</li>
-                      <li>{t('kyc.liveness.selfieGuide.tip2', '确保证件和面部都清晰可见')}</li>
-                      <li>{t('kyc.liveness.selfieGuide.tip3', '避免遮挡证件上的信息')}</li>
+                      <li>{t('kyc.liveness.selfieGuide.tip1')}</li>
+                      <li>{t('kyc.liveness.selfieGuide.tip2')}</li>
+                      <li>{t('kyc.liveness.selfieGuide.tip3')}</li>
                     </ul>
                   </div>
                 </div>
@@ -1099,7 +1183,7 @@ export function LivenessStep() {
 
               <div className="relative rounded-2xl overflow-hidden bg-black">
                 <video 
-                  ref={videoRef} 
+                  ref={setVideoRef} 
                   autoPlay 
                   playsInline 
                   muted 
@@ -1115,7 +1199,7 @@ export function LivenessStep() {
                   </div>
                   <div className="absolute bottom-20 left-0 right-0 text-center">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm bg-white/10 text-white/80">
-                      <p className="text-sm font-medium">{t('kyc.liveness.selfieReady', '请手持证件，点击拍照')}</p>
+                      <p className="text-sm font-medium">{t('kyc.liveness.selfieReady')}</p>
                     </div>
                   </div>
                 </div>
@@ -1132,7 +1216,7 @@ export function LivenessStep() {
                 onClick={() => { stopCamera(); setActiveMode('none'); }}
                 className="w-full text-sm text-white/60 hover:text-white py-2"
               >
-                {t('common.cancel', '取消')}
+                {t('common.cancel')}
               </button>
             </div>
           )}
@@ -1143,10 +1227,10 @@ export function LivenessStep() {
               <Shield className="h-12 w-12 text-white/30 mx-auto mb-4" />
               <p className="text-white/60">
                 {!capturedImage && !livenessVerified 
-                  ? t('kyc.liveness.clickToStart', '点击上方卡片开始验证')
+                  ? t('kyc.liveness.clickToStart')
                   : !capturedImage 
-                    ? t('kyc.liveness.needPhoto', '请完成照片拍摄')
-                    : t('kyc.liveness.needLiveness', '请完成活体检测')}
+                    ? t('kyc.liveness.needPhoto')
+                    : t('kyc.liveness.needLiveness')}
               </p>
             </div>
           )}
@@ -1157,8 +1241,8 @@ export function LivenessStep() {
               <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
                 <CheckCircle2 className="h-10 w-10 text-green-400" />
               </div>
-              <h4 className="text-lg font-semibold text-white mb-2">{t('kyc.liveness.allComplete', '验证完成')}</h4>
-              <p className="text-white/60">{t('kyc.liveness.allCompleteDesc', '您已完成所有验证步骤，可以继续下一步')}</p>
+              <h4 className="text-lg font-semibold text-white mb-2">{t('kyc.liveness.allComplete')}</h4>
+              <p className="text-white/60">{t('kyc.liveness.allCompleteDesc')}</p>
             </div>
           )}
 
@@ -1171,11 +1255,11 @@ export function LivenessStep() {
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
               <div className="text-sm text-amber-400/80">
-                <p className="font-medium text-amber-400 mb-1">{t('kyc.liveness.tips.title', '提示')}:</p>
+                <p className="font-medium text-amber-400 mb-1">{t('kyc.liveness.tips.title')}:</p>
                 <ul className="space-y-1 list-disc list-inside">
-                  <li>{t('kyc.liveness.tips.lighting', '确保光线充足，避免背光')}</li>
-                  <li>{t('kyc.liveness.tips.noObstruction', '摘下眼镜、帽子等遮挡物')}</li>
-                  <li>{t('kyc.liveness.tips.face', '正对摄像头，保持面部清晰')}</li>
+                  <li>{t('kyc.liveness.tips.lighting')}</li>
+                  <li>{t('kyc.liveness.tips.noObstruction')}</li>
+                  <li>{t('kyc.liveness.tips.face')}</li>
                 </ul>
               </div>
             </div>
@@ -1185,7 +1269,7 @@ export function LivenessStep() {
 
       <div className="flex justify-between">
         <Button variant="outline" size="lg" onClick={prevStep} className="gap-2">
-          <ArrowLeft className="h-4 w-4" />{t('common.back', '返回')}
+          <ArrowLeft className="h-4 w-4" />{t('common.back')}
         </Button>
         <Button 
           variant="primary" 
@@ -1194,7 +1278,7 @@ export function LivenessStep() {
           disabled={!isAllComplete} 
           className="gap-2"
         >
-          {t('common.continue', '继续')}<ArrowRight className="h-4 w-4" />
+          {t('common.continue')}<ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     </div>

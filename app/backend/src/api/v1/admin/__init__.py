@@ -17,6 +17,7 @@ from src.api.v1.admin import (
     stats,
     transactions,
     transactions_audit,
+    treasury,
 )
 
 router = APIRouter()
@@ -53,3 +54,6 @@ router.include_router(audit.router, prefix="/audit-logs", tags=["Admin Audit Log
 
 # 统计报表 (平台统计、用户统计、TVL 等)
 router.include_router(stats.router, prefix="/stats", tags=["Admin Stats"])
+
+# 国库多签管理
+router.include_router(treasury.router, prefix="/treasury", tags=["Admin Treasury"])

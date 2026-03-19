@@ -1,35 +1,19 @@
 'use client'
 
+import { Wrench, Zap, DollarSign, Fuel, AlertTriangle, UserCog } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Wrench, Zap, DollarSign, Fuel, Trash2, AlertTriangle, XCircle } from 'lucide-react'
-import { RequireAdmin } from '@/components/auth'
-import { QuickKycPanel } from '@/components/dev/quick-kyc-panel'
-import { MockTokenMint } from '@/components/dev/mock-token-mint'
-import { EthFaucet } from '@/components/dev/eth-faucet'
-import { DataResetPanel } from '@/components/dev/data-reset-panel'
-import { Card, CardContent } from '@/components/ui/card'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
-// Environment check - only show dev tools in development environment
-const ENV = process.env.NEXT_PUBLIC_ENV || 'development'
-const IS_DEV_ENV = ENV === 'development'
+import { RequireAdmin } from '@/components/auth'
+import { AdminRolePanel } from '@/components/dev/admin-role-panel'
+import { EthFaucet } from '@/components/dev/eth-faucet'
+import { MockTokenMint } from '@/components/dev/mock-token-mint'
+import { QuickKycPanel } from '@/components/dev/quick-kyc-panel'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
 export default function DevToolsPage() {
   const { t } = useTranslation()
-
-  // 非开发环境直接返回不可用提示
-  if (!IS_DEV_ENV) {
-    return (
-      <div className="max-w-[800px] mx-auto py-[60px] px-6">
-        <Alert variant="destructive">
-          <XCircle className="h-4 w-4" />
-          <AlertTitle>{t('dev.notAvailable')}</AlertTitle>
-          <AlertDescription>{t('dev.notAvailableDescription')}</AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
 
   return (
     <RequireAdmin>
@@ -49,7 +33,7 @@ export default function DevToolsPage() {
         <Alert variant="warning" className="mb-6">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>{t('dev.warning')}</AlertTitle>
-          <AlertDescription>{t('dev.warningDescription', { env: ENV })}</AlertDescription>
+          <AlertDescription>{t('dev.warningDescription')}</AlertDescription>
         </Alert>
 
         {/* Tools */}
@@ -69,9 +53,9 @@ export default function DevToolsPage() {
                   <Fuel className="h-4 w-4" />
                   {t('dev.faucet.title')}
                 </TabsTrigger>
-                <TabsTrigger value="reset" className="flex items-center gap-2">
-                  <Trash2 className="h-4 w-4" />
-                  {t('dev.dataReset.title')}
+                <TabsTrigger value="admin-access" className="flex items-center gap-2">
+                  <UserCog className="h-4 w-4" />
+                  {t('dev.adminAccess.title')}
                 </TabsTrigger>
               </TabsList>
               
@@ -86,9 +70,9 @@ export default function DevToolsPage() {
               <TabsContent value="faucet">
                 <EthFaucet />
               </TabsContent>
-              
-              <TabsContent value="reset">
-                <DataResetPanel />
+
+              <TabsContent value="admin-access">
+                <AdminRolePanel />
               </TabsContent>
             </Tabs>
           </CardContent>

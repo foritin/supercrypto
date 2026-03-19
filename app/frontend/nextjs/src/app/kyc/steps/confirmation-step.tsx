@@ -1,10 +1,5 @@
 'use client';
 
-import * as React from 'react';
-import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useKycContext } from '@/contexts/kyc-context';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -13,11 +8,17 @@ import {
   MapPin, 
   FileText,
   Shield,
-  AlertCircle,
   Loader2,
   ChevronLeft,
 } from 'lucide-react';
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useKycContext } from '@/contexts/kyc-context';
+
 
 export function ConfirmationStep() {
   const { t } = useTranslation();
@@ -35,7 +36,7 @@ export function ConfirmationStep() {
 
   const handleSubmit = async () => {
     if (!agreed) {
-      toast.error(t('kyc.confirmation.agreeRequired', 'Please agree to the terms to continue'));
+      toast.error(t('kyc.confirmation.agreeRequired'));
       return;
     }
 
@@ -45,10 +46,10 @@ export function ConfirmationStep() {
     try {
       const success = await submitKyc();
       if (success) {
-        toast.success(t('kyc.confirmation.submitted', 'KYC application submitted successfully'));
+        toast.success(t('kyc.confirmation.submitted'));
       }
-    } catch (error) {
-      toast.error(t('kyc.confirmation.error', 'Failed to submit application'));
+    } catch {
+      toast.error(t('kyc.confirmation.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -66,7 +67,7 @@ export function ConfirmationStep() {
           <button
             onClick={showLandingPage}
             className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-            title={t('kyc.backToOverview', 'Back to Overview')}
+            title={t('kyc.backToOverview')}
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -76,10 +77,10 @@ export function ConfirmationStep() {
             <CheckCircle className="h-8 w-8 text-primary" />
           </div>
           <h3 className="text-xl font-semibold text-white mb-2">
-            {t('kyc.confirmation.title', 'Review Your Information')}
+            {t('kyc.confirmation.title')}
           </h3>
           <p className="text-white/60 max-w-md mx-auto">
-            {t('kyc.confirmation.desc', 'Please review your information before submitting. Make sure all details are accurate.')}
+            {t('kyc.confirmation.desc')}
           </p>
         </div>
 
@@ -90,27 +91,27 @@ export function ConfirmationStep() {
               <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
                 <User className="h-5 w-5 text-primary" />
               </div>
-              <h4 className="font-semibold text-white">Personal Information</h4>
+              <h4 className="font-semibold text-white">{t('kyc.confirmation.sections.personalInfo')}</h4>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-white/40 mb-1">Full Name</p>
+                <p className="text-white/40 mb-1">{t('kyc.confirmation.fields.fullName')}</p>
                 <p className="text-white font-medium">{formData.firstName} {formData.lastName}</p>
               </div>
               <div>
-                <p className="text-white/40 mb-1">Date of Birth</p>
+                <p className="text-white/40 mb-1">{t('kyc.confirmation.fields.dateOfBirth')}</p>
                 <p className="text-white font-medium">{formatDate(formData.dateOfBirth)}</p>
               </div>
               <div>
-                <p className="text-white/40 mb-1">Nationality</p>
+                <p className="text-white/40 mb-1">{t('kyc.confirmation.fields.nationality')}</p>
                 <p className="text-white font-medium">{formData.nationality}</p>
               </div>
               <div>
-                <p className="text-white/40 mb-1">Email</p>
+                <p className="text-white/40 mb-1">{t('kyc.confirmation.fields.email')}</p>
                 <p className="text-white font-medium">{formData.email}</p>
               </div>
               <div>
-                <p className="text-white/40 mb-1">Phone</p>
+                <p className="text-white/40 mb-1">{t('kyc.confirmation.fields.phone')}</p>
                 <p className="text-white font-medium">{formData.phone}</p>
               </div>
             </div>
@@ -122,7 +123,7 @@ export function ConfirmationStep() {
               <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
                 <MapPin className="h-5 w-5 text-primary" />
               </div>
-              <h4 className="font-semibold text-white">Residential Address</h4>
+              <h4 className="font-semibold text-white">{t('kyc.confirmation.sections.address')}</h4>
             </div>
             <div className="text-sm space-y-2">
               <p className="text-white font-medium">{formData.addressLine1}</p>
@@ -140,19 +141,19 @@ export function ConfirmationStep() {
               <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
                 <FileText className="h-5 w-5 text-primary" />
               </div>
-              <h4 className="font-semibold text-white">Identity Document</h4>
+              <h4 className="font-semibold text-white">{t('kyc.confirmation.sections.identityDocument')}</h4>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-white/40 mb-1">Document Type</p>
+                <p className="text-white/40 mb-1">{t('kyc.confirmation.fields.documentType')}</p>
                 <p className="text-white font-medium capitalize">{formData.documentType?.replace('_', ' ')}</p>
               </div>
               <div>
-                <p className="text-white/40 mb-1">Document Number</p>
+                <p className="text-white/40 mb-1">{t('kyc.confirmation.fields.documentNumber')}</p>
                 <p className="text-white font-medium">{formData.documentNumber}</p>
               </div>
               <div>
-                <p className="text-white/40 mb-1">Expiry Date</p>
+                <p className="text-white/40 mb-1">{t('kyc.confirmation.fields.expiryDate')}</p>
                 <p className="text-white font-medium">{formatDate(formData.documentExpiry)}</p>
               </div>
             </div>
@@ -165,7 +166,7 @@ export function ConfirmationStep() {
                 <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
                   <Shield className="h-5 w-5 text-primary" />
                 </div>
-                <h4 className="font-semibold text-white">Face Verification</h4>
+                <h4 className="font-semibold text-white">{t('kyc.confirmation.sections.faceVerification')}</h4>
               </div>
               <div className="flex items-center gap-3">
                 <img
@@ -175,7 +176,7 @@ export function ConfirmationStep() {
                 />
                 <div>
                   <p className="text-white font-medium">Photo Captured</p>
-                  <p className="text-sm text-primary">Verified</p>
+                  <p className="text-sm text-primary">{t('kyc.confirmation.livenessVerified')}</p>
                 </div>
               </div>
             </div>
@@ -195,18 +196,16 @@ export function ConfirmationStep() {
               />
               <div className="text-sm text-white/60">
                 <p>
-                  I confirm that all the information provided is accurate and complete. 
-                  I understand that providing false information may result in rejection 
-                  of my application and potential legal consequences.
+                  {t('kyc.confirmation.terms.accuracy')}
                 </p>
                 <p className="mt-2">
-                  I agree to the{' '}
+                  {t('kyc.confirmation.terms.agreePrefix')}{' '}
                   <a href="/terms" className="text-primary hover:underline" target="_blank">
-                    Terms of Service
+                    {t('kyc.confirmation.terms.termsOfService')}
                   </a>{' '}
-                  and{' '}
+                  {t('kyc.confirmation.terms.and')}{' '}
                   <a href="/privacy" className="text-primary hover:underline" target="_blank">
-                    Privacy Policy
+                    {t('kyc.confirmation.terms.privacyPolicy')}
                   </a>.
                 </p>
               </div>
@@ -220,8 +219,7 @@ export function ConfirmationStep() {
           <div className="flex items-start gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
             <Shield className="h-5 w-5 text-primary shrink-0 mt-0.5" />
             <p className="text-sm text-white/60">
-              Your information is encrypted and stored securely. We use industry-standard 
-              security measures to protect your personal data.
+              {t('kyc.confirmation.securityNotice')}
             </p>
           </div>
         </div>
@@ -237,7 +235,7 @@ export function ConfirmationStep() {
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          {t('common.back', 'Back')}
+          {t('common.back')}
         </Button>
 
         <Button
@@ -250,11 +248,11 @@ export function ConfirmationStep() {
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Submitting...
+              {t('kyc.confirmation.submitting')}
             </>
           ) : (
             <>
-              {t('kyc.confirmation.submit', 'Submit Application')}
+              {t('kyc.confirmation.submit')}
               <ArrowRight className="h-4 w-4" />
             </>
           )}

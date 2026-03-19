@@ -1,25 +1,27 @@
 "use client"
 
-import * as React from "react"
-import {
+import type {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
   VisibilityState,
+  RowSelectionState} from "@tanstack/react-table";
+import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable,
-  RowSelectionState,
+  useReactTable
 } from "@tanstack/react-table"
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import * as React from "react"
+import { useTranslation } from "react-i18next"
 
 import { cn } from "@/lib/utils"
+
 import { Button } from "./button"
 import { Checkbox } from "./checkbox"
-import { Skeleton } from "./skeleton"
 import {
   Select,
   SelectContent,
@@ -27,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./select"
+import { Skeleton } from "./skeleton"
 
 // ============================================
 // Table Base Components
@@ -201,7 +204,7 @@ interface DataTableEmptyProps {
   message?: string
 }
 
-function DataTableEmpty({ columns, message = "暂无数据" }: DataTableEmptyProps) {
+function DataTableEmpty({ columns, message = "No data" }: DataTableEmptyProps) {
   return (
     <TableRow>
       <TableCell colSpan={columns} className="h-24 text-center">
@@ -226,6 +229,7 @@ function DataTablePaginationControls<TData>({
   table, 
   pagination 
 }: DataTablePaginationControlsProps<TData>) {
+  const { t } = useTranslation()
   const pageIndex = pagination?.pageIndex ?? table.getState().pagination.pageIndex
   const pageSize = pagination?.pageSize ?? table.getState().pagination.pageSize
   const pageCount = pagination?.pageCount ?? table.getPageCount()
@@ -252,7 +256,7 @@ function DataTablePaginationControls<TData>({
   return (
     <div className="flex items-center justify-between px-2 py-4">
       <div className="flex items-center space-x-2">
-        <p className="text-sm text-muted-foreground">每页显示</p>
+        <p className="text-sm text-muted-foreground">{t('table.rowsPerPage')}</p>
         <Select
           value={String(pageSize)}
           onValueChange={(value) => handlePageSizeChange(Number(value))}
@@ -268,11 +272,11 @@ function DataTablePaginationControls<TData>({
             ))}
           </SelectContent>
         </Select>
-        <p className="text-sm text-muted-foreground">条</p>
+        <p className="text-sm text-muted-foreground">{t('table.rows')}</p>
       </div>
       <div className="flex items-center space-x-6 lg:space-x-8">
         <div className="flex w-[100px] items-center justify-center text-sm text-muted-foreground">
-          第 {pageIndex + 1} / {pageCount} 页
+          {t('table.pageOf', { page: pageIndex + 1, total: pageCount })}
         </div>
         <div className="flex items-center space-x-2">
           <Button
@@ -281,7 +285,7 @@ function DataTablePaginationControls<TData>({
             onClick={() => handlePageChange(0)}
             disabled={!canPreviousPage}
           >
-            <span className="sr-only">跳转到第一页</span>
+            <span className="sr-only">{t('table.firstPage')}</span>
             <ChevronsLeft className="h-4 w-4" />
           </Button>
           <Button
@@ -290,7 +294,7 @@ function DataTablePaginationControls<TData>({
             onClick={() => handlePageChange(pageIndex - 1)}
             disabled={!canPreviousPage}
           >
-            <span className="sr-only">上一页</span>
+            <span className="sr-only">{t('table.prevPage')}</span>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button
@@ -299,7 +303,7 @@ function DataTablePaginationControls<TData>({
             onClick={() => handlePageChange(pageIndex + 1)}
             disabled={!canNextPage}
           >
-            <span className="sr-only">下一页</span>
+            <span className="sr-only">{t('table.nextPage')}</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
@@ -308,7 +312,7 @@ function DataTablePaginationControls<TData>({
             onClick={() => handlePageChange(pageCount - 1)}
             disabled={!canNextPage}
           >
-            <span className="sr-only">跳转到最后一页</span>
+            <span className="sr-only">{t('table.lastPage')}</span>
             <ChevronsRight className="h-4 w-4" />
           </Button>
         </div>
@@ -393,14 +397,14 @@ export function createSelectionColumn<TData>(): ColumnDef<TData> {
           (table.getIsSomePageRowsSelected() && "indeterminate")
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="全选"
+        aria-label="Select all"
       />
     ),
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="选择行"
+        aria-label="Select row"
       />
     ),
     enableSorting: false,
@@ -418,7 +422,7 @@ export function DataTable<TData, TValue>({
   pagination,
   sorting: externalSorting,
   loading = false,
-  emptyMessage = "暂无数据",
+  emptyMessage = "No data",
   enableRowSelection = false,
   onRowSelectionChange,
 }: DataTableProps<TData, TValue>) {
@@ -450,10 +454,7 @@ export function DataTable<TData, TValue>({
     data,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: pagination ? undefined : getPaginationRowModel(),
-    getSortedRowModel: externalSorting ? undefined : getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: externalSorting ? undefined : setInternalSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
@@ -469,13 +470,20 @@ export function DataTable<TData, TValue>({
         },
       }),
     },
-    ...(pagination && {
-      pageCount: pagination.pageCount,
-      manualPagination: true,
-    }),
-    ...(externalSorting && {
-      manualSorting: true,
-    }),
+    ...(pagination
+      ? {
+          pageCount: pagination.pageCount,
+          manualPagination: true,
+        }
+      : {
+          getPaginationRowModel: getPaginationRowModel(),
+        }),
+    ...(externalSorting
+      ? { manualSorting: true }
+      : {
+          getSortedRowModel: getSortedRowModel(),
+          onSortingChange: setInternalSorting,
+        }),
     enableRowSelection,
   })
 
@@ -535,7 +543,10 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       {(pagination || !loading) && data.length > 0 && (
-        <DataTablePaginationControls table={table} pagination={pagination} />
+        <DataTablePaginationControls
+          table={table}
+          {...(pagination ? { pagination } : {})}
+        />
       )}
     </div>
   )

@@ -14,9 +14,10 @@
  * - 关闭时 dispatch RESET 重置状态
  */
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useReducer, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence, motion } from "framer-motion";
+
 import {
   Dialog,
   DialogContent,
@@ -24,21 +25,23 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { put } from "@/services/api";
 import type { KycDetail } from "@/services/admin-kyc";
+import { put } from "@/services/api";
+
+import { AdmissionButton, shouldShowAdmissionButton } from "./admission-button";
+import { OnChainStatusPanel } from "./onchain-status-panel";
+import { StepBasicInfo } from "./step-basic-info";
+import { StepDocuments } from "./step-documents";
+import { StepFinalDecision } from "./step-final-decision";
+import { StepFooter } from "./step-footer";
+import { StepIndicator } from "./step-indicator";
+import { StepRiskAssessment } from "./step-risk-assessment";
 import {
   stepperReducer,
   initialState,
   buildReviewSteps,
   type ReviewStepsData,
 } from "./stepper-reducer";
-import { StepIndicator } from "./step-indicator";
-import { StepFooter } from "./step-footer";
-import { StepBasicInfo } from "./step-basic-info";
-import { StepDocuments } from "./step-documents";
-import { StepRiskAssessment } from "./step-risk-assessment";
-import { StepFinalDecision } from "./step-final-decision";
-import { OnChainStatusPanel } from "./onchain-status-panel";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -330,6 +333,33 @@ export function ReviewStepperModal({
                   contractAddress={contractInfo.contract_address}
                   deployerAddress={contractInfo.deployer_address}
                   onRevocationSuccess={onAdmissionSuccess ?? (() => {})}
+                />
+              </div>
+            )}
+
+            {contractInfo && shouldShowAdmissionButton(kycDetail.kyc.status, kycDetail.kyc.on_chain_sync_status) && (
+              <div className="mt-6 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
+                <div className="mb-3">
+                  <p className="text-sm font-medium text-amber-400">
+                    {t("admin.kyc.stepper.admissionRequiredTitle", "审核已通过，请继续完成链上准入")}
+                  </p>
+                  <p className="text-xs text-white/70 mt-1">
+                    {t(
+                      "admin.kyc.stepper.admissionRequiredDesc",
+                      "当前仅完成后台审核，尚未写入链上。请点击下方按钮发起准入交易。"
+                    )}
+                  </p>
+                </div>
+
+                <AdmissionButton
+                  kycId={kycDetail.kyc.id}
+                  walletAddress={kycDetail.kyc.wallet_address}
+                  countryCode={kycDetail.kyc.country_code || ""}
+                  isAccredited={kycDetail.kyc.is_accredited ?? false}
+                  isReAdmission={kycDetail.kyc.on_chain_sync_status === "revoked"}
+                  contractAddress={contractInfo.contract_address}
+                  deployerAddress={contractInfo.deployer_address}
+                  onSuccess={onAdmissionSuccess ?? (() => {})}
                 />
               </div>
             )}

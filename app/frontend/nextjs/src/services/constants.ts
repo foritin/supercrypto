@@ -8,8 +8,8 @@
  * - GET /public/constants - 获取所有常量分组
  * - GET /public/constants/{group} - 获取指定分组的常量
  */
-import { api } from '@/services/api'
 import { PUBLIC_PATHS } from '@/constants/api-paths'
+import { api } from '@/services/api'
 
 /**
  * 单个常量项

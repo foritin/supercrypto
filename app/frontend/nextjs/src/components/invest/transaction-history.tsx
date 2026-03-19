@@ -1,12 +1,6 @@
 'use client';
 
-import * as React from 'react';
-import { useTranslation } from 'react-i18next';
-import { useChainId } from 'wagmi';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useTransactionStore, type Transaction, type TransactionStatus } from '@/stores/transaction-store';
-import { getExplorerUrl } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
 import { 
   ExternalLink, 
   RefreshCw, 
@@ -17,7 +11,14 @@ import {
   Filter,
   ChevronDown,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
+import { useChainId } from 'wagmi';
+
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { getExplorerUrl } from '@/lib/utils';
+import { useTransactionStore, type Transaction, type TransactionStatus } from '@/stores/transaction-store';
 
 interface TransactionHistoryProps {
   limit?: number;
@@ -111,7 +112,6 @@ function TransactionItem({ tx }: { tx: Transaction }) {
 export function TransactionHistory({ limit = 10, showFilters = true }: TransactionHistoryProps) {
   const { t } = useTranslation();
   const { 
-    transactions, 
     pendingHashes, 
     getRecentTransactions,
     clearCompleted,
@@ -122,7 +122,7 @@ export function TransactionHistory({ limit = 10, showFilters = true }: Transacti
 
   const allTransactions = React.useMemo(() => {
     return getRecentTransactions(limit);
-  }, [getRecentTransactions, limit, transactions]);
+  }, [getRecentTransactions, limit]);
 
   const filteredTransactions = React.useMemo(() => {
     if (filter === 'all') return allTransactions;

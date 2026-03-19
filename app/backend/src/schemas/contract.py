@@ -12,11 +12,12 @@ from pydantic import BaseModel, Field
 
 
 class ReadinessDetails(BaseModel):
-    """就绪状态详情 - 三个条件的具体状态"""
+    """就绪状态详情 - 四个条件的具体状态"""
 
     all_registered: bool = Field(description="所有合约已注册到 Provider")
     no_missing_deps: bool = Field(description="没有必须依赖未绑定")
     has_primary: bool = Field(description="已设置主合约")
+    treasury_configured: bool = Field(description="已配置 TREASURY 地址")
 
 
 # ============ 绑定状态 Schemas ============
@@ -48,6 +49,7 @@ class PrepareRegisterRequest(BaseModel):
 
     contract_name: str
     provider_key: Optional[str] = None
+    external_address: Optional[str] = None
 
 
 class ConfirmRegisterRequest(BaseModel):
@@ -71,6 +73,37 @@ class ConfirmUnregisterRequest(BaseModel):
     contract_name: str
     provider_key: str
     tx_hash: str
+
+
+class ContractAddressUpdateRequest(BaseModel):
+    """手动更新合约地址请求"""
+
+    contract_name: str
+    address: str
+
+
+# ============ TREASURY 绑定 Schemas ============
+
+
+class PrepareSetTreasuryRequest(BaseModel):
+    """准备设置 TREASURY 请求"""
+
+    treasury_contract_name: str
+
+
+class ConfirmSetTreasuryRequest(BaseModel):
+    """确认设置 TREASURY 请求"""
+
+    treasury_contract_name: str
+    tx_hash: str
+
+
+class TreasuryBindingResponse(BaseModel):
+    """TREASURY 绑定状态响应"""
+
+    provider_address: str
+    treasury: str
+    treasury_multisig: str
 
 
 # ============ 合约验证 Schemas ============

@@ -6,14 +6,10 @@
  * Migrated from Ant Design to shadcn/ui
  * @validates Requirements 16.12
  */
+import { Trash2, AlertTriangle, AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Trash2, AlertTriangle, AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -22,6 +18,10 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { notification } from '@/lib/notification'
 import { devToolsService, type ResetableDataInfo, type DataResetRequest } from '@/services/dev-tools'
 

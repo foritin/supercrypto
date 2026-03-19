@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * 下载 TensorFlow.js WASM 文件到 public 目录
  */

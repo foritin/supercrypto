@@ -12,8 +12,8 @@
  *        functionality via column header clicks
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
 
 // ============================================
 // Sorting Utility Functions (to be tested)
@@ -124,12 +124,6 @@ interface TestTableRow {
   value: number
 }
 
-interface TestTableRowWithOptional {
-  id: number
-  name: string
-  value: number | null
-}
-
 // ============================================
 // Property Tests
 // ============================================
@@ -194,8 +188,8 @@ describe('Property 5: Table Sorting Correctness', () => {
           
           // Verify ascending order
           for (let i = 1; i < sorted.length; i++) {
-            const prev = sorted[i - 1][column]
-            const curr = sorted[i][column]
+            const prev = sorted[i - 1]![column]
+            const curr = sorted[i]![column]
             
             if (typeof prev === 'string' && typeof curr === 'string') {
               expect(curr.localeCompare(prev)).toBeGreaterThanOrEqual(0)
@@ -230,8 +224,8 @@ describe('Property 5: Table Sorting Correctness', () => {
           
           // Verify descending order
           for (let i = 1; i < sorted.length; i++) {
-            const prev = sorted[i - 1][column]
-            const curr = sorted[i][column]
+            const prev = sorted[i - 1]![column]
+            const curr = sorted[i]![column]
             
             if (typeof prev === 'string' && typeof curr === 'string') {
               expect(curr.localeCompare(prev)).toBeLessThanOrEqual(0)
@@ -284,7 +278,7 @@ describe('Property 5: Table Sorting Correctness', () => {
           // Within each group, original indices should be in ascending order
           for (const group of groups.values()) {
             for (let i = 1; i < group.length; i++) {
-              expect(group[i]._originalIndex).toBeGreaterThan(group[i - 1]._originalIndex)
+              expect(group[i]!._originalIndex).toBeGreaterThan(group[i - 1]!._originalIndex)
             }
           }
         }
@@ -350,12 +344,12 @@ describe('Property 5: Table Sorting Correctness', () => {
           if (firstNullIndex !== -1) {
             // All items after the first null should also be null
             for (let i = firstNullIndex; i < sorted.length; i++) {
-              expect(sorted[i].value).toBeNull()
+              expect(sorted[i]!.value).toBeNull()
             }
             
             // All items before the first null should not be null
             for (let i = 0; i < firstNullIndex; i++) {
-              expect(sorted[i].value).not.toBeNull()
+              expect(sorted[i]!.value).not.toBeNull()
             }
           }
         }
@@ -385,8 +379,8 @@ describe('Property 5: Table Sorting Correctness', () => {
           
           // Verify numeric ordering (not string ordering)
           for (let i = 1; i < sorted.length; i++) {
-            const prev = sorted[i - 1].value
-            const curr = sorted[i].value
+            const prev = sorted[i - 1]!.value
+            const curr = sorted[i]!.value
             
             // This would fail if string comparison was used
             // e.g., "10" < "2" in string comparison, but 10 > 2 in numeric
@@ -419,8 +413,8 @@ describe('Property 5: Table Sorting Correctness', () => {
           
           // Verify string ordering using localeCompare
           for (let i = 1; i < sorted.length; i++) {
-            const prev = sorted[i - 1].name
-            const curr = sorted[i].name
+            const prev = sorted[i - 1]!.name
+            const curr = sorted[i]!.name
             const comparison = curr.localeCompare(prev)
             
             if (order === 'asc') {
@@ -521,8 +515,8 @@ describe('Property 5: Table Sorting Correctness', () => {
           
           // Property 2: Correct ordering
           for (let i = 1; i < sorted.length; i++) {
-            const prev = sorted[i - 1][column]
-            const curr = sorted[i][column]
+            const prev = sorted[i - 1]![column]
+            const curr = sorted[i]![column]
             
             if (typeof prev === 'number' && typeof curr === 'number') {
               if (order === 'asc') {

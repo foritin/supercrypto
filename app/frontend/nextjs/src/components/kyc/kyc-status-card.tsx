@@ -16,19 +16,20 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import { useAccount } from 'wagmi'
-import { useKycStatus, useKycApply, getKycStatusInfo } from '@/hooks/use-kyc-status'
-import { KycStatus } from '@/services/kyc'
-import { useRouter } from 'next/navigation'
+
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useKycStatus, getKycStatusInfo } from '@/hooks/use-kyc-status'
 import { cn } from '@/lib/utils'
+import { KycStatus } from '@/services/kyc'
 
 // shadcn/ui 组件
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 
 export interface KycStatusCardProps {
   onStartKyc?: () => void
@@ -54,7 +55,6 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
   const { t } = useTranslation()
   const { isConnected } = useAccount()
   const { data: kycData, isLoading, isError, refetch, status } = useKycStatus()
-  const { mutate: applyKyc, isPending: isApplying } = useKycApply()
   const router = useRouter()
   
   const statusInfo = getKycStatusInfo(status)
@@ -148,12 +148,7 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
     if (onStartKyc) {
       onStartKyc()
     } else {
-      applyKyc({}, {
-        onSuccess: () => {
-          // 引导跳转第三方 KYC（MVP：占位外链或路由）
-          router.push('/kyc/start')
-        },
-      })
+      router.push('/kyc/start')
     }
   }
 
@@ -290,12 +285,8 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
             {/* Requirements 8.3: 触摸目标尺寸优化 - 最小 44x44px */}
             <Button 
               onClick={handleStartKyc} 
-              disabled={isApplying}
               className="min-h-[44px] w-full sm:w-auto"
             >
-              {isApplying ? (
-                <RotateCw className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
-              ) : null}
               {t('kyc.rejected.reapply')}
             </Button>
           </div>
@@ -341,14 +332,9 @@ export function KycStatusCard({ onStartKyc }: KycStatusCardProps) {
             <Button 
               size="lg"
               onClick={handleStartKyc}
-              disabled={isApplying}
               className="min-h-[48px] w-full sm:w-auto"
             >
-              {isApplying ? (
-                <RotateCw className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
-              ) : (
-                <ArrowRight className="w-4 h-4 mr-2" aria-hidden="true" />
-              )}
+              <ArrowRight className="w-4 h-4 mr-2" aria-hidden="true" />
               {t('kyc.notStarted.startButton')}
             </Button>
           </div>

@@ -11,6 +11,7 @@
  */
 
 import axios from 'axios'
+
 import { API_BASE_URL } from '@/constants/api'
 import { PUBLIC_PATHS } from '@/constants/api-paths'
 
@@ -196,7 +197,7 @@ export async function fetchPlatformInfo(): Promise<PlatformInfoData> {
     // 网络错误时尝试返回过期缓存（降级）
     const stale = readStaleCache()
     if (stale) return stale
-    throw new Error('无法获取平台信息')
+    throw new Error('Failed to fetch platform info')
   }
 }
 

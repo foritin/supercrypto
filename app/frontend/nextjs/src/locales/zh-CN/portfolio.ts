@@ -31,6 +31,11 @@ const portfolio = {
       period: "锁定期",
       status: "状态",
       actions: "操作",
+      recentTransactions: "最近交易",
+      assetType: "资产/类型",
+      txId: "交易ID",
+      date: "日期",
+      viewDetails: "查看详情",
     },
     
     // 交易历史表格列
@@ -139,6 +144,38 @@ const portfolio = {
       unstake: "解质押",
       claim: "领取",
     },
+    
+    // 投资卡片
+    card: {
+      invested: "已投资",
+      expectedReturn: "预期收益",
+      totalAtMaturity: "到期总额",
+      daysLeft: "剩余 {{days}} 天",
+      inProgress: "进行中",
+      completed: "已完成",
+      matured: "已到期",
+      pending: "待处理",
+      redeem: "赎回",
+      details: "详情",
+      lockPeriod: "锁定期",
+      redeemCompleted: "赎回完成",
+    },
+    
+    // 开发模式
+    dev: {
+      mockData: "模拟数据",
+      demo: "演示",
+    },
+    
+    // 视图选项
+    view: {
+      cards: "卡片",
+      table: "表格",
+    },
+    
+    // Dashboard portfolio card
+    totalAssets: "共 {{count}} 项资产",
+    totalReturn: "累计收益",
 
     // 旧的扁平结构（保留兼容）
     totalInvested: "总投资额",

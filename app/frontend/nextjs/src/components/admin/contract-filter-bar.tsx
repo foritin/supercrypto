@@ -15,7 +15,11 @@
 
 import { Search, X, HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -23,15 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Label } from '@/components/ui/label';
 
 export interface ContractFilters {
   search: string;              // 搜索关键词
@@ -116,7 +117,7 @@ export function ContractFilterBar({
           <SelectContent>
             {STATUS_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {t(opt.labelKey, opt.value === 'all' ? '全部状态' : opt.value)}
+                {t(opt.labelKey, opt.value === 'all' ? 'All Statuses' : opt.value)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -133,7 +134,7 @@ export function ContractFilterBar({
           <SelectContent>
             {TYPE_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
-                {t(opt.labelKey, opt.value === 'all' ? '全部类型' : opt.value)}
+                {t(opt.labelKey, opt.value === 'all' ? 'All Types' : opt.value)}
               </SelectItem>
             ))}
           </SelectContent>

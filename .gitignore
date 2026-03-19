@@ -10,7 +10,7 @@
 __pycache__
 
 node_modules/
-
+demo
 .claude
 .cursor
 .vscode
@@ -42,3 +42,6 @@ docs
 stories
 
 logs/
+
+.research
+.reference

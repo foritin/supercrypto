@@ -5,11 +5,12 @@
  * - 公开接口：/public/assets/*
  * - 管理员接口：/admin/assets/*
  */
-import { api } from '@/services/api'
 import { PUBLIC_PATHS, ADMIN_PATHS } from '@/constants/api-paths'
+import { api } from '@/services/api'
 
 export type AssetStatus = 'active' | 'paused' | 'sold_out' | 'closed'
 export type AssetType = 'real_estate' | 'bond' | 'commodity' | 'equity' | 'other'
+export type AssetSubscriptionMode = 'current' | 'fixed' | 'both'
 export type FrameStyle = 'green' | 'blue' | 'gold' | 'purple' | 'gray'
 // MVP 媒体类型 - 与后端 MediaType 枚举同步
 export type MediaType = 'cover' | 'gallery' | 'valuation' | 'legal' | 'financial' | 'floor_plan' | 'video' | 'other' | 'logo'
@@ -80,6 +81,7 @@ export interface AssetListItem {
   name: string
   symbol: string
   asset_type: AssetType
+  subscription_mode: AssetSubscriptionMode
   image_url: string | null
   cover_image_url: string | null  // 封面图预签名 URL（从 AssetMedia 获取）
   logo_url: string | null  // Logo 预签名 URL（从 AssetMedia 获取）
@@ -92,6 +94,8 @@ export interface AssetListItem {
   total_supply: number
   subscribed_amount: number
   subscription_progress: number
+  subscription_start_at: string | null
+  subscription_end_at: string | null
   is_available: boolean
 }
 
@@ -110,10 +114,13 @@ export interface RecentInvestor {
 
 export interface AssetDetail {
   id: number
+  chain_id?: number
+  risk_level?: 'low' | 'medium' | 'high'
   name: string
   symbol: string
   description: string | null
   asset_type: AssetType
+  subscription_mode: AssetSubscriptionMode
   image_url: string | null
   document_url: string | null
   location: string | null
@@ -124,6 +131,8 @@ export interface AssetDetail {
   min_subscription: number
   remaining_amount: number
   subscription_progress: number
+  subscription_start_at: string | null
+  subscription_end_at: string | null
   apy_3m: number
   apy_6m: number
   apy_12m: number
@@ -163,6 +172,7 @@ export interface MediaStats {
 export interface AssetListQuery {
   status?: AssetStatus
   asset_type?: AssetType
+  subscription_mode?: AssetSubscriptionMode
   page?: number
   page_size?: number
 }
@@ -171,6 +181,7 @@ export interface AssetCreateRequest {
   symbol: string
   description?: string
   asset_type: AssetType
+  subscription_mode?: AssetSubscriptionMode
   image_url?: string
   document_url?: string
   location?: string
@@ -180,6 +191,8 @@ export interface AssetCreateRequest {
   apy_3m?: number
   apy_6m?: number
   apy_12m?: number
+  subscription_start_at?: string
+  subscription_end_at?: string
   contract_address?: string
   frame_style?: FrameStyle
 }
@@ -188,6 +201,7 @@ export interface AssetUpdateRequest {
   symbol?: string
   description?: string
   asset_type?: AssetType
+  subscription_mode?: AssetSubscriptionMode
   image_url?: string
   document_url?: string
   location?: string
@@ -197,6 +211,8 @@ export interface AssetUpdateRequest {
   apy_3m?: number
   apy_6m?: number
   apy_12m?: number
+  subscription_start_at?: string | null
+  subscription_end_at?: string | null
   contract_address?: string
   frame_style?: FrameStyle
 }
@@ -208,6 +224,7 @@ export const assetService = {
     const params = new URLSearchParams()
     if (query.status) params.append('status', query.status)
     if (query.asset_type) params.append('asset_type', query.asset_type)
+    if (query.subscription_mode) params.append('subscription_mode', query.subscription_mode)
     if (query.page) params.append('page', query.page.toString())
     if (query.page_size) params.append('page_size', query.page_size.toString())
     const url = PUBLIC_PATHS.ASSETS + (params.toString() ? '?' + params.toString() : '')
@@ -253,6 +270,7 @@ export const assetService = {
     const params = new URLSearchParams()
     if (query.status) params.append('status', query.status)
     if (query.asset_type) params.append('asset_type', query.asset_type)
+    if (query.subscription_mode) params.append('subscription_mode', query.subscription_mode)
     if (query.page) params.append('page', query.page.toString())
     if (query.page_size) params.append('page_size', query.page_size.toString())
     const url = ADMIN_PATHS.ASSETS + (params.toString() ? '?' + params.toString() : '')
@@ -303,8 +321,8 @@ export const assetService = {
   async updateAssetPrice(id: number, price: number, source = 'manual'): Promise<AssetDetail> {
     return (
       await api.post<API.ResponseData<AssetDetail>>(
-        ADMIN_PATHS.ASSET_PRICE(id, price, source),
-        {}
+        ADMIN_PATHS.ASSET_PRICE(id),
+        { price, source }
       )
     ).object_data as AssetDetail
   },

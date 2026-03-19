@@ -8,11 +8,7 @@
  * 使用 Sheet + SectionCard + InfoRow 组件
  */
 
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useChainId } from "wagmi";
 import {
-  X,
   CheckCircle2,
   XCircle,
   AlertTriangle,
@@ -21,9 +17,6 @@ import {
   FileText,
   ShieldCheck,
   ShieldAlert,
-  Calendar,
-  CreditCard,
-  Globe,
   Smartphone,
   ExternalLink,
   RefreshCw,
@@ -31,11 +24,15 @@ import {
   Check,
   Copy,
   Hourglass,
-  TrendingUp,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useChainId } from "wagmi";
+
+import { SectionCard, InfoRow } from "@/components/ui";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -43,8 +40,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Sheet,
   SheetContent,
@@ -52,13 +47,15 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import type { KycDetail, RiskLevel, ReviewPriority } from "@/services/admin-kyc";
-import type { KycStatusType } from "@/services/admin";
-import { DocumentViewer } from "./document-viewer";
-import { VideoPlayer } from "./video-player";
-import { DocumentReviewPanel } from "./document-review-panel";
-import { SectionCard, InfoRow } from "@/components/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { getExplorerUrl } from "@/lib/utils";
+import type { KycStatusType } from "@/services/admin";
+import type { KycDetail, RiskLevel, ReviewPriority } from "@/services/admin-kyc";
+
+import { DocumentReviewPanel } from "./document-review-panel";
+import { DocumentViewer } from "./document-viewer";
+
 
 interface ReviewPanelProps {
   kycDetail: KycDetail | null;
@@ -309,9 +306,9 @@ export function ReviewPanel({
   const [selectedRejectCode, setSelectedRejectCode] = useState("");
   const [customRejectReason, setCustomRejectReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
-  const [isAccredited, setIsAccredited] = useState(false);
+  const [isAccredited] = useState(false);
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
-  const [selectedDocumentIndex, setSelectedDocumentIndex] = useState(0);
+  const [selectedDocumentIndex] = useState(0);
   const [copied, setCopied] = useState(false);
 
   if (!kycDetail) return null;
@@ -327,15 +324,9 @@ export function ReviewPanel({
     documents.id_back && { type: "id_back" as const, label: t("admin.kyc.reviewPanel.idBack"), url: documents.id_back },
     documents.selfie && { type: "selfie" as const, label: t("admin.kyc.reviewPanel.selfie"), url: documents.selfie },
     documents.face_image && { type: "face_image" as const, label: t("admin.kyc.reviewPanel.facePhoto"), url: documents.face_image },
-  ].filter(Boolean);
-
-  // 活体视频单独处理
-  const livenessVideoUrl = documents.liveness_video;
-
-  const handleDocumentClick = (index: number) => {
-    setSelectedDocumentIndex(index);
-    setDocumentViewerOpen(true);
-  };
+  ].filter(
+    (item): item is { type: "id_front" | "id_back" | "selfie" | "face_image"; label: string; url: string } => Boolean(item)
+  );
 
   const handleApprove = () => {
     onApprove(kyc.id, isAccredited);
@@ -570,9 +561,7 @@ export function ReviewPanel({
               <TabsContent value="documents" className="mt-0">
                 <DocumentReviewPanel
                   documents={documents}
-                  ocrData={ocr_data}
-                  facialComparison={facial_comparison}
-                  riskChecks={risk_details?.checks}
+                  {...(ocr_data ? { ocrData: ocr_data } : {})}
                 />
               </TabsContent>
 
@@ -674,8 +663,8 @@ export function ReviewPanel({
         isOpen={documentViewerOpen}
         onClose={() => setDocumentViewerOpen(false)}
         initialIndex={selectedDocumentIndex}
-        ocrData={ocr_data}
-        facialComparison={facial_comparison}
+        {...(ocr_data ? { ocrData: ocr_data } : {})}
+        {...(facial_comparison ? { facialComparison: facial_comparison } : {})}
       />
     </>
   );

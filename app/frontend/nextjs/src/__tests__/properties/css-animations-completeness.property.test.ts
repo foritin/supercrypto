@@ -9,10 +9,11 @@
  * 和对应的动画工具类。
  */
 
-import { describe, test, expect } from 'vitest';
-import * as fc from 'fast-check';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import * as fc from 'fast-check';
+import { describe, test, expect } from 'vitest';
 
 // 读取 animations.css 文件内容
 const animationsPath = path.join(__dirname, '../../styles/animations.css');

@@ -1,9 +1,10 @@
 'use client';
 
+import { X, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import Link from 'next/link';
-import { X, AlertTriangle } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 /**

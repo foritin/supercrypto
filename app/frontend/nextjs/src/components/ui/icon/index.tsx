@@ -1,9 +1,12 @@
 'use client';
 
-import { LucideIcon, icons } from 'lucide-react';
+import { motion } from 'framer-motion';
+import type { LucideIcon} from 'lucide-react';
+import { icons } from 'lucide-react';
+
 import { cn } from '@/utils/cn';
 import { iconSizes, type IconVariant } from '@/utils/icon-mapping';
-import { motion } from 'framer-motion';
+
 
 interface IconProps {
   name: keyof typeof icons;

@@ -9,7 +9,6 @@
  * ════════════════════════════════════════════════════════════════
  */
 
-import { notification, toast } from '@/lib/notification';
 import {
   CheckCircle,
   XCircle,
@@ -18,6 +17,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import React from 'react';
+
+import { toast } from '@/lib/notification';
 
 // Toast 类型配置
 interface ToastConfig {

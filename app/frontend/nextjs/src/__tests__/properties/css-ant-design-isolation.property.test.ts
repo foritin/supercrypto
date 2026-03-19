@@ -9,9 +9,10 @@
  * 所有 Ant Design 覆盖样式应位于 legacy/ant-design.css 文件中。
  */
 
-import { describe, test, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import { describe, test, expect } from 'vitest';
 
 // 读取文件内容
 const globalsPath = path.join(__dirname, '../../app/globals.css');

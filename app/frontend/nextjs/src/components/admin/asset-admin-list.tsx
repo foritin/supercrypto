@@ -12,38 +12,18 @@
  * 
  * @validates Requirements 8.1, 8.4, 8.5
  */
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
 import { 
   Plus, Edit, RefreshCw, PauseCircle, PlayCircle, 
-  DollarSign, Link, Image, Loader2, Trash2
+  DollarSign, Link, Image as ImageIcon, Loader2, Trash2
 } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import { z } from 'zod'
 
 // shadcn/ui components
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,12 +34,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { GlowStatusBadge } from '@/components/ui/glow-status-badge'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { AdminCard } from '@/components/layout/admin-layout'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { DataTable } from '@/components/ui/data-table'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -68,27 +56,41 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { DataTable } from '@/components/ui/data-table'
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 // Services and utilities
 import { notification } from '@/lib/notification'
-import { getErrorMessage } from '@/utils/error-handler'
 import { 
   assetService, 
   type AssetListItem, 
   type AssetDetail,
   type AssetStatus, 
+  type AssetSubscriptionMode,
   type AssetType,
   type AssetUpdateRequest,
   type ProjectContractInfo,
   ASSET_TYPE_NAMES,
   ASSET_STATUS_NAMES,
 } from '@/services/asset'
-import { MediaManager } from './media-manager'
+import { getErrorMessage } from '@/utils/error-handler'
+
 import { AssetStatusIndicator } from './asset-status-indicator'
 import { CreateAssetWizard } from './create-asset-wizard'
-import { ASSET_STATUS_BADGE } from '@/constants/status-config'
+import { MediaManager } from './media-manager'
 
 // Asset type options
 const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
@@ -98,9 +100,6 @@ const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
   { value: 'equity', label: ASSET_TYPE_NAMES.equity },
   { value: 'other', label: ASSET_TYPE_NAMES.other },
 ]
-
-// 使用共享状态徽章配置
-const STATUS_BADGE_VARIANTS = ASSET_STATUS_BADGE
 
 interface PaginatedData {
   items: AssetListItem[]
@@ -118,6 +117,7 @@ const createEditAssetSchema = (t: (key: string) => string) => z.object({
   symbol: z.string().min(1, t('admin.assets.form.symbolEmpty')),
   description: z.string().optional(),
   asset_type: z.enum(['real_estate', 'bond', 'commodity', 'equity', 'other']),
+  subscription_mode: z.enum(['current', 'fixed', 'both']),
   image_url: z.string().optional(),
   document_url: z.string().optional(),
   location: z.string().optional(),
@@ -126,13 +126,25 @@ const createEditAssetSchema = (t: (key: string) => string) => z.object({
   apy_3m: z.number().min(0).max(100),
   apy_6m: z.number().min(0).max(100),
   apy_12m: z.number().min(0).max(100),
+  subscription_start_at: z.string().optional().nullable(),
+  subscription_end_at: z.string().optional().nullable(),
+}).refine(data => {
+  if (data.subscription_start_at && data.subscription_end_at) {
+    return new Date(data.subscription_end_at) > new Date(data.subscription_start_at)
+  }
+  return true
+}, {
+  message: t('admin.assets.form.endBeforeStart'),
+  path: ['subscription_end_at'],
 })
 
 type EditAssetFormValues = z.infer<ReturnType<typeof createEditAssetSchema>>
 
 // Price update form schema factory - uses i18n
-const createPriceUpdateSchema = (t: (key: string) => string) => z.object({
-  price: z.number().min(0, t('admin.assets.form.priceNonNegative')),
+// Store price as string to preserve user input (trailing dots, trailing zeros)
+// and convert to number on submit
+const createPriceUpdateSchema = (_t: (key: string) => string) => z.object({
+  price: z.union([z.string(), z.number()]).optional(),
   source: z.enum(['manual', 'oracle', 'api']),
 })
 
@@ -142,6 +154,7 @@ export function AssetAdminList() {
   const { t } = useTranslation()
   const [statusFilter, setStatusFilter] = useState<AssetStatus | undefined>(undefined)
   const [typeFilter, setTypeFilter] = useState<AssetType | undefined>(undefined)
+  const [subscriptionModeFilter, setSubscriptionModeFilter] = useState<AssetSubscriptionMode | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   
@@ -200,6 +213,7 @@ export function AssetAdminList() {
       symbol: '',
       description: '',
       asset_type: 'real_estate',
+      subscription_mode: 'both',
       image_url: '',
       document_url: '',
       location: '',
@@ -208,6 +222,8 @@ export function AssetAdminList() {
       apy_3m: 0,
       apy_6m: 0,
       apy_12m: 0,
+      subscription_start_at: null,
+      subscription_end_at: null,
     },
   })
 
@@ -215,7 +231,7 @@ export function AssetAdminList() {
   const priceForm = useForm<PriceUpdateFormValues>({
     resolver: zodResolver(priceUpdateSchema),
     defaultValues: {
-      price: 0,
+      price: undefined as number | undefined,
       source: 'manual',
     },
   })
@@ -228,8 +244,9 @@ export function AssetAdminList() {
       const result = await assetService.getAssetsAdmin({
         page,
         page_size: pageSize,
-        status: statusFilter,
-        asset_type: typeFilter,
+        ...(statusFilter ? { status: statusFilter } : {}),
+        ...(typeFilter ? { asset_type: typeFilter } : {}),
+        ...(subscriptionModeFilter ? { subscription_mode: subscriptionModeFilter } : {}),
       })
       setData(result)
     } catch (err) {
@@ -238,7 +255,7 @@ export function AssetAdminList() {
     } finally {
       setIsLoading(false)
     }
-  }, [page, pageSize, statusFilter, typeFilter, t])
+  }, [page, pageSize, statusFilter, typeFilter, subscriptionModeFilter, t])
 
   useEffect(() => {
     fetchAssets()
@@ -360,7 +377,29 @@ export function AssetAdminList() {
     if (!selectedAsset) return
     setIsUpdating(true)
     try {
-      await assetService.updateAsset(selectedAsset.id, values as AssetUpdateRequest)
+      // Convert local datetime-local values to ISO strings for the API
+      const payload: AssetUpdateRequest = {
+        name: values.name,
+        symbol: values.symbol,
+        asset_type: values.asset_type,
+        subscription_mode: values.subscription_mode,
+        total_supply: values.total_supply,
+        min_subscription: values.min_subscription,
+        apy_3m: values.apy_3m,
+        apy_6m: values.apy_6m,
+        apy_12m: values.apy_12m,
+        ...(values.description ? { description: values.description } : {}),
+        ...(values.image_url ? { image_url: values.image_url } : {}),
+        ...(values.document_url ? { document_url: values.document_url } : {}),
+        ...(values.location ? { location: values.location } : {}),
+        ...(values.subscription_start_at
+          ? { subscription_start_at: new Date(values.subscription_start_at).toISOString() }
+          : { subscription_start_at: null }),
+        ...(values.subscription_end_at
+          ? { subscription_end_at: new Date(values.subscription_end_at).toISOString() }
+          : { subscription_end_at: null }),
+      }
+      await assetService.updateAsset(selectedAsset.id, payload)
       notification.success(t('admin.assets.updateSuccess'))
       setEditModalOpen(false)
       setSelectedAsset(null)
@@ -391,10 +430,22 @@ export function AssetAdminList() {
 
   // Update price
   const handlePriceUpdate = async (values: PriceUpdateFormValues) => {
+    console.log('[DEBUG] handlePriceUpdate called, price:', values.price, 'type:', typeof values.price)
     if (!selectedAsset) return
+    const priceNum = typeof values.price === 'string' ? parseFloat(values.price) : values.price
+    console.log('[DEBUG] priceNum:', priceNum)
+    if (priceNum === undefined || priceNum === null || Number.isNaN(priceNum)) {
+      console.log('[DEBUG] Validation failed - price is empty')
+      priceForm.setError('price', { message: t('admin.assets.form.priceRequired') })
+      return
+    }
+    if (priceNum < 0) {
+      priceForm.setError('price', { message: t('admin.assets.form.priceNonNegative') })
+      return
+    }
     setIsUpdatingPrice(true)
     try {
-      await assetService.updateAssetPrice(selectedAsset.id, values.price, values.source)
+      await assetService.updateAssetPrice(selectedAsset.id, priceNum, values.source)
       notification.success(t('admin.assets.priceUpdateSuccess'))
       setPriceModalOpen(false)
       setSelectedAsset(null)
@@ -413,11 +464,21 @@ export function AssetAdminList() {
     try {
       const detail = await assetService.getAssetAdmin(asset.id)
       setCurrentAssetDetail(detail)
+      // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+      const toLocalInput = (iso: string | null | undefined) => {
+        if (!iso) return null
+        const d = new Date(iso)
+        if (isNaN(d.getTime())) return null
+        // offset to local time
+        const offset = d.getTimezoneOffset() * 60000
+        return new Date(d.getTime() - offset).toISOString().slice(0, 16)
+      }
       editForm.reset({
         name: detail.name,
         symbol: detail.symbol,
         description: detail.description || '',
         asset_type: detail.asset_type,
+        subscription_mode: (detail.subscription_mode || 'both') as AssetSubscriptionMode,
         image_url: detail.image_url || '',
         document_url: detail.document_url || '',
         location: detail.location || '',
@@ -426,9 +487,11 @@ export function AssetAdminList() {
         apy_3m: detail.apy_3m,
         apy_6m: detail.apy_6m,
         apy_12m: detail.apy_12m,
+        subscription_start_at: toLocalInput(detail.subscription_start_at),
+        subscription_end_at: toLocalInput(detail.subscription_end_at),
       })
       setEditModalOpen(true)
-    } catch (err) {
+    } catch {
       notification.error(t('common.error'))
     }
   }
@@ -437,7 +500,7 @@ export function AssetAdminList() {
   const openPriceModal = (asset: AssetListItem) => {
     setSelectedAsset(asset)
     priceForm.reset({
-      price: asset.current_price,
+      price: asset.current_price != null ? String(asset.current_price) : undefined,
       source: 'manual',
     })
     setPriceModalOpen(true)
@@ -488,6 +551,12 @@ export function AssetAdminList() {
   }
 
   // Table columns using @tanstack/react-table ColumnDef
+  const subscriptionModeLabelMap = {
+    current: t('admin.assets.form.subscriptionModeCurrent'),
+    fixed: t('admin.assets.form.subscriptionModeFixed'),
+    both: t('admin.assets.form.subscriptionModeBoth'),
+  } as const
+
   const columns: ColumnDef<AssetListItem>[] = [
     {
       accessorKey: 'id',
@@ -516,9 +585,28 @@ export function AssetAdminList() {
       accessorKey: 'status',
       header: t('admin.assets.status'),
       size: 100,
+      cell: ({ row }) => {
+        const status = row.original.status
+        const variantMap: Record<string, 'success' | 'warning' | 'default' | 'error'> = {
+          active: 'success',
+          paused: 'warning',
+          sold_out: 'default',
+          closed: 'error',
+        }
+        return (
+          <GlowStatusBadge variant={variantMap[status] || 'default'}>
+            {ASSET_STATUS_NAMES[status]}
+          </GlowStatusBadge>
+        )
+      },
+    },
+    {
+      accessorKey: 'subscription_mode',
+      header: t('admin.assets.subscriptionMode'),
+      size: 130,
       cell: ({ row }) => (
-        <Badge variant={STATUS_BADGE_VARIANTS[row.original.status]}>
-          {ASSET_STATUS_NAMES[row.original.status]}
+        <Badge variant="outline">
+          {subscriptionModeLabelMap[row.original.subscription_mode]}
         </Badge>
       ),
     },
@@ -629,7 +717,7 @@ export function AssetAdminList() {
                       setMediaModalOpen(true)
                     }}
                   >
-                    <Image className="h-4 w-4" />
+                    <ImageIcon className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{t('admin.assets.mediaManagement')}</TooltipContent>
@@ -708,11 +796,22 @@ export function AssetAdminList() {
     { value: 'closed', label: ASSET_STATUS_NAMES.closed },
   ]
 
+  const subscriptionModeOptions: { value: 'all' | AssetSubscriptionMode; label: string }[] = [
+    { value: 'all', label: t('admin.assets.allModes') },
+    { value: 'both', label: t('admin.assets.form.subscriptionModeBoth') },
+    { value: 'current', label: t('admin.assets.form.subscriptionModeCurrent') },
+    { value: 'fixed', label: t('admin.assets.form.subscriptionModeFixed') },
+  ]
+
   return (
-    <Card>
-      <CardHeader>
+    <>
+    <AdminCard>
+      <Card className="bg-transparent border-0">
+      <CardHeader className="border-b border-white/10 pb-4">
         <div className="flex justify-between items-center">
-          <CardTitle>{t('admin.assets.title')}</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <span className="font-semibold text-white">{t('admin.assets.title')}</span>
+          </CardTitle>
           <div className="flex gap-2">
             <Select
               value={statusFilter || 'all'}
@@ -739,6 +838,21 @@ export function AssetAdminList() {
               <SelectContent>
                 <SelectItem value="all">{t('admin.assets.allTypes')}</SelectItem>
                 {ASSET_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={subscriptionModeFilter || 'all'}
+              onValueChange={(value) => setSubscriptionModeFilter(value === 'all' ? undefined : value as AssetSubscriptionMode)}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder={t('admin.assets.filterByMode')} />
+              </SelectTrigger>
+              <SelectContent>
+                {subscriptionModeOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -772,6 +886,8 @@ export function AssetAdminList() {
           }}
         />
       </CardContent>
+      </Card>
+    </AdminCard>
 
       {/* Create Modal */}
       <CreateAssetWizard
@@ -852,6 +968,29 @@ export function AssetAdminList() {
 
               <FormField
                 control={editForm.control}
+                name="subscription_mode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('admin.assets.form.subscriptionMode')}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="both">{t('admin.assets.form.subscriptionModeBoth')}</SelectItem>
+                        <SelectItem value="current">{t('admin.assets.form.subscriptionModeCurrent')}</SelectItem>
+                        <SelectItem value="fixed">{t('admin.assets.form.subscriptionModeFixed')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editForm.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
@@ -903,7 +1042,21 @@ export function AssetAdminList() {
                         type="number" 
                         {...field}
                         value={field.value ?? ''}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                        onChange={(e) => {
+                            const val = e.target.value
+                            // 允许空值
+                            if (val === '') {
+                              field.onChange(undefined)
+                              return
+                            }
+                            // 只接受数字和小数点
+                            if (/^\d*\.?\d*$/.test(val)) {
+                              const num = parseFloat(val)
+                              if (!isNaN(num)) {
+                                field.onChange(num)
+                              }
+                            }
+                          }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -939,11 +1092,23 @@ export function AssetAdminList() {
                       <FormLabel>{t('admin.assets.form.apy3m')}</FormLabel>
                       <FormControl>
                         <Input 
-                          type="number" 
-                          step="0.01" 
+                          type="text"
+                          inputMode="decimal"
                           {...field}
                           value={field.value ?? ''}
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            // 允许空值或有效数字
+                            if (val === '') {
+                              field.onChange(undefined)
+                            } else if (/^\d*\.?\d*$/.test(val)) {
+                              // 只接受数字和小数点
+                              const num = parseFloat(val)
+                              if (!isNaN(num)) {
+                                field.onChange(num)
+                              }
+                            }
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -958,11 +1123,26 @@ export function AssetAdminList() {
                       <FormLabel>{t('admin.assets.form.apy6m')}</FormLabel>
                       <FormControl>
                         <Input 
-                          type="number" 
-                          step="0.01" 
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0.00"
                           {...field}
                           value={field.value ?? ''}
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            // 允许空值
+                            if (val === '') {
+                              field.onChange(undefined)
+                              return
+                            }
+                            // 只接受数字和小数点
+                            if (/^\d*\.?\d*$/.test(val)) {
+                              const num = parseFloat(val)
+                              if (!isNaN(num)) {
+                                field.onChange(num)
+                              }
+                            }
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -981,7 +1161,52 @@ export function AssetAdminList() {
                           step="0.01" 
                           {...field}
                           value={field.value ?? ''}
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            if (val === '') {
+                              field.onChange(undefined)
+                            } else {
+                              field.onChange(parseFloat(val))
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* 认购时间窗口 */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="subscription_start_at"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('admin.assets.form.subscriptionStartAt')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="datetime-local"
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="subscription_end_at"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('admin.assets.form.subscriptionEndAt')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="datetime-local"
+                          value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value || null)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -1084,11 +1309,23 @@ export function AssetAdminList() {
                       <FormLabel>{t('admin.assets.newPrice')}</FormLabel>
                       <FormControl>
                         <Input 
-                          type="number" 
-                          step="0.01" 
-                          {...field}
+                          type="text" 
+                          inputMode="decimal" placeholder="0.00" 
                           value={field.value ?? ''}
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                          name={field.name}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            if (val === '') {
+                              field.onChange('')
+                              return
+                            }
+                            // Allow valid decimal input patterns including trailing dot and trailing zeros
+                            if (/^\d*\.?\d*$/.test(val)) {
+                              field.onChange(val)
+                            }
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -1471,6 +1708,6 @@ export function AssetAdminList() {
           onUpdate={() => fetchAssets()}
         />
       )}
-    </Card>
+    </>
   )
 }

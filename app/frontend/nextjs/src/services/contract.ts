@@ -6,8 +6,8 @@
  * - 公开接口：/public/contracts/*
  * - 管理员接口：/admin/contracts/*
  */
-import { api } from "@/services/api";
 import { PUBLIC_PATHS, ADMIN_PATHS } from "@/constants/api-paths";
+import { api } from "@/services/api";
 import type {
   ReadinessDetails,
   BoundAssetInfo,
@@ -119,22 +119,25 @@ export const contractService = {
 
 // Subscription 合约 ABI (关键函数 - 活期模式)
 // 注意: Vyper 合约使用 snake_case 命名，与 Solidity 的 camelCase 不同
+// [UPDATED T+1] calculate_interest 添加 startTime 参数用于满1天判断
 export const SUBSCRIPTION_ABI = [
   // 读取函数 (Vyper snake_case)
   "function min_investment() view returns (uint256)",
   "function max_investment() view returns (uint256)",
   "function require_accredited() view returns (bool)",
   "function paused() view returns (bool)",
+  "function ADDRESS_PROVIDER() view returns (address)",
   "function lock_period_apy(uint256 period) view returns (uint256)",
   "function subscriptionCount(address user) view returns (uint256)",
   "function get_subscription(address user, uint256 subscriptionId) view returns ((uint256 principal, uint256 lockPeriod, uint256 subscribeTime, uint256 redeemTime, uint256 apy, bool redeemed))",
-  "function calculate_interest(uint256 principal, uint256 lockPeriod, uint256 apy) view returns (uint256)",
+  "function calculate_interest(uint256 principal, uint256 lockPeriod, uint256 apy, uint256 startTime) view returns (uint256)",
   "function get_pending_reward(address user, uint256 subscriptionId) view returns (uint256)",
   "function get_lock_periods() view returns (uint256[4])",
 
   // 写入函数 (活期模式: lockPeriod 参数可选，默认0)
   "function subscribe(uint256 amount)",
   "function subscribe(uint256 amount, uint256 lockPeriod)",
+  "function subscribe(uint256 amount, uint256 lockPeriod, address paymentToken)",
   "function redeem(uint256 subscriptionId)",
 
   // 事件
@@ -170,7 +173,7 @@ export const LOCK_PERIODS = {
 } as const;
 
 // 将月份转换为秒 (活期模式: 返回 0)
-export function monthsToSeconds(months: number): number {
+export function monthsToSeconds(_months: number): number {
   // 活期模式: 始终返回 0
   return FLEXIBLE_PERIOD;
 }
@@ -346,12 +349,13 @@ export interface ResetDeployRequest {
 export interface PrepareRegisterRequest {
   contract_name: string;
   provider_key?: string;
+  external_address?: string;
 }
 
 // 准备注册响应
 export interface PrepareRegisterResponse {
   provider_address: string;      // AddressProvider 合约地址
-  function_name: string;         // "set_address"
+  function_name: string;         // "admin_set_address"
   key_hash: string;              // keccak256(provider_key)
   contract_address: string;      // 要注册的合约地址
   contract_name: string;
@@ -390,7 +394,7 @@ export interface PrepareUnregisterRequest {
 // 准备解除注册响应
 export interface PrepareUnregisterResponse {
   provider_address: string;      // AddressProvider 合约地址
-  function_name: string;         // "set_address"
+  function_name: string;         // "admin_set_address"
   key_hash: string;              // keccak256(provider_key)
   contract_address: string;      // 零地址 (0x0000...0000)
   contract_name: string;
@@ -418,6 +422,24 @@ export interface ConfirmUnregisterResponse {
   provider_key: string;
   tx_hash: string;
   message: string;
+}
+
+// 准备设置 TREASURY 请求
+export interface PrepareSetTreasuryRequest {
+  treasury_contract_name: string;
+}
+
+// 确认设置 TREASURY 请求
+export interface ConfirmSetTreasuryRequest {
+  treasury_contract_name: string;
+  tx_hash: string;
+}
+
+// TREASURY 绑定状态
+export interface TreasuryBindingResponse {
+  provider_address: string;
+  treasury: string;
+  treasury_multisig: string;
 }
 
 // 合约验证结果
@@ -594,6 +616,42 @@ export const contractAdminService = {
   },
 
   /**
+   * 准备设置 TREASURY（管理员）
+   */
+  async prepareSetTreasury(
+    request: PrepareSetTreasuryRequest
+  ): Promise<PrepareRegisterResponse> {
+    const response = await api.post<API.ResponseData<PrepareRegisterResponse>>(
+      ADMIN_PATHS.CONTRACT_TREASURY_PREPARE,
+      request
+    );
+    return response.object_data as PrepareRegisterResponse;
+  },
+
+  /**
+   * 确认设置 TREASURY（管理员）
+   */
+  async confirmSetTreasury(
+    request: ConfirmSetTreasuryRequest
+  ): Promise<ConfirmRegisterResponse> {
+    const response = await api.post<API.ResponseData<ConfirmRegisterResponse>>(
+      ADMIN_PATHS.CONTRACT_TREASURY_CONFIRM,
+      request
+    );
+    return response.object_data as ConfirmRegisterResponse;
+  },
+
+  /**
+   * 读取 TREASURY / TREASURY_MULTISIG 链上绑定状态（管理员）
+   */
+  async getTreasuryBinding(): Promise<TreasuryBindingResponse> {
+    const response = await api.get<API.ResponseData<TreasuryBindingResponse>>(
+      ADMIN_PATHS.CONTRACT_TREASURY_BINDING
+    );
+    return response.object_data as TreasuryBindingResponse;
+  },
+
+  /**
    * 验证合约地址
    * @param addresses 要验证的地址列表
    * @param checkRwaBinding 是否检查 RWA Token 绑定
@@ -649,23 +707,3 @@ export const CONTRACT_SET_ABIS: Record<string, string[]> = {
   setLPToken: ["function setLPToken(address _lpToken)"],
 };
 
-// AddressProvider ABI (用于注册和 owner 检查)
-export const ADDRESS_PROVIDER_ABI = [
-  {
-    name: "owner",
-    type: "function",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ name: "", type: "address" }],
-  },
-  {
-    name: "set_address",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "_key", type: "bytes32" },
-      { name: "_address", type: "address" },
-    ],
-    outputs: [],
-  },
-] as const;

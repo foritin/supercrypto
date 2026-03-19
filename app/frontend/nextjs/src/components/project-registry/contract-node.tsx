@@ -6,8 +6,9 @@
 
 'use client';
 
+import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+
 import type { NodeData, ContractStatus, DependencyType } from '@/types/project-registry';
 
 
@@ -39,20 +40,23 @@ const typeLabels: Record<DependencyType, string> = {
 
 // 状态标签
 const statusLabels: Record<ContractStatus, string> = {
-  not_registered: '未注册',
-  registered: '已注册',
-  deployed: '已部署',
-  bound: '已绑定',
-  active: '已激活',
-  deprecated: '已废弃',
+  not_registered: 'Not Registered',
+  registered: 'Registered',
+  deployed: 'Deployed',
+  bound: 'Bound',
+  active: 'Active',
+  deprecated: 'Deprecated',
 };
 
 
-interface ContractNodeProps extends NodeProps<NodeData> {}
+type ContractFlowNode = Node<Record<string, unknown>, 'contract'>;
+
+type ContractNodeProps = NodeProps<ContractFlowNode>;
 
 function ContractNodeComponent({ data, selected }: ContractNodeProps) {
-  const statusColor = data.status ? statusColors[data.status] : '#9ca3af';
-  const borderColor = typeBorderColors[data.dependency_type] || '#9ca3af';
+  const nodeData = data as unknown as NodeData;
+  const statusColor = nodeData.status ? statusColors[nodeData.status] : '#9ca3af';
+  const borderColor = typeBorderColors[nodeData.dependency_type] || '#9ca3af';
 
   return (
     <>
@@ -93,7 +97,7 @@ function ContractNodeComponent({ data, selected }: ContractNodeProps) {
               background: statusColor,
             }}
           />
-          <span style={{ fontWeight: 500, fontSize: 14 }}>{data.label}</span>
+          <span style={{ fontWeight: 500, fontSize: 14 }}>{nodeData.label}</span>
         </div>
 
         {/* 分隔线 */}
@@ -110,13 +114,13 @@ function ContractNodeComponent({ data, selected }: ContractNodeProps) {
           }}
         >
           <span style={{ fontFamily: 'monospace' }}>
-            {typeLabels[data.dependency_type] || data.dependency_type}
+            {typeLabels[nodeData.dependency_type] || nodeData.dependency_type}
           </span>
-          <span>{data.status ? statusLabels[data.status] : '-'}</span>
+          <span>{nodeData.status ? statusLabels[nodeData.status] : '-'}</span>
         </div>
 
         {/* 地址 */}
-        {data.address && (
+        {nodeData.address && (
           <div
             style={{
               marginTop: 4,
@@ -127,7 +131,7 @@ function ContractNodeComponent({ data, selected }: ContractNodeProps) {
               textOverflow: 'ellipsis',
             }}
           >
-            {data.address.slice(0, 6)}...{data.address.slice(-4)}
+            {nodeData.address.slice(0, 6)}...{nodeData.address.slice(-4)}
           </div>
         )}
       </div>

@@ -14,14 +14,18 @@
  *   DatePicker.onChange(date) ⟹ form.getValues(fieldName) = date
  */
 
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import fc from 'fast-check'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { render, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { format } from 'date-fns'
+import fc from 'fast-check'
+import { useForm, type SubmitHandler } from 'react-hook-form'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { z } from 'zod'
+
+import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/date-picker'
+import { DateRangePicker } from '@/components/ui/date-range-picker'
 import {
   Form,
   FormField,
@@ -30,9 +34,6 @@ import {
   FormControl,
   FormMessage,
 } from '@/components/ui/form'
-import { DatePicker } from '@/components/ui/date-picker'
-import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
-import { Button } from '@/components/ui/button'
 
 // Schema for single date form
 const singleDateSchema = z.object({
@@ -67,16 +68,16 @@ type OptionalDateFormValues = z.infer<typeof optionalDateSchema>
 
 // Test component for single DatePicker with react-hook-form
 interface SingleDateFormProps {
-  onSubmit: (data: SingleDateFormValues) => void
+  onSubmit: SubmitHandler<SingleDateFormValues>
   defaultValue?: Date
-  onFormChange?: (values: SingleDateFormValues) => void
+  onFormChange?: (values: Partial<SingleDateFormValues>) => void
 }
 
 function SingleDateForm({ onSubmit, defaultValue, onFormChange }: SingleDateFormProps) {
   const form = useForm<SingleDateFormValues>({
     resolver: zodResolver(singleDateSchema),
     defaultValues: {
-      date: defaultValue,
+      ...(defaultValue ? { date: defaultValue } : {}),
     },
   })
 
@@ -97,9 +98,9 @@ function SingleDateForm({ onSubmit, defaultValue, onFormChange }: SingleDateForm
               <FormLabel>Date</FormLabel>
               <FormControl>
                 <DatePicker
-                  value={field.value}
                   onChange={field.onChange}
                   data-testid="date-picker"
+                  {...(field.value ? { value: field.value } : {})}
                 />
               </FormControl>
               <FormMessage data-testid="date-error" />
@@ -114,16 +115,16 @@ function SingleDateForm({ onSubmit, defaultValue, onFormChange }: SingleDateForm
 
 // Test component for DateRangePicker with react-hook-form
 interface DateRangeFormProps {
-  onSubmit: (data: DateRangeFormValues) => void
-  defaultValue?: DateRange
-  onFormChange?: (values: DateRangeFormValues) => void
+  onSubmit: SubmitHandler<DateRangeFormValues>
+  defaultValue?: DateRangeFormValues['dateRange']
+  onFormChange?: (values: Partial<DateRangeFormValues>) => void
 }
 
 function DateRangeForm({ onSubmit, defaultValue, onFormChange }: DateRangeFormProps) {
   const form = useForm<DateRangeFormValues>({
     resolver: zodResolver(dateRangeSchema),
     defaultValues: {
-      dateRange: defaultValue,
+      ...(defaultValue ? { dateRange: defaultValue } : {}),
     },
   })
 
@@ -144,9 +145,9 @@ function DateRangeForm({ onSubmit, defaultValue, onFormChange }: DateRangeFormPr
               <FormLabel>Date Range</FormLabel>
               <FormControl>
                 <DateRangePicker
-                  value={field.value}
                   onChange={field.onChange}
                   data-testid="date-range-picker"
+                  {...(field.value ? { value: field.value } : {})}
                 />
               </FormControl>
               <FormMessage data-testid="date-range-error" />
@@ -161,7 +162,7 @@ function DateRangeForm({ onSubmit, defaultValue, onFormChange }: DateRangeFormPr
 
 // Test component for optional DatePicker
 interface OptionalDateFormProps {
-  onSubmit: (data: OptionalDateFormValues) => void
+  onSubmit: SubmitHandler<OptionalDateFormValues>
   defaultValue?: Date
 }
 
@@ -169,7 +170,7 @@ function OptionalDateForm({ onSubmit, defaultValue }: OptionalDateFormProps) {
   const form = useForm<OptionalDateFormValues>({
     resolver: zodResolver(optionalDateSchema),
     defaultValues: {
-      date: defaultValue,
+      ...(defaultValue ? { date: defaultValue } : {}),
     },
   })
 
@@ -184,9 +185,9 @@ function OptionalDateForm({ onSubmit, defaultValue }: OptionalDateFormProps) {
               <FormLabel>Optional Date</FormLabel>
               <FormControl>
                 <DatePicker
-                  value={field.value}
                   onChange={field.onChange}
                   data-testid="optional-date-picker"
+                  {...(field.value ? { value: field.value } : {})}
                 />
               </FormControl>
               <FormMessage data-testid="optional-date-error" />
@@ -235,10 +236,10 @@ describe('Property 11: DatePicker Form Integration', () => {
         fc.property(
           validDateArbitrary,
           (date) => {
-            let capturedFormValues: SingleDateFormValues | undefined
+            let capturedFormValues: Partial<SingleDateFormValues> | undefined
             const onSubmit = vi.fn()
             
-            const { container } = render(
+            render(
               <SingleDateForm
                 onSubmit={onSubmit}
                 defaultValue={date}
@@ -312,7 +313,14 @@ describe('Property 11: DatePicker Form Integration', () => {
             })
 
             // Verify the submitted data contains the correct date
-            const submittedData = onSubmit.mock.calls[0][0]
+            const firstCall = onSubmit.mock.calls[0]
+            if (!firstCall) {
+              return
+            }
+            const submittedData = firstCall[0]
+            if (!submittedData) {
+              return
+            }
             expect(submittedData.date.getTime()).toBe(date.getTime())
             
             cleanup()
@@ -333,10 +341,10 @@ describe('Property 11: DatePicker Form Integration', () => {
         fc.property(
           validDateRangeArbitrary,
           (dateRange) => {
-            let capturedFormValues: DateRangeFormValues | undefined
+            let capturedFormValues: Partial<DateRangeFormValues> | undefined
             const onSubmit = vi.fn()
             
-            const { container } = render(
+            render(
               <DateRangeForm
                 onSubmit={onSubmit}
                 defaultValue={dateRange}
@@ -415,7 +423,14 @@ describe('Property 11: DatePicker Form Integration', () => {
             })
 
             // Verify the submitted data contains the correct date range
-            const submittedData = onSubmit.mock.calls[0][0]
+            const firstCall = onSubmit.mock.calls[0]
+            if (!firstCall) {
+              return
+            }
+            const submittedData = firstCall[0]
+            if (!submittedData) {
+              return
+            }
             expect(submittedData.dateRange.from.getTime()).toBe(dateRange.from.getTime())
             expect(submittedData.dateRange.to.getTime()).toBe(dateRange.to.getTime())
             
@@ -442,7 +457,6 @@ describe('Property 11: DatePicker Form Integration', () => {
             const { container } = render(
               <SingleDateForm
                 onSubmit={onSubmit}
-                defaultValue={undefined}
               />
             )
 
@@ -478,7 +492,6 @@ describe('Property 11: DatePicker Form Integration', () => {
             const { container } = render(
               <OptionalDateForm
                 onSubmit={onSubmit}
-                defaultValue={undefined}
               />
             )
 
@@ -494,7 +507,14 @@ describe('Property 11: DatePicker Form Integration', () => {
             })
 
             // Verify the submitted data has undefined date
-            const submittedData = onSubmit.mock.calls[0][0]
+            const firstCall = onSubmit.mock.calls[0]
+            if (!firstCall) {
+              return
+            }
+            const submittedData = firstCall[0]
+            if (!submittedData) {
+              return
+            }
             expect(submittedData.date).toBeUndefined()
             
             cleanup()
@@ -553,17 +573,21 @@ describe('Property 11: DatePicker Form Integration', () => {
           fc.array(validDateArbitrary, { minLength: 2, maxLength: 5 }),
           (dates) => {
             const onSubmit = vi.fn()
+            const firstDate = dates[0]
+            if (!firstDate) {
+              return
+            }
             
-            const { container, rerender } = render(
+            const { container } = render(
               <SingleDateForm
                 onSubmit={onSubmit}
-                defaultValue={dates[0]}
+                defaultValue={firstDate}
               />
             )
 
             // Verify initial date
             const triggerButton = container.querySelector('button[id]')
-            expect(triggerButton?.textContent).toContain(format(dates[0], 'PPP'))
+            expect(triggerButton?.textContent).toContain(format(firstDate, 'PPP'))
 
             // Note: Since we're using defaultValue, re-rendering with a new defaultValue
             // won't change the form value (that's how react-hook-form works with defaultValues)

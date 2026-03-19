@@ -11,12 +11,13 @@
  * - 当 documents.liveness_video 不存在时，不渲染 VideoPlayer
  */
 
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup, within } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, it, expect, vi, afterEach } from "vitest";
+
 import { ReviewPanel } from "@/components/admin-kyc/review-panel";
-import type { KycDetail, RiskLevel, ReviewPriority } from "@/services/admin-kyc";
 import type { KycStatusType } from "@/services/admin";
+import type { KycDetail, RiskLevel, ReviewPriority } from "@/services/admin-kyc";
 
 // Mock react-i18next
 vi.mock("react-i18next", () => ({
@@ -53,8 +54,6 @@ function createMockKycDetail(
     id_front: "https://example.com/id_front.jpg",
     id_back: "https://example.com/id_back.jpg",
     selfie: "https://example.com/selfie.jpg",
-    face_image: undefined,
-    liveness_video: undefined,
     ...overrides.documents,
   };
 
@@ -144,7 +143,7 @@ describe("ReviewPanel - Property 2: Document List Construction", () => {
         documents: {
           id_front: "https://example.com/id_front.jpg",
           id_back: "https://example.com/id_back.jpg",
-          selfie: undefined, // No selfie so face_image label is used
+          selfie: "", // No selfie so face_image label is used
           face_image: "https://example.com/face_image.jpg",
         },
       });
@@ -166,9 +165,7 @@ describe("ReviewPanel - Property 2: Document List Construction", () => {
     it("should not include face_image in document list when face_image is not present", async () => {
       const user = userEvent.setup();
       const kycDetail = createMockKycDetail({
-        documents: {
-          face_image: undefined,
-        },
+        documents: {},
       });
 
       render(<ReviewPanel kycDetail={kycDetail} {...defaultProps} />);
@@ -212,9 +209,7 @@ describe("ReviewPanel - Property 2: Document List Construction", () => {
     it("should not render VideoPlayer when liveness_video is not present", async () => {
       const user = userEvent.setup();
       const kycDetail = createMockKycDetail({
-        documents: {
-          liveness_video: undefined,
-        },
+        documents: {},
       });
 
       render(<ReviewPanel kycDetail={kycDetail} {...defaultProps} />);
@@ -261,10 +256,7 @@ describe("ReviewPanel - Property 2: Document List Construction", () => {
     it("should not render face_image or liveness_video when neither is present", async () => {
       const user = userEvent.setup();
       const kycDetail = createMockKycDetail({
-        documents: {
-          face_image: undefined,
-          liveness_video: undefined,
-        },
+        documents: {},
       });
 
       render(<ReviewPanel kycDetail={kycDetail} {...defaultProps} />);

@@ -9,15 +9,6 @@
  */
 'use client'
 
-import { useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Badge } from '@/components/ui/badge'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import {
   CheckCircle,
   XCircle,
@@ -25,8 +16,18 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react'
-import type { AssetDetail, AssetListItem } from '@/services/asset'
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { Badge } from '@/components/ui/badge'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import type { AssetDetail, AssetListItem } from '@/services/asset'
 
 // 状态类型
 type StatusType = 'success' | 'error' | 'warning'
@@ -86,20 +87,6 @@ function getStatusIcon(status: StatusType) {
       return <XCircle className="h-3.5 w-3.5 text-destructive" />
     case 'warning':
       return <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />
-  }
-}
-
-/**
- * 获取 Badge variant
- */
-function getBadgeVariant(status: StatusType): 'default' | 'destructive' | 'secondary' | 'outline' {
-  switch (status) {
-    case 'success':
-      return 'default'
-    case 'error':
-      return 'destructive'
-    case 'warning':
-      return 'secondary'
   }
 }
 

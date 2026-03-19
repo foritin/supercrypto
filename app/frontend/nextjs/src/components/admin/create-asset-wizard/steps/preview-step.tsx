@@ -9,8 +9,6 @@
  */
 'use client'
 
-import { useCallback, useMemo, useEffect, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
 import { 
   ArrowLeft, 
   Check, 
@@ -19,6 +17,8 @@ import {
   AlertTriangle,
   Sparkles 
 } from 'lucide-react'
+import { useCallback, useMemo, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -29,11 +29,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import type { ProjectContractInfo, ContractBindingStatus } from '@/services/asset'
 
-import { useWizard } from '../wizard-context'
 import { AssetCardPreview } from '../asset-card-preview'
 import type { StepComponentProps } from '../types'
-import type { ProjectContractInfo, ContractBindingStatus } from '@/services/asset'
+import { useWizard } from '../wizard-context'
+
 
 // ============ 类型定义 ============
 
@@ -196,6 +197,8 @@ export function PreviewStep({
   isSubmitting,
 }: PreviewStepProps) {
   const { t } = useTranslation()
+  const tt = (key: string, params?: Record<string, unknown>) =>
+    params ? t(key, params) : t(key)
   const { state, updateFormData } = useWizard()
   const { formData } = state
   
@@ -233,19 +236,21 @@ export function PreviewStep({
     let coverImage: string | undefined
     if (formData.coverFile && formData.coverFile.length > 0) {
       const coverFile = formData.coverFile[0]
-      coverImage = coverFile.preview || coverFile.url
+      if (coverFile) {
+        coverImage = coverFile.preview || coverFile.url
+      }
     }
 
     return {
       name: formData.name,
       symbol: formData.symbol,
       asset_type: formData.asset_type,
-      location: formData.location,
       current_price: formData.current_price,
       apy_3m: formData.apy_3m,
       apy_6m: formData.apy_6m,
       apy_12m: formData.apy_12m,
-      coverImage,
+      ...(formData.location ? { location: formData.location } : {}),
+      ...(coverImage ? { coverImage } : {}),
     }
   }, [formData])
 
@@ -340,7 +345,7 @@ export function PreviewStep({
                     project={project}
                     isSelected={selectedProjects.includes(project.project)}
                     onToggle={() => toggleProject(project.project)}
-                    t={t}
+                    t={tt}
                   />
                 ))
             )}

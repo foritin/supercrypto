@@ -12,8 +12,9 @@
  * - 2.3: WHEN 用户点击"上一步"按钮 THEN KYC_Wizard SHALL 保留已填写数据并返回上一步
  */
 
-import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
+
 import {
   type KycWizardFormData,
   type KycIdType,
@@ -395,6 +396,8 @@ describe('Property 2: 步骤导航数据保持一致性', () => {
             expect(isFormDataEqual(state.formData, originalData)).toBe(true)
             // 验证步骤回到原位
             expect(state.currentStep).toBe(originalStep)
+
+            return true
           }
         ),
         { numRuns: 100 }
@@ -424,6 +427,8 @@ describe('Property 2: 步骤导航数据保持一致性', () => {
 
             // 验证数据始终保持不变
             expect(isFormDataEqual(state.formData, originalData)).toBe(true)
+
+            return true
           }
         ),
         { numRuns: 100 }

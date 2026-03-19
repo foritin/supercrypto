@@ -6,13 +6,13 @@ API v1 主路由
 - /public/*      无需认证的公开接口
 - /user/*        已登录用户接口 (require_user)
 - /admin/*       管理员接口 (require_admin)
-- /dev/*         开发工具（仅开发环境）
+- /dev/*         开发工具
 """
 
-from falib.utils.config import SETTINGS
 from fastapi import APIRouter, Depends
 
 from src.api.v1 import admin, dev, public, user
+from src.api.v1.dev import kyc as dev_kyc
 from src.security import require_admin, require_user
 
 # ============================================================================
@@ -48,8 +48,10 @@ api_router.include_router(
 )
 
 # ============================================================================
-# 开发工具 /dev/* - 仅开发环境
+# 开发工具 /dev/*
 # ============================================================================
 
-if SETTINGS.environment in ("dev", "test"):
-    api_router.include_router(dev.router, prefix="/dev", tags=["开发者工具"])
+api_router.include_router(dev.router, prefix="/dev", tags=["开发者工具"])
+
+# 兼容历史路径 /kyc/dev/*，避免旧调用方 404
+api_router.include_router(dev_kyc.router, prefix="/kyc/dev", tags=["开发者工具"])

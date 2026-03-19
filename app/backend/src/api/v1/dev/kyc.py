@@ -11,6 +11,7 @@ from falib.utils.handlers import create_success_response
 from fastapi import APIRouter, Depends
 
 from src.common.dependencies import get_kyc_service
+from src.schemas.kyc import RecordAdmissionRequest
 from src.services import KycService
 
 router = APIRouter()
@@ -29,13 +30,41 @@ async def quick_approve_kyc(
 
     - **wallet_address**: 钱包地址
 
-    ⚠️ Only available in local/test environment.
-    Will return 403 in production.
+    本接口只会将记录推进为待链上确认状态（或链上已验证时直接对齐）。
+    不会由后端代签名发交易。
     """
     result = await service.quick_approve(wallet_address)
+
+    msg = "Quick approve prepared; please confirm on-chain with wallet"
+    if result.on_chain_sync_status and result.on_chain_sync_status.value == "synced":
+        msg = "Quick approve already synced from on-chain state"
+
     return create_success_response(
         object_data=result.model_dump(mode="json"),
-        msg="KYC approved successfully (dev mode)",
+        msg=msg,
+    )
+
+
+@router.post(
+    "/quick-approve/{wallet_address}/confirm",
+    summary="Confirm Quick KYC Admission",
+    description="Confirm wallet-submitted on-chain quick approve transaction",
+)
+async def confirm_quick_approve_kyc(
+    wallet_address: str,
+    data: RecordAdmissionRequest,
+    service: KycService = Depends(get_kyc_service),
+):
+    """
+    确认 quick-approve 的链上交易
+
+    - **wallet_address**: 钱包地址
+    - **tx_hash**: 前端钱包发起 addInvestor 的交易哈希
+    """
+    result = await service.quick_record_admission(wallet_address, data.tx_hash)
+    return create_success_response(
+        object_data=result.model_dump(mode="json"),
+        msg="Quick approve confirmed on-chain",
     )
 
 

@@ -30,6 +30,18 @@ interface IAddressProvider:
     def get_usdc() -> address: view
     def get_kyc_manager() -> address: view
     def get_vanke_rwa_token() -> address: view
+    def get_treasury() -> address: view
+    def get_treasury_multisig() -> address: view
+
+interface ITreasuryMultisig:
+    def create_proposal(
+        _recipient: address,
+        _token: address,
+        _amount: uint256,
+        _description: String[256],
+        _subscription_id: uint256
+    ) -> uint256: nonpayable
+    def is_signer(_addr: address) -> bool: view
 
 # 合约迁移接口
 interface IMigration:
@@ -62,6 +74,23 @@ event Redeem:
     principal: uint256
     interest: uint256
     total: uint256
+
+# 赎回相关事件
+event RedemptionRequested:
+    subscription_id: indexed(uint256)
+    user: indexed(address)
+    principal: uint256
+    interest: uint256
+    total: uint256
+    proposal_id: uint256
+
+event RedemptionExecuted:
+    subscription_id: indexed(uint256)
+    user: indexed(address)
+    principal: uint256
+    interest: uint256
+    total: uint256
+    executed_at: uint256
 
 event APYUpdated:
     lockPeriod: uint256
@@ -105,6 +134,7 @@ FLEXIBLE_PERIOD: constant(uint256) = 0  # 0 表示活期，随时可赎回
 # 基点常量
 BASIS_POINTS: constant(uint256) = 10000  # 100% = 10000基点
 SECONDS_PER_YEAR: constant(uint256) = 365 * 24 * 3600
+SECONDS_PER_DAY: constant(uint256) = 24 * 3600  # 86400秒，T+1起息阈值
 
 # ============ 存储变量 ============
 
@@ -133,6 +163,37 @@ migrated: public(bool)  # 迁移标志
 # 为迁移添加的用户列表（追踪所有有认购记录的用户）
 userList: public(DynArray[address, 1000])
 
+# ============ 赎回请求管理 ============
+
+# 赎回状态枚举
+enum RedemptionStatus:
+    NOT_SET      # 无状态
+    PENDING      # 等待多签审批
+    APPROVED     # 已批准（待执行）
+    EXECUTED     # 已执行完成
+    REJECTED     # 已拒绝
+
+# 赎回请求结构体
+struct RedemptionRequest:
+    subscription_id: uint256     # 认购ID
+    user: address                # 用户地址
+    principal: uint256           # 本金
+    interest: uint256            # 利息
+    total: uint256               # 总额
+    status: RedemptionStatus     # 状态
+    proposal_id: uint256         # 关联的多签提案ID
+    requested_at: uint256        # 申请时间
+    executed_at: uint256         # 执行时间
+
+# 赎回请求存储：用户 => 认购ID => 赎回请求
+redemption_requests: public(HashMap[address, HashMap[uint256, RedemptionRequest]])
+
+# 赎回请求计数（用于生成唯一ID）
+redemption_counter: public(uint256)
+
+# 已授权的赎回执行者（TreasuryMultisig合约地址）
+redemption_executor: public(address)
+
 # ============ 构造函数 ============
 
 @deploy
@@ -145,7 +206,7 @@ def __init__():
     self.paused = False
 
     # STO 合规默认参数
-    self.min_investment = 1000 * 10**6      # 最小投资 $1,000（符合Reg D要求）
+    self.min_investment = 1 * 10**6         # 最小投资 $1（USDT/USDC 6位小数）
     self.max_investment = 0                 # 0表示无上限
     self.require_accredited = False         # 默认不强制要求合格投资者
 
@@ -261,6 +322,16 @@ def admin_set_require_accredited(_require: bool):
     assert msg.sender == self.owner, "Only owner"
     self.require_accredited = _require
 
+
+@external
+def admin_set_redemption_executor(_executor: address):
+    """
+    @notice 设置赎回执行者地址（TreasuryMultisig合约）
+    @param _executor TreasuryMultisig合约地址
+    """
+    assert msg.sender == self.owner, "Only owner"
+    self.redemption_executor = _executor
+
 # ============ 核心业务函数 ============
 
 # 注意: set_kyc_manager, set_usdt, set_rwa_token 已移除 - 纯 Provider 模式下通过 AddressProvider 管理
@@ -315,8 +386,10 @@ def subscribe(_amount: uint256, _lock_period: uint256 = 0, _payment_token: addre
     # 获取活期 APY
     apy: uint256 = self.lock_period_apy[FLEXIBLE_PERIOD]
 
-    # 从用户转入稳定币（USDT 或 USDC）
-    assert extcall IERC20(payment_token).transferFrom(msg.sender, self, _amount), "Transfer failed"
+    # 从用户转入稳定币到国库地址（USDT 或 USDC）
+    treasury: address = self._get_treasury()
+    assert treasury != empty(address), "Treasury not set"
+    assert extcall IERC20(payment_token).transferFrom(msg.sender, treasury, _amount), "Transfer failed"
 
     # 铸造等量RWA代币给用户（稳定币 6位小数 -> RWA 18位小数）
     rwa_amount: uint256 = _amount * 10 ** 12  # 转换精度
@@ -373,44 +446,207 @@ def redeem(_subscription_id: uint256):
     if payment_token == empty(address):
         payment_token = self._get_usdt()
 
-    # 计算利息（活期模式：按实际持有时间计算）
+    # 计算利息（活期模式：按实际持有时间计算，T+1起息）
     actual_holding_period: uint256 = block.timestamp - subscription.subscribeTime
     interest: uint256 = self._calculate_interest(
         subscription.principal,
         actual_holding_period,  # 使用实际持有时间而非预设锁定期
-        subscription.apy
+        subscription.apy,
+        subscription.subscribeTime  # T+1起息判断
     )
 
     total: uint256 = subscription.principal + interest
 
-    # 检查合约支付代币余额
-    assert staticcall IERC20(payment_token).balanceOf(self) >= total, "Insufficient token balance"
+    # 从国库转出支付代币（本金+利息）
+    treasury: address = self._get_treasury()
+    assert treasury != empty(address), "Treasury not set"
+    assert staticcall IERC20(payment_token).balanceOf(treasury) >= total, "Insufficient treasury balance"
 
     # 销毁RWA代币
     rwa_amount: uint256 = subscription.principal * 10 ** 12
     extcall IRWAToken(rwa_token).burn(msg.sender, rwa_amount)
 
-    # 转出支付代币（本金+利息）
-    assert extcall IERC20(payment_token).transfer(msg.sender, total), "Transfer failed"
+    # 从国库转给用户（需要国库合约授权或实现相应机制）
+    # 注意：实际实现取决于国库合约的具体设计
+    # 这里假设国库合约有 transferTo 方法或被授权给本合约
+    assert extcall IERC20(payment_token).transferFrom(treasury, msg.sender, total), "Transfer from treasury failed"
 
     # 标记为已赎回
     self.subscriptions[msg.sender][_subscription_id].redeemed = True
 
     log Redeem(msg.sender, subscription.principal, interest, total)
 
+
+@external
+def request_redeem(_subscription_id: uint256) -> uint256:
+    """
+    @notice 请求赎回（多签审批模式）
+    @param _subscription_id 认购ID
+    @return proposal_id 创建的多签提案ID
+    @dev 用户调用此函数发起赎回申请，创建多签提案等待审批
+    """
+    assert not self.migrated, "Contract migrated, use new contract"
+    assert not self.paused, "Contract paused"
+    assert _subscription_id < self.subscriptionCount[msg.sender], "Invalid subscription ID"
+    
+    # 从Provider获取依赖地址
+    kyc: address = self._get_kyc_manager()
+    treasury_multisig: address = self._get_treasury_multisig()
+    
+    # KYC验证
+    assert staticcall IKYCManager(kyc).is_verified(msg.sender), "KYC verification required"
+    
+    subscription: SubscriptionInfo = self.subscriptions[msg.sender][_subscription_id]
+    assert not subscription.redeemed, "Already redeemed"
+    # 活期模式：移除锁定期检查，随时可赎回
+    
+    # 计算利息和总额（活期模式：按实际持有时间计算，T+1起息）
+    actual_holding_period: uint256 = block.timestamp - subscription.subscribeTime
+    interest: uint256 = self._calculate_interest(
+        subscription.principal,
+        actual_holding_period,
+        subscription.apy,
+        subscription.subscribeTime
+    )
+    total: uint256 = subscription.principal + interest
+    
+    # 确定支付代币
+    payment_token: address = subscription.paymentToken
+    if payment_token == empty(address):
+        payment_token = self._get_usdt()
+    
+    # 检查国库余额是否充足
+    treasury: address = self._get_treasury()
+    assert staticcall IERC20(payment_token).balanceOf(treasury) >= total, "Insufficient treasury balance"
+    
+    # 创建赎回请求记录
+    redemption_id: uint256 = self.redemption_counter
+    self.redemption_requests[msg.sender][_subscription_id] = RedemptionRequest(
+        subscription_id=_subscription_id,
+        user=msg.sender,
+        principal=subscription.principal,
+        interest=interest,
+        total=total,
+        status=RedemptionStatus.PENDING,
+        proposal_id=0,  # 将在创建提案后更新
+        requested_at=block.timestamp,
+        executed_at=0
+    )
+    self.redemption_counter += 1
+    
+    # 创建多签提案
+    description: String[256] = empty(String[256])
+    # 构建描述字符串（使用字符串拼接的简化方式）
+    description = "Redemption request"
+    
+    proposal_id: uint256 = extcall ITreasuryMultisig(treasury_multisig).create_proposal(
+        msg.sender,           # recipient: 用户地址
+        payment_token,        # token: 支付代币
+        total,                # amount: 总额
+        description,          # description: 描述
+        _subscription_id      # subscription_id: 订阅ID
+    )
+    
+    # 更新赎回请求，记录提案ID
+    self.redemption_requests[msg.sender][_subscription_id].proposal_id = proposal_id
+    
+    log RedemptionRequested(
+        _subscription_id,
+        msg.sender,
+        subscription.principal,
+        interest,
+        total,
+        proposal_id
+    )
+    
+    return proposal_id
+
+
+@external
+def execute_redemption(_subscription_id: uint256, _user: address):
+    """
+    @notice 执行赎回（仅TreasuryMultisig可调用）
+    @param _subscription_id 认购ID
+    @param _user 用户地址
+    @dev 多签通过后，TreasuryMultisig调用此函数完成赎回
+    """
+    # 验证调用者是授权的TreasuryMultisig
+    treasury_multisig: address = self._get_treasury_multisig()
+    assert msg.sender == treasury_multisig, "Only TreasuryMultisig can execute"
+    
+    # 获取赎回请求
+    redemption: RedemptionRequest = self.redemption_requests[_user][_subscription_id]
+    assert redemption.status == RedemptionStatus.PENDING or redemption.status == RedemptionStatus.APPROVED, "Invalid redemption status"
+    
+    subscription: SubscriptionInfo = self.subscriptions[_user][_subscription_id]
+    assert not subscription.redeemed, "Already redeemed"
+    
+    # 获取支付代币
+    payment_token: address = subscription.paymentToken
+    if payment_token == empty(address):
+        payment_token = self._get_usdt()
+    
+    # 计算实际利息（防止时间差导致金额变化）
+    actual_holding_period: uint256 = block.timestamp - subscription.subscribeTime
+    interest: uint256 = self._calculate_interest(
+        subscription.principal,
+        actual_holding_period,
+        subscription.apy,
+        subscription.subscribeTime
+    )
+    total: uint256 = subscription.principal + interest
+    
+    # 销毁RWA代币
+    rwa_token: address = self._get_rwa_token()
+    rwa_amount: uint256 = subscription.principal * 10 ** 12
+    extcall IRWAToken(rwa_token).burn(_user, rwa_amount)
+    
+    # 标记认购为已赎回
+    self.subscriptions[_user][_subscription_id].redeemed = True
+    
+    # 更新赎回请求状态
+    self.redemption_requests[_user][_subscription_id].status = RedemptionStatus.EXECUTED
+    self.redemption_requests[_user][_subscription_id].executed_at = block.timestamp
+    self.redemption_requests[_user][_subscription_id].interest = interest
+    self.redemption_requests[_user][_subscription_id].total = total
+    
+    log RedemptionExecuted(
+        _subscription_id,
+        _user,
+        subscription.principal,
+        interest,
+        total,
+        block.timestamp
+    )
+    
+    log Redeem(_user, subscription.principal, interest, total)
+
+
+@view
+@external
+def get_redemption_request(_user: address, _subscription_id: uint256) -> RedemptionRequest:
+    """
+    @notice 获取赎回请求详情
+    @param _user 用户地址
+    @param _subscription_id 认购ID
+    @return 赎回请求信息
+    """
+    return self.redemption_requests[_user][_subscription_id]
+
 # ============ 查询函数 ============
 
 @view
 @external
-def calculate_interest(_principal: uint256, _lock_period: uint256, _apy: uint256) -> uint256:
+def calculate_interest(_principal: uint256, _lock_period: uint256, _apy: uint256, _start_time: uint256) -> uint256:
     """
-    @notice 计算利息（外部调用）
+    @notice 计算利息（外部调用，T+1起息）
     @param _principal 本金
     @param _lock_period 锁定期（秒）
     @param _apy 年化收益率（基点）
+    @param _start_time 认购开始时间戳（用于T+1判断）
     @return 利息
     """
-    return self._calculate_interest(_principal, _lock_period, _apy)
+    return self._calculate_interest(_principal, _lock_period, _apy, _start_time)
 
 
 @view
@@ -440,12 +676,13 @@ def get_pending_reward(_user: address, _subscription_id: uint256) -> uint256:
     if subscription.redeemed:
         return 0
 
-    # 活期模式：按实际持有时间计算利息
+    # 活期模式：按实际持有时间计算利息（T+1起息）
     actual_holding_period: uint256 = block.timestamp - subscription.subscribeTime
     return self._calculate_interest(
         subscription.principal,
         actual_holding_period,  # 使用实际持有时间
-        subscription.apy
+        subscription.apy,
+        subscription.subscribeTime  # T+1起息判断
     )
 
 
@@ -491,14 +728,33 @@ def _get_rwa_token() -> address:
 
 @view
 @internal
-def _calculate_interest(_principal: uint256, _lock_period: uint256, _apy: uint256) -> uint256:
+def _get_treasury() -> address:
+    """@notice 从 AddressProvider 获取国库地址"""
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_treasury()
+
+
+@view
+@internal
+def _get_treasury_multisig() -> address:
+    """@notice 从 AddressProvider 获取国库多签合约地址"""
+    return staticcall IAddressProvider(self.ADDRESS_PROVIDER).get_treasury_multisig()
+
+
+@view
+@internal
+def _calculate_interest(_principal: uint256, _lock_period: uint256, _apy: uint256, _start_time: uint256) -> uint256:
     """
-    @notice 计算利息
+    @notice 计算利息（T+1起息：满24小时后才开始计算）
     @param _principal 本金
     @param _lock_period 锁定期（秒）
     @param _apy 年化收益率（基点）
+    @param _start_time 认购开始时间戳（用于T+1判断）
     @return 利息
     """
+    # T+1起息规则：未满24小时不计算收益
+    if block.timestamp - _start_time < SECONDS_PER_DAY:
+        return 0
+    
     # 利息 = 本金 * APY * 锁定期 / 年秒数 / 基点
     return _principal * _apy * _lock_period // SECONDS_PER_YEAR // BASIS_POINTS
 

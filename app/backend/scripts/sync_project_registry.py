@@ -24,8 +24,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tortoise import Tortoise
 
-from src.services.project_registry_service import get_config_loader
 from src.aerich_redirect import TORTOISE_ORM
+from src.services.deploy_config_loader_service import get_config_loader
 
 
 async def sync_project(project_name: str, force: bool = False) -> dict:
@@ -39,7 +39,7 @@ async def sync_project(project_name: str, force: bool = False) -> dict:
     try:
         stats = await loader.sync_to_database(project_name, force=force)
 
-        print(f"✅ 同步成功!")
+        print("✅ 同步成功!")
         print(f"   - 新建: {stats['created']} 条")
         print(f"   - 更新: {stats['updated']} 条")
         print(f"   - 未变: {stats['unchanged']} 条")

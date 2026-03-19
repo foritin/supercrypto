@@ -1,9 +1,10 @@
 'use client';
 
+import { Upload, X, CheckCircle, Loader2 } from 'lucide-react';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, X, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
 import { uploadKycDocument, getKycDocumentUrl, type KycDocumentType } from '@/services/kyc';
 
 interface DocumentUploadProps {
@@ -114,7 +115,7 @@ export function DocumentUpload({
     // 前端预检查文件大小 (10MB)
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
-      const errorMsg = t('kyc.upload.fileTooLarge', 'File size exceeds 10MB limit');
+      const errorMsg = t('kyc.upload.fileTooLarge');
       setUploadError(errorMsg);
       toast.error(errorMsg);
       return;
@@ -127,18 +128,18 @@ export function DocumentUpload({
       const apiDocType = getApiDocumentType(documentType, side);
       const response = await uploadKycDocument(apiDocType, file);
       onUpload(file, response.file_path);
-      toast.success(t('kyc.upload.uploadSuccess', 'Upload successful'));
+      toast.success(t('kyc.upload.uploadSuccess'));
     } catch (error) {
       console.error('Upload failed:', error);
       // 解析后端返回的错误信息
       const errorMessage = error instanceof Error ? error.message : String(error);
       let errorMsg: string;
       if (errorMessage.includes('10MB') || errorMessage.includes('文件大小')) {
-        errorMsg = t('kyc.upload.fileTooLarge', 'File size exceeds 10MB limit');
+        errorMsg = t('kyc.upload.fileTooLarge');
       } else if (errorMessage.includes('文件格式') || errorMessage.includes('不支持')) {
-        errorMsg = t('kyc.upload.invalidFormat', 'Invalid file format. Supports: JPG, PNG, PDF');
+        errorMsg = t('kyc.upload.invalidFormat');
       } else {
-        errorMsg = t('kyc.upload.error', 'Upload failed, please try again');
+        errorMsg = t('kyc.upload.error');
       }
       setUploadError(errorMsg);
       toast.error(errorMsg);
@@ -161,19 +162,19 @@ export function DocumentUpload({
   const getDocumentLabel = () => {
     switch (documentType) {
       case 'passport':
-        return side === 'front' ? t('kyc.upload.passportDataPage', 'Passport Data Page') : '';
+        return side === 'front' ? t('kyc.upload.passportDataPage') : '';
       case 'national_id':
         return side === 'front' 
-          ? t('kyc.upload.idFront', 'ID Front Side') 
-          : t('kyc.upload.idBack', 'ID Back Side');
+          ? t('kyc.upload.idFront') 
+          : t('kyc.upload.idBack');
       case 'drivers_license':
         return side === 'front' 
-          ? t('kyc.upload.licenseFront', 'License Front') 
-          : t('kyc.upload.licenseBack', 'License Back');
+          ? t('kyc.upload.licenseFront') 
+          : t('kyc.upload.licenseBack');
       default:
         return side === 'front' 
-          ? t('kyc.upload.frontSide', 'Front Side') 
-          : t('kyc.upload.backSide', 'Back Side');
+          ? t('kyc.upload.frontSide') 
+          : t('kyc.upload.backSide');
     }
   };
 
@@ -213,14 +214,14 @@ export function DocumentUpload({
           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
             <CheckCircle className="h-8 w-8 text-primary mb-2" />
             <p className="text-white text-sm font-medium">
-              {uploadedFile?.name || t('kyc.upload.uploadSuccess', 'Upload successful')}
+              {uploadedFile?.name || t('kyc.upload.uploadSuccess')}
             </p>
             <button
               onClick={handleClear}
               className="mt-3 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30 transition-colors flex items-center gap-2"
             >
               <X className="h-4 w-4" />
-              {t('common.remove', 'Remove')}
+              {t('common.remove')}
             </button>
           </div>
         </div>
@@ -250,17 +251,17 @@ export function DocumentUpload({
             <>
               <Loader2 className="h-10 w-10 text-primary mx-auto mb-3 animate-spin" />
               <p className="text-white font-medium mb-1">
-                {t('kyc.upload.uploading', 'Uploading...')}
+                {t('kyc.upload.uploading')}
               </p>
             </>
           ) : (
             <>
               <Upload className="h-10 w-10 text-white/40 mx-auto mb-3" />
               <p className="text-white font-medium mb-1">
-                {t('kyc.upload.dragDrop', 'Drag & drop or click to upload')}
+                {t('kyc.upload.dragDrop')}
               </p>
               <p className="text-white/40 text-sm">
-                {t('kyc.upload.supportedFormats', 'Supports: JPG, PNG, PDF (max 10MB)')}
+                {t('kyc.upload.supportedFormats')}
               </p>
             </>
           )}

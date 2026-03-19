@@ -1,7 +1,5 @@
 "use client";
 
-import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
 import {
   HelpCircle,
   ChevronDown,
@@ -12,9 +10,12 @@ import {
   FileText,
   Search,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+
 import { PageBadge } from "@/components/ui/page-badge";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { cn } from "@/lib/utils";
 
 /**
  * FAQ 页面内容组件

@@ -42,6 +42,8 @@ class ProviderKey:
     USDC = keccak(text="USDC")
     TIMELOCK = keccak(text="TIMELOCK")
     MULTI_SIG = keccak(text="MULTI_SIG")
+    TREASURY = keccak(text="TREASURY")
+    TREASURY_MULTISIG = keccak(text="TREASURY_MULTISIG")  # 国库多签合约
 
     # Vanke 项目合约
     VANKE_RWA_TOKEN = keccak(text="VANKE_RWA_TOKEN")

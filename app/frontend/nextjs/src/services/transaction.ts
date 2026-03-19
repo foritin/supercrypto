@@ -2,9 +2,9 @@
  * Transaction API Service
  * 交易历史相关 API（管理员接口）
  */
-import { api } from "@/services/api";
 import { API_PATHS } from "@/constants/api-paths";
 import { getExplorerUrl as getExplorerUrlByChainId } from "@/lib/utils";
+import { api } from "@/services/api";
 
 // 交易状态
 export type TransactionStatus = "pending" | "confirmed" | "failed";
@@ -231,6 +231,10 @@ export function getExplorerUrl(
     main: 1,
     sepolia: 11155111,
     test: 11155111,
+    arbitrum: 42161,
+    arb: 42161,
+    'arbitrum-sepolia': 421614,
+    arbitrum_sepolia: 421614,
   }
   const chainId = networkToChainId[network]
   if (!chainId) return null

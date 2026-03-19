@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useMemo, useCallback, useEffect } from 'react';
+import Dagre from '@dagrejs/dagre';
+import {
+  useQuery,
+} from '@tanstack/react-query';
 import {
   ReactFlow,
   Background,
@@ -16,20 +19,20 @@ import {
   type Edge,
   type NodeTypes,
 } from '@xyflow/react';
+import { AlertCircle, Inbox } from 'lucide-react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import '@xyflow/react/dist/style.css';
-import Dagre from '@dagrejs/dagre';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { contractGraphService, type GraphNode } from '@/services/contract-graph';
-import { Skeleton } from '@/components/ui/skeleton';
+
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { AlertCircle, Inbox } from 'lucide-react';
+import { contractGraphService, type GraphNode } from '@/services/contract-graph';
 
 // ============================================
 // Dark Fintech Theme - Web3 配色方案
@@ -82,11 +85,13 @@ const STATUS_TEXT: Record<string, string> = {
   missing_deps: 'Missing Deps',
 };
 
+const FALLBACK_STATUS_STYLE = { color: THEME.accent.muted, glow: 'transparent' };
+
 // ============================================
 // 自定义合约节点 - Turbo Flow 风格
 // ============================================
 function ContractNode({ data }: { data: GraphNode }) {
-  const status = STATUS_COLORS[data.status] || STATUS_COLORS.not_deployed;
+  const status = STATUS_COLORS[data.status] ?? FALLBACK_STATUS_STYLE;
   const statusText = STATUS_TEXT[data.status] || 'Unknown';
   const isGlobal = data.project === 'common' || !data.project;
 
@@ -419,7 +424,7 @@ export function ContractDependencyTree({ onContractClick, showNotRegistered = tr
 
     const { nodes: ln, edges: le } = getLayoutedElements(nodes, edges, 'TB');
     return { layoutedNodes: ln, layoutedEdges: le };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [graphData, showNotRegistered]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
@@ -524,7 +529,7 @@ export function ContractDependencyTree({ onContractClick, showNotRegistered = tr
             className="rf-minimap"
             nodeColor={(node) => {
               const data = node.data as unknown as GraphNode;
-              const status = STATUS_COLORS[data.status] || STATUS_COLORS.not_deployed;
+              const status = STATUS_COLORS[data.status] ?? FALLBACK_STATUS_STYLE;
               return status.color;
             }}
             maskColor="rgba(0, 0, 0, 0.8)"

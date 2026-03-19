@@ -12,14 +12,14 @@
  * @validates Requirements 4.1, 4.2, 4.3
  */
 
+import { zodResolver } from '@hookform/resolvers/zod'
+import { CreditCard, FileText, Car } from 'lucide-react'
 import * as React from 'react'
 import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
-import { CreditCard, FileText, Car } from 'lucide-react'
 
-import { cn } from '@/lib/utils'
+import { IDCardUploader } from '@/components/kyc/id-card-uploader'
 import {
   Form,
   FormControl,
@@ -29,8 +29,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { IDCardUploader } from '@/components/kyc/id-card-uploader'
-
+import { cn } from '@/lib/utils'
 import {
   step2Schema,
   type Step2FormValues,
@@ -330,14 +329,14 @@ export function Step2DocumentUpload({
           render={({ field }) => (
             <FormItem className="space-y-2">
               <FormLabel htmlFor="kyc-document-expiry" className="flex items-center text-sm text-white/50 font-normal">
-                {t('kyc.fields.documentExpiry', '证件有效期')}
+                {t('kyc.fields.documentExpiry')}
                 <RequiredMark />
               </FormLabel>
               <FormControl>
                 <Input
                   id="kyc-document-expiry"
                   type="date"
-                  placeholder={t('kyc.fields.documentExpiryPlaceholder', '请选择证件有效期')}
+                  placeholder={t('kyc.fields.documentExpiryPlaceholder')}
                   {...field}
                   aria-describedby={errors.documentExpiry ? 'kyc-document-expiry-error' : undefined}
                   aria-invalid={!!errors.documentExpiry}

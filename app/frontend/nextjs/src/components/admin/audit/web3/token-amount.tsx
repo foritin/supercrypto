@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { formatUnits } from 'viem';
+
 import {
   Tooltip,
   TooltipContent,
@@ -57,7 +58,7 @@ export const TokenAmount: React.FC<TokenAmountProps> = ({
       } else {
         return `${(num / 1000000000).toFixed(2)}B`;
       }
-    } catch (err) {
+    } catch {
       return '0';
     }
   };
@@ -66,7 +67,7 @@ export const TokenAmount: React.FC<TokenAmountProps> = ({
     try {
       const bigAmount = typeof amount === 'string' ? BigInt(amount) : amount;
       return formatUnits(bigAmount, decimals);
-    } catch (err) {
+    } catch {
       return '0';
     }
   };

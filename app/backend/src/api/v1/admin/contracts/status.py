@@ -103,7 +103,7 @@ def _contract_to_dict(contract) -> dict:
         if contract.contract_type
         else None,
         "is_primary": contract.is_primary,
-        "symbol": contract.symbol,
+        "symbol": contract.name,
         "status": contract.status.value if contract.status else None,
         "network": contract.network.value if contract.network else None,
         "chain_id": contract.chain_id,

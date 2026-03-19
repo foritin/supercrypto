@@ -1,16 +1,17 @@
 'use client';
 
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { type Address, type Hash, type TransactionRequest } from 'viem';
 import { 
   useSendTransaction as useWagmiSendTransaction,
   useWaitForTransactionReceipt,
   useEstimateGas,
   useAccount,
 } from 'wagmi';
-import { type Address, type Hash, type TransactionRequest } from 'viem';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
-import { useTransactionStore, type TransactionType, type Transaction } from '@/stores/transaction-store';
+
+import { useTransactionStore, type TransactionType } from '@/stores/transaction-store';
 
 interface SendTransactionOptions {
   type: TransactionType;
@@ -26,8 +27,6 @@ export function useTransaction() {
   const { address, chainId } = useAccount();
   const { 
     addTransaction, 
-    confirmTransaction, 
-    failTransaction,
     setSubmitting 
   } = useTransactionStore();
 
@@ -68,14 +67,16 @@ export function useTransaction() {
         type: options.type,
         from: address,
         to: (txRequest.to as Address) || address,
-        value: txRequest.value?.toString(),
         chainId,
         description: options.description,
-        tokenSymbol: options.tokenSymbol,
-        tokenAmount: options.tokenAmount,
-        gasLimit: txRequest.gas?.toString(),
-        maxFeePerGas: txRequest.maxFeePerGas?.toString(),
-        maxPriorityFeePerGas: txRequest.maxPriorityFeePerGas?.toString(),
+        ...(txRequest.value !== undefined ? { value: txRequest.value.toString() } : {}),
+        ...(options.tokenSymbol !== undefined ? { tokenSymbol: options.tokenSymbol } : {}),
+        ...(options.tokenAmount !== undefined ? { tokenAmount: options.tokenAmount } : {}),
+        ...(txRequest.gas !== undefined ? { gasLimit: txRequest.gas.toString() } : {}),
+        ...(txRequest.maxFeePerGas !== undefined ? { maxFeePerGas: txRequest.maxFeePerGas.toString() } : {}),
+        ...(txRequest.maxPriorityFeePerGas !== undefined
+          ? { maxPriorityFeePerGas: txRequest.maxPriorityFeePerGas.toString() }
+          : {}),
       });
 
       toast.success(t('transaction.pending'), {
@@ -106,8 +107,7 @@ export function useTransaction() {
 export function useTransactionReceipt(hash: Hash | undefined) {
   const { 
     confirmTransaction, 
-    failTransaction,
-    updateTransaction 
+    failTransaction
   } = useTransactionStore();
   
   const { t } = useTranslation();
@@ -161,15 +161,15 @@ export function useGasEstimate(
     query: {
       enabled: !cached && !!address,
     },
-  });
+  } as Parameters<typeof useEstimateGas>[0]);
 
   // Cache the result
   if (estimate.data && !cached) {
-    setGasEstimate(cacheKey, estimate.data);
+    setGasEstimate(cacheKey, estimate.data as bigint);
   }
 
   return {
-    gasEstimate: cached || estimate.data,
+    gasEstimate: (cached || estimate.data) as bigint | undefined,
     isLoading: estimate.isLoading,
     isError: estimate.isError,
     error: estimate.error,

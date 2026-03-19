@@ -16,8 +16,8 @@
  * - 8.6: MediaManager 使用 shadcn/ui 组件
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
+import { describe, it, expect } from 'vitest'
 
 // Types for testing
 type AssetType = 'real_estate' | 'bond' | 'commodity' | 'equity' | 'other'
@@ -345,7 +345,7 @@ describe('Property 12: Admin CRUD Operations Preservation', () => {
         fc.property(
           kycIdArb,
           fc.boolean(),
-          (kycId, isAccredited) => {
+          (_kycId, isAccredited) => {
             const reviewData = {
               approved: true,
               is_accredited: isAccredited,
@@ -369,7 +369,7 @@ describe('Property 12: Admin CRUD Operations Preservation', () => {
         fc.property(
           kycIdArb,
           fc.string({ minLength: 1, maxLength: 500 }),
-          (kycId, rejectReason) => {
+          (_kycId, rejectReason) => {
             const reviewData = {
               approved: false,
               reject_reason: rejectReason,

@@ -58,6 +58,7 @@ class ErrorCode(IntEnum):
     CONTRACT_NOT_DEPLOYED = 3015
     CONTRACT_NOT_REGISTERED = 3016
     PROVIDER_REGISTRY_NOT_FOUND = 3017
+    CONTRACT_ABI_NOT_FOUND = 3018
 
     # ============ KYC 相关 (4xxx) ============
     KYC_NOT_FOUND = 4001

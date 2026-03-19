@@ -7,9 +7,11 @@
 'use client';
 
 import Link from 'next/link';
+
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ProjectStatusBadge } from './project-status-badge';
 import type { ProjectSummary } from '@/types/project-registry';
+
+import { ProjectStatusBadge } from './project-status-badge';
 
 interface ProjectCardProps {
   project: ProjectSummary;

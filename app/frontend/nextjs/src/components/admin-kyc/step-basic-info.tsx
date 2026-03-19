@@ -9,9 +9,6 @@
  * - OCR 识别信息 (条件渲染)
  */
 
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useChainId } from "wagmi";
 import {
   User,
   Smartphone,
@@ -20,6 +17,10 @@ import {
   Check,
   Copy,
 } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useChainId } from "wagmi";
+
 import { SectionCard, InfoRow } from "@/components/ui";
 import { getExplorerUrl } from "@/lib/utils";
 import type { KycDetail } from "@/services/admin-kyc";
