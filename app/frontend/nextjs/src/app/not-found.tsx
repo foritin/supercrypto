@@ -9,7 +9,11 @@ import { House, Terminal, Warning } from "@phosphor-icons/react";
  * 赛博终端风格 404 页面
  */
 export default function NotFound() {
-  const { t } = useTranslation();
+  const { t, ready } = useTranslation();
+  
+  // 默认值，防止 i18n 未加载时显示键名
+  const d = (key: string, fallback: string) => 
+    ready ? t(key) : fallback;
 
   return (
     <div className="min-h-screen bg-[#050508] flex items-center justify-center px-4 overflow-hidden">
@@ -53,7 +57,7 @@ export default function NotFound() {
                 <div className="w-3 h-3 rounded-full bg-green-500/80" />
               </div>
               <span className="ml-3 text-xs font-mono text-white/40">
-                {t("common.notFound.terminalMode")} — 404
+                {d("common.notFound.terminalMode", "终端模式")} — 404
               </span>
             </div>
             <Terminal className="w-4 h-4 text-white/30" />
@@ -116,16 +120,16 @@ export default function NotFound() {
               <div className="flex items-center justify-center gap-2 text-amber-400">
                 <Warning weight="fill" className="w-5 h-5" />
                 <span className="text-sm font-mono uppercase tracking-wider">
-                  {t("common.notFound.signalLost")}
+                  {d("common.notFound.signalLost", "信号丢失")}
                 </span>
               </div>
               
               <h2 className="text-xl font-medium text-white/90">
-                {t("common.notFound.title")}
+                {d("common.notFound.title", "页面未找到")}
               </h2>
               
               <p className="text-sm text-white/50 max-w-xs mx-auto">
-                {t("common.notFound.description")}
+                {d("common.notFound.description", "您访问的页面不存在或已被移除")}
               </p>
             </motion.div>
 
@@ -145,7 +149,7 @@ export default function NotFound() {
                 <span className="text-[#00f5d4]">$</span>
                 <span className="text-white/60">trace_route</span>
               </div>
-              <div className="text-amber-400/80">{t("common.notFound.connectionFailed")}</div>
+              <div className="text-amber-400/80">{d("common.notFound.connectionFailed", "连接失败")}</div>
               <div className="flex items-center gap-2">
                 <span className="text-[#00f5d4]">$</span>
                 <span className="text-white/60 animate-pulse">_</span>
@@ -163,14 +167,14 @@ export default function NotFound() {
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#00f5d4] text-black font-medium transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,245,212,0.3)] hover:scale-[1.02] active:scale-[0.98]"
               >
                 <House weight="fill" className="w-4 h-4" />
-                {t("common.notFound.backToHome")}
+                {d("common.notFound.backToHome", "返回首页")}
               </Link>
             </motion.div>
           </div>
 
           {/* Terminal Footer */}
           <div className="px-4 py-2 border-t border-white/[0.06] bg-white/[0.02] flex items-center justify-between text-[10px] font-mono text-white/30">
-            <span>{t("common.notFound.code")}</span>
+            <span>{d("common.notFound.code", "错误代码: 404")}</span>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-red-500/60 animate-pulse" />
               <span>DISCONNECTED</span>
