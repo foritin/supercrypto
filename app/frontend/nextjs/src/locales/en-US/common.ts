@@ -128,6 +128,16 @@ const common = {
     nextPage: "Next page",
     lastPage: "Go to last page",
   },
+  notFound: {
+    title: "Page Not Found",
+    description: "The page you're looking for doesn't exist or has been moved",
+    code: "Error Code: 404",
+    backToHome: "Back to Home",
+    terminalMode: "Terminal Mode",
+    signalLost: "Signal Lost",
+    searching: "Searching...",
+    connectionFailed: "Connection Failed",
+  },
 }
 
 export default common

@@ -128,6 +128,16 @@ const common = {
     nextPage: "下一页",
     lastPage: "前往最后一页",
   },
+  notFound: {
+    title: "页面未找到",
+    description: "您访问的页面不存在或已被移除",
+    code: "错误代码: 404",
+    backToHome: "返回首页",
+    terminalMode: "终端模式",
+    signalLost: "信号丢失",
+    searching: "正在搜索...",
+    connectionFailed: "连接失败",
+  },
 };
 
 export default common;
