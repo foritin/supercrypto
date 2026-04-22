@@ -2,7 +2,9 @@
 
 import { motion } from 'framer-motion';
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { formatNumberNoGrouping } from './number-format';
 import {
   AreaChart,
   Area,
@@ -49,6 +51,7 @@ function CustomTooltip({
   payload?: Array<{ color?: string; name?: string; value?: number }>; 
   label?: string 
 }) {
+  const { t } = useTranslation();
   if (!active || !payload || payload.length === 0) return null;
 
   const portfolio = payload.find(p => p.name === 'portfolio')?.value ?? 0;
@@ -58,7 +61,7 @@ function CustomTooltip({
   const returnRate = invested > 0 ? ((earnings / invested) * 100).toFixed(2) : '0.00';
 
   return (
-    <div className="bg-[#0d0f14]/95 border border-[#00f5d4]/30 rounded-lg p-4 shadow-2xl backdrop-blur-md min-w-[200px]">
+    <div className="bg-[#0d0f14]/95 border border-[#00f5d4]/30 rounded-xl p-4 shadow-2xl backdrop-blur-md min-w-[220px]">
       <div className="flex items-center gap-2 mb-3">
         <Calendar className="w-3 h-3 text-[#00f5d4]" />
         <span className="text-white/60 text-xs font-mono">{label}</span>
@@ -66,32 +69,38 @@ function CustomTooltip({
       
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <span className="text-white/40 text-xs">Portfolio</span>
+          <span className="text-white/40 text-xs font-body">
+            {t('portfolio.chart.portfolioValue', { defaultValue: 'Portfolio Value' })}
+          </span>
           <span className="text-white font-bold text-sm font-mono">
-            ${portfolio.toLocaleString()}
+            ${formatNumberNoGrouping(portfolio)}
           </span>
         </div>
         
         <div className="flex justify-between items-center">
-          <span className="text-white/40 text-xs">Invested</span>
+          <span className="text-white/40 text-xs font-body">
+            {t('portfolio.chart.totalInvested', { defaultValue: 'Total Invested' })}
+          </span>
           <span className="text-white/60 text-xs font-mono">
-            ${invested.toLocaleString()}
+            ${formatNumberNoGrouping(invested)}
           </span>
         </div>
 
         {benchmark !== undefined && (
           <div className="flex justify-between items-center">
-            <span className="text-white/40 text-xs">Benchmark</span>
+            <span className="text-white/40 text-xs font-body">
+              {t('portfolio.chart.benchmark', { defaultValue: 'Benchmark' })}
+            </span>
             <span className="text-amber-400 text-xs font-mono">
-              ${benchmark.toLocaleString()}
+              ${formatNumberNoGrouping(benchmark)}
             </span>
           </div>
         )}
         
         <div className="pt-2 mt-2 border-t border-white/10 flex justify-between items-center">
-          <span className="text-emerald-400 text-xs flex items-center gap-1">
+          <span className="text-emerald-400 text-xs flex items-center gap-1 font-body">
             <TrendUp weight="bold" className="w-3 h-3" />
-            Return
+            {t('portfolio.chart.return', { defaultValue: 'Return' })}
           </span>
           <span className={cn(
             'font-bold text-sm font-mono',
@@ -112,6 +121,7 @@ export function PerformanceChart({
   isLoading,
   className,
 }: PerformanceChartProps) {
+  const { t } = useTranslation();
   const [internalTimeRange, setInternalTimeRange] = useState<TimeRange>('30d');
   const timeRange = propTimeRange || internalTimeRange;
   const rawData = propData || [];
@@ -151,7 +161,7 @@ export function PerformanceChart({
   if (isLoading) {
     return (
       <div className={cn(
-        'relative p-6 rounded-xl overflow-hidden',
+        'relative p-6 rounded-2xl overflow-hidden',
         'bg-[#0d0f14]/80 border border-[#00f5d4]/20',
         className
       )}>
@@ -169,7 +179,7 @@ export function PerformanceChart({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className={cn(
-          'relative p-6 rounded-xl overflow-hidden',
+          'relative p-6 rounded-2xl overflow-hidden',
           'bg-[#0d0f14]/80 border border-[#00f5d4]/20',
           className
         )}
@@ -179,8 +189,12 @@ export function PerformanceChart({
             <TrendUp weight="duotone" className="w-5 h-5 text-[#00f5d4]" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-white">Performance</h3>
-            <p className="text-xs text-white/40">Portfolio value over time</p>
+            <h3 className="text-base font-semibold font-body text-white">
+              {t('portfolio.chart.performance', { defaultValue: 'Performance' })}
+            </h3>
+            <p className="text-xs text-white/40 font-body">
+              {t('portfolio.chart.portfolioValueOverTime', { defaultValue: 'Portfolio value over time' })}
+            </p>
           </div>
         </div>
         
@@ -188,8 +202,12 @@ export function PerformanceChart({
           <div className="w-20 h-20 rounded-full border-2 border-dashed border-[#00f5d4]/20 flex items-center justify-center mb-4">
             <Target weight="duotone" className="w-8 h-8 text-[#00f5d4]/30" />
           </div>
-          <p className="text-gray-400 text-sm">No performance data</p>
-          <p className="text-gray-600 text-xs mt-1">Data will appear as your portfolio grows</p>
+          <p className="text-gray-400 text-sm font-body">
+            {t('portfolio.empty.noPerformanceData', { defaultValue: 'No performance data' })}
+          </p>
+          <p className="text-gray-600 text-xs mt-1 font-body">
+            {t('portfolio.empty.performanceDataWillAppear', { defaultValue: 'Data will appear as your portfolio grows' })}
+          </p>
         </div>
       </motion.div>
     );
@@ -201,7 +219,7 @@ export function PerformanceChart({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        'relative p-6 rounded-xl overflow-hidden',
+        'relative p-6 rounded-2xl overflow-hidden',
         'bg-[#0d0f14]/80 backdrop-blur-md',
         'border border-[#00f5d4]/20',
         className
@@ -214,8 +232,12 @@ export function PerformanceChart({
             <TrendUp weight="duotone" className="w-5 h-5 text-[#00f5d4]" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-white">Performance</h3>
-            <p className="text-xs text-white/40">Portfolio value over time</p>
+            <h3 className="text-base font-semibold font-body text-white">
+              {t('portfolio.chart.performance', { defaultValue: 'Performance' })}
+            </h3>
+            <p className="text-xs text-white/40 font-body">
+              {t('portfolio.chart.portfolioValueOverTime', { defaultValue: 'Portfolio value over time' })}
+            </p>
           </div>
         </div>
 
@@ -223,13 +245,17 @@ export function PerformanceChart({
         {stats && (
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-xs text-white/40 uppercase tracking-wider">Current</p>
+              <p className="text-xs text-white/40 uppercase tracking-wider font-body">
+                {t('portfolio.chart.current', { defaultValue: 'Current' })}
+              </p>
               <p className="text-lg font-bold text-white font-mono">
-                ${stats.currentValue.toLocaleString()}
+                ${formatNumberNoGrouping(stats.currentValue)}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-white/40 uppercase tracking-wider">Change</p>
+              <p className="text-xs text-white/40 uppercase tracking-wider font-body">
+                {t('portfolio.chart.change', { defaultValue: 'Change' })}
+              </p>
               <p className={cn(
                 'text-sm font-bold font-mono',
                 stats.change >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -337,16 +363,22 @@ export function PerformanceChart({
       <div className="flex items-center gap-6 mt-4 pt-4 border-t border-white/[0.06]">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-[#00f5d4]" />
-          <span className="text-xs text-white/60">Portfolio Value</span>
+          <span className="text-xs text-white/60 font-body">
+            {t('portfolio.chart.portfolioValue', { defaultValue: 'Portfolio Value' })}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-[#8b5cf6] opacity-60" />
-          <span className="text-xs text-white/60">Total Invested</span>
+          <span className="text-xs text-white/60 font-body">
+            {t('portfolio.chart.totalInvested', { defaultValue: 'Total Invested' })}
+          </span>
         </div>
         {filteredData.some(d => d.benchmark !== undefined) && (
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-amber-400" />
-            <span className="text-xs text-white/60">Benchmark</span>
+            <span className="text-xs text-white/60 font-body">
+              {t('portfolio.chart.benchmark', { defaultValue: 'Benchmark' })}
+            </span>
           </div>
         )}
       </div>

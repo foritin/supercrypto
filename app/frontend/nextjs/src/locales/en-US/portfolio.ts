@@ -53,6 +53,7 @@ const portfolio = {
       matured: "Matured",
       redeemed: "Redeemed",
       pending: "Pending",
+      redeeming: "Redeeming",
       locked: "Locked",
       redeemable: "Redeemable",
       expired: "Expired",
@@ -172,6 +173,119 @@ const portfolio = {
       cards: "Cards",
       table: "Table",
     },
+
+    // Filters
+    filters: {
+      allAssets: "All Assets",
+    },
+
+    // Action buttons
+    cta: {
+      newInvestment: "New Investment",
+    },
+
+    // Groups
+    groups: {
+      activeInvestments: "Active Investments",
+      maturedPositions: "Matured Positions",
+      otherPositions: "Other Positions",
+      assetsCount: "{{count}} assets",
+      ofPortfolio: "{{percent}}% of portfolio",
+    },
+
+    // Net worth card
+    netWorth: {
+      title: "Net Worth",
+      change24h: "24h",
+      earnings: "Earnings:",
+      invested: "Invested",
+      current: "Current",
+    },
+
+    // Chart
+    chart: {
+      performance: "Performance",
+      portfolioValueOverTime: "Portfolio value over time",
+      portfolioValue: "Portfolio Value",
+      totalInvested: "Total Invested",
+      benchmark: "Benchmark",
+      return: "Return",
+      current: "Current",
+      change: "Change",
+    },
+
+    // Stream
+    stream: {
+      title: "Transaction Stream",
+      subtitle: "Recent activity log",
+      live: "Live",
+      items: "{{count}} items",
+      viewAll: "View all {{count}} transactions",
+      types: {
+        subscribe: "Subscribe",
+        redeem: "Redeem",
+        claim: "Claim",
+        distribute: "Distribute",
+      },
+      status: {
+        confirmed: "Confirmed",
+        pending: "Pending",
+        failed: "Failed",
+      },
+    },
+
+    // Cyber Header
+    cyberHeader: {
+      title: "PORTFOLIO",
+      terminal: "TERMINAL",
+      subtitle: "RWA INVESTMENT MONITORING SYSTEM",
+    },
+
+    // Footer
+    footer: {
+      terminal: "PORTFOLIO_TERMINAL",
+      secureConnection: "SECURE_CONNECTION",
+      copyright: "© {{year}} SUPERCRYPTO",
+    },
+
+    // Modal
+    modal: {
+      status: "Status",
+      profit: "+{{percent}}% profit",
+      progressComplete: "{{percent}}% complete",
+      maturedReady: "Matured and ready. Redemption can be requested.",
+      redeemingInProgress: "Redemption in progress. Check timeline below.",
+      redemptionTimeline: "Redemption Timeline",
+      noTimelineYet: "Not matured yet. Redemption can be requested after maturity.",
+      timeline: {
+        requestCreated: "Request Created",
+        proposalCreated: "Proposal Created",
+        signatureSubmitted: "Signature Submitted",
+        thresholdReached: "Threshold Reached",
+        executed: "Executed",
+        rejected: "Rejected",
+        eventRecorded: "Event recorded",
+      },
+      timelineStatus: {
+        pending: "Pending",
+        signing: "Signing",
+        executed: "Executed",
+        rejected: "Rejected",
+        recorded: "Recorded",
+      },
+    },
+
+    // Empty states
+    empty: {
+      noAssetsInCategory: "No assets in this category",
+      noPerformanceData: "No performance data",
+      performanceDataWillAppear: "Data will appear as your portfolio grows",
+      noTransactions: "No transactions",
+      pulseWillAppear: "Pulse will appear here",
+    },
+
+    unknownAsset: "Unknown Asset",
+    subscriptionWithId: "Subscription #{{id}}",
     
     // Dashboard portfolio card
     totalAssets: "{{count}} assets",

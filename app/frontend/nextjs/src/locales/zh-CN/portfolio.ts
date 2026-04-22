@@ -53,6 +53,7 @@ const portfolio = {
       matured: "已到期",
       redeemed: "已赎回",
       pending: "待确认",
+      redeeming: "赎回中",
       locked: "锁定中",
       redeemable: "可赎回",
       expired: "已过期",
@@ -172,6 +173,119 @@ const portfolio = {
       cards: "卡片",
       table: "表格",
     },
+
+    // 筛选
+    filters: {
+      allAssets: "全部资产",
+    },
+
+    // 操作按钮
+    cta: {
+      newInvestment: "新增投资",
+    },
+
+    // 分组
+    groups: {
+      activeInvestments: "活跃投资",
+      maturedPositions: "已到期仓位",
+      otherPositions: "其他仓位",
+      assetsCount: "{{count}} 项资产",
+      ofPortfolio: "占组合 {{percent}}%",
+    },
+
+    // 净值卡
+    netWorth: {
+      title: "净值",
+      change24h: "24小时",
+      earnings: "收益:",
+      invested: "已投资",
+      current: "当前",
+    },
+
+    // 图表
+    chart: {
+      performance: "表现",
+      portfolioValueOverTime: "投资组合价值走势",
+      portfolioValue: "组合价值",
+      totalInvested: "总投资额",
+      benchmark: "基准",
+      return: "回报",
+      current: "当前",
+      change: "变化",
+    },
+
+    // 交易流
+    stream: {
+      title: "交易流",
+      subtitle: "最近活动记录",
+      live: "实时",
+      items: "{{count}} 条",
+      viewAll: "查看全部 {{count}} 笔交易",
+      types: {
+        subscribe: "认购",
+        redeem: "赎回",
+        claim: "领取",
+        distribute: "分发",
+      },
+      status: {
+        confirmed: "已确认",
+        pending: "处理中",
+        failed: "失败",
+      },
+    },
+
+    // 赛博头部
+    cyberHeader: {
+      title: "PORTFOLIO",
+      terminal: "TERMINAL",
+      subtitle: "RWA 投资监控系统",
+    },
+
+    // 页脚
+    footer: {
+      terminal: "PORTFOLIO_TERMINAL",
+      secureConnection: "SECURE_CONNECTION",
+      copyright: "© {{year}} SUPERCRYPTO",
+    },
+
+    // 详情弹窗
+    modal: {
+      status: "状态",
+      profit: "+{{percent}}% 收益",
+      progressComplete: "进度 {{percent}}%",
+      maturedReady: "已到期，可发起赎回。",
+      redeemingInProgress: "赎回处理中，请查看下方时间线。",
+      redemptionTimeline: "赎回时间线",
+      noTimelineYet: "当前未到期，到期后可发起赎回。",
+      timeline: {
+        requestCreated: "已创建请求",
+        proposalCreated: "已创建提案",
+        signatureSubmitted: "已提交签名",
+        thresholdReached: "达到阈值",
+        executed: "已执行",
+        rejected: "已拒绝",
+        eventRecorded: "事件已记录",
+      },
+      timelineStatus: {
+        pending: "处理中",
+        signing: "签名中",
+        executed: "已执行",
+        rejected: "已拒绝",
+        recorded: "已记录",
+      },
+    },
+
+    // 空状态
+    empty: {
+      noAssetsInCategory: "该分类下暂无资产",
+      noPerformanceData: "暂无表现数据",
+      performanceDataWillAppear: "有历史数据后会显示在这里",
+      noTransactions: "暂无交易",
+      pulseWillAppear: "交易脉冲将显示在这里",
+    },
+
+    unknownAsset: "未知资产",
+    subscriptionWithId: "认购 #{{id}}",
     
     // Dashboard portfolio card
     totalAssets: "共 {{count}} 项资产",

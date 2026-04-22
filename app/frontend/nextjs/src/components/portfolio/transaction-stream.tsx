@@ -13,6 +13,8 @@ import {
   Pulse
 } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatNumberNoGrouping } from './number-format';
 
 export interface Transaction {
   id: string;
@@ -34,7 +36,7 @@ interface TransactionStreamProps {
 
 const typeConfig = {
   subscribe: { 
-    label: 'SUBSCRIBE',
+    labelKey: 'portfolio.stream.types.subscribe',
     shortLabel: 'SUB',
     icon: ArrowDownLeft,
     color: 'text-emerald-400',
@@ -43,7 +45,7 @@ const typeConfig = {
     prefix: '+',
   },
   redeem: { 
-    label: 'REDEEM',
+    labelKey: 'portfolio.stream.types.redeem',
     shortLabel: 'RDM',
     icon: ArrowUpRight,
     color: 'text-amber-400',
@@ -52,7 +54,7 @@ const typeConfig = {
     prefix: '-',
   },
   claim: { 
-    label: 'CLAIM',
+    labelKey: 'portfolio.stream.types.claim',
     shortLabel: 'CLM',
     icon: CheckCircle,
     color: 'text-blue-400',
@@ -61,7 +63,7 @@ const typeConfig = {
     prefix: '+',
   },
   distribute: { 
-    label: 'DISTRIBUTE',
+    labelKey: 'portfolio.stream.types.distribute',
     shortLabel: 'DST',
     icon: Pulse,
     color: 'text-purple-400',
@@ -73,17 +75,17 @@ const typeConfig = {
 
 const statusConfig = {
   confirmed: { 
-    label: 'CONFIRMED',
+    labelKey: 'portfolio.stream.status.confirmed',
     color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     icon: CheckCircle,
   },
   pending: { 
-    label: 'PENDING',
+    labelKey: 'portfolio.stream.status.pending',
     color: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
     icon: Clock,
   },
   failed: { 
-    label: 'FAILED',
+    labelKey: 'portfolio.stream.status.failed',
     color: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
     icon: XCircle,
   },
@@ -98,6 +100,7 @@ function TransactionItem({
   index: number;
   isLatest?: boolean;
 }) {
+  const { t, i18n } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const type = typeConfig[transaction.type];
   const status = statusConfig[transaction.status];
@@ -106,9 +109,10 @@ function TransactionItem({
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
+    const locale = i18n.language.startsWith('zh') ? 'zh-CN' : 'en-US';
     return {
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      date: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
+      time: date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
     };
   };
 
@@ -168,17 +172,17 @@ function TransactionItem({
       {/* Amount */}
       <div className="text-right">
         <div className={cn(
-          'text-sm font-bold font-mono',
+          'text-sm font-bold font-mono tabular-nums',
           transaction.type === 'redeem' ? 'text-amber-400' : 'text-emerald-400'
         )}>
-          {type.prefix}${transaction.amount.toLocaleString()}
+          {type.prefix}${formatNumberNoGrouping(transaction.amount)}
         </div>
         <div className={cn(
           'flex items-center gap-1 text-[9px] uppercase font-mono',
           status.color.split(' ')[0]
         )}>
           <StatusIcon weight="fill" className="w-2.5 h-2.5" />
-          {status.label}
+          {t(status.labelKey, { defaultValue: transaction.status })}
         </div>
       </div>
 
@@ -214,12 +218,13 @@ export function TransactionStream({
   maxItems = 10,
   className,
 }: TransactionStreamProps) {
+  const { t } = useTranslation();
   const displayTransactions = transactions.slice(0, maxItems);
 
   if (isLoading) {
     return (
       <div className={cn(
-        'relative p-5 rounded-xl overflow-hidden',
+        'relative p-5 rounded-2xl overflow-hidden',
         'bg-[#0d0f14]/80 border border-[#00f5d4]/20',
         className
       )}>
@@ -228,8 +233,12 @@ export function TransactionStream({
             <Terminal weight="duotone" className="w-5 h-5 text-[#00f5d4]" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">Transaction Stream</h3>
-            <p className="text-xs text-white/40">Recent activity log</p>
+            <h3 className="text-sm font-semibold font-body text-white">
+              {t('portfolio.stream.title', { defaultValue: 'Transaction Stream' })}
+            </h3>
+            <p className="text-xs text-white/40 font-body">
+              {t('portfolio.stream.subtitle', { defaultValue: 'Recent activity log' })}
+            </p>
           </div>
         </div>
         
@@ -248,7 +257,7 @@ export function TransactionStream({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className={cn(
-          'relative p-5 rounded-xl overflow-hidden',
+          'relative p-5 rounded-2xl overflow-hidden',
           'bg-[#0d0f14]/80 border border-[#00f5d4]/20',
           className
         )}
@@ -258,8 +267,12 @@ export function TransactionStream({
             <Terminal weight="duotone" className="w-5 h-5 text-[#00f5d4]" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">Transaction Stream</h3>
-            <p className="text-xs text-white/40">Recent activity log</p>
+            <h3 className="text-sm font-semibold font-body text-white">
+              {t('portfolio.stream.title', { defaultValue: 'Transaction Stream' })}
+            </h3>
+            <p className="text-xs text-white/40 font-body">
+              {t('portfolio.stream.subtitle', { defaultValue: 'Recent activity log' })}
+            </p>
           </div>
         </div>
         
@@ -267,8 +280,12 @@ export function TransactionStream({
           <div className="w-16 h-16 rounded-xl border border-dashed border-white/10 flex items-center justify-center mb-3">
             <Pulse weight="duotone" className="w-6 h-6 text-white/20" />
           </div>
-          <p className="text-gray-400 text-sm">No transactions</p>
-          <p className="text-gray-600 text-xs mt-1">Pulse will appear here</p>
+          <p className="text-gray-400 text-sm font-body">
+            {t('portfolio.empty.noTransactions', { defaultValue: 'No transactions' })}
+          </p>
+          <p className="text-gray-600 text-xs mt-1 font-body">
+            {t('portfolio.empty.pulseWillAppear', { defaultValue: 'Pulse will appear here' })}
+          </p>
         </div>
       </motion.div>
     );
@@ -280,7 +297,7 @@ export function TransactionStream({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        'relative p-5 rounded-xl overflow-hidden',
+        'relative p-5 rounded-2xl overflow-hidden',
         'bg-[#0d0f14]/80 backdrop-blur-md',
         'border border-[#00f5d4]/20',
         className
@@ -293,18 +310,27 @@ export function TransactionStream({
             <Terminal weight="duotone" className="w-5 h-5 text-[#00f5d4]" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">Transaction Stream</h3>
-            <p className="text-xs text-white/40">Recent activity log</p>
+            <h3 className="text-sm font-semibold font-body text-white">
+              {t('portfolio.stream.title', { defaultValue: 'Transaction Stream' })}
+            </h3>
+            <p className="text-xs text-white/40 font-body">
+              {t('portfolio.stream.subtitle', { defaultValue: 'Recent activity log' })}
+            </p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] text-white/40 font-mono uppercase">Live</span>
+            <span className="text-[10px] text-white/40 font-mono uppercase">
+              {t('portfolio.stream.live', { defaultValue: 'Live' })}
+            </span>
           </div>
-          <span className="text-[10px] text-white/30 font-mono">
-            {transactions.length} items
+          <span className="text-[10px] text-white/30 font-mono tabular-nums">
+            {t('portfolio.stream.items', {
+              count: transactions.length,
+              defaultValue: `${transactions.length} items`,
+            })}
           </span>
         </div>
       </div>
@@ -327,7 +353,10 @@ export function TransactionStream({
       {transactions.length > maxItems && (
         <div className="mt-3 pt-3 border-t border-white/[0.06] text-center">
           <button className="text-xs text-[#00f5d4]/60 hover:text-[#00f5d4] transition-colors font-mono">
-            View all {transactions.length} transactions →
+            {t('portfolio.stream.viewAll', {
+              count: transactions.length,
+              defaultValue: `View all ${transactions.length} transactions`,
+            })} →
           </button>
         </div>
       )}

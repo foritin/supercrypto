@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 
 import { 
   TerminalBackground,
@@ -47,29 +48,8 @@ interface InvestmentAsset {
   type: 'investment';
 }
 
-// Generate mock performance data for demo
-function generatePerformanceData(totalValue: number, totalInvested: number): any[] {
-  const data = [];
-  const now = Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
-  
-  for (let i = 30; i >= 0; i--) {
-    const timestamp = now - i * dayMs;
-    const progress = 1 - i / 30;
-    const variation = (Math.random() - 0.5) * 0.02;
-    
-    data.push({
-      date: new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      timestamp,
-      portfolio: totalInvested + (totalValue - totalInvested) * progress * (1 + variation),
-      invested: totalInvested,
-    });
-  }
-  
-  return data;
-}
-
 export default function PortfolioPage() {
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<AssetCategory>('all');
   
   // Real data hooks
@@ -110,7 +90,7 @@ export default function PortfolioPage() {
       
       return {
         id: sub.id.toString(),
-        name: sub.asset_name || 'Unknown Asset',
+        name: sub.asset_name || t('portfolio.unknownAsset', { defaultValue: 'Unknown Asset' }),
         symbol: sub.asset_symbol || 'N/A',
         invested: sub.amount,
         currentValue: sub.total_return,
@@ -124,7 +104,7 @@ export default function PortfolioPage() {
         type: 'investment',
       };
     });
-  }, [subscriptionsData, redemptions]);
+  }, [subscriptionsData, redemptions, t]);
 
   // Calculate category counts
   const categoryCounts = useMemo(() => {
@@ -160,7 +140,7 @@ export default function PortfolioPage() {
 
     if (activeInvestments.length > 0) {
       groups.push({
-        title: 'Active Investments',
+        title: t('portfolio.groups.activeInvestments', { defaultValue: 'Active Investments' }),
         type: 'investment',
         totalValue: activeInvestments.reduce((sum, a) => sum + a.currentValue, 0),
         assets: activeInvestments,
@@ -171,7 +151,7 @@ export default function PortfolioPage() {
 
     if (maturedInvestments.length > 0) {
       groups.push({
-        title: 'Matured Positions',
+        title: t('portfolio.groups.maturedPositions', { defaultValue: 'Matured Positions' }),
         type: 'investment',
         totalValue: maturedInvestments.reduce((sum, a) => sum + a.currentValue, 0),
         assets: maturedInvestments,
@@ -182,7 +162,7 @@ export default function PortfolioPage() {
 
     if (otherInvestments.length > 0) {
       groups.push({
-        title: 'Other Positions',
+        title: t('portfolio.groups.otherPositions', { defaultValue: 'Other Positions' }),
         type: 'investment',
         totalValue: otherInvestments.reduce((sum, a) => sum + a.currentValue, 0),
         assets: otherInvestments,
@@ -192,7 +172,7 @@ export default function PortfolioPage() {
     }
 
     return groups;
-  }, [filteredAssets]);
+  }, [filteredAssets, t]);
 
   // Transform to transactions
   const transactions: Transaction[] = useMemo(() => {
@@ -237,32 +217,37 @@ export default function PortfolioPage() {
           status: r.status === 'executed' ? 'confirmed' : 'pending',
           date: r.createdAt,
           hash: r.proposalTxHash || r.txHash,
-          assetName: `Subscription #${r.subscriptionId}`,
+          assetName: t('portfolio.subscriptionWithId', {
+            id: r.subscriptionId,
+            defaultValue: `Subscription #${r.subscriptionId}`,
+          }),
         });
       }
     });
     
     return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [subscriptionsData, redemptions]);
+  }, [subscriptionsData, redemptions, t]);
 
   // Stats
   const stats = useMemo(() => {
     const totalInvested = userStats?.total_invested || 0;
     const totalValue = userStats?.total_value || 0;
-    
-    // Calculate 24h change (mock based on total earnings trend)
-    const totalEarnings = userStats?.total_earnings || 0;
-    const change24h = totalInvested > 0 
-      ? ((totalEarnings / totalInvested) * 100) / 365 // Approximate daily change
-      : 0;
-    
-    return { totalValue, totalInvested, change24h };
+
+    return { totalValue, totalInvested };
   }, [userStats]);
 
-  // Generate performance data
+  // Use only backend-provided performance series. If API doesn't provide one, show empty state.
   const performanceData = useMemo(() => {
-    return generatePerformanceData(stats.totalValue, stats.totalInvested);
-  }, [stats.totalValue, stats.totalInvested]);
+    type BackendPoint = {
+      date: string;
+      timestamp: number;
+      portfolio: number;
+      invested: number;
+      benchmark?: number;
+    };
+    const backendSeries = (userStats as { performance_data?: BackendPoint[] } | undefined)?.performance_data;
+    return Array.isArray(backendSeries) ? backendSeries : [];
+  }, [userStats]);
 
   const isLoading = isLoadingSubscriptions || isLoadingStats || isLoadingRedemptions;
   const isEmpty = !isLoading && investmentAssets.length === 0;
@@ -298,7 +283,6 @@ export default function PortfolioPage() {
           <NetWorthCard 
             totalValue={stats.totalValue}
             totalInvested={stats.totalInvested}
-            change24h={stats.change24h}
             isLoading={isLoadingStats}
           />
         </motion.section>
@@ -322,7 +306,7 @@ export default function PortfolioPage() {
                 className="bg-[#00f5d4] text-black hover:bg-[#00f5d4]/90 font-medium"
               >
                 <Lightning weight="fill" className="w-4 h-4 mr-2" />
-                New Investment
+                {t('portfolio.cta.newInvestment', { defaultValue: 'New Investment' })}
               </Button>
             </Link>
           </div>
@@ -361,7 +345,9 @@ export default function PortfolioPage() {
               ) : (
                 <div className="text-center py-12 bg-white/[0.02] rounded-xl border border-white/[0.06]">
                   <Wallet weight="duotone" className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                  <p className="text-white/40">No assets in this category</p>
+                  <p className="text-white/40">
+                    {t('portfolio.empty.noAssetsInCategory', { defaultValue: 'No assets in this category' })}
+                  </p>
                 </div>
               )}
             </motion.div>
@@ -386,15 +372,15 @@ export default function PortfolioPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="mt-12 pt-6 border-t border-white/[0.06] flex items-center justify-between text-[10px] text-white/30 font-mono"
+          className="mt-12 pt-6 border-t border-white/[0.06] flex items-center justify-between text-xs text-white/30 font-mono"
         >
           <div className="flex items-center gap-4">
-            <span>PORTFOLIO_TERMINAL</span>
+            <span>{t('portfolio.footer.terminal', { defaultValue: 'PORTFOLIO_TERMINAL' })}</span>
             <span>|</span>
-            <span>SECURE_CONNECTION</span>
+            <span>{t('portfolio.footer.secureConnection', { defaultValue: 'SECURE_CONNECTION' })}</span>
           </div>
           <div className="flex items-center gap-4">
-            <span>© 2026 SUPERCRYPTO</span>
+            <span>{t('portfolio.footer.copyright', { year: 2026, defaultValue: '© {{year}} SUPERCRYPTO' })}</span>
           </div>
         </motion.footer>
       </main>

@@ -4,9 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import { 
-  TrendUp, 
-  Clock, 
+import { useTranslation } from 'react-i18next';
+import { formatNumberNoGrouping } from './number-format';
+import {
+  TrendUp,
+  Clock,
   CheckCircle,
   ArrowUpRight,
   CaretDown
@@ -44,58 +46,60 @@ interface CollapsibleAssetListProps {
   className?: string;
 }
 
-const statusConfig = {
-  active: { 
-    label: 'Active', 
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/10',
-    borderColor: 'border-emerald-500/20',
-    icon: TrendUp 
-  },
-  matured: { 
-    label: 'Matured', 
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/10',
-    borderColor: 'border-blue-500/20',
-    icon: CheckCircle 
-  },
-  pending: { 
-    label: 'Pending', 
-    color: 'text-amber-400',
-    bgColor: 'bg-amber-500/10',
-    borderColor: 'border-amber-500/20',
-    icon: Clock 
-  },
-  completed: { 
-    label: 'Completed', 
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-500/10',
-    borderColor: 'border-gray-500/20',
-    icon: CheckCircle 
-  },
-  redeeming: { 
-    label: 'Redeeming', 
-    color: 'text-purple-400',
-    bgColor: 'bg-purple-500/10',
-    borderColor: 'border-purple-500/20',
-    icon: ArrowUpRight 
-  },
-};
-
-function AssetRow({ 
-  asset, 
+function AssetRow({
+  asset,
   index,
-  onClick 
-}: { 
-  asset: Asset; 
+  onClick
+}: {
+  asset: Asset;
   index: number;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   const profit = asset.currentValue - asset.invested;
   const profitPercent = asset.invested > 0 ? (profit / asset.invested) * 100 : 0;
+  const isPositive = profit >= 0;
+
+  const statusConfig = {
+    active: {
+      label: t('portfolio.status.active', { defaultValue: 'Active' }),
+      color: 'text-emerald-400',
+      bgColor: 'bg-emerald-500/10',
+      borderColor: 'border-emerald-500/20',
+      icon: TrendUp,
+    },
+    matured: {
+      label: t('portfolio.status.matured', { defaultValue: 'Matured' }),
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-500/10',
+      borderColor: 'border-blue-500/20',
+      icon: CheckCircle,
+    },
+    pending: {
+      label: t('portfolio.status.pending', { defaultValue: 'Pending' }),
+      color: 'text-amber-400',
+      bgColor: 'bg-amber-500/10',
+      borderColor: 'border-amber-500/20',
+      icon: Clock,
+    },
+    completed: {
+      label: t('portfolio.status.redeemed', { defaultValue: 'Completed' }),
+      color: 'text-gray-400',
+      bgColor: 'bg-gray-500/10',
+      borderColor: 'border-gray-500/20',
+      icon: CheckCircle,
+    },
+    redeeming: {
+      label: t('portfolio.status.redeeming', { defaultValue: 'Redeeming' }),
+      color: 'text-purple-400',
+      bgColor: 'bg-purple-500/10',
+      borderColor: 'border-purple-500/20',
+      icon: ArrowUpRight,
+    },
+  } as const;
+
   const status = statusConfig[asset.status];
   const StatusIcon = status.icon;
-  const isPositive = profit >= 0;
 
   return (
     <motion.div
@@ -109,7 +113,6 @@ function AssetRow({
         'transition-colors duration-200'
       )}
     >
-      {/* Asset Icon */}
       <div className={cn(
         'w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0',
         'bg-gradient-to-br from-[#00f5d4]/20 to-[#8b5cf6]/20',
@@ -118,15 +121,14 @@ function AssetRow({
         {asset.symbol.slice(0, 2)}
       </div>
 
-      {/* Asset Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-white font-medium truncate">{asset.name}</span>
-          <span className="text-white/30 text-xs">{asset.symbol}</span>
+          <span className="text-white font-medium font-body truncate">{asset.name}</span>
+          <span className="text-white/30 text-xs font-mono">{asset.symbol}</span>
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <span className={cn(
-            'text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 border',
+            'text-xs px-2 py-0.5 rounded-lg flex items-center gap-1 border',
             status.bgColor,
             status.borderColor,
             status.color
@@ -135,25 +137,28 @@ function AssetRow({
             {status.label}
           </span>
           {asset.status === 'active' && asset.daysLeft !== undefined && (
-            <span className="text-white/40 text-xs">{asset.daysLeft} days left</span>
+            <span className="text-white/40 text-xs font-body">
+              {t('portfolio.card.daysLeft', {
+                days: asset.daysLeft,
+                defaultValue: `${asset.daysLeft} days left`,
+              })}
+            </span>
           )}
         </div>
       </div>
 
-      {/* Value & Profit */}
       <div className="text-right shrink-0">
-        <div className="text-white font-mono font-medium">
-          ${asset.currentValue.toLocaleString()}
+        <div className="text-white font-mono tabular-nums font-medium">
+          ${formatNumberNoGrouping(asset.currentValue)}
         </div>
         <div className={cn(
-          'text-xs',
+          'text-xs font-mono tabular-nums',
           isPositive ? 'text-emerald-400' : 'text-rose-400'
         )}>
           {isPositive ? '+' : ''}{profitPercent.toFixed(2)}%
         </div>
       </div>
 
-      {/* Arrow */}
       <div className="p-2 rounded-lg text-white/20 group-hover:text-[#00f5d4] transition-colors shrink-0">
         <ArrowUpRight weight="bold" className="w-4 h-4" />
       </div>
@@ -161,51 +166,68 @@ function AssetRow({
   );
 }
 
-function AssetGroupSection({ group, defaultOpen = true }: { group: AssetGroup; defaultOpen?: boolean }) {
+function AssetGroupSection({
+  group,
+  defaultOpen = true,
+  totalPortfolioValue
+}: {
+  group: AssetGroup;
+  defaultOpen?: boolean;
+  totalPortfolioValue: number;
+}) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const Icon = group.icon;
+  const percentage = totalPortfolioValue > 0 ? (group.totalValue / totalPortfolioValue) * 100 : 0;
 
   return (
     <>
       <Collapsible.Root open={isOpen} onOpenChange={setIsOpen}>
         <div className="rounded-2xl bg-[#0d0f14] border border-white/[0.08] overflow-hidden">
-          {/* Header */}
           <Collapsible.Trigger asChild>
             <button className="w-full">
-              <div 
+              <div
                 className={cn(
                   'flex items-center justify-between p-4',
                   'border-b transition-all duration-200',
-                  isOpen 
-                    ? 'border-white/[0.06] bg-white/[0.02]' 
+                  isOpen
+                    ? 'border-white/[0.06] bg-white/[0.02]'
                     : 'border-transparent hover:bg-white/[0.01]'
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ 
+                    style={{
                       background: `${group.color}15`,
                       border: `1px solid ${group.color}30`,
                     }}
                   >
                     <Icon weight="duotone" className="w-5 h-5" style={{ color: group.color }} />
                   </div>
-                  
+
                   <div className="text-left">
-                    <div className="text-white font-medium">{group.title}</div>
-                    <div className="text-white/40 text-xs">{group.assets.length} assets</div>
+                    <div className="text-white font-medium font-body">{group.title}</div>
+                    <div className="text-white/40 text-xs font-body">
+                      {t('portfolio.groups.assetsCount', {
+                        count: group.assets.length,
+                        defaultValue: `${group.assets.length} assets`,
+                      })}
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <div className="text-white font-mono font-semibold">
-                      ${group.totalValue.toLocaleString()}
+                    <div className="text-white font-mono tabular-nums font-semibold">
+                      ${formatNumberNoGrouping(group.totalValue)}
                     </div>
-                    <div className="text-white/30 text-[10px]">
-                      {((group.totalValue / 100000) * 100).toFixed(1)}% of portfolio
+                    <div className="text-white/40 text-xs font-body">
+                      {t('portfolio.groups.ofPortfolio', {
+                        percent: percentage.toFixed(1),
+                        defaultValue: `${percentage.toFixed(1)}% of portfolio`,
+                      })}
                     </div>
                   </div>
 
@@ -221,7 +243,6 @@ function AssetGroupSection({ group, defaultOpen = true }: { group: AssetGroup; d
             </button>
           </Collapsible.Trigger>
 
-          {/* Content */}
           <Collapsible.Content asChild>
             <motion.div
               initial={false}
@@ -231,9 +252,9 @@ function AssetGroupSection({ group, defaultOpen = true }: { group: AssetGroup; d
               <div className="divide-y divide-white/[0.04]">
                 <AnimatePresence>
                   {isOpen && group.assets.map((asset, index) => (
-                    <AssetRow 
-                      key={asset.id} 
-                      asset={asset} 
+                    <AssetRow
+                      key={asset.id}
+                      asset={asset}
                       index={index}
                       onClick={() => setSelectedAsset(asset)}
                     />
@@ -245,7 +266,6 @@ function AssetGroupSection({ group, defaultOpen = true }: { group: AssetGroup; d
         </div>
       </Collapsible.Root>
 
-      {/* Detail Modal */}
       <InvestmentDetailModal
         isOpen={!!selectedAsset}
         onClose={() => setSelectedAsset(null)}
@@ -257,13 +277,16 @@ function AssetGroupSection({ group, defaultOpen = true }: { group: AssetGroup; d
 }
 
 export function CollapsibleAssetList({ groups, className }: CollapsibleAssetListProps) {
+  const totalPortfolioValue = groups.reduce((sum, group) => sum + group.totalValue, 0);
+
   return (
     <div className={cn('space-y-3', className)}>
       {groups.map((group, index) => (
-        <AssetGroupSection 
-          key={group.title} 
-          group={group} 
+        <AssetGroupSection
+          key={group.title}
+          group={group}
           defaultOpen={index === 0}
+          totalPortfolioValue={totalPortfolioValue}
         />
       ))}
     </div>

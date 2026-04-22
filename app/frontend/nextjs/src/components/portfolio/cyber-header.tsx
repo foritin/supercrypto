@@ -4,13 +4,16 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { TerminalWindow, Clock } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface CyberHeaderProps {
   className?: string;
 }
 
 export function CyberHeader({ className }: CyberHeaderProps) {
+  const { t, i18n } = useTranslation();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const locale = i18n.language.startsWith('zh') ? 'zh-CN' : 'en-US';
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -19,14 +22,14 @@ export function CyberHeader({ className }: CyberHeaderProps) {
     return () => clearInterval(timer);
   }, []);
 
-  const timeStr = currentTime.toLocaleTimeString('en-US', { 
+  const timeStr = currentTime.toLocaleTimeString(locale, { 
     hour12: false,
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
   });
 
-  const dateStr = currentTime.toLocaleDateString('en-US', {
+  const dateStr = currentTime.toLocaleDateString(locale, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -64,11 +67,13 @@ export function CyberHeader({ className }: CyberHeaderProps) {
           </div>
           
           <div>
-            <h1 className="text-lg font-bold text-white tracking-tight">
-              PORTFOLIO<span className="text-[#00f5d4]">_</span>TERMINAL
+            <h1 className="text-lg font-bold font-body text-white tracking-tight">
+              {t('portfolio.cyberHeader.title', { defaultValue: 'PORTFOLIO' })}
+              <span className="text-[#00f5d4]">_</span>
+              {t('portfolio.cyberHeader.terminal', { defaultValue: 'TERMINAL' })}
             </h1>
-            <p className="text-[10px] text-white/40 font-mono tracking-wider">
-              RWA INVESTMENT MONITORING SYSTEM
+            <p className="text-xs text-white/40 font-mono tracking-wide">
+              {t('portfolio.cyberHeader.subtitle', { defaultValue: 'RWA INVESTMENT MONITORING SYSTEM' })}
             </p>
           </div>
         </div>

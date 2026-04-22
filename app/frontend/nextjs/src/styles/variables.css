@@ -3,19 +3,16 @@
    ============================================ */
 
 :root {
-  /* Primary Colors - Deep Sea Blue */
-  --color-primary: #0066FF;
-  --color-primary-light: #3385FF;
-  --color-primary-dark: #0052CC;
-  --color-primary-glow: rgba(0, 102, 255, 0.4);
+  /* Primary Colors - Green Neon */
+  --color-primary: #00d4aa;
+  --color-primary-light: #33ffcc;
+  --color-primary-dark: #00a080;
+  --color-primary-glow: rgba(0, 212, 170, 0.4);
 
-  /* Accent Colors - Antique Gold */
-  --color-accent: #00C9A7;
-  --color-accent-light: #33D9BD;
-  --color-accent-dark: #00A085;
-  --color-gold: #D4AF37;
-  --color-gold-light: #E5C76B;
-  --color-gold-dark: #B8941F;
+  /* Gold Accent */
+  --color-gold: #ffd700;
+  --color-gold-light: #ffe55c;
+  --color-gold-dark: #c9a000;
 
   /* Status Colors */
   --color-success: #52c41a;
@@ -122,10 +119,10 @@
 /* Dark Mode (Default) */
 :root,
 .dark {
-  --bg-dark: #0A0F1A;
-  --bg-card: #111827;
-  --bg-card-hover: #1F2937;
-  --bg-elevated: #1F2937;
+  --bg-dark: #0a0f0d;
+  --bg-card: #111916;
+  --bg-card-hover: #151f1a;
+  --bg-elevated: #1a241e;
   --bg-gradient: linear-gradient(135deg, #0a0f0d 0%, #0d1512 50%, #111916 100%);
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.70);
@@ -140,6 +137,8 @@
   --glass-bg: rgba(17, 25, 22, 0.8);
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-blur: blur(12px);
+  --glass-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%, transparent 100%);
+  --glass-glow-gradient: linear-gradient(135deg, rgba(0, 212, 170, 0.2) 0%, rgba(0, 160, 128, 0.15) 50%, rgba(0, 212, 170, 0.1) 100%);
 }
 
 /* Light Mode */
@@ -162,6 +161,8 @@
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(15, 23, 42, 0.1);
   --glass-blur: blur(12px);
+  --glass-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, transparent 50%, transparent 100%);
+  --glass-glow-gradient: linear-gradient(135deg, rgba(0, 212, 170, 0.1) 0%, rgba(0, 160, 128, 0.05) 50%, rgba(0, 212, 170, 0.05) 100%);
 }
 
 /* shadcn/ui CSS Variables - Dark Mode */

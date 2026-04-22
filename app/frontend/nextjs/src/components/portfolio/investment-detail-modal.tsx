@@ -1,11 +1,13 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { X } from '@phosphor-icons/react';
-import { useRedemptionDetail } from '@/hooks/use-redemptions';
 import { useMemo } from 'react';
-import { truncateAddress } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
+import { X } from '@phosphor-icons/react';
+
+import { cn, truncateAddress } from '@/lib/utils';
+import { useRedemptionDetail } from '@/hooks/use-redemptions';
+import { formatNumberNoGrouping } from './number-format';
 
 interface InvestmentDetailModalProps {
   isOpen: boolean;
@@ -28,20 +30,12 @@ interface InvestmentDetailModalProps {
   redemptionId?: string | null | undefined;
 }
 
-const TIMELINE_EVENT_LABELS: Record<string, string> = {
-  request_created: 'Request Created',
-  proposal_created: 'Proposal Created',
-  signature_submitted: 'Signature Submitted',
-  threshold_reached: 'Threshold Reached',
-  executed: 'Executed',
-  rejected: 'Rejected',
-};
-
 const statusColors: Record<string, string> = {
-  pending: 'text-amber-400',
-  signing: 'text-amber-400',
-  executed: 'text-emerald-400',
-  rejected: 'text-rose-400',
+  pending: 'text-amber-300',
+  signing: 'text-amber-300',
+  executed: 'text-emerald-300',
+  rejected: 'text-rose-300',
+  recorded: 'text-white/70',
 };
 
 const statusBgColors: Record<string, string> = {
@@ -49,53 +43,87 @@ const statusBgColors: Record<string, string> = {
   signing: 'bg-amber-500/10',
   executed: 'bg-emerald-500/10',
   rejected: 'bg-rose-500/10',
+  recorded: 'bg-white/5',
 };
 
-export function InvestmentDetailModal({ 
-  isOpen, 
-  onClose, 
+function getEventLabel(t: any, eventType: string) {
+  const keyMap: Record<string, string> = {
+    request_created: 'portfolio.modal.timeline.requestCreated',
+    proposal_created: 'portfolio.modal.timeline.proposalCreated',
+    signature_submitted: 'portfolio.modal.timeline.signatureSubmitted',
+    threshold_reached: 'portfolio.modal.timeline.thresholdReached',
+    executed: 'portfolio.modal.timeline.executed',
+    rejected: 'portfolio.modal.timeline.rejected',
+  };
+
+  const translationKey = keyMap[eventType];
+  if (!translationKey) return eventType;
+  return t(translationKey, { defaultValue: eventType });
+}
+
+export function InvestmentDetailModal({
+  isOpen,
+  onClose,
   investment,
-  redemptionId 
+  redemptionId
 }: InvestmentDetailModalProps) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.startsWith('zh') ? 'zh-CN' : 'en-US';
   const { data: redemptionDetail } = useRedemptionDetail(redemptionId || '');
 
   const timeline = useMemo(() => {
-    if (redemptionDetail?.events?.length) {
-      return redemptionDetail.events.map(event => ({
-        id: event.id,
-        title: TIMELINE_EVENT_LABELS[event.eventType] || event.eventType,
-        description: event.message || 'Event recorded',
-        date: new Date(event.createdAt).toLocaleString(),
-        status: event.status || 'recorded',
-        txHash: event.txHash,
-      }));
-    }
-    return [];
-  }, [redemptionDetail]);
+    if (!redemptionDetail?.events?.length) return [];
+    return redemptionDetail.events.map((event) => ({
+      id: event.id,
+      title: getEventLabel(t, event.eventType),
+      description: event.message || t('portfolio.modal.timeline.eventRecorded', { defaultValue: 'Event recorded' }),
+      date: new Date(event.createdAt).toLocaleString(locale),
+      status: event.status || 'recorded',
+      txHash: event.txHash,
+    }));
+  }, [redemptionDetail, t, locale]);
 
   if (!investment) return null;
 
   const profit = investment.currentValue - investment.invested;
   const profitPercent = investment.invested > 0 ? (profit / investment.invested) * 100 : 0;
 
-  const getStatusDisplay = () => {
+  const statusDisplay = (() => {
     switch (investment.status) {
-      case 'active': return { label: 'Active', color: 'text-emerald-400' };
-      case 'matured': return { label: 'Matured', color: 'text-blue-400' };
-      case 'pending': return { label: 'Pending', color: 'text-amber-400' };
-      case 'completed': return { label: 'Completed', color: 'text-gray-400' };
-      case 'redeeming': return { label: 'Redeeming', color: 'text-purple-400' };
-      default: return { label: investment.status, color: 'text-white' };
+      case 'active':
+        return {
+          label: t('portfolio.status.active', { defaultValue: 'Active' }),
+          color: 'text-emerald-400',
+        };
+      case 'matured':
+        return {
+          label: t('portfolio.status.matured', { defaultValue: 'Matured' }),
+          color: 'text-blue-400',
+        };
+      case 'pending':
+        return {
+          label: t('portfolio.status.pending', { defaultValue: 'Pending' }),
+          color: 'text-amber-400',
+        };
+      case 'completed':
+        return {
+          label: t('portfolio.status.redeemed', { defaultValue: 'Completed' }),
+          color: 'text-gray-300',
+        };
+      case 'redeeming':
+        return {
+          label: t('portfolio.status.redeeming', { defaultValue: 'Redeeming' }),
+          color: 'text-purple-400',
+        };
+      default:
+        return { label: investment.status, color: 'text-white' };
     }
-  };
-
-  const statusDisplay = getStatusDisplay();
+  })();
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -103,19 +131,19 @@ export function InvestmentDetailModal({
             onClick={onClose}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
           />
-          
-          {/* Modal */}
+
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.96, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-50"
+            exit={{ opacity: 0, scale: 0.96, y: 20 }}
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl px-4 sm:px-0 z-50"
           >
-            <div className="bg-[#0d0f14] border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl">
-              {/* Header */}
+            <div className="bg-[#0d0f14] border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col">
               <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
-                <h2 className="text-lg font-semibold text-white">Investment Details</h2>
-                <button 
+                <h2 className="text-lg font-semibold font-body text-white">
+                  {t('portfolio.investmentDetails', { defaultValue: 'Investment Details' })}
+                </h2>
+                <button
                   onClick={onClose}
                   className="p-2 rounded-lg hover:bg-white/[0.05] text-white/40 hover:text-white transition-colors"
                 >
@@ -123,8 +151,7 @@ export function InvestmentDetailModal({
                 </button>
               </div>
 
-              <div className="p-5 space-y-5">
-                {/* Asset Header */}
+              <div className="p-5 space-y-5 overflow-y-auto custom-scrollbar">
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     'w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold shrink-0',
@@ -133,49 +160,68 @@ export function InvestmentDetailModal({
                   )}>
                     {investment.symbol.slice(0, 2)}
                   </div>
-                  <div>
-                    <h3 className="text-white font-semibold">{investment.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="text-white font-semibold font-body truncate">{investment.name}</h3>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className={cn('text-sm', statusDisplay.color)}>
+                      <span className={cn('text-sm font-mono tabular-nums', statusDisplay.color)}>
                         {investment.apy}% APY
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <div className="text-white/40 text-xs mb-1">Invested</div>
-                    <div className="text-white font-mono text-lg">
-                      ${investment.invested.toLocaleString()}
+                    <div className="text-white/50 text-xs mb-1 font-body">
+                      {t('portfolio.card.invested', { defaultValue: 'Invested' })}
+                    </div>
+                    <div className="text-white font-mono tabular-nums text-lg">
+                      ${formatNumberNoGrouping(investment.invested)}
                     </div>
                   </div>
                   <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <div className="text-white/40 text-xs mb-1">Expected Return</div>
-                    <div className="text-amber-400 font-mono text-lg">
-                      +${investment.expectedReturn.toLocaleString()}
+                    <div className="text-white/50 text-xs mb-1 font-body">
+                      {t('portfolio.card.expectedReturn', { defaultValue: 'Expected Return' })}
                     </div>
-                    <div className="text-white/30 text-xs mt-1">
-                      +{profitPercent.toFixed(2)}% profit
+                    <div className="text-amber-400 font-mono tabular-nums text-lg">
+                      +${formatNumberNoGrouping(investment.expectedReturn)}
+                    </div>
+                    <div className="text-white/40 text-xs mt-1 font-body">
+                      {t('portfolio.modal.profit', {
+                        percent: profitPercent.toFixed(2),
+                        defaultValue: `+${profitPercent.toFixed(2)}% profit`,
+                      })}
                     </div>
                   </div>
                 </div>
 
-                {/* Status & Progress */}
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-white/40 text-xs uppercase tracking-wider">Status</span>
-                    <span className={cn('text-sm font-medium', statusDisplay.color)}>
+                    <span className="text-white/50 text-xs uppercase tracking-wider font-body">
+                      {t('portfolio.modal.status', { defaultValue: 'Status' })}
+                    </span>
+                    <span className={cn('text-sm font-medium font-body', statusDisplay.color)}>
                       {statusDisplay.label}
                     </span>
                   </div>
-                  
+
                   {investment.progress !== undefined && (
                     <div>
-                      <div className="flex justify-between text-xs text-white/40 mb-2">
-                        <span>{Math.round(investment.progress)}% complete</span>
-                        <span>{investment.daysLeft} days left</span>
+                      <div className="flex justify-between text-xs text-white/50 mb-2">
+                        <span className="font-body">
+                          {t('portfolio.modal.progressComplete', {
+                            percent: Math.round(investment.progress),
+                            defaultValue: `${Math.round(investment.progress)}% complete`,
+                          })}
+                        </span>
+                        <span className="font-body">
+                          {investment.daysLeft !== undefined
+                            ? t('portfolio.card.daysLeft', {
+                                days: investment.daysLeft,
+                                defaultValue: `${investment.daysLeft} days left`,
+                              })
+                            : '--'}
+                        </span>
                       </div>
                       <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                         <motion.div
@@ -189,62 +235,67 @@ export function InvestmentDetailModal({
                   )}
 
                   {investment.status === 'matured' && (
-                    <p className="text-sm text-white/60 mt-3">
-                      Matured and ready. Redemption can be requested.
+                    <p className="text-sm text-white/60 mt-3 font-body">
+                      {t('portfolio.modal.maturedReady', {
+                        defaultValue: 'Matured and ready. Redemption can be requested.',
+                      })}
                     </p>
                   )}
-                  
+
                   {investment.status === 'redeeming' && (
-                    <p className="text-sm text-white/60 mt-3">
-                      Redemption in progress. Check timeline below.
+                    <p className="text-sm text-white/60 mt-3 font-body">
+                      {t('portfolio.modal.redeemingInProgress', {
+                        defaultValue: 'Redemption in progress. Check timeline below.',
+                      })}
                     </p>
                   )}
                 </div>
 
-                {/* Redemption Timeline */}
                 {timeline.length > 0 && (
                   <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                    <h4 className="text-white/40 text-xs uppercase tracking-wider mb-4">
-                      Redemption Timeline
+                    <h4 className="text-white/50 text-xs uppercase tracking-wider mb-4 font-body">
+                      {t('portfolio.modal.redemptionTimeline', { defaultValue: 'Redemption Timeline' })}
                     </h4>
                     <div className="space-y-4">
                       {timeline.map((event, index) => (
-                        <div key={event.id} className="relative pl-5">
-                          {/* Timeline line */}
+                        <div key={event.id} className="relative pl-6">
                           {index < timeline.length - 1 && (
-                            <div className="absolute left-[5px] top-4 bottom-[-16px] w-px bg-white/10" />
+                            <div className="absolute left-[7px] top-4 bottom-[-16px] w-px bg-white/10" />
                           )}
-                          {/* Dot */}
-                          <div 
+                          <div
                             className={cn(
-                              'absolute left-0 top-1 w-2.5 h-2.5 rounded-full border-2',
-                              event.status === 'executed' 
-                                ? 'bg-emerald-400 border-emerald-400' 
+                              'absolute left-0 top-1.5 w-3 h-3 rounded-full border-2',
+                              event.status === 'executed'
+                                ? 'bg-emerald-400 border-emerald-400'
                                 : event.status === 'rejected'
                                   ? 'bg-rose-400 border-rose-400'
                                   : 'bg-amber-400 border-amber-400'
                             )}
                           />
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-white text-sm font-medium">{event.title}</span>
+
+                          <div className="min-w-0">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-white text-sm font-medium font-body">{event.title}</p>
+                                <p className="text-white/45 text-xs mt-0.5 font-body">{event.description}</p>
+                              </div>
                               <span className={cn(
-                                'text-[10px] px-2 py-0.5 rounded-full',
-                                statusBgColors[event.status],
-                                statusColors[event.status]
+                                'text-xs px-2 py-1 rounded-full min-w-[88px] text-center font-body',
+                                statusBgColors[event.status] || statusBgColors.recorded,
+                                statusColors[event.status] || statusColors.recorded
                               )}>
-                                {event.status}
+                                {t(`portfolio.modal.timelineStatus.${event.status}`, { defaultValue: event.status })}
                               </span>
                             </div>
-                            <p className="text-white/40 text-xs mt-0.5">{event.description}</p>
-                            <div className="flex items-center justify-between mt-1">
-                              <span className="text-white/30 text-[10px]">{event.date}</span>
+
+                            <div className="flex items-center justify-between gap-3 mt-1.5">
+                              <span className="text-white/35 text-xs font-mono">{event.date}</span>
                               {event.txHash && (
                                 <a
                                   href={`https://etherscan.io/tx/${event.txHash}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-[10px] text-[#00f5d4] hover:underline font-mono"
+                                  className="text-xs text-[#00f5d4] hover:underline font-mono tabular-nums"
                                 >
                                   {truncateAddress(event.txHash)}
                                 </a>
@@ -257,30 +308,30 @@ export function InvestmentDetailModal({
                   </div>
                 )}
 
-                {/* No timeline message */}
                 {investment.status === 'active' && timeline.length === 0 && (
                   <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                    <h4 className="text-white/40 text-xs uppercase tracking-wider mb-2">
-                      Redemption Timeline
+                    <h4 className="text-white/50 text-xs uppercase tracking-wider mb-2 font-body">
+                      {t('portfolio.modal.redemptionTimeline', { defaultValue: 'Redemption Timeline' })}
                     </h4>
-                    <p className="text-sm text-white/50">
-                      Not matured yet. Redemption can be requested after maturity.
+                    <p className="text-sm text-white/55 font-body">
+                      {t('portfolio.modal.noTimelineYet', {
+                        defaultValue: 'Not matured yet. Redemption can be requested after maturity.',
+                      })}
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Footer */}
               <div className="flex items-center justify-end gap-3 p-5 border-t border-white/[0.06]">
-                <button 
+                <button
                   onClick={onClose}
-                  className="px-4 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/[0.05] transition-colors text-sm"
+                  className="px-4 py-2 rounded-lg text-white/65 hover:text-white hover:bg-white/[0.05] transition-colors text-sm font-body"
                 >
-                  Close
+                  {t('portfolio.closeButton', { defaultValue: 'Close' })}
                 </button>
                 {investment.status === 'matured' && (
-                  <button className="px-4 py-2 rounded-lg bg-[#00f5d4] text-black font-medium hover:bg-[#00f5d4]/90 transition-colors text-sm">
-                    Redeem
+                  <button className="px-4 py-2 rounded-lg bg-[#00f5d4] text-black font-medium hover:bg-[#00f5d4]/90 transition-colors text-sm font-body">
+                    {t('portfolio.redeemNow', { defaultValue: 'Redeem Now' })}
                   </button>
                 )}
               </div>
