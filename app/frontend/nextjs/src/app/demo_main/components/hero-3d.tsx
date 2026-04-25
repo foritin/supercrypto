@@ -112,46 +112,39 @@ void main() {
 }
 `;
 
-export function Hero3D() {
-  const router = useRouter();
-  const reduced = useReducedMotion();
-  const magneticRef = useMagneticButton({ threshold: 120, strength: 0.35 });
-  const containerRef = useRef<HTMLDivElement>(null);
+// ─────────────────────────────────────────────────────────────────────────────
+// Fixed 3D Canvas — stays pinned to viewport so wave backdrop-filter can see it
+// ─────────────────────────────────────────────────────────────────────────────
+export function Hero3DCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Scroll-driven camera
   const { scrollY } = useScroll();
-  const rawCameraZ = useTransform(scrollY, [0, 800], [3.5, 0.5]);
-  const rawSphereScale = useTransform(scrollY, [0, 600], [1, 2.5]);
-  const rawSphereOpacity = useTransform(scrollY, [0, 500], [1, 0]);
+  const rawCameraZ = useTransform(scrollY, [0, 1200], [3.5, 0.5]);
+  const rawSphereScale = useTransform(scrollY, [0, 1000], [1, 2.5]);
+  const rawSphereOpacity = useTransform(scrollY, [0, 1600], [1, 0]);
   const cameraZ = useSpring(rawCameraZ, { stiffness: 60, damping: 20 });
   const sphereScale = useSpring(rawSphereScale, { stiffness: 60, damping: 20 });
   const sphereOpacity = useSpring(rawSphereOpacity, { stiffness: 80, damping: 20 });
 
-  // Text parallax
-  const rawTextY = useTransform(scrollY, [0, 800], [0, -180]);
-  const rawTextOpacity = useTransform(scrollY, [0, 400], [1, 0]);
-  const textY = useSpring(rawTextY, { stiffness: 100, damping: 30 });
-  const textOpacity = useSpring(rawTextOpacity, { stiffness: 100, damping: 30 });
+  // Background opacity fades so the canvas becomes transparent behind the wave
+  const rawCanvasBgOpacity = useTransform(scrollY, [0, 600], [1, 0]);
+  const canvasBgOpacity = useSpring(rawCanvasBgOpacity, { stiffness: 80, damping: 25 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
+    if (!canvas) return;
 
-    // Renderer
+    const WAVE_HEIGHT = 120;
     const renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
       alpha: true,
     });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(window.innerWidth, window.innerHeight + WAVE_HEIGHT);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Scene
     const scene = new THREE.Scene();
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(
       45,
       window.innerWidth / window.innerHeight,
@@ -160,10 +153,8 @@ export function Hero3D() {
     );
     camera.position.z = 3.5;
 
-    // Sphere geometry
     const geometry = new THREE.IcosahedronGeometry(1.2, 64);
 
-    // Shader material
     const material = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
@@ -179,7 +170,6 @@ export function Hero3D() {
     const sphere = new THREE.Mesh(geometry, material);
     scene.add(sphere);
 
-    // Particle field
     const particleCount = 200;
     const particleGeometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
@@ -196,7 +186,6 @@ export function Hero3D() {
     const particles = new THREE.Points(particleGeometry, particleMaterial);
     scene.add(particles);
 
-    // Mouse tracking
     const mouse = { x: 0, y: 0 };
     const targetRotation = { x: 0, y: 0 };
 
@@ -205,30 +194,23 @@ export function Hero3D() {
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
     };
 
-    // Animation
     let raf: number;
     const clock = new THREE.Clock();
 
     const animate = () => {
       const elapsed = clock.getElapsedTime();
 
-      // Update uniforms
       (material.uniforms as Record<string, THREE.Uniform>).uTime!.value = elapsed;
 
-      // Smooth mouse rotation
       targetRotation.x = mouse.y * 0.3;
       targetRotation.y = mouse.x * 0.3;
       sphere.rotation.x += (targetRotation.x - sphere.rotation.x) * 0.05;
       sphere.rotation.y += (targetRotation.y - sphere.rotation.y) * 0.05;
-
-      // Gentle idle rotation
       sphere.rotation.y += 0.002;
 
-      // Particle rotation
       particles.rotation.y = elapsed * 0.02;
       particles.rotation.x = elapsed * 0.01;
 
-      // Apply scroll-driven values
       const camZ = cameraZ.get();
       const sScale = sphereScale.get();
       const sOpacity = sphereOpacity.get();
@@ -244,11 +226,10 @@ export function Hero3D() {
 
     animate();
 
-    // Resize
     const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(window.innerWidth, window.innerHeight + WAVE_HEIGHT);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -267,23 +248,51 @@ export function Hero3D() {
   }, [cameraZ, sphereScale, sphereOpacity]);
 
   return (
-    <div ref={containerRef} className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
-      {/* 3D Canvas */}
+    <div className="fixed top-0 left-0 w-full h-full z-0 pointer-events-none">
+      {/* Solid dark background that fades out with scroll */}
+      <motion.div
+        className="absolute inset-0"
+        style={{
+          background: "#0A0F1A",
+          opacity: canvasBgOpacity,
+        }}
+      />
+      {/* 3D canvas — always visible, alpha: true so transparent where no geometry */}
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 z-0"
-        style={{ background: "#0A0F1A" }}
+        className="absolute top-0 left-0 w-full"
+        style={{
+          height: "calc(100vh + 120px)",
+          background: "transparent",
+        }}
       />
-
       {/* Vignette overlay */}
       <div
-        className="absolute inset-0 z-[1] pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
         style={{
           background: "radial-gradient(ellipse at center, transparent 30%, rgba(10,15,26,0.8) 100%)",
         }}
       />
+    </div>
+  );
+}
 
-      {/* Content overlay */}
+// ─────────────────────────────────────────────────────────────────────────────
+// Hero Text Content — normal document flow, scrolls with page
+// ─────────────────────────────────────────────────────────────────────────────
+export function Hero3DContent() {
+  const router = useRouter();
+  const reduced = useReducedMotion();
+  const magneticRef = useMagneticButton({ threshold: 120, strength: 0.35 });
+
+  const { scrollY } = useScroll();
+  const rawTextY = useTransform(scrollY, [0, 1200], [0, -180]);
+  const rawTextOpacity = useTransform(scrollY, [0, 800], [1, 0]);
+  const textY = useSpring(rawTextY, { stiffness: 100, damping: 30 });
+  const textOpacity = useSpring(rawTextOpacity, { stiffness: 100, damping: 30 });
+
+  return (
+    <div className="relative min-h-screen flex flex-col items-center justify-center">
       <motion.div
         style={{ y: reduced ? 0 : textY, opacity: reduced ? 1 : textOpacity }}
         className="relative z-10 max-w-[900px] text-center px-6"
@@ -360,5 +369,17 @@ export function Hero3D() {
         </motion.button>
       </motion.div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Combined Hero3D — renders fixed canvas + scrollable content
+// ─────────────────────────────────────────────────────────────────────────────
+export function Hero3D() {
+  return (
+    <>
+      <Hero3DCanvas />
+      <Hero3DContent />
+    </>
   );
 }

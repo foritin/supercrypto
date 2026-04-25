@@ -1,135 +1,30 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Layers, ChevronDown, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
+import { InfiniteMarquee } from "@/components/home";
+import { FeaturesV3 } from "./components/features-v3";
+import { HowItWorksV2 } from "./components/how-it-works-v2";
+import { CalculatorSectionV2 } from "./components/calculator-section-v2";
+import { CTASectionV2 } from "./components/cta-section-v2";
+import { PartnersMarquee, INSTITUTION_PARTNERS, ROW1_PROVIDERS, ROW2_PROVIDERS } from "@/components/partners";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { cn } from "@/lib/utils";
 import { Hero3D } from "./components/hero-3d";
-import { HeroMatrix } from "./components/hero-matrix";
-import { HeroNexus } from "./components/hero-nexus";
-import { HeroVortex } from "./components/hero-vortex";
-import { HeroNeonGrid } from "./components/hero-neon-grid";
 import { WaveTransition } from "./components/wave-transition";
 import { StatsBand } from "./components/stats-band";
 import { AssetCardsV3 } from "./components/asset-cards-v3";
-import { FeaturesSpotlight } from "./components/features-spotlight";
-import { MarqueeLight } from "./components/marquee-light";
-import { CTAV3 } from "./components/cta-v3";
-
-type HeroStyle = "metal" | "matrix" | "nexus" | "vortex" | "neon";
-
-const STYLES: { key: HeroStyle; label: string; desc: string }[] = [
-  { key: "metal", label: "Metal Sphere", desc: "3D flowing metal" },
-  { key: "matrix", label: "Matrix Rain", desc: "Code rain cascade" },
-  { key: "nexus", label: "Particle Nexus", desc: "Interactive network" },
-  { key: "vortex", label: "Cosmic Vortex", desc: "Spiral galaxy arms" },
-  { key: "neon", label: "Neon Grid", desc: "Cyberpunk pulse" },
-];
 
 export default function DemoMainPage() {
-  const [style, setStyle] = useState<HeroStyle>("metal");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const { t } = useTranslation();
 
-  useEffect(() => {
-    // Check URL query param for style override (e.g. ?style=matrix)
-    const params = new URLSearchParams(window.location.search);
-    const queryStyle = params.get("style");
-
-    if (queryStyle && STYLES.some((s) => s.key === queryStyle)) {
-      setStyle(queryStyle as HeroStyle);
-    } else {
-      const saved = localStorage.getItem("demo_main_hero_style") as HeroStyle | null;
-      if (saved && STYLES.some((s) => s.key === saved)) {
-        setStyle(saved);
-      }
-    }
-    setMounted(true);
-  }, []);
-
-  const selectStyle = useCallback((s: HeroStyle) => {
-    setStyle(s);
-    localStorage.setItem("demo_main_hero_style", s);
-    setMenuOpen(false);
-  }, []);
-
-  const HeroComponent =
-    style === "metal"
-      ? Hero3D
-      : style === "matrix"
-        ? HeroMatrix
-        : style === "nexus"
-          ? HeroNexus
-          : style === "vortex"
-            ? HeroVortex
-            : HeroNeonGrid;
+  const featuresSection = useScrollReveal();
+  const howItWorksSection = useScrollReveal();
+  const calculatorSection = useScrollReveal();
+  const ecosystemSection = useScrollReveal();
 
   return (
     <main className="relative min-h-screen bg-[#0A0F1A] text-white overflow-x-hidden">
-      {/* ─── Style Switcher (top-left) ─── */}
-      {mounted && (
-        <div className="fixed top-20 left-4 z-[100]">
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="flex items-center gap-2 h-9 px-3 rounded-lg bg-white/[0.06] backdrop-blur-md border border-white/[0.08] text-[11px] font-medium tracking-wide text-white/70 hover:bg-white/[0.1] hover:text-white transition-all"
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Style</span>
-              <ChevronDown
-                className={`w-3 h-3 transition-transform ${menuOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            <AnimatePresence>
-              {menuOpen && (
-                <>
-                  {/* Backdrop click */}
-                  <div
-                    className="fixed inset-0 z-[-1]"
-                    onClick={() => setMenuOpen(false)}
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, y: -4, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -4, scale: 0.97 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute top-full left-0 mt-2 w-44 rounded-xl bg-[#0E1420]/95 backdrop-blur-xl border border-white/[0.08] overflow-hidden shadow-2xl"
-                  >
-                    {STYLES.map((s) => (
-                      <button
-                        key={s.key}
-                        onClick={() => selectStyle(s.key)}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 text-left hover:bg-white/[0.06] transition-colors group"
-                      >
-                        <div
-                          className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
-                            style === s.key
-                              ? "border-[#00F5FF] bg-[#00F5FF]/20"
-                              : "border-white/20 group-hover:border-white/40"
-                          }`}
-                        >
-                          {style === s.key && (
-                            <Check className="w-2.5 h-2.5 text-[#00F5FF]" />
-                          )}
-                        </div>
-                        <div>
-                          <div className="text-[12px] font-medium text-white/90">
-                            {s.label}
-                          </div>
-                          <div className="text-[10px] text-white/30">
-                            {s.desc}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      )}
-
       {/* Subtle noise texture overlay */}
       <div
         className="fixed inset-0 z-[1] pointer-events-none opacity-[0.02]"
@@ -138,22 +33,12 @@ export default function DemoMainPage() {
         }}
       />
 
+      {/* ─── All above-fold content shares one stacking context so the wave can reveal the canvas ─── */}
       <div className="relative z-10">
-        {/* ─── Hero with style switch ─── */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={style}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <HeroComponent />
-          </motion.div>
-        </AnimatePresence>
+        <Hero3D />
 
-        {/* ─── Transition: Dark → Light ─── */}
-        <WaveTransition direction="dark-to-light" />
+        {/* ─── Transition: Dark → Light with 3D reveal ─── */}
+        <WaveTransition direction="dark-to-light" reveal3D />
 
         {/* ─── Stats Band ─── */}
         <StatsBand />
@@ -164,14 +49,99 @@ export default function DemoMainPage() {
         {/* ─── Transition: Light → Dark ─── */}
         <WaveTransition direction="light-to-dark" />
 
-        {/* ─── Features Spotlight ─── */}
-        <FeaturesSpotlight />
-
         {/* ─── Partners Marquee ─── */}
-        <MarqueeLight />
+        <PartnersMarquee
+          title={t("home.partners.institutions.title")}
+          subtitle={t("home.partners.institutions.subtitle")}
+          partners={INSTITUTION_PARTNERS}
+          speed={35}
+          grayscale={true}
+          pauseOnHover={true}
+        />
 
-        {/* ─── CTA ─── */}
-        <CTAV3 />
+        {/* ─── Features Section ─── */}
+        <section
+          ref={featuresSection.ref as React.RefObject<HTMLDivElement>}
+          className={cn(
+            "w-full scroll-reveal section-spacing px-6 flex justify-center",
+            featuresSection.isVisible && "is-visible"
+          )}
+        >
+          <div className="w-full max-w-[1200px] relative">
+            <div className="text-center mb-[72px] fade-in-stagger">
+              <span className="inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.2em] text-white/40 font-medium mb-6">
+                <span className="w-8 h-[1px] bg-white/20" />
+                Features
+                <span className="w-8 h-[1px] bg-white/20" />
+              </span>
+              <h2 className="font-display mt-4 mb-6 text-3xl md:text-4xl font-semibold text-white">
+                {t("home.features.title")}
+              </h2>
+              <p className="text-lg text-white/50 max-w-[600px] mx-auto text-center">
+                {t("home.features.subtitle")}
+              </p>
+            </div>
+            <FeaturesV3 />
+          </div>
+        </section>
+
+        {/* ─── How It Works Section ─── */}
+        <section
+          ref={howItWorksSection.ref as React.RefObject<HTMLDivElement>}
+          className={cn(
+            "w-full scroll-reveal section-spacing px-6 flex justify-center",
+            howItWorksSection.isVisible && "is-visible"
+          )}
+        >
+          <div className="w-full max-w-[1200px]">
+            <div className="text-center mb-[72px] fade-in-stagger">
+              <span className="text-[#D4AF37] text-sm font-semibold uppercase tracking-[2px]">
+                How It Works
+              </span>
+              <h2 className="font-display mt-4 mb-4 text-3xl md:text-4xl font-semibold text-white">
+                {t("home.howItWorks.title")}
+              </h2>
+              <p className="text-lg text-white/50 max-w-[600px] mx-auto text-center">
+                {t("home.howItWorks.subtitle")}
+              </p>
+            </div>
+            <HowItWorksV2 />
+          </div>
+        </section>
+
+        {/* ─── Yield Calculator Section ─── */}
+        <section
+          ref={calculatorSection.ref as React.RefObject<HTMLDivElement>}
+          className={cn(
+            "w-full scroll-reveal section-spacing px-6 flex justify-center",
+            calculatorSection.isVisible && "is-visible"
+          )}
+        >
+          <div className="w-full max-w-[1200px]">
+            <CalculatorSectionV2 />
+          </div>
+        </section>
+
+        {/* ─── Ecosystem / Logo Wall Section ─── */}
+        <section
+          ref={ecosystemSection.ref as React.RefObject<HTMLDivElement>}
+          className={cn(
+            "scroll-reveal",
+            ecosystemSection.isVisible && "is-visible"
+          )}
+        >
+          <InfiniteMarquee
+            row1Items={ROW1_PROVIDERS}
+            row2Items={ROW2_PROVIDERS}
+            title={t("home.partners.blockchains.title")}
+            subtitle={t("home.partners.blockchains.subtitle")}
+            speed={35}
+            pauseOnHover={true}
+          />
+        </section>
+
+        {/* ─── Final CTA Section ─── */}
+        <CTASectionV2 />
       </div>
     </main>
   );
