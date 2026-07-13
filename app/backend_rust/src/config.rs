@@ -14,10 +14,8 @@ pub struct AppConfig {
     pub backdoor: String,
     pub encryption_key: String,
     pub chain: ChainConfig,
-    pub postgresql: PostgresqlConfig,
+    pub sqlite: SqliteConfig,
     pub redis: RedisConfig,
-    pub rustfs: MinioConfig,
-    pub minio: MinioConfig,
     pub ai_providers: AiProvidersConfig,
     pub aspose: AsposeConfig,
     pub crypto: CryptoConfig,
@@ -33,23 +31,11 @@ pub struct ChainConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct PostgresqlConfig {
-    pub host: String,
-    pub port: u16,
-    pub user: String,
-    pub password: String,
-    pub database: String,
-    pub pool_size: u32,
-    pub echo: bool,
-}
-
-impl PostgresqlConfig {
-    pub fn url(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.user, self.password, self.host, self.port, self.database
-        )
-    }
+pub struct SqliteConfig {
+    /// SQLite 数据库文件路径，例如 "data/app.sqlite"
+    pub database_url: String,
+    /// 最大连接数
+    pub max_connections: u32,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -67,24 +53,6 @@ impl RedisConfig {
             self.password, self.host, self.port, self.db
         )
     }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct MinioConfig {
-    pub access_key: String,
-    pub secret_key: String,
-    pub endpoint: String,
-    pub bucket: String,
-    #[serde(default)]
-    pub secure: bool,
-    #[serde(default)]
-    pub redirect: String,
-    #[serde(default)]
-    pub access: String,
-    #[serde(default)]
-    pub secret: String,
-    #[serde(default)]
-    pub version: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -140,7 +108,7 @@ impl AppConfig {
         let env = env::var("APP_ENVIRONMENT").unwrap_or_else(|_| "dev".to_string());
         let config_file = format!("config/{}.yaml", env);
 
-        let mut cfg = config::Config::builder()
+        let cfg = config::Config::builder()
             .add_source(config::File::with_name(&config_file).required(true))
             .add_source(config::Environment::with_prefix("APP").separator("__"))
             .build()?;

@@ -1,13 +1,17 @@
-use axum::{
-    extract::{Path, Query, State},
+﻿use axum::{
+    body::Body,
+    extract::{Multipart, Path, Query, State},
+    http::{StatusCode, header},
+    response::Response,
     Json, Router,
 };
 use serde::Deserialize;
 
 use crate::error::AppError;
+use crate::repositories::media_repo;
 use crate::schemas::common::{ApiResponse, DataWrapper, Pagination};
 use crate::schemas::user::{
-    CreateStakingRequest, CreateSubscriptionRequest, KycApplyRequest, KycUploadRequest,
+    CreateStakingRequest, CreateSubscriptionRequest, KycApplyRequest,
     StakingResponse, SubscriptionResponse,
 };
 use crate::state::SharedState;
@@ -40,10 +44,11 @@ pub fn routes() -> Router<SharedState> {
         .route("/api/v1/user/staking/{id}/claim", axum::routing::post(claim_rewards))
         .route("/api/v1/user/kyc/upload-document", axum::routing::post(upload_document))
         .route("/api/v1/user/kyc/apply", axum::routing::post(apply_kyc))
+        .route("/api/v1/user/media/{id}", axum::routing::get(download_media))
 }
 
 async fn get_me(
-    State(state): State<SharedState>,
+    State(_state): State<SharedState>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     // TODO: get user from request extension (JWT)
     let data = DataWrapper::object(serde_json::json!({
@@ -112,9 +117,9 @@ async fn list_subscriptions(
     let items = sqlx::query_as!(
         SubscriptionResponse,
         r#"
-        SELECT id, wallet_address, asset_id, amount, token_type as "token_type: String",
+        SELECT id, wallet_address, asset_id, amount, token_type,
         lock_period, apy, rwa_token_amount, start_date, end_date,
-        expected_interest, actual_interest, tx_hash, status as "status: String", created_at
+        expected_interest, actual_interest, tx_hash, status, created_at
         FROM subscription
         WHERE wallet_address = $1 AND environment = 'hardhat'
         ORDER BY created_at DESC
@@ -142,14 +147,14 @@ async fn list_subscriptions(
 
 async fn get_subscription(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
 ) -> Result<Json<ApiResponse<DataWrapper<SubscriptionResponse>>>, AppError> {
     let item = sqlx::query_as!(
         SubscriptionResponse,
         r#"
-        SELECT id, wallet_address, asset_id, amount, token_type as "token_type: String",
+        SELECT id, wallet_address, asset_id, amount, token_type,
         lock_period, apy, rwa_token_amount, start_date, end_date,
-        expected_interest, actual_interest, tx_hash, status as "status: String", created_at
+        expected_interest, actual_interest, tx_hash, status, created_at
         FROM subscription
         WHERE id = $1
         "#,
@@ -165,10 +170,10 @@ async fn get_subscription(
 
 async fn redeem_subscription(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     sqlx::query!(
-        "UPDATE subscription SET status = 'redeemed', redeemed_at = NOW() WHERE id = $1",
+        "UPDATE subscription SET status = 'redeemed', redeemed_at = CURRENT_TIMESTAMP WHERE id = $1",
         id
     )
     .execute(&state.db)
@@ -214,7 +219,7 @@ async fn confirm_subscription(
         .ok_or_else(|| AppError::BadRequest("tx_hash required".to_string()))?;
 
     sqlx::query!(
-        "UPDATE subscription SET status = 'active', start_date = NOW(), tx_hash = $1 WHERE tx_hash IS NULL AND status = 'pending'",
+        "UPDATE subscription SET status = 'active', start_date = CURRENT_TIMESTAMP, tx_hash = $1 WHERE tx_hash IS NULL AND status = 'pending'",
         tx_hash
     )
     .execute(&state.db)
@@ -251,7 +256,7 @@ async fn create_staking(
     Json(req): Json<CreateStakingRequest>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     let wallet_address = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
-    let now = chrono::Utc::now();
+    let now = chrono::Utc::now().naive_utc();
     let end_date = now + chrono::Duration::days(req.period as i64);
     let multiplier = match req.period {
         15 => "1.0",
@@ -259,7 +264,7 @@ async fn create_staking(
         45 => "4.5",
         60 => "7.0",
         _ => "1.0",
-    }.parse().unwrap();
+    }.to_string();
 
     let result = sqlx::query!(
         "INSERT INTO staking_record (wallet_address, subscription_id, amount, period, multiplier, start_date, end_date, status, environment) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
@@ -295,7 +300,7 @@ async fn list_staking(
         StakingResponse,
         r#"
         SELECT id, wallet_address, subscription_id, amount, period, multiplier,
-        start_date, end_date, expected_rewards, claimed_rewards, status as "status: String", created_at
+        start_date, end_date, expected_rewards, claimed_rewards, status, created_at
         FROM staking_record
         WHERE wallet_address = $1 AND environment = 'hardhat'
         ORDER BY created_at DESC
@@ -323,13 +328,13 @@ async fn list_staking(
 
 async fn get_staking(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
 ) -> Result<Json<ApiResponse<DataWrapper<StakingResponse>>>, AppError> {
     let item = sqlx::query_as!(
         StakingResponse,
         r#"
         SELECT id, wallet_address, subscription_id, amount, period, multiplier,
-        start_date, end_date, expected_rewards, claimed_rewards, status as "status: String", created_at
+        start_date, end_date, expected_rewards, claimed_rewards, status, created_at
         FROM staking_record
         WHERE id = $1
         "#,
@@ -345,7 +350,7 @@ async fn get_staking(
 
 async fn unstake(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     sqlx::query!(
         "UPDATE staking_record SET status = 'completed', unstake_tx_hash = $2 WHERE id = $1",
@@ -361,7 +366,7 @@ async fn unstake(
 
 async fn claim_rewards(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     let wallet_address = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
 
@@ -380,11 +385,59 @@ async fn claim_rewards(
 }
 
 async fn upload_document(
-    State(_state): State<SharedState>,
+    State(state): State<SharedState>,
+    mut multipart: Multipart,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
-    // TODO: implement multipart upload to MinIO
-    let data = DataWrapper::object(serde_json::json!({"url": "placeholder"}));
-    Ok(Json(ApiResponse::ok(data)))
+    // 占位：从 JWT 获取 address，当前使用硬编码
+    let owner_address = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
+    let storage_dir = "data/files";
+
+    let mut saved = None;
+    while let Some(field) = multipart.next_field().await.unwrap_or(None) {
+        let name = field.name().unwrap_or("file").to_string();
+        if name == "file" || name == "document" {
+            let file_name = field.file_name().unwrap_or("upload.bin").to_string();
+            let mime_type = field.content_type().map(|s| s.to_string());
+            let data = field.bytes().await.map_err(|e| AppError::BadRequest(e.to_string()))?;
+            let media = media_repo::save_file(&state.db, owner_address, &file_name, mime_type.as_deref(), &data, storage_dir).await?;
+            saved = Some(media);
+            break;
+        }
+    }
+
+    match saved {
+        Some(media) => {
+            let data = DataWrapper::object(serde_json::json!({
+                "id": media.id,
+                "url": format!("/api/v1/user/media/{}", media.id),
+                "file_name": media.file_name,
+                "file_size": media.file_size
+            }));
+            Ok(Json(ApiResponse::ok(data)))
+        }
+        None => Err(AppError::BadRequest("no file uploaded".to_string())),
+    }
+}
+
+async fn download_media(
+    State(state): State<SharedState>,
+    Path(id): Path<i64>,
+) -> Result<Response, AppError> {
+    match media_repo::get_file_by_id(&state.db, id).await? {
+        Some(media) => {
+            let bytes = std::fs::read(&media.storage_path)?;
+            let mut builder = Response::builder().status(StatusCode::OK);
+            if let Some(mime) = &media.mime_type {
+                builder = builder.header(header::CONTENT_TYPE, mime);
+            }
+            builder = builder.header(
+                header::CONTENT_DISPOSITION,
+                format!(r#"attachment; filename="{}""#, media.file_name),
+            );
+            Ok(builder.body(Body::from(bytes)).unwrap())
+        }
+        None => Err(AppError::NotFound(format!("media {} not found", id))),
+    }
 }
 
 async fn apply_kyc(
@@ -400,7 +453,7 @@ async fn apply_kyc(
         network,
         "pending",
         req.full_name,
-        req.date_of_birth.parse::<chrono::NaiveDate>().ok(),
+        req.date_of_birth,
         req.email,
         req.phone,
         req.address_line1,

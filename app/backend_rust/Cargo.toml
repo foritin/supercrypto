@@ -8,7 +8,7 @@ edition = "2021"
 tokio = { version = "1.45", features = ["full"] }
 
 # Web 框架
-axum = "0.8"
+axum = { version = "0.8", features = ["multipart"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace", "fs"] }
 
@@ -20,11 +20,11 @@ serde_yaml = "0.9"
 # 配置
 config = "0.15"
 
-# 数据库
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "json", "decimal"] }
+# 数据库：SQLite
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "chrono", "json", "bigdecimal"] }
 
 # 数字精度
-rust_decimal = { version = "1", features = ["db-postgres", "serde-str"] }
+rust_decimal = { version = "1", features = ["serde-str"] }
 
 # Redis
 deadpool-redis = "0.20"
@@ -32,9 +32,6 @@ redis = { version = "0.29", features = ["tokio-comp", "connection-manager"] }
 
 # JWT
 jsonwebtoken = "9"
-
-# Web3
-alloy = { version = "0.15", features = ["full"] }
 
 # 密码学
 ring = "0.17"
@@ -45,13 +42,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # 验证
 validator = { version = "0.20", features = ["derive"] }
-
-# 上传
-multer = "3"
-
-# S3 / MinIO
-aws-sdk-s3 = "1"
-aws-config = "1"
 
 # 定时任务
 tokio-cron-scheduler = "0.14"

@@ -1,20 +1,20 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct AccountKyc {
-    pub id: i32,
+    pub id: i64,
     pub address: String,
     pub network: String,
     pub status: String,
-    pub submitted_at: Option<DateTime<Utc>>,
-    pub reviewed_at: Option<DateTime<Utc>>,
+    pub submitted_at: Option<NaiveDateTime>,
+    pub reviewed_at: Option<NaiveDateTime>,
     pub reviewer_address: Option<String>,
     pub reject_reason: Option<String>,
     pub external_kyc_id: Option<String>,
     pub country_code: Option<String>,
-    pub is_accredited: bool,
+    pub is_accredited: i64,
     pub full_name: Option<String>,
     pub date_of_birth: Option<NaiveDate>,
     pub selfie_url: Option<String>,
@@ -26,35 +26,35 @@ pub struct AccountKyc {
     pub state: Option<String>,
     pub postal_code: Option<String>,
     pub residence_country: Option<String>,
-    pub liveness_verified: bool,
+    pub liveness_verified: i64,
     pub face_image_url: Option<String>,
     pub liveness_video_url: Option<String>,
     pub on_chain_sync_status: String,
     pub on_chain_tx_hash: Option<String>,
-    pub on_chain_synced_at: Option<DateTime<Utc>>,
+    pub on_chain_synced_at: Option<NaiveDateTime>,
     pub on_chain_error: Option<String>,
     pub risk_level: String,
-    pub risk_score: i32,
+    pub risk_score: i64,
     pub priority: String,
     pub review_progress: Option<serde_json::Value>,
-    pub is_pep: bool,
-    pub is_sanctioned: bool,
+    pub is_pep: i64,
+    pub is_sanctioned: i64,
     pub source_ip: Option<String>,
     pub device_fingerprint: Option<String>,
-    pub created_at: Option<DateTime<Utc>>,
-    pub updated_at: Option<DateTime<Utc>>,
+    pub created_at: Option<NaiveDateTime>,
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct AccountKycDocument {
-    pub id: i32,
-    pub kyc_id: i32,
+    pub id: i64,
+    pub kyc_id: i64,
     pub id_type: String,
     pub id_number_hash: Option<String>,
     pub id_number_last4: Option<String>,
     pub document_expiry: Option<NaiveDate>,
     pub id_front_url: Option<String>,
     pub id_back_url: Option<String>,
-    pub created_at: Option<DateTime<Utc>>,
-    pub updated_at: Option<DateTime<Utc>>,
+    pub created_at: Option<NaiveDateTime>,
+    pub updated_at: Option<NaiveDateTime>,
 }

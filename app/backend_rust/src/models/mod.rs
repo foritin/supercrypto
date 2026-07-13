@@ -4,6 +4,7 @@ pub mod audit;
 pub mod chain;
 pub mod contract;
 pub mod kyc;
+pub mod media_file;
 pub mod staking;
 pub mod subscription;
 pub mod transaction;

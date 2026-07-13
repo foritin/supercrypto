@@ -1,4 +1,4 @@
-use axum::{
+﻿use axum::{
     http::StatusCode,
     response::{IntoResponse, Json},
 };
@@ -40,6 +40,8 @@ pub enum AppError {
 
     #[error("JWT error: {0}")]
     Jwt(#[from] jsonwebtoken::errors::Error),
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 
     #[error("Redis error: {0}")]
     Redis(#[from] deadpool_redis::PoolError),
@@ -67,6 +69,7 @@ impl AppError {
             AppError::ValidationError(_) => StatusCode::UNPROCESSABLE_ENTITY,
             AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Jwt(_) => StatusCode::UNAUTHORIZED,
+            AppError::Io(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Redis(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::RedisCmd(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Web3(_) => StatusCode::BAD_REQUEST,
@@ -84,6 +87,7 @@ impl AppError {
             AppError::ValidationError(_) => Some("E422".to_string()),
             AppError::Database(_) => Some("E500_DB".to_string()),
             AppError::Jwt(_) => Some("E401_JWT".to_string()),
+            AppError::Io(_) => Some("E500_IO".to_string()),
             AppError::Redis(_) => Some("E500_REDIS".to_string()),
             AppError::RedisCmd(_) => Some("E500_REDIS".to_string()),
             AppError::Web3(_) => Some("E400_WEB3".to_string()),

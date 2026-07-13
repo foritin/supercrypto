@@ -107,7 +107,7 @@ async fn list_assets(
 
 async fn get_asset(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     let item = sqlx::query!(
         "SELECT id, name, symbol, description, status, created_at FROM asset WHERE id = $1",
@@ -129,19 +129,19 @@ async fn get_asset(
 
 async fn update_asset(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
     Json(req): Json<UpdateAssetRequest>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     if let Some(name) = req.name {
-        sqlx::query!("UPDATE asset SET name = $2, updated_at = NOW() WHERE id = $1", id, name)
+        sqlx::query!("UPDATE asset SET name = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1", id, name)
             .execute(&state.db).await?;
     }
     if let Some(price) = req.current_price {
-        sqlx::query!("UPDATE asset SET current_price = $2, updated_at = NOW() WHERE id = $1", id, price)
+        sqlx::query!("UPDATE asset SET current_price = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1", id, price)
             .execute(&state.db).await?;
     }
     if let Some(status) = req.status {
-        sqlx::query!("UPDATE asset SET status = $2, updated_at = NOW() WHERE id = $1", id, status)
+        sqlx::query!("UPDATE asset SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1", id, status)
             .execute(&state.db).await?;
     }
 
@@ -151,14 +151,14 @@ async fn update_asset(
 
 async fn update_asset_status(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
     Json(req): Json<serde_json::Value>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     let status = req.get("status")
         .and_then(|v| v.as_str())
         .ok_or_else(|| AppError::BadRequest("status required".to_string()))?;
 
-    sqlx::query!("UPDATE asset SET status = $2, updated_at = NOW() WHERE id = $1", id, status)
+    sqlx::query!("UPDATE asset SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1", id, status)
         .execute(&state.db).await?;
 
     let data = DataWrapper::msg("Status updated");
@@ -167,11 +167,11 @@ async fn update_asset_status(
 
 async fn update_asset_price(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
     Json(req): Json<UpdateAssetPriceRequest>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     sqlx::query!(
-        "UPDATE asset SET current_price = $2, price_updated_at = NOW(), updated_at = NOW() WHERE id = $1",
+        "UPDATE asset SET current_price = $2, price_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
         id,
         req.price
     )
@@ -183,7 +183,7 @@ async fn update_asset_price(
 
 async fn bind_project(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
     Json(req): Json<BindProjectRequest>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     sqlx::query!(
@@ -196,7 +196,7 @@ async fn bind_project(
     )
     .execute(&state.db).await?;
 
-    sqlx::query!("UPDATE asset SET contract_address = $2, updated_at = NOW() WHERE id = $1", id, req.contract_address)
+    sqlx::query!("UPDATE asset SET contract_address = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1", id, req.contract_address)
         .execute(&state.db).await?;
 
     let data = DataWrapper::msg("Project bound");
@@ -205,12 +205,12 @@ async fn bind_project(
 
 async fn unbind_project(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     sqlx::query!("DELETE FROM asset_contract_binding WHERE asset_id = $1", id)
         .execute(&state.db).await?;
 
-    sqlx::query!("UPDATE asset SET contract_address = NULL, updated_at = NOW() WHERE id = $1", id)
+    sqlx::query!("UPDATE asset SET contract_address = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1", id)
         .execute(&state.db).await?;
 
     let data = DataWrapper::msg("Project unbound");
@@ -234,7 +234,8 @@ async fn get_contract_status(
         "network": r.network
     })).collect();
 
-    let data = DataWrapper::list(items, Pagination::new(items.len() as i64, 1, 100));
+    let total = items.len() as i64;
+    let data = DataWrapper::list(items, Pagination::new(total, 1, 100));
     Ok(Json(ApiResponse::ok(data)))
 }
 
@@ -260,8 +261,8 @@ async fn get_stats(
         total_assets,
         total_subscriptions,
         total_staking,
-        total_tvl: total_tvl.map(|v: rust_decimal::Decimal| v).unwrap_or_default(),
-        total_staking_rewards: total_rewards.map(|v: rust_decimal::Decimal| v).unwrap_or_default(),
+        total_tvl: total_tvl.map(|v| v.to_string()).unwrap_or_else(|| "0".to_string()),
+        total_staking_rewards: total_rewards.map(|v| v.to_string()).unwrap_or_else(|| "0".to_string()),
     };
 
     let data = DataWrapper::object(stats);
@@ -298,7 +299,7 @@ async fn list_kyc(
 
 async fn get_kyc(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
 ) -> Result<Json<ApiResponse<DataWrapper<KycDetail>>>, AppError> {
     let row = sqlx::query!(
         "SELECT id, address, network, status, full_name, date_of_birth, email, phone, submitted_at, reviewed_at, reviewer_address, reject_reason, country_code, risk_level, risk_score, priority FROM account_kyc WHERE id = $1",
@@ -332,7 +333,7 @@ async fn get_kyc(
         priority: row.priority,
         documents: docs.into_iter().map(|d| crate::schemas::kyc::KycDocumentItem {
             id: d.id,
-            id_type: d.id_type,
+            id_type: Some(d.id_type),
             id_number_last4: d.id_number_last4,
             document_expiry: d.document_expiry,
             id_front_url: d.id_front_url,
@@ -346,11 +347,11 @@ async fn get_kyc(
 
 async fn review_kyc(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
     Json(req): Json<KycReviewRequest>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     sqlx::query!(
-        "UPDATE account_kyc SET status = $2, reviewer_address = $3, reject_reason = $4, reviewed_at = NOW(), updated_at = NOW() WHERE id = $1",
+        "UPDATE account_kyc SET status = $2, reviewer_address = $3, reject_reason = $4, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1",
         id,
         req.status,
         req.reviewer_address,
@@ -367,12 +368,15 @@ async fn create_account(
     Json(req): Json<CreateAccountRequest>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     let roles = serde_json::to_value(req.roles).unwrap_or(serde_json::json!([]));
+    let address = req.address.to_lowercase();
+    let balance = "0".to_string();
     let result = sqlx::query!(
-        "INSERT INTO account (address, private_key, roles, network, is_active, balance) VALUES ($1, $2, $3, $4, true, 0) RETURNING id",
-        req.address.to_lowercase(),
+        "INSERT INTO account (address, private_key, roles, network, is_active, balance) VALUES ($1, $2, $3, $4, 1, $5) RETURNING id",
+        address,
         req.private_key,
         roles,
-        req.network
+        req.network,
+        balance
     )
     .fetch_one(&state.db).await?;
 
@@ -411,7 +415,7 @@ async fn list_accounts(
 
 async fn get_account(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     let item = sqlx::query!(
         "SELECT id, address, roles, network, is_active, balance, created_at FROM account WHERE id = $1",
@@ -483,7 +487,7 @@ async fn list_transactions(
 
 async fn get_transaction(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     let item = sqlx::query!(
         "SELECT id, tx_hash, from_address, to_address, amount, status, created_at FROM transaction_audit WHERE id = $1",

@@ -1,5 +1,4 @@
-use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
@@ -29,12 +28,12 @@ pub struct RefreshRequest {
 /// 当前用户信息
 #[derive(Debug, Serialize, FromRow)]
 pub struct UserInfo {
-    pub id: i32,
+    pub id: i64,
     pub address: String,
     pub roles: serde_json::Value,
     pub network: String,
-    pub last_login_dt: Option<DateTime<Utc>>,
-    pub is_active: bool,
-    pub is_blocked: bool,
-    pub balance: Decimal,
+    pub last_login_dt: Option<NaiveDateTime>,
+    pub is_active: i64,
+    pub is_blocked: i64,
+    pub balance: String,
 }

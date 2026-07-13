@@ -4,7 +4,7 @@ use serde::Serialize;
 /// 统一成功响应
 #[derive(Debug, Serialize)]
 pub struct ApiResponse<T: Serialize> {
-    pub code: i32,
+    pub code: i64,
     pub message: String,
     pub data: T,
 }

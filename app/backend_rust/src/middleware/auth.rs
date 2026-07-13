@@ -1,13 +1,12 @@
 use axum::{
-    extract::State,
-    http::{Request, StatusCode, header},
+    extract::{Request, State},
+    http::header,
     middleware::Next,
-    response::Response,
+    response::{IntoResponse, Response},
 };
 use crate::state::SharedState;
 use crate::security::jwt;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// 认证用户信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,10 +17,10 @@ pub struct AuthUser {
 }
 
 /// 认证状态中间件 - 解析 JWT 并注入到 request extensions
-pub async fn auth_state_middleware<B>(
+pub async fn auth_state_middleware(
     State(state): State<SharedState>,
-    mut request: Request<B>,
-    next: Next<B>,
+    mut request: Request,
+    next: Next,
 ) -> Response {
     // 尝试解析 Authorization header
     if let Some(auth_header) = request.headers().get(header::AUTHORIZATION) {
@@ -44,12 +43,12 @@ pub async fn auth_state_middleware<B>(
 }
 
 /// 检查用户是否已认证
-pub fn require_user<B>(request: &Request<B>) -> Option<AuthUser> {
+pub fn require_user(request: &Request) -> Option<AuthUser> {
     request.extensions().get::<AuthUser>().cloned()
 }
 
 /// 检查用户是否为管理员
-pub fn require_admin<B>(request: &Request<B>) -> Result<AuthUser, Response> {
+pub fn require_admin(request: &Request) -> Result<AuthUser, Response> {
     match request.extensions().get::<AuthUser>() {
         Some(user) if user.roles.contains(&"admin".to_string()) => Ok(user.clone()),
         _ => {

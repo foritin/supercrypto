@@ -82,9 +82,10 @@ async fn quick_approve(
     State(state): State<SharedState>,
     Path(address): Path<String>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+    let address = address.to_lowercase();
     sqlx::query!(
-        "UPDATE account_kyc SET status = 'approved', reviewed_at = NOW(), updated_at = NOW() WHERE address = $1",
-        address.to_lowercase()
+        "UPDATE account_kyc SET status = 'approved', reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE address = $1",
+        address
     )
     .execute(&state.db).await?;
 
@@ -96,15 +97,16 @@ async fn reset_kyc(
     State(state): State<SharedState>,
     Path(address): Path<String>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+    let address = address.to_lowercase();
     sqlx::query!(
         "DELETE FROM account_kyc_document WHERE kyc_id IN (SELECT id FROM account_kyc WHERE address = $1)",
-        address.to_lowercase()
+        address
     )
     .execute(&state.db).await?;
 
     sqlx::query!(
         "DELETE FROM account_kyc WHERE address = $1",
-        address.to_lowercase()
+        address
     )
     .execute(&state.db).await?;
 

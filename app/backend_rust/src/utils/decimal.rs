@@ -1,5 +1,3 @@
-use rust_decimal::Decimal;
-
-pub fn zero() -> Decimal {
-    Decimal::new(0, 0)
+pub fn zero() -> String {
+    "0".to_string()
 }

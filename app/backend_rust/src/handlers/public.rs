@@ -8,8 +8,8 @@ use crate::error::AppError;
 use crate::repositories::asset_repo;
 use crate::schemas::common::{ApiResponse, DataWrapper, Pagination};
 use crate::schemas::public::{
-    AssetDetail, AssetListItem, ContractAddressItem, KycStatusResponse, PlatformInfo,
-    StakingConfig, StakingLimitResponse, StakingPeriodConfig, SubscriptionPreviewRequest,
+    AssetDetail, AssetListItem, KycStatusResponse, PlatformInfo,
+    StakingConfig, StakingLimitResponse, StakingPeriodConfig,
     SubscriptionPreviewResponse, PltTokenInfo,
 };
 use crate::state::SharedState;
@@ -24,11 +24,12 @@ pub struct ListAssetsQuery {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct PreviewQuery {
-    asset_id: i32,
+    asset_id: i64,
     amount: String, // parse as Decimal
     token_type: Option<String>,
-    lock_period: Option<i32>,
+    lock_period: Option<i64>,
 }
 
 fn default_page() -> i64 { 1 }
@@ -73,7 +74,7 @@ async fn list_assets(
 
 async fn get_asset(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
 ) -> Result<Json<ApiResponse<DataWrapper<AssetDetail>>>, AppError> {
     let item = asset_repo::get_asset_by_id(&state.db, id)
         .await?
@@ -97,7 +98,7 @@ async fn get_asset_by_symbol(
 
 async fn get_price_history(
     State(state): State<SharedState>,
-    Path(id): Path<i32>,
+    Path(id): Path<i64>,
     Query(params): Query<PriceHistoryQuery>,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
     let limit = params.limit.unwrap_or(50);
@@ -142,13 +143,13 @@ async fn preview_subscription(
     // TODO: implement preview calculation
     let preview = SubscriptionPreviewResponse {
         asset_id: 0,
-        amount: "0".parse().unwrap(),
+        amount: "0".to_string(),
         token_type: "USDT".to_string(),
         lock_period: 0,
-        apy: "0".parse().unwrap(),
-        expected_interest: "0".parse().unwrap(),
-        total_return: "0".parse().unwrap(),
-        start_date: chrono::Utc::now(),
+        apy: "0".to_string(),
+        expected_interest: "0".to_string(),
+        total_return: "0".to_string(),
+        start_date: chrono::Utc::now().naive_utc(),
         end_date: None,
     };
     let data = DataWrapper::object(preview);
@@ -158,7 +159,7 @@ async fn preview_subscription(
 async fn get_staking_config() -> Result<Json<ApiResponse<DataWrapper<StakingConfig>>>, AppError> {
     let config = StakingConfig {
         periods: vec![
-            StakingPeriodConfig { days: 15, multiplier: "1.0".parse().unwrap(), label: "15 Days".to_string() },
+            StakingPeriodConfig { days: 15, multiplier: "1.0".to_string(), label: "15 Days".to_string() },
             StakingPeriodConfig { days: 30, multiplier: "2.5".parse().unwrap(), label: "30 Days".to_string() },
             StakingPeriodConfig { days: 45, multiplier: "4.5".parse().unwrap(), label: "45 Days".to_string() },
             StakingPeriodConfig { days: 60, multiplier: "7.0".parse().unwrap(), label: "60 Days".to_string() },
@@ -176,7 +177,7 @@ async fn get_staking_config() -> Result<Json<ApiResponse<DataWrapper<StakingConf
 async fn get_staking_limit(
     State(state): State<SharedState>,
 ) -> Result<Json<ApiResponse<DataWrapper<StakingLimitResponse>>>, AppError> {
-    let today = chrono::Utc::now().date_naive();
+    let today = chrono::Utc::now().naive_utc().date().to_string();
     let row = sqlx::query_as!(
         crate::models::staking::StakingLimit,
         r#"SELECT id, date, base_limit, carried_limit, used_limit, environment, created_at, updated_at
@@ -188,27 +189,31 @@ async fn get_staking_limit(
 
     let resp = match row {
         Some(r) => {
-            let total = r.base_limit + r.carried_limit;
-            let remaining = total - r.used_limit;
-            let zero = "0".parse::<rust_decimal::Decimal>().unwrap();
+            let base = r.base_limit.parse::<f64>().unwrap_or(0.0);
+        let carried = r.carried_limit.parse::<f64>().unwrap_or(0.0);
+        let used = r.used_limit.parse::<f64>().unwrap_or(0.0);
+        let total = (base + carried).to_string();
+        let remaining = (base + carried - used).to_string();
+            
+            
             StakingLimitResponse {
                 date: r.date.to_string(),
                 base_limit: r.base_limit,
                 carried_limit: r.carried_limit,
                 used_limit: r.used_limit,
-                remaining_limit: if remaining > zero { remaining } else { zero },
+                remaining_limit: remaining,
                 total_limit: total,
-                is_exhausted: remaining <= zero,
+                is_exhausted: if base + carried - used <= 0.0 { 1 } else { 0 },
             }
         }
         None => StakingLimitResponse {
             date: today.to_string(),
-            base_limit: "100000".parse().unwrap(),
-            carried_limit: "0".parse().unwrap(),
-            used_limit: "0".parse().unwrap(),
-            remaining_limit: "100000".parse().unwrap(),
-            total_limit: "100000".parse().unwrap(),
-            is_exhausted: false,
+            base_limit: "100000".to_string(),
+            carried_limit: "0".to_string(),
+            used_limit: "0".to_string(),
+            remaining_limit: "100000".to_string(),
+            total_limit: "100000".to_string(),
+            is_exhausted: 0i64,
         },
     };
 
@@ -220,15 +225,16 @@ async fn get_kyc_status(
     State(state): State<SharedState>,
     Path(address): Path<String>,
 ) -> Result<Json<ApiResponse<DataWrapper<KycStatusResponse>>>, AppError> {
+    let address = address.to_lowercase();
     let row = sqlx::query!(
         "SELECT status FROM account_kyc WHERE address = $1",
-        address.to_lowercase()
+        address
     )
     .fetch_optional(&state.db)
     .await?;
 
-    let status = row.map(|r| r.status).unwrap_or_else(|| "not_started".to_string());
-    let is_verified = status == "approved";
+    let status = row.map(|r| r.status.unwrap_or_else(|| "not_started".to_string())).unwrap_or_else(|| "not_started".to_string());
+    let is_verified: i64 = if status == "approved" { 1 } else { 0 };
 
     let resp = KycStatusResponse {
         address: address.to_lowercase(),

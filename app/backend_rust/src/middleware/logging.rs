@@ -1,16 +1,15 @@
 use axum::{
-    http::{Request, StatusCode},
+    extract::{Request, State},
     middleware::Next,
     response::Response,
 };
-use axum::extract::State;
 use crate::state::SharedState;
 
 /// 请求日志中间件
-pub async fn request_logging_middleware<B>(
+pub async fn request_logging_middleware(
     State(_state): State<SharedState>,
-    request: Request<B>,
-    next: Next<B>,
+    request: Request,
+    next: Next,
 ) -> Response {
     let method = request.method().clone();
     let uri = request.uri().clone();

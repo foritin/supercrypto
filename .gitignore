@@ -2,6 +2,15 @@
 .build/
 .cache/
 
+# Rust / Cargo
+target/
+**/*.rs.bak
+.sqlx/
+*.db
+
+# Rust build lock(Cargo.lock for libraries is not committed; for binaries it is - adjust as needed)
+app/backend_rust/Cargo.lock
+
 # Python
 .env
 .venv

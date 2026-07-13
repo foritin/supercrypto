@@ -1,60 +1,59 @@
-use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
 /// 认购创建请求
 #[derive(Debug, Deserialize)]
 pub struct CreateSubscriptionRequest {
-    pub asset_id: i32,
-    pub amount: Decimal,
+    pub asset_id: i64,
+    pub amount: String,
     pub token_type: String,
-    pub lock_period: i32,
+    pub lock_period: i64,
 }
 
 /// 认购响应
 #[derive(Debug, Serialize, FromRow)]
 pub struct SubscriptionResponse {
-    pub id: i32,
+    pub id: i64,
     pub wallet_address: String,
-    pub asset_id: i32,
-    pub amount: Decimal,
+    pub asset_id: i64,
+    pub amount: String,
     pub token_type: String,
-    pub lock_period: i32,
-    pub apy: Decimal,
-    pub rwa_token_amount: Decimal,
-    pub start_date: Option<DateTime<Utc>>,
-    pub end_date: Option<DateTime<Utc>>,
-    pub expected_interest: Decimal,
-    pub actual_interest: Decimal,
+    pub lock_period: i64,
+    pub apy: String,
+    pub rwa_token_amount: String,
+    pub start_date: Option<NaiveDateTime>,
+    pub end_date: Option<NaiveDateTime>,
+    pub expected_interest: String,
+    pub actual_interest: String,
     pub tx_hash: Option<String>,
     pub status: String,
-    pub created_at: Option<DateTime<Utc>>,
+    pub created_at: Option<NaiveDateTime>,
 }
 
 /// 质押创建请求
 #[derive(Debug, Deserialize)]
 pub struct CreateStakingRequest {
-    pub subscription_id: Option<i32>,
-    pub amount: Decimal,
-    pub period: i32,
+    pub subscription_id: Option<i64>,
+    pub amount: String,
+    pub period: i64,
 }
 
 /// 质押响应
 #[derive(Debug, Serialize, FromRow)]
 pub struct StakingResponse {
-    pub id: i32,
+    pub id: i64,
     pub wallet_address: String,
-    pub subscription_id: Option<i32>,
-    pub amount: Decimal,
-    pub period: i32,
-    pub multiplier: Decimal,
-    pub start_date: DateTime<Utc>,
-    pub end_date: DateTime<Utc>,
-    pub expected_rewards: Decimal,
-    pub claimed_rewards: Decimal,
+    pub subscription_id: Option<i64>,
+    pub amount: String,
+    pub period: i64,
+    pub multiplier: String,
+    pub start_date: NaiveDateTime,
+    pub end_date: NaiveDateTime,
+    pub expected_rewards: String,
+    pub claimed_rewards: String,
     pub status: String,
-    pub created_at: Option<DateTime<Utc>>,
+    pub created_at: Option<NaiveDateTime>,
 }
 
 /// KYC 上传请求

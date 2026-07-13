@@ -1,5 +1,5 @@
-use chrono::{DateTime, Utc};
+use chrono::{Utc, NaiveDateTime};
 
-pub fn now_utc() -> DateTime<Utc> {
-    Utc::now()
+pub fn now_utc() -> NaiveDateTime {
+    Utc::now().naive_utc()
 }
