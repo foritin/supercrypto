@@ -1,0 +1,8 @@
+﻿cargo :     Checking backend v1.0.0 (D:\project\rust\CryptoPlatform\app\backend_rust)
+所在位置 行:4 字符: 11
++ $output = cargo check --lib -p backend 2>&1
++           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking ba...p\backend_rust):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.45s
