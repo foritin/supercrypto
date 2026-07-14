@@ -182,23 +182,21 @@ def save_abi_to_file(contract_name: str, abi: list, address: str = "") -> str:
     return str(abi_path)
 
 
-async def upload_abi_to_minio(
+async def upload_abi_to_storage(
     contract_name: str,
     abi: list,
     network: Network,
     project_name: str,
 ) -> str:
-    """上传 ABI 到 MinIO 并返回对象路径。"""
-    from falib.utils.config import SETTINGS
-
-    from src.common.adapters import get_async_minio_adapter
+    """上传 ABI 到本地存储并返回对象路径。"""
+    from src.services.storage_service import StorageService
 
     network_value = getattr(network, "value", str(network))
     object_name = f"contracts/abi/{str(network_value).lower()}/{project_name}/{contract_name}.json"
     content = json.dumps(abi, ensure_ascii=False).encode("utf-8")
 
-    async with get_async_minio_adapter() as minio:
-        await minio.put_object(SETTINGS.MINIO.BUCKET, object_name, content)
+    storage = StorageService()
+    await storage.upload_raw(object_name, content)
 
     print(f"   ☁️ ABI 已上传: {object_name}")
     return object_name
@@ -273,7 +271,7 @@ async def deploy_contract(
     # 3. 保存 ABI
     abi = get_abi(config.name)
     save_abi_to_file(config.name, abi)
-    abi_path = await upload_abi_to_minio(
+    abi_path = await upload_abi_to_storage(
         contract_name=config.name,
         abi=abi,
         network=network,

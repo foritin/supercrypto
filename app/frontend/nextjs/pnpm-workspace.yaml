@@ -1,0 +1,10 @@
+allowBuilds:
+  '@reown/appkit': false
+  bufferutil: false
+  esbuild: false
+  keccak: true
+  sharp: false
+  unrs-resolver: false
+  utf-8-validate: false
+patchedDependencies:
+  qr@0.6.0: patches/qr@0.6.0.patch

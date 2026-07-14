@@ -12,7 +12,7 @@ pub struct ApiResponse<T: Serialize> {
 impl<T: Serialize> ApiResponse<T> {
     pub fn ok(data: T) -> Self {
         Self {
-            code: 0,
+            code: 200,
             message: "success".to_string(),
             data,
         }
@@ -22,9 +22,9 @@ impl<T: Serialize> ApiResponse<T> {
 /// 分页数据包装
 #[derive(Debug, Serialize)]
 pub struct DataWrapper<T: Serialize> {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "object_data", skip_serializing_if = "Option::is_none")]
     pub object: Option<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "list_data", skip_serializing_if = "Option::is_none")]
     pub list: Option<Vec<T>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pagination: Option<Pagination>,

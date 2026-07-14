@@ -238,13 +238,13 @@ async def _do_sync_provider_registry():
         )
         return
 
-    # 加载 ABI (优先从 MinIO，失败则从本地)
+    # 加载 ABI (优先从本地存储，失败则从本地文件)
     provider_abi = None
     try:
         storage = StorageService()
         provider_abi = await storage.get_json(provider_contract.abi_path)
     except Exception as e:
-        schedule_logger.warning(f"Failed to load ABI from MinIO: {e}")
+        schedule_logger.warning(f"Failed to load ABI from storage: {e}")
 
     if not provider_abi:
         # Fallback: 从本地加载

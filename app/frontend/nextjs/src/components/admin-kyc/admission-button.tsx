@@ -14,7 +14,7 @@
 import { ShieldCheck } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useConnection, useWalletClient, usePublicClient } from 'wagmi'
+import { useAccount, useWalletClient, usePublicClient } from 'wagmi'
 
 import { Button } from '@/components/ui/button'
 import { useCurrentUser } from '@/hooks'
@@ -97,7 +97,7 @@ export function AdmissionButton({
   onSuccess,
 }: AdmissionButtonProps) {
   const { t } = useTranslation()
-  const { address } = useConnection()
+  const { address } = useAccount()
   const { data: walletClient } = useWalletClient()
   const publicClient = usePublicClient()
   const { isAdmin } = useCurrentUser()

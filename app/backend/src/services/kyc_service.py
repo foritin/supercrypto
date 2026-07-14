@@ -188,18 +188,16 @@ class KycService:
         - 纯数组: [{...}, {...}]  (ape compile 输出)
         - 对象包装: {"abi": [{...}, {...}]}  (Hardhat/Foundry 输出)
         """
-        # 1. 尝试从 MinIO 加载
+        # 1. 尝试从本地存储加载
         if deployment.abi_path:
             try:
-                from src.common.adapters import get_async_minio_adapter
-
-                async with get_async_minio_adapter() as minio:
-                    artifact = await minio.get_json(deployment.abi_path)
-                    abi = self.extract_abi(artifact)
-                    logger.debug(f"ABI loaded from MinIO: {deployment.abi_path}")
-                    return abi
+                storage = StorageService()
+                artifact = await storage.get_json(deployment.abi_path)
+                abi = self.extract_abi(artifact)
+                logger.debug(f"ABI loaded from storage: {deployment.abi_path}")
+                return abi
             except Exception as e:
-                logger.warning(f"Failed to load ABI from MinIO: {e}, trying local")
+                logger.warning(f"Failed to load ABI from storage: {e}, trying local")
 
         # 2. 本地 fallback
         abi_file = LOCAL_ABI_PATH / f"{deployment.name}.json"

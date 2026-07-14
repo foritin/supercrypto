@@ -1,0 +1,13 @@
+diff --git a/index.js b/index.js
+index 40c38fda8c34e103f07c725094fdc875c8e0fe55..be689a9e1148717a40e5df70309ca8974c16e0a6 100644
+--- a/index.js
++++ b/index.js
+@@ -1562,7 +1562,7 @@ export function encodeQR(text, output = 'raw', opts = {}) {
+     // 2-module default to avoid changing encoder output; callers that need a
+     // standards-conformant quiet zone must pass `border: 4` explicitly.
+     const border = _opts.border === undefined ? 2 : _opts.border;
+-    if (!Number.isSafeInteger(border) || border <= 0)
++    if (!Number.isSafeInteger(border) || border < 0)
+         throw new Error(`invalid border=${border}`);
+     res = res.border(border, false); // Add border
+     if (_opts.scale !== undefined)

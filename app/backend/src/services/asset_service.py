@@ -1109,53 +1109,50 @@ class AssetService:
         if not prepared_files:
             return results
 
-        # 使用单个连接上传所有文件
-        from src.common.adapters import get_async_minio_adapter
+        # 逐个上传文件
+        for file, content, file_size in prepared_files:
+            try:
+                # 生成文件路径
+                file_path = self.storage.generate_file_path(
+                    asset_id, media_type.value, file.filename
+                )
 
-        async with get_async_minio_adapter() as minio:
-            for file, content, file_size in prepared_files:
-                try:
-                    # 生成文件路径
-                    file_path = self.storage.generate_file_path(
-                        asset_id, media_type.value, file.filename
-                    )
+                # 上传到本地存储
+                await self.storage.upload_raw(file_path, content)
+                url = self.storage.get_file_url(file_path)
 
-                    # 上传到 MinIO
-                    await minio.put_object(self.storage.bucket, file_path, content)
-                    url = self.storage.get_file_url(file_path)
+                logger.info(
+                    f"File uploaded: {file_path} ({file_size} bytes)"
+                )
 
-                    logger.info(
-                        f"File uploaded to MinIO: {file_path} ({file_size} bytes)"
-                    )
+                # 确定是否为主图
+                is_primary = False
+                if media_type == MediaType.COVER and existing_cover_count == 0:
+                    is_primary = True
+                    existing_cover_count += 1
 
-                    # 确定是否为主图
-                    is_primary = False
-                    if media_type == MediaType.COVER and existing_cover_count == 0:
-                        is_primary = True
-                        existing_cover_count += 1
+                # 创建媒体记录
+                media = await AssetMedia.create(
+                    asset_id=asset_id,
+                    media_type=media_type,
+                    title=file.filename,
+                    url=url,
+                    file_name=file.filename,
+                    file_size=file.size,
+                    mime_type=file.content_type,
+                    sort_order=next_order,
+                    is_primary=is_primary,
+                )
+                next_order += 1
 
-                    # 创建媒体记录
-                    media = await AssetMedia.create(
-                        asset_id=asset_id,
-                        media_type=media_type,
-                        title=file.filename,
-                        url=url,
-                        file_name=file.filename,
-                        file_size=file.size,
-                        mime_type=file.content_type,
-                        sort_order=next_order,
-                        is_primary=is_primary,
-                    )
-                    next_order += 1
+                logger.info(
+                    f"媒体上传成功: asset_id={asset_id}, media_id={media.id}, type={media_type.value}"
+                )
+                results.append((True, media, None))
 
-                    logger.info(
-                        f"媒体上传成功: asset_id={asset_id}, media_id={media.id}, type={media_type.value}"
-                    )
-                    results.append((True, media, None))
-
-                except Exception as e:
-                    logger.error(f"文件上传失败: {e}")
-                    results.append((False, None, str(e)))
+            except Exception as e:
+                logger.error(f"文件上传失败: {e}")
+                results.append((False, None, str(e)))
 
         return results
 
@@ -1203,31 +1200,28 @@ class AssetService:
         if not files_to_delete:
             return results
 
-        # 使用单个连接删除所有文件
-        from src.common.adapters import get_async_minio_adapter
+        # 逐个删除文件
+        for media_id, file_path, media in files_to_delete:
+            try:
+                # 移除开头的斜杠
+                object_path = (
+                    file_path[1:] if file_path.startswith("/") else file_path
+                )
+                await self.storage.delete_file(object_path)
+                logger.info(f"File deleted: {object_path}")
 
-        async with get_async_minio_adapter() as minio:
-            for media_id, file_path, media in files_to_delete:
-                try:
-                    # 移除开头的斜杠
-                    object_path = (
-                        file_path[1:] if file_path.startswith("/") else file_path
-                    )
-                    await minio.remove_object(self.storage.bucket, object_path)
-                    logger.info(f"File deleted from MinIO: {object_path}")
+                # 删除数据库记录
+                await media.delete()
+                results.append((media_id, True, None))
+                logger.info(
+                    f"媒体删除成功: asset_id={asset_id}, media_id={media_id}"
+                )
 
-                    # 删除数据库记录
-                    await media.delete()
-                    results.append((media_id, True, None))
-                    logger.info(
-                        f"媒体删除成功: asset_id={asset_id}, media_id={media_id}"
-                    )
-
-                except Exception as e:
-                    logger.warning(f"删除存储文件失败: {e}，继续删除数据库记录")
-                    # 即使存储删除失败，也删除数据库记录
-                    await media.delete()
-                    results.append((media_id, True, None))
+            except Exception as e:
+                logger.warning(f"删除存储文件失败: {e}，继续删除数据库记录")
+                # 即使存储删除失败，也删除数据库记录
+                await media.delete()
+                results.append((media_id, True, None))
 
         return results
 

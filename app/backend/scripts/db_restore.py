@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PostgreSQL 数据库恢复脚本
+SQLite 数据库恢复脚本
 
 使用方法:
     cd app/backend && source .venv/bin/activate
@@ -9,23 +9,18 @@ PostgreSQL 数据库恢复脚本
 备份文件会自动从 app/backend/output 目录查找
 """
 
-import subprocess
+import shutil
 import sys
 from pathlib import Path
 
 from falib.utils.config import SETTINGS
 
 
-def get_db_config() -> dict:
-    """从 falib 配置获取数据库连接信息"""
-    pg = SETTINGS.postgresql
-    return {
-        "host": pg.host,
-        "port": pg.port,
-        "user": pg.user,
-        "password": pg.password,
-        "database": pg.database,
-    }
+def get_db_path() -> Path:
+    """从配置获取 SQLite 数据库文件路径"""
+    db_config = getattr(SETTINGS, "sqlite", None)
+    db_path = getattr(db_config, "path", "E:/cryptoplatform-data/py_backend.db") if db_config else "E:/cryptoplatform-data/py_backend.db"
+    return Path(db_path)
 
 
 def list_backups() -> list[Path]:
@@ -37,18 +32,18 @@ def list_backups() -> list[Path]:
         return []
 
     return sorted(
-        output_dir.glob("*.sql"), key=lambda p: p.stat().st_mtime, reverse=True
+        output_dir.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True
     )
 
 
 def restore_database(backup_file: str) -> None:
     """
-    恢复 PostgreSQL 数据库
+    恢复 SQLite 数据库（复制备份文件覆盖当前数据库）
 
     Args:
         backup_file: 备份文件名（不含路径）
     """
-    config = get_db_config()
+    db_path = get_db_path()
 
     # 确定备份文件路径
     script_dir = Path(__file__).parent
@@ -62,11 +57,7 @@ def restore_database(backup_file: str) -> None:
             print(f"  - {f.name}")
         sys.exit(1)
 
-    # 设置密码环境变量
-    env = {"PGPASSWORD": config["password"]}
-
-    print(f"正在恢复数据库 {config['database']}...")
-    print(f"主机: {config['host']}:{config['port']}")
+    print(f"正在恢复数据库: {db_path}")
     print(f"备份文件: {backup_path}")
     print(f"⚠️  警告: 此操作将完全覆盖现有数据库!")
 
@@ -76,39 +67,15 @@ def restore_database(backup_file: str) -> None:
         print("已取消恢复操作")
         sys.exit(0)
 
-    # 构建 psql 命令
-    cmd = [
-        "psql",
-        "-h",
-        str(config["host"]),
-        "-p",
-        str(config["port"]),
-        "-U",
-        config["user"],
-        "-d",
-        config["database"],
-        "-f",
-        str(backup_path),
-        "-v",
-        "ON_ERROR_STOP=1",
-    ]
-
     print("\n正在执行恢复...")
 
     try:
-        result = subprocess.run(
-            cmd,
-            env={**subprocess.os.environ, **env},
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        # 确保目录存在
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(str(backup_path), str(db_path))
         print(f"✓ 恢复成功!")
-    except subprocess.CalledProcessError as e:
-        print(f"✗ 恢复失败: {e.stderr}")
-        sys.exit(1)
-    except FileNotFoundError:
-        print("✗ 错误: 未找到 psql 命令，请确保已安装 PostgreSQL 客户端工具")
+    except Exception as e:
+        print(f"✗ 恢复失败: {e}")
         sys.exit(1)
 
 

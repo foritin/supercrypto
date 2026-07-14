@@ -3,8 +3,9 @@
 数据库适配器等通用依赖
 """
 
-from falib.adapter.minio import AsyncMinIOAdapter, SyncMinIOAdapter
-from falib.adapter.postgresql import SyncPostgresqlAdapter
+import sqlite3
+from pathlib import Path
+
 from falib.adapter.redis import AsyncRedisAdapter, SyncRedisAdapter
 from falib.adapter.web3 import AsyncWeb3Adapter
 from falib.utils.config import SETTINGS
@@ -19,27 +20,24 @@ _async_redis_adapter: AsyncRedisAdapter | None = None
 _redis_logger = get_logger("system.adapter.redis")
 
 
-def get_db_adapter() -> SyncPostgresqlAdapter:
-    """获取数据库适配器"""
-    host = SETTINGS.POSTGRESQL.HOST
-    port = SETTINGS.POSTGRESQL.PORT
-    user = SETTINGS.POSTGRESQL.USER
-    password = SETTINGS.POSTGRESQL.PASSWORD
-    database = SETTINGS.POSTGRESQL.DATABASE
-    models = SETTINGS.POSTGRESQL.MODELS
-    pool_size = SETTINGS.POSTGRESQL.POOL_SIZE
-    echo = SETTINGS.POSTGRESQL.ECHO
+def get_db_adapter() -> sqlite3.Connection:
+    """获取 SQLite 数据库连接（同步）
 
-    return SyncPostgresqlAdapter(
-        host=host,
-        port=port,
-        user=user,
-        password=password,
-        database=database,
-        models=models,
-        pool_size=pool_size,
-        echo=echo,
-    )
+    用于脚本等同步场景。返回的连接需由调用方关闭。
+    """
+    db_config = getattr(SETTINGS, "SQLITE", None)
+    db_path = getattr(db_config, "PATH", "E:/cryptoplatform-data/py_backend.db") if db_config else "E:/cryptoplatform-data/py_backend.db"
+
+    # 确保目录存在
+    db_file = Path(db_path)
+    db_file.parent.mkdir(parents=True, exist_ok=True)
+
+    conn = sqlite3.connect(str(db_file))
+    conn.row_factory = sqlite3.Row
+    # 开启 WAL 模式提升并发读性能
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
 
 
 def get_redis_adapter() -> SyncRedisAdapter:
@@ -53,38 +51,6 @@ def get_redis_adapter() -> SyncRedisAdapter:
         port=port,
         db=db,
         password=password,
-    )
-
-
-def get_minio_adapter() -> SyncMinIOAdapter:
-    """获取 MinIO 适配器"""
-    endpoint = SETTINGS.MINIO.ENDPOINT
-    access_key = SETTINGS.MINIO.ACCESS_KEY
-    secret_key = SETTINGS.MINIO.SECRET_KEY
-    bucket = SETTINGS.MINIO.BUCKET
-    secure = SETTINGS.MINIO.SECURE
-    return SyncMinIOAdapter(
-        endpoint=endpoint,
-        access_key=access_key,
-        secret_key=secret_key,
-        default_bucket_name=bucket,
-        secure=secure,
-    )
-
-
-def get_async_minio_adapter() -> AsyncMinIOAdapter:
-    """获取异步 MinIO 适配器"""
-    endpoint = SETTINGS.MINIO.ENDPOINT
-    access_key = SETTINGS.MINIO.ACCESS_KEY
-    secret_key = SETTINGS.MINIO.SECRET_KEY
-    bucket = SETTINGS.MINIO.BUCKET
-    secure = SETTINGS.MINIO.SECURE
-    return AsyncMinIOAdapter(
-        endpoint=endpoint,
-        access_key=access_key,
-        secret_key=secret_key,
-        default_bucket_name=bucket,
-        secure=secure,
     )
 
 

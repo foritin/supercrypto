@@ -1,6 +1,6 @@
 ﻿use axum::{
     body::Body,
-    extract::{Multipart, Path, Query, State},
+    extract::{Multipart, Path, Query, Request, State},
     http::{StatusCode, header},
     response::Response,
     Json, Router,
@@ -8,6 +8,7 @@
 use serde::Deserialize;
 
 use crate::error::AppError;
+use crate::middleware::auth;
 use crate::repositories::media_repo;
 use crate::schemas::common::{ApiResponse, DataWrapper, Pagination};
 use crate::schemas::user::{
@@ -48,14 +49,46 @@ pub fn routes() -> Router<SharedState> {
 }
 
 async fn get_me(
-    State(_state): State<SharedState>,
+    State(state): State<SharedState>,
+    request: Request,
 ) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
-    // TODO: get user from request extension (JWT)
+    let user = auth::require_user(&request).ok_or(AppError::Unauthorized)?;
+
+    let row = sqlx::query!(
+        "SELECT id, roles, balance FROM account WHERE address = $1 AND network = 'hardhat'",
+        user.address
+    )
+    .fetch_optional(&state.db).await?
+    .ok_or_else(|| AppError::NotFound("account not found".to_string()))?;
+
+    // roles 在 SQLite 中存储为 JSON 字符串，需要解析为数组
+    let roles: serde_json::Value = serde_json::from_str(&row.roles)
+        .unwrap_or(serde_json::json!(["user"]));
+    let is_admin = roles.as_array()
+        .map(|arr| arr.iter().any(|r| r == "admin" || r == "superadmin"))
+        .unwrap_or(false);
+
+    // 查询 KYC 状态
+    let addr_lower = user.address.to_lowercase();
+    let kyc_row = sqlx::query!(
+        "SELECT status FROM account_kyc WHERE address = $1",
+        addr_lower
+    )
+    .fetch_optional(&state.db)
+    .await?;
+    let kyc_status = kyc_row
+        .and_then(|r| r.status)
+        .unwrap_or_else(|| "not_started".to_string());
+
     let data = DataWrapper::object(serde_json::json!({
-        "id": 1,
-        "address": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
-        "roles": [],
-        "network": "hardhat"
+        "id": row.id,
+        "address": user.address,
+        "roles": roles,
+        "is_admin": is_admin,
+        "network": "hardhat",
+        "net_type": "hardhat",
+        "balance": row.balance,
+        "kyc_status": kyc_status,
     }));
     Ok(Json(ApiResponse::ok(data)))
 }

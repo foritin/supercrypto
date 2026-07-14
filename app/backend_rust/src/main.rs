@@ -1,26 +1,61 @@
 use std::sync::Arc;
 use tracing::info;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
 
 use backend::config::AppConfig;
 use backend::router;
 use backend::state::AppState;
 use backend::tasks;
 
+/// 初始化日志系统：stdout + 按天轮转文件日志
+fn init_logging(cfg: &AppConfig) -> anyhow::Result<tracing_appender::non_blocking::WorkerGuard> {
+    let log_cfg = &cfg.log;
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(&log_cfg.level));
+
+    // 文件日志 appender
+    let file_appender = match log_cfg.rotation.as_str() {
+        "hourly" => tracing_appender::rolling::hourly(&log_cfg.dir, "backend.log"),
+        "never" => tracing_appender::rolling::never(&log_cfg.dir, "backend.log"),
+        _ => tracing_appender::rolling::daily(&log_cfg.dir, "backend.log"),
+    };
+    let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
+
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_writer(file_writer)
+        .with_ansi(false) // 文件中不要 ANSI 颜色码
+        .with_target(true)
+        .with_file(true)
+        .with_line_number(true);
+
+    let registry = tracing_subscriber::registry().with(filter).with(file_layer);
+
+    if log_cfg.stdout {
+        let stdout_layer = tracing_subscriber::fmt::layer()
+            .with_target(true)
+            .with_file(true)
+            .with_line_number(true);
+        registry.with(stdout_layer).init();
+    } else {
+        registry.init();
+    }
+
+    Ok(guard)
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // 初始化日志
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,backend=debug".into()),
-        )
-        .init();
+    // 先加载配置（日志配置在配置文件中）
+    let cfg = AppConfig::load()?;
+
+    // 初始化日志系统，guard 必须存活到程序结束
+    let _log_guard = init_logging(&cfg)?;
 
     info!("🚀 Starting SuperCrypto Rust API...");
-
-    // 加载配置
-    let cfg = AppConfig::load()?;
     info!("✅ Config loaded (environment: {})", cfg.environment);
+    info!("📁 Log dir: {}, rotation: {}", cfg.log.dir, cfg.log.rotation);
 
     // 解析 SQLite 连接字符串：接受裸路径或 sqlite: URL 两种格式。
     // Windows 盘符（如 E:）在 sqlx 中必须写成 "sqlite:E:/..." 才能被正确

@@ -23,6 +23,7 @@ from src.models.kyc import (
     AccountKycDocument,
 )
 from src.models.kyc_audit_log import KycAuditLog
+from src.models.media_file import MediaFile
 from src.models.redemption import (
     RedemptionEvent,
     RedemptionRequest,
@@ -61,6 +62,8 @@ __all__ = [
     "AssetContractBinding",
     "AssetMedia",
     "AssetFeatures",
+    # MediaFile
+    "MediaFile",
     # Subscription
     "Subscription",
     # 合约模型

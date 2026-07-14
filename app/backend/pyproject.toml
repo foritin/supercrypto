@@ -20,6 +20,7 @@ dependencies = [
     "python-multipart>=0.0.20",
     "ape-hardhat>=0.8.5",
     "hypothesis>=6.151.9",
+    "aiosqlite>=0.19.0",
 ]
 
 [project.optional-dependencies]
@@ -50,7 +51,7 @@ filterwarnings = [
 [tool.aerich]
 tortoise_orm = "src.aerich_redirect.TORTOISE_ORM"
 location = "./migrations"
-src_folder = "./app/backend"
+src_folder = "."
 
 
 [tool.ruff]

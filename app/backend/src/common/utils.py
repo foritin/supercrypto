@@ -26,22 +26,24 @@ def calculate_total_pages(total: int, page_size: int) -> int:
 
 def is_db_available() -> bool:
     """
-    检查 Tortoise ORM 连接池是否可用 (未关闭)
+    检查 Tortoise ORM 连接是否可用
 
-    用于定时任务在执行前检查数据库连接池状态，
+    用于定时任务在执行前检查数据库连接状态，
     避免在热重载或应用关闭期间执行数据库操作。
 
     Returns:
-        bool: 连接池是否可用
+        bool: 连接是否可用
     """
     try:
         conn = Tortoise.get_connection("default")
-        # asyncpg pool 关闭后 _pool 会是 None 或处于 closing 状态
+        # SQLite: 检查连接对象是否存在且未关闭
+        # asyncpg: 检查连接池状态 (兼容旧代码)
         pool = getattr(conn, "_pool", None)
-        if pool is None:
-            return False
-        if getattr(pool, "_closing", False) or getattr(pool, "_closed", False):
-            return False
+        if pool is not None:
+            # asyncpg pool 路径
+            if getattr(pool, "_closing", False) or getattr(pool, "_closed", False):
+                return False
+        # SQLite 连接总是可用（文件-based，无连接池）
         return True
     except Exception:
         return False

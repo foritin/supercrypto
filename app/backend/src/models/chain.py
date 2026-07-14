@@ -61,7 +61,7 @@ class Chain(AbstractModel, TimestampMixin):
     metadata = fields.JSONField(null=True, description="扩展元数据")
 
     class Meta:
-        table = "chains"
+        table = "chain"
         ordering = ["sort_order", "chain_id"]
 
     def __str__(self):

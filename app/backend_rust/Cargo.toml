@@ -35,10 +35,12 @@ jsonwebtoken = "9"
 
 # 密码学
 ring = "0.17"
+alloy = { version = "2.1", features = ["providers", "signer-local", "sol-types", "contract", "rpc-types-eth", "network"] }
 
 # 日志
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-appender = "0.2"
 
 # 验证
 validator = { version = "0.20", features = ["derive"] }

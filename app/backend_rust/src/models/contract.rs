@@ -16,6 +16,10 @@ pub struct ContractDeployment {
     pub tx_hash: String,
     pub status: String,
     pub abi_path: Option<String>,
+    #[sqlx(default)]
+    pub abi: Option<String>,
+    #[sqlx(default)]
+    pub is_primary: i64,
     pub created_at: Option<NaiveDateTime>,
     pub updated_at: Option<NaiveDateTime>,
 }
@@ -53,6 +57,12 @@ pub struct ProviderRegistry {
     pub is_deleted: i64,
     pub deleted_at: Option<NaiveDateTime>,
     pub deleted_by: Option<String>,
+    #[sqlx(default)]
+    pub category: Option<String>,
+    #[sqlx(default)]
+    pub contract_name: Option<String>,
+    #[sqlx(default)]
+    pub last_synced_at: Option<NaiveDateTime>,
     pub created_at: Option<NaiveDateTime>,
     pub updated_at: Option<NaiveDateTime>,
 }

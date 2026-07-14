@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useConnection, useWalletClient, usePublicClient } from 'wagmi'
+import { useAccount, useWalletClient, usePublicClient } from 'wagmi'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -216,7 +216,7 @@ export function OnChainStatusPanel({
   onRevocationSuccess,
 }: OnChainStatusPanelProps) {
   const { t } = useTranslation()
-  const { address } = useConnection()
+  const { address } = useAccount()
   const { data: walletClient } = useWalletClient()
   const publicClient = usePublicClient()
   const { isAdmin } = useCurrentUser()

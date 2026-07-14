@@ -6,7 +6,7 @@ use axum::{
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{admin, dev, public, user};
+use crate::handlers::{admin, audit, contract, dev, public, sessions, treasury, user};
 use crate::middleware::{auth, logging};
 use crate::state::SharedState;
 
@@ -17,6 +17,10 @@ pub fn create_router(state: SharedState) -> Router {
         .merge(user::routes())
         .merge(admin::routes())
         .merge(dev::routes())
+        .merge(contract::routes())
+        .merge(audit::routes())
+        .merge(sessions::routes())
+        .merge(treasury::routes())
         .route("/health", axum::routing::get(health_check))
         .route("/metrics/chain", axum::routing::get(chain_metrics))
         .layer(from_fn_with_state(state_clone, auth::auth_state_middleware))

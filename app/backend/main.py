@@ -12,7 +12,9 @@ from fastapi import Depends, FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from tortoise import Tortoise
+from pathlib import Path
 
 from src.aerich_redirect import TORTOISE_ORM
 from src.api.v1.router import api_router
@@ -232,6 +234,16 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # 注册路由
 app.include_router(api_router, prefix="/api/v1")
+
+
+# 挂载静态文件服务 - 提供上传文件的 HTTP 访问
+# StaticFiles 作为 catch-all，API 路由 (/api/v1/*) 优先匹配
+_storage_config = getattr(settings, "STORAGE", None)
+_storage_base = getattr(_storage_config, "BASE_DIR", "data/uploads") if _storage_config else "data/uploads"
+_storage_bucket = getattr(_storage_config, "BUCKET", "default") if _storage_config else "default"
+_static_dir = Path(_storage_base) / _storage_bucket
+_static_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/", StaticFiles(directory=str(_static_dir)), name="uploads")
 
 
 # 健康检查（全局）

@@ -72,12 +72,31 @@ pub struct PlatformInfo {
     pub app_name: String,
     pub version: String,
     pub environment: String,
+    /// serde rename: 前端期望 `chain_info` 而非 `chain`
+    #[serde(rename = "chain_info")]
     pub chain: ChainInfo,
-    pub contracts: Vec<ContractAddressItem>,
+    /// serde rename: 前端期望 `address_info` 而非 `contracts`
+    #[serde(rename = "address_info")]
+    pub contracts: Vec<AddressInfoEntry>,
+}
+
+/// 合约地址+ABI信息（前端 AddressInfo 类型）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AddressInfoEntry {
+    pub id: i64,
+    pub scope: String,
+    pub contract_type: String,
+    pub status: String,
+    pub address: String,
+    pub deployer_address: String,
+    pub name: String,
+    pub abi_info: Vec<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChainInfo {
+    /// serde rename: 前端期望 `chain_name` 而非 `name`
+    #[serde(rename = "chain_name")]
     pub name: String,
     pub network: String,
     pub chain_id: u64,

@@ -48,7 +48,7 @@ export async function login(
       chain_id: chainId,
       chain_name: chainName,
     },
-    { withCredentials: true } // 接收后端设置的 httpOnly cookie
+    { withCredentials: false } // Rust 后端使用 JWT，不需要 cookie
   );
 
   const data = response.data.data.object_data as LoginResponse;
@@ -82,7 +82,7 @@ export async function refreshAccessToken(): Promise<TokenData | null> {
     const response = await axios.post(
       `${API_BASE_URL}/public/auth/refresh`,
       refreshToken ? { refresh_token: refreshToken } : {},
-      { withCredentials: true } // 确保携带 httpOnly cookie
+      { withCredentials: false } // Rust 后端使用 JWT，不需要 cookie
     );
 
     const data = response.data.data.object_data as LoginResponse;

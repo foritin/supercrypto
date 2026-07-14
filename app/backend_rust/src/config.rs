@@ -20,6 +20,12 @@ pub struct AppConfig {
     pub aspose: AsposeConfig,
     pub crypto: CryptoConfig,
     pub kyc: KycConfig,
+    #[serde(default)]
+    pub faucet: FaucetConfig,
+    #[serde(default)]
+    pub deployer: DeployerConfig,
+    #[serde(default)]
+    pub log: LogConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -103,9 +109,82 @@ pub struct SumsubConfig {
     pub webhook_secret: String,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct FaucetConfig {
+    pub private_key: String,
+    pub amount_eth: String,
+}
+
+impl Default for FaucetConfig {
+    fn default() -> Self {
+        Self {
+            private_key: String::new(),
+            amount_eth: "1".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DeployerConfig {
+    pub private_key: String,
+}
+
+impl Default for DeployerConfig {
+    fn default() -> Self {
+        Self {
+            private_key: String::new(),
+        }
+    }
+}
+
+/// 日志配置
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LogConfig {
+    /// 日志级别: trace, debug, info, warn, error
+    #[serde(default = "default_log_level")]
+    pub level: String,
+    /// 日志目录
+    #[serde(default = "default_log_dir")]
+    pub dir: String,
+    /// 日志轮转: daily, hourly, never
+    #[serde(default = "default_log_rotation")]
+    pub rotation: String,
+    /// 是否同时输出到 stdout
+    #[serde(default = "default_true")]
+    pub stdout: bool,
+}
+
+impl Default for LogConfig {
+    fn default() -> Self {
+        Self {
+            level: default_log_level(),
+            dir: default_log_dir(),
+            rotation: default_log_rotation(),
+            stdout: true,
+        }
+    }
+}
+
+fn default_log_level() -> String {
+    "info".to_string()
+}
+
+fn default_log_dir() -> String {
+    "logs".to_string()
+}
+
+fn default_log_rotation() -> String {
+    "daily".to_string()
+}
+
+fn default_true() -> bool {
+    true
+}
+
 impl AppConfig {
     pub fn load() -> anyhow::Result<Self> {
         let env = env::var("APP_ENVIRONMENT").unwrap_or_else(|_| "dev".to_string());
+        let _config_file = format!("config/{}.yaml", env);
         let config_file = format!("config/{}.yaml", env);
 
         let cfg = config::Config::builder()

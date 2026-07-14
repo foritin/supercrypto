@@ -6,3 +6,4 @@ pub mod admin;
 pub mod kyc;
 pub mod subscription;
 pub mod staking;
+pub mod contract;
