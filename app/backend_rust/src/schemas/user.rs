@@ -6,9 +6,10 @@ use sqlx::FromRow;
 #[derive(Debug, Deserialize)]
 pub struct CreateSubscriptionRequest {
     pub asset_id: i64,
-    pub amount: String,
+    pub amount: f64,
     pub token_type: String,
     pub lock_period: i64,
+    pub tx_hash: Option<String>,
 }
 
 /// 认购响应
@@ -17,25 +18,33 @@ pub struct SubscriptionResponse {
     pub id: i64,
     pub wallet_address: String,
     pub asset_id: i64,
-    pub amount: String,
+    pub asset_name: Option<String>,
+    pub asset_symbol: Option<String>,
+    pub amount: Option<f64>,
     pub token_type: String,
     pub lock_period: i64,
-    pub apy: String,
-    pub rwa_token_amount: String,
+    pub apy: Option<f64>,
+    pub rwa_token_amount: Option<f64>,
     pub start_date: Option<NaiveDateTime>,
     pub end_date: Option<NaiveDateTime>,
-    pub expected_interest: String,
-    pub actual_interest: String,
+    pub expected_interest: Option<f64>,
+    pub actual_interest: Option<f64>,
+    pub total_return: Option<f64>,
+    pub days_remaining: Option<i64>,
+    pub is_matured: Option<i64>,
     pub tx_hash: Option<String>,
+    pub redeem_tx_hash: Option<String>,
     pub status: String,
+    pub environment: String,
     pub created_at: Option<NaiveDateTime>,
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 /// 质押创建请求
 #[derive(Debug, Deserialize)]
 pub struct CreateStakingRequest {
     pub subscription_id: Option<i64>,
-    pub amount: String,
+    pub amount: f64,
     pub period: i64,
 }
 

@@ -285,6 +285,8 @@ function ConversionCard({
   delay?: number;
 }) {
   const { t } = useTranslation();
+  const safeApprovalRate = typeof approvalRate === "number" ? approvalRate : 0;
+  const safeResubmitRate = typeof resubmitRate === "number" ? resubmitRate : 0;
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -304,13 +306,13 @@ function ConversionCard({
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
           <span className="text-xs text-white/40">{t("admin.kyc.stats.approvalRate")}</span>
-          <span className="text-sm font-semibold text-emerald-400">{approvalRate.toFixed(1)}%</span>
+          <span className="text-sm font-semibold text-emerald-400">{safeApprovalRate.toFixed(1)}%</span>
         </div>
         <div className="h-2 bg-white/5 rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-emerald-500 rounded-full"
             initial={{ width: 0 }}
-            animate={{ width: `${approvalRate}%` }}
+            animate={{ width: `${safeApprovalRate}%` }}
             transition={{ duration: 1, delay: 0.3 }}
           />
         </div>
@@ -320,13 +322,13 @@ function ConversionCard({
       <div>
         <div className="flex justify-between items-center mb-2">
           <span className="text-xs text-white/40">{t("admin.kyc.stats.resubmitRate")}</span>
-          <span className="text-sm font-semibold text-yellow-400">{resubmitRate.toFixed(1)}%</span>
+          <span className="text-sm font-semibold text-yellow-400">{safeResubmitRate.toFixed(1)}%</span>
         </div>
         <div className="h-2 bg-white/5 rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-yellow-500 rounded-full"
             initial={{ width: 0 }}
-            animate={{ width: `${resubmitRate}%` }}
+            animate={{ width: `${safeResubmitRate}%` }}
             transition={{ duration: 1, delay: 0.4 }}
           />
         </div>

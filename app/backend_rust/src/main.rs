@@ -101,6 +101,16 @@ async fn main() -> anyhow::Result<()> {
         .await?;
     info!("✅ Database migrations applied");
 
+    // 启动时自动部署/导入合约（去重）
+    let deploy_cfg = cfg.clone();
+    let deploy_db = db_pool.clone();
+    match tasks::deploy_on_startup::deploy_on_startup(&deploy_db, &deploy_cfg).await {
+        Ok(()) => {}
+        Err(e) => {
+            tracing::error!("❌ Startup deploy failed: {}. Continuing without auto-deploy...", e);
+        }
+    }
+
     // 初始化 Redis 连接池
     let redis_cfg = deadpool_redis::Runtime::Tokio1;
     let redis_pool = deadpool_redis::Config::from_url(&cfg.redis.url())

@@ -55,3 +55,6 @@ logs/
 .research
 .reference
 .reasonix
+
+# pnpm store cache
+.pnpm-store/

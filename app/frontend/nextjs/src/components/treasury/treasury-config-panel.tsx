@@ -571,7 +571,7 @@ export function TreasuryConfigPanel({
                                 className="border-white/[0.15] data-[state=checked]:bg-[#00d4aa]/80 data-[state=checked]:border-[#00d4aa]/80"
                               />
                               <div className="min-w-0 flex-1">
-                                <div className="text-[12px] text-white/85 truncate">{candidate.label}</div>
+                                <div className="text-[12px] text-white/85 truncate">{candidate.label || truncateAddress(candidate.address)}</div>
                                 <div className="text-[10px] text-white/55 font-mono">
                                   {truncateAddress(candidate.address)}
                                 </div>

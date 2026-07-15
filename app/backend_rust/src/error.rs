@@ -102,6 +102,7 @@ impl IntoResponse for AppError {
         let status = self.status_code();
         let error_code = self.error_code();
         let message = self.to_string();
+        tracing::error!(status = %status, error = %message, "AppError");
         let detail = match &self {
             AppError::BadRequest(d) => Some(d.clone()),
             AppError::ValidationError(d) => Some(d.clone()),

@@ -140,7 +140,7 @@ export function AssetStatusIndicator({
       status: hasAPY ? 'success' : 'error',
       required: true,
       message: hasAPY
-        ? `3M: ${asset.apy_3m}% | 6M: ${asset.apy_6m}% | 12M: ${asset.apy_12m}%`
+        ? `3M: ${(asset.apy_3m * 100).toFixed(1)}% | 6M: ${(asset.apy_6m * 100).toFixed(1)}% | 12M: ${(asset.apy_12m * 100).toFixed(1)}%`
         : t('admin.assets.statusIndicator.apyNotSet'),
     })
 

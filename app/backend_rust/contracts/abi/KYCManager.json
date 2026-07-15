@@ -1,0 +1,770 @@
+[
+  {
+    "name": "InvestorAdded",
+    "inputs": [
+      {
+        "name": "investor",
+        "type": "address",
+        "indexed": true
+      },
+      {
+        "name": "country",
+        "type": "string",
+        "indexed": false
+      },
+      {
+        "name": "accreditedInvestor",
+        "type": "bool",
+        "indexed": false
+      },
+      {
+        "name": "timestamp",
+        "type": "uint256",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  },
+  {
+    "name": "InvestorUpdated",
+    "inputs": [
+      {
+        "name": "investor",
+        "type": "address",
+        "indexed": true
+      },
+      {
+        "name": "verified",
+        "type": "bool",
+        "indexed": false
+      },
+      {
+        "name": "timestamp",
+        "type": "uint256",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  },
+  {
+    "name": "InvestorRemoved",
+    "inputs": [
+      {
+        "name": "investor",
+        "type": "address",
+        "indexed": true
+      },
+      {
+        "name": "reason",
+        "type": "string",
+        "indexed": false
+      },
+      {
+        "name": "timestamp",
+        "type": "uint256",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  },
+  {
+    "name": "CountryBlocked",
+    "inputs": [
+      {
+        "name": "country",
+        "type": "string",
+        "indexed": false
+      },
+      {
+        "name": "blocked",
+        "type": "bool",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  },
+  {
+    "name": "VerifierSet",
+    "inputs": [
+      {
+        "name": "verifier",
+        "type": "address",
+        "indexed": true
+      },
+      {
+        "name": "enabled",
+        "type": "bool",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  },
+  {
+    "name": "InvestorFrozen",
+    "inputs": [
+      {
+        "name": "investor",
+        "type": "address",
+        "indexed": true
+      },
+      {
+        "name": "frozen",
+        "type": "bool",
+        "indexed": false
+      },
+      {
+        "name": "reason",
+        "type": "string",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  },
+  {
+    "name": "Migrated",
+    "inputs": [
+      {
+        "name": "oldContract",
+        "type": "address",
+        "indexed": true
+      },
+      {
+        "name": "newContract",
+        "type": "address",
+        "indexed": true
+      },
+      {
+        "name": "timestamp",
+        "type": "uint256",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "owner_transfer_ownership",
+    "inputs": [
+      {
+        "name": "_newOwner",
+        "type": "address"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "admin_set_verifier",
+    "inputs": [
+      {
+        "name": "_verifier",
+        "type": "address"
+      },
+      {
+        "name": "_enabled",
+        "type": "bool"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "admin_set_transfer_agent",
+    "inputs": [
+      {
+        "name": "_agent",
+        "type": "address"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "admin_set_max_investors",
+    "inputs": [
+      {
+        "name": "_max",
+        "type": "uint256"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "admin_set_kyc_expiry_period",
+    "inputs": [
+      {
+        "name": "_period",
+        "type": "uint256"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "admin_set_blocked_country",
+    "inputs": [
+      {
+        "name": "_country",
+        "type": "string"
+      },
+      {
+        "name": "_blocked",
+        "type": "bool"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "admin_add_investor",
+    "inputs": [
+      {
+        "name": "_investor",
+        "type": "address"
+      },
+      {
+        "name": "_country",
+        "type": "string"
+      },
+      {
+        "name": "_accreditedInvestor",
+        "type": "bool"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "admin_update_investor_verification",
+    "inputs": [
+      {
+        "name": "_investor",
+        "type": "address"
+      },
+      {
+        "name": "_verified",
+        "type": "bool"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "admin_remove_investor",
+    "inputs": [
+      {
+        "name": "_investor",
+        "type": "address"
+      },
+      {
+        "name": "_reason",
+        "type": "string"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "admin_freeze_investor",
+    "inputs": [
+      {
+        "name": "_investor",
+        "type": "address"
+      },
+      {
+        "name": "_freeze",
+        "type": "bool"
+      },
+      {
+        "name": "_reason",
+        "type": "string"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "is_verified",
+    "inputs": [
+      {
+        "name": "_investor",
+        "type": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "is_accredited",
+    "inputs": [
+      {
+        "name": "_investor",
+        "type": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "is_frozen",
+    "inputs": [
+      {
+        "name": "_investor",
+        "type": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "get_investor_info",
+    "inputs": [
+      {
+        "name": "_investor",
+        "type": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "components": [
+          {
+            "name": "verified",
+            "type": "bool"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "accreditedInvestor",
+            "type": "bool"
+          },
+          {
+            "name": "addedTime",
+            "type": "uint256"
+          },
+          {
+            "name": "verificationTime",
+            "type": "uint256"
+          },
+          {
+            "name": "expiryTime",
+            "type": "uint256"
+          },
+          {
+            "name": "frozen",
+            "type": "bool"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "can_invest",
+    "inputs": [
+      {
+        "name": "_investor",
+        "type": "address"
+      },
+      {
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "is_country_allowed",
+    "inputs": [
+      {
+        "name": "_country",
+        "type": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "get_remaining_slots",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "get_dependencies",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string[]"
+      },
+      {
+        "name": "",
+        "type": "string[]"
+      },
+      {
+        "name": "",
+        "type": "string[]"
+      }
+    ]
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "owner_migrate",
+    "inputs": [
+      {
+        "name": "newContract",
+        "type": "address"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "name": "receive_migration",
+    "inputs": [
+      {
+        "name": "oldContract",
+        "type": "address"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "is_migrated",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "get_user_list",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "get_blocked_country_count",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "get_blocked_country_at",
+    "inputs": [
+      {
+        "name": "_index",
+        "type": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "is_country_blocked",
+    "inputs": [
+      {
+        "name": "_country",
+        "type": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "transferAgent",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "investors",
+    "inputs": [
+      {
+        "name": "arg0",
+        "type": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "components": [
+          {
+            "name": "verified",
+            "type": "bool"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "accreditedInvestor",
+            "type": "bool"
+          },
+          {
+            "name": "addedTime",
+            "type": "uint256"
+          },
+          {
+            "name": "verificationTime",
+            "type": "uint256"
+          },
+          {
+            "name": "expiryTime",
+            "type": "uint256"
+          },
+          {
+            "name": "frozen",
+            "type": "bool"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "investorCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "accreditedInvestorCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "verifiers",
+    "inputs": [
+      {
+        "name": "arg0",
+        "type": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "blockedCountries",
+    "inputs": [
+      {
+        "name": "arg0",
+        "type": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "migrated",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "userList",
+    "inputs": [
+      {
+        "name": "arg0",
+        "type": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "blockedCountriesList",
+    "inputs": [
+      {
+        "name": "arg0",
+        "type": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "maxInvestors",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "stateMutability": "view",
+    "type": "function",
+    "name": "kycExpiryPeriod",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "stateMutability": "nonpayable",
+    "type": "constructor",
+    "inputs": [],
+    "outputs": []
+  }
+]

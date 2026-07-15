@@ -1,9 +1,10 @@
 use axum::{
-    extract::{Request, State},
-    http::header,
+    extract::{FromRequestParts, Request, State},
+    http::{header, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
 };
+use http::request::Parts;
 use crate::state::SharedState;
 use crate::security::jwt;
 use serde::{Deserialize, Serialize};
@@ -61,5 +62,80 @@ pub fn require_admin(request: &Request) -> Result<AuthUser, Response> {
             }).into_response();
             Err(response)
         }
+    }
+}
+
+// ── Axum extractor: 从 request extensions 提取管理员地址 ──
+
+/// 从请求中提取管理员钱包地址（需先通过 auth_state_middleware 注入）
+pub struct AdminAddress(pub String);
+
+impl<S> FromRequestParts<S> for AdminAddress
+where
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, axum::Json<crate::error::ErrorResponse>);
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let user = parts
+            .extensions
+            .get::<AuthUser>()
+            .ok_or_else(|| {
+                (
+                    StatusCode::UNAUTHORIZED,
+                    axum::Json(crate::error::ErrorResponse {
+                        code: 401,
+                        message: "Unauthorized".to_string(),
+                        error_code: Some("E401".to_string()),
+                        detail: Some("Authentication required".to_string()),
+                        path: "/".to_string(),
+                    }),
+                )
+            })?;
+
+        if !user.roles.contains(&"admin".to_string()) {
+            return Err((
+                StatusCode::FORBIDDEN,
+                axum::Json(crate::error::ErrorResponse {
+                    code: 403,
+                    message: "Forbidden".to_string(),
+                    error_code: Some("E403".to_string()),
+                    detail: Some("Admin permission required".to_string()),
+                    path: "/".to_string(),
+                }),
+            ));
+        }
+
+        Ok(AdminAddress(user.address.clone()))
+    }
+}
+
+/// 从请求中提取已登录用户的钱包地址（需先通过 auth_state_middleware 注入）
+pub struct UserAddress(pub String);
+
+impl<S> FromRequestParts<S> for UserAddress
+where
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, axum::Json<crate::error::ErrorResponse>);
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let user = parts
+            .extensions
+            .get::<AuthUser>()
+            .ok_or_else(|| {
+                (
+                    StatusCode::UNAUTHORIZED,
+                    axum::Json(crate::error::ErrorResponse {
+                        code: 401,
+                        message: "Unauthorized".to_string(),
+                        error_code: Some("E401".to_string()),
+                        detail: Some("Authentication required".to_string()),
+                        path: "/".to_string(),
+                    }),
+                )
+            })?;
+
+        Ok(UserAddress(user.address.clone()))
     }
 }

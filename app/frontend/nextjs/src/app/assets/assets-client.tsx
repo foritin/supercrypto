@@ -196,7 +196,7 @@ export default function AssetsClient() {
   const { data, isLoading, error } = useAssets(query);
 
   // 格式化函数
-  const formatApy = (apy: number) => (apy === 0 ? "-" : `${apy.toFixed(1)}%`);
+  const formatApy = (apy: number) => (apy === 0 ? "-" : `${(apy * 100).toFixed(1)}%`);
 
   const formatAmount = (amount: number) => {
     if (amount >= 1000000) return `${(amount / 1000000).toFixed(2)}M`;

@@ -79,6 +79,7 @@ const NETWORK_CONFIG: Record<number, { name: string; icon: string; color: string
   10: { name: "Optimism", icon: "🔴", color: "#FF0420", bgColor: "rgba(255, 4, 32, 0.15)" },
   56: { name: "BSC", icon: "🟡", color: "#F3BA2F", bgColor: "rgba(243, 186, 47, 0.15)" },
   8453: { name: "Base", icon: "🔵", color: "#0052FF", bgColor: "rgba(0, 82, 255, 0.15)" },
+  31337: { name: "Hardhat", icon: "⚒", color: "#FFC107", bgColor: "rgba(255, 193, 7, 0.15)" },
 };
 
 const getNetworkConfig = (chainId?: number) => {
@@ -621,7 +622,7 @@ export function SubscriptionModal({ open, asset, onClose, onSuccess }: Subscript
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent
-        className="sm:max-w-[540px] p-0 gap-0 overflow-hidden border-0 bg-transparent"
+        className="sm:max-w-[540px] max-h-[90vh] p-0 gap-0 overflow-hidden border-0 bg-transparent"
         style={{ boxShadow: "none" }}
       >
         {/* Main Container with Glowing Border */}
@@ -630,7 +631,7 @@ export function SubscriptionModal({ open, asset, onClose, onSuccess }: Subscript
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="relative rounded-2xl overflow-hidden"
+          className="relative rounded-2xl overflow-y-auto max-h-[90vh]"
           style={{
             background: "linear-gradient(180deg, #0B1426 0%, #071018 100%)",
             border: "1px solid rgba(0, 212, 170, 0.2)",
@@ -701,7 +702,7 @@ export function SubscriptionModal({ open, asset, onClose, onSuccess }: Subscript
             <div className="mx-6 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent my-5" />
             
             {/* Main Content Area */}
-            <div className="px-6 pb-6 min-h-[440px]">
+            <div className="px-6 pb-6 min-h-[300px] max-h-[calc(90vh-180px)] overflow-y-auto">
               <AnimatePresence mode="wait" custom={uiStep}>
                 
                 {/* Step 0: Configure */}

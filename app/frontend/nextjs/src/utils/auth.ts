@@ -126,13 +126,17 @@ export function parseJwtPayload(token: string): Record<string, unknown> | null {
 
 /**
  * Get address from JWT token payload
+ *
+ * Supports two JWT claim formats:
+ * - Rust backend: address stored in standard `sub` claim
+ * - Python backend: address stored in custom `address` claim
  */
 export function getAddressFromToken(): string | null {
   const token = getJwtToken()
   if (!token) return null
-  
+
   const payload = parseJwtPayload(token)
-  return (payload?.address as string) || null
+  return (payload?.sub as string) || (payload?.address as string) || null
 }
 
 /**

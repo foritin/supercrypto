@@ -7,7 +7,7 @@ use serde::Deserialize;
 use crate::contracts::provider;
 use crate::error::AppError;
 use crate::repositories::contract_repo;
-use crate::schemas::common::{ApiResponse, DataWrapper, Pagination};
+use crate::schemas::common::{DataWrapper, Pagination};
 use crate::schemas::contract::*;
 use crate::services::contract_service;
 use crate::state::SharedState;
@@ -72,6 +72,7 @@ pub fn routes() -> Router<SharedState> {
         .route("/api/v1/admin/contracts/registry", axum::routing::get(list_registry))
         .route("/api/v1/admin/contracts/registry/sync", axum::routing::post(sync_registry))
         .route("/api/v1/admin/contracts/provider/sync", axum::routing::post(sync_from_provider))
+        .route("/api/v1/admin/contracts/provider/status", axum::routing::get(provider_status))
         // 合约配置
         .route("/api/v1/admin/contracts/config", axum::routing::get(list_configs))
         .route("/api/v1/admin/contracts/config", axum::routing::put(upsert_config))
@@ -89,19 +90,52 @@ pub fn routes() -> Router<SharedState> {
 async fn deploy_contract(
     State(state): State<SharedState>,
     Json(req): Json<DeployContractRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<DeployResult>>>, AppError> {
+) -> Result<Json<DataWrapper<DeployResult>>, AppError> {
     let result = contract_service::deploy_contract(&state.db, &state.config, &req).await?;
     let data = DataWrapper::object(result);
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
+}
+
+// ============================================
+// Provider status
+// ============================================
+
+async fn provider_status(
+    State(state): State<SharedState>,
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
+    let rows = sqlx::query!(
+        "SELECT r.id, r.provider_address, r.chain_id, r.network, r.key, r.key_hash, r.is_registered, r.registered_address, c.contract_name, c.provider_key FROM provider_registry r LEFT JOIN contract_config c ON r.key = c.provider_key_hash WHERE r.is_registered = 1"
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    let contracts: Vec<serde_json::Value> = rows.into_iter().map(|r| serde_json::json!({
+        "id": r.id,
+        "provider_address": r.provider_address,
+        "chain_id": r.chain_id,
+        "network": r.network,
+        "key": r.key,
+        "key_hash": r.key_hash,
+        "is_registered": r.is_registered != 0,
+        "registered_address": r.registered_address,
+        "contract_name": r.contract_name,
+    })).collect();
+
+    let data = DataWrapper::object(serde_json::json!({
+        "contracts": contracts,
+        "count": contracts.len(),
+        "network": state.config.chain.network,
+    }));
+    Ok(Json(data))
 }
 
 async fn import_contract(
     State(state): State<SharedState>,
     Json(req): Json<ImportContractRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     contract_service::import_contract(&state.db, &state.config, &req).await?;
     let data = DataWrapper::msg("Contract imported");
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 // ============================================
@@ -111,7 +145,7 @@ async fn import_contract(
 async fn list_contracts(
     State(state): State<SharedState>,
     Query(params): Query<ContractListQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let (items, total) = contract_repo::list_deployments(
         &state.db,
         params.network.as_deref(),
@@ -139,24 +173,46 @@ async fn list_contracts(
                 "status": c.status,
                 "abi_path": c.abi_path,
                 "has_abi": c.abi.is_some(),
+                "registration_status": "not_registered",
                 "created_at": c.created_at,
                 "updated_at": c.updated_at,
             })
         })
         .collect();
 
+    // Enrich with actual registration status from provider_registry
+    let mut items = items;
+    let registered = sqlx::query!(
+        "SELECT c.contract_name, p.is_registered FROM contract_config c JOIN provider_registry p ON c.provider_key_hash = p.key_hash WHERE c.provider_key IS NOT NULL"
+    )
+    .fetch_all(&state.db)
+    .await?;
+
+    for item in &mut items {
+        let contract_name = item["name"].as_str().unwrap_or("");
+        if let Some(r) = registered.iter().find(|r| r.contract_name == contract_name) {
+            let reg_status = if r.is_registered.unwrap_or(0) != 0 { "synced" } else { "pending" };
+            item["registration_status"] = serde_json::json!(reg_status);
+        }
+    }
+
     let pagination = Pagination::new(total, params.page, params.page_size);
     let data = DataWrapper::list(items, pagination);
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn get_contract(
     State(state): State<SharedState>,
     Path(name): Path<String>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
-    let contract = contract_repo::get_deployment_by_name(&state.db, &name)
-        .await?
-        .ok_or_else(|| AppError::NotFound(format!("contract {} not found", name)))?;
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
+    // {name} may be a numeric id or contract name
+    let contract = if let Ok(id) = name.parse::<i64>() {
+        contract_repo::get_deployment_by_id(&state.db, id).await?
+            .ok_or_else(|| AppError::NotFound(format!("contract id {} not found", name)))?
+    } else {
+        contract_repo::get_deployment_by_name(&state.db, &name).await?
+            .ok_or_else(|| AppError::NotFound(format!("contract {} not found", name)))?
+    };
 
     let abi_json = contract
         .abi
@@ -180,7 +236,7 @@ async fn get_contract(
         "created_at": contract.created_at,
         "updated_at": contract.updated_at,
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 // ============================================
@@ -191,22 +247,22 @@ async fn update_status(
     State(state): State<SharedState>,
     Path(name): Path<String>,
     Json(req): Json<UpdateContractStatusRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     // {name} 可能是数字 id 或合约名称，统一处理
     let id: i64 = name.parse().map_err(|_| AppError::BadRequest("invalid id".to_string()))?;
     contract_repo::update_deployment_status(&state.db, id, &req.status).await?;
     let data = DataWrapper::msg("Status updated");
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn delete_contract(
     State(state): State<SharedState>,
     Path(name): Path<String>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let id: i64 = name.parse().map_err(|_| AppError::BadRequest("invalid id".to_string()))?;
     contract_repo::delete_deployment(&state.db, id).await?;
     let data = DataWrapper::msg("Contract deleted");
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 // ============================================
@@ -216,7 +272,7 @@ async fn delete_contract(
 async fn register_to_provider(
     State(state): State<SharedState>,
     Json(req): Json<RegisterToProviderRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     contract_service::register_to_provider(&state.db, &state.config, &req).await?;
 
     let data = DataWrapper::object(serde_json::json!({
@@ -225,13 +281,13 @@ async fn register_to_provider(
         "provider_address": req.provider_address,
         "registered": true,
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn list_registry(
     State(state): State<SharedState>,
     Query(params): Query<RegistryListQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let items = contract_repo::list_registry(
         &state.db,
         params.provider_address.as_deref(),
@@ -259,17 +315,17 @@ async fn list_registry(
 
     let total = items.len() as i64;
     let data = DataWrapper::list(items, Pagination::new(total, 1, 100));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn sync_registry(
     State(state): State<SharedState>,
     Json(req): Json<SyncRegistryRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<SyncResult>>>, AppError> {
+) -> Result<Json<DataWrapper<SyncResult>>, AppError> {
     let result = contract_service::sync_registry(&state.db, &state.config, &req.provider_address)
         .await?;
     let data = DataWrapper::object(result);
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 // ============================================
@@ -279,7 +335,7 @@ async fn sync_registry(
 async fn list_configs(
     State(state): State<SharedState>,
     Query(params): Query<ConfigListQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let items = contract_repo::list_configs(&state.db, params.project_name.as_deref()).await?;
 
     let items: Vec<serde_json::Value> = items
@@ -308,13 +364,13 @@ async fn list_configs(
 
     let total = items.len() as i64;
     let data = DataWrapper::list(items, Pagination::new(total, 1, 100));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn upsert_config(
     State(state): State<SharedState>,
     Json(req): Json<UpsertContractConfigRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let dependencies = req
         .dependencies
         .as_ref()
@@ -352,7 +408,7 @@ async fn upsert_config(
     .await?;
 
     let data = DataWrapper::msg("Config saved");
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 // ============================================
@@ -362,10 +418,19 @@ async fn upsert_config(
 async fn verify_contract(
     State(state): State<SharedState>,
     Path(name): Path<String>,
-) -> Result<Json<ApiResponse<DataWrapper<VerifyResult>>>, AppError> {
-    let result = contract_service::verify_contract(&state.db, &state.config, &name).await?;
+) -> Result<Json<DataWrapper<VerifyResult>>, AppError> {
+    // {name} may be a numeric id or contract name — resolve to name first
+    let contract_name = if let Ok(id) = name.parse::<i64>() {
+        contract_repo::get_deployment_by_id(&state.db, id)
+            .await?
+            .ok_or_else(|| AppError::NotFound(format!("contract id {} not found", name)))?
+            .name
+    } else {
+        name
+    };
+    let result = contract_service::verify_contract(&state.db, &state.config, &contract_name).await?;
     let data = DataWrapper::object(result);
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 // ============================================
@@ -375,56 +440,56 @@ async fn verify_contract(
 async fn prepare_register(
     State(state): State<SharedState>,
     Json(req): Json<PrepareRegisterRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::prepare_register(&state.db, &state.config, &req).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 async fn confirm_register(
     State(state): State<SharedState>,
     Json(req): Json<ConfirmRegisterRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::confirm_register(&state.db, &state.config, &req).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 async fn prepare_unregister(
     State(state): State<SharedState>,
     Json(req): Json<PrepareUnregisterRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::prepare_unregister(&state.db, &state.config, &req).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 async fn confirm_unregister(
     State(state): State<SharedState>,
     Json(req): Json<ConfirmUnregisterRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::confirm_unregister(&state.db, &state.config, &req).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 async fn prepare_set_treasury(
     State(state): State<SharedState>,
     Json(req): Json<PrepareSetTreasuryRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::prepare_set_treasury(&state.db, &state.config, &req).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 async fn confirm_set_treasury(
     State(state): State<SharedState>,
     Json(req): Json<ConfirmSetTreasuryRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::confirm_set_treasury(&state.db, &state.config, &req).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 async fn get_treasury_binding(
     State(state): State<SharedState>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::get_treasury_binding(&state.db, &state.config).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 // ============================================
@@ -433,17 +498,26 @@ async fn get_treasury_binding(
 
 async fn get_dependency_graph(
     State(state): State<SharedState>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::get_dependency_graph(&state.db).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 async fn get_contract_dependencies(
     State(state): State<SharedState>,
     Path(name): Path<String>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
-    let result = contract_service::get_contract_dependencies(&state.db, &name).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
+    // {name} may be a numeric id or contract name — resolve to name first
+    let contract_name = if let Ok(id) = name.parse::<i64>() {
+        contract_repo::get_deployment_by_id(&state.db, id)
+            .await?
+            .ok_or_else(|| AppError::NotFound(format!("contract id {} not found", name)))?
+            .name
+    } else {
+        name
+    };
+    let result = contract_service::get_contract_dependencies(&state.db, &contract_name).await?;
+    Ok(Json(DataWrapper::object(result)))
 }
 
 // ============================================
@@ -453,17 +527,17 @@ async fn get_contract_dependencies(
 async fn set_primary(
     State(state): State<SharedState>,
     Path(id): Path<i64>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::set_primary(&state.db, id).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 async fn unset_primary(
     State(state): State<SharedState>,
     Path(id): Path<i64>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::unset_primary(&state.db, id).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 // ============================================
@@ -473,15 +547,15 @@ async fn unset_primary(
 async fn update_contract_address(
     State(state): State<SharedState>,
     Json(req): Json<ContractAddressUpdateRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::update_registry_record(&state.db, &req.contract_name, &req.address).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 async fn update_address(
     State(state): State<SharedState>,
     Json(req): Json<UpdateContractAddressRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     // Look up target contract deployment
     let contract = contract_repo::get_deployment_by_name(&state.db, &req.target_contract)
         .await?
@@ -503,13 +577,13 @@ async fn update_address(
         "function_args": [req.new_address],
         "abi": abi,
     });
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 async fn confirm_binding(
-    State(state): State<SharedState>,
+    State(_state): State<SharedState>,
     Json(req): Json<ConfirmBindingRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     tracing::info!(
         contract = %req.contract_name,
         dependency = %req.dependency_name,
@@ -517,7 +591,7 @@ async fn confirm_binding(
         "Binding confirmed"
     );
     let data = DataWrapper::msg("Binding confirmed");
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 // ============================================
@@ -527,9 +601,9 @@ async fn confirm_binding(
 async fn validate_contracts(
     State(state): State<SharedState>,
     Json(req): Json<ValidateContractRequest>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::validate_contracts(&state.db, &state.config, &req).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 // ============================================
@@ -538,9 +612,9 @@ async fn validate_contracts(
 
 async fn sync_from_provider(
     State(state): State<SharedState>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let result = contract_service::sync_from_provider(&state.db, &state.config).await?;
-    Ok(Json(ApiResponse::ok(DataWrapper::object(result))))
+    Ok(Json(DataWrapper::object(result)))
 }
 
 // ============================================
@@ -549,7 +623,7 @@ async fn sync_from_provider(
 
 async fn list_registry_projects(
     State(state): State<SharedState>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let configs = contract_repo::list_configs(&state.db, None).await?;
     let mut projects: Vec<String> = configs.iter()
         .map(|c| c.project_name.clone())
@@ -561,7 +635,7 @@ async fn list_registry_projects(
         projects.into_iter().map(serde_json::Value::String).collect(),
         Pagination::new(total, 1, 100),
     );
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 // ============================================
@@ -572,7 +646,7 @@ async fn reset_project_deployments(
     State(state): State<SharedState>,
     Path(project): Path<String>,
     Json(req): Json<serde_json::Value>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let confirm = req.get("confirm").and_then(|v| v.as_str()).unwrap_or("");
     if confirm != "RESET" {
         return Err(AppError::BadRequest("confirm must be 'RESET'".to_string()));
@@ -583,13 +657,13 @@ async fn reset_project_deployments(
         "project": project,
         "network": state.config.chain.network,
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn reset_all_deployments(
     State(state): State<SharedState>,
     Json(req): Json<serde_json::Value>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let confirm = req.get("confirm").and_then(|v| v.as_str()).unwrap_or("");
     if confirm != "RESET" {
         return Err(AppError::BadRequest("confirm must be 'RESET'".to_string()));
@@ -599,5 +673,5 @@ async fn reset_all_deployments(
         "deleted_count": deleted,
         "network": state.config.chain.network,
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }

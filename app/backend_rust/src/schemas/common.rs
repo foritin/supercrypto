@@ -33,23 +33,23 @@ pub struct DataWrapper<T: Serialize> {
 }
 
 impl<T: Serialize> DataWrapper<T> {
-    pub fn object(data: T) -> Self {
-        Self {
-            object: Some(data),
-            list: None,
-            pagination: None,
-            msg: None,
-        }
-    }
+   pub fn object(data: T) -> Self {
+       Self {
+           object: Some(data),
+           list: None,
+           pagination: None,
+            msg: Some("success".to_string()),
+       }
+   }
 
-    pub fn list(data: Vec<T>, pagination: Pagination) -> Self {
-        Self {
-            object: None,
-            list: Some(data),
-            pagination: Some(pagination),
-            msg: None,
-        }
-    }
+   pub fn list(data: Vec<T>, pagination: Pagination) -> Self {
+       Self {
+           object: None,
+           list: Some(data),
+           pagination: Some(pagination),
+            msg: Some("success".to_string()),
+       }
+   }
 
     pub fn msg(text: impl Into<String>) -> Self {
         Self {

@@ -84,7 +84,7 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = React.memo(function
         }
         return `$${val.toFixed(2)}`;
       case 'percentage':
-        return `${val.toFixed(1)}%`;
+        return `${(val * 100).toFixed(1)}%`;
       case 'number':
         return val.toLocaleString('en-US', {
           minimumFractionDigits: 0,

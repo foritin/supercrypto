@@ -58,6 +58,15 @@ import {
 import { notification } from '@/lib/notification'
 import { cn } from '@/lib/utils'
 import { assetService, type AssetMediaItem, type MediaType, type MediaStats, type FrameStyle } from '@/services/asset'
+import { API_BASE_URL } from '@/constants/api'
+
+/** Convert relative media URL to full backend URL for <img src> */
+function mediaUrl(url: string | null | undefined): string {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const origin = API_BASE_URL.replace(/\/api\/v\d+$/, '')
+  return `${origin}${url}`
+}
 
 // 媒体类型配置
 const MEDIA_TYPE_CONFIG: Record<
@@ -389,13 +398,13 @@ export function MediaManager({ assetId, visible, onClose, onUpdate }: MediaManag
         
         <div className="relative h-[150px] overflow-hidden">
           <img
-            src={media.url}
+            src={mediaUrl(media.url)}
             alt={media.title || t('admin.media.status.unnamed')}
             className={cn(
               "object-cover w-full h-full transition-transform group-hover:scale-105",
               !selectionMode && "cursor-pointer"
             )}
-            onClick={!selectionMode ? () => setPreviewImage(media.url) : undefined}
+            onClick={!selectionMode ? () => setPreviewImage(mediaUrl(media.url)) : undefined}
           />
           {media.is_primary && (
             <Badge 

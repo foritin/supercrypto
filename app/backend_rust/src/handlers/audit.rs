@@ -5,9 +5,10 @@ use axum::{
 use serde::Deserialize;
 
 use crate::error::AppError;
-use crate::schemas::common::{ApiResponse, DataWrapper, Pagination};
+use crate::schemas::common::{DataWrapper, Pagination};
 use crate::state::SharedState;
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct AuditQuery {
     #[serde(default = "default_page")]
@@ -36,7 +37,7 @@ pub fn routes() -> Router<SharedState> {
 async fn list_audit_logs(
     State(state): State<SharedState>,
     Query(params): Query<AuditQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let offset = (params.page - 1).max(0) * params.page_size;
     let items = sqlx::query!(
         "SELECT id, action, category, resource_type, resource_id, actor_address, actor_role, details, status, created_at
@@ -56,13 +57,13 @@ async fn list_audit_logs(
     })).collect();
 
     let data = DataWrapper::list(items, Pagination::new(total, params.page, params.page_size));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn get_audit_log(
     State(state): State<SharedState>,
     Path(id): Path<i64>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let row = sqlx::query!(
         "SELECT id, action, category, resource_type, resource_id, actor_address, actor_role, details, status, created_at
          FROM audit_log WHERE id = $1", id
@@ -76,12 +77,12 @@ async fn get_audit_log(
         "actor_address": row.actor_address, "actor_role": row.actor_role,
         "details": row.details, "status": row.status, "created_at": row.created_at,
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn audit_stats(
     State(state): State<SharedState>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let total = sqlx::query_scalar!("SELECT COUNT(*) FROM audit_log")
         .fetch_one(&state.db).await.unwrap_or(0);
     let today = sqlx::query_scalar!(
@@ -99,13 +100,13 @@ async fn audit_stats(
     let data = DataWrapper::object(serde_json::json!({
         "total": total, "today": today, "by_action": action_stats,
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn export_audit_logs(
     State(state): State<SharedState>,
     Query(_params): Query<AuditQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     // 返回全部审计日志（导出用）
     let items = sqlx::query!(
         "SELECT id, action, category, resource_type, resource_id, actor_address, actor_role, details, status, created_at
@@ -121,14 +122,14 @@ async fn export_audit_logs(
     })).collect();
 
     let data = DataWrapper::object(serde_json::json!({"logs": items, "count": items.len()}));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn audit_by_operator(
     State(state): State<SharedState>,
     Path(operator_id): Path<i64>,
     Query(params): Query<AuditQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let offset = (params.page - 1).max(0) * params.page_size;
     let items = sqlx::query!(
         "SELECT id, action, category, resource_type, resource_id, actor_address, actor_role, details, status, created_at
@@ -148,14 +149,14 @@ async fn audit_by_operator(
     })).collect();
 
     let data = DataWrapper::list(items, Pagination::new(total, params.page, params.page_size));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn audit_by_target(
     State(state): State<SharedState>,
     Path((target_type, target_id)): Path<(String, i64)>,
     Query(params): Query<AuditQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let offset = (params.page - 1).max(0) * params.page_size;
     let items = sqlx::query!(
         "SELECT id, action, category, resource_type, resource_id, actor_address, actor_role, details, status, created_at
@@ -177,5 +178,5 @@ async fn audit_by_target(
     })).collect();
 
     let data = DataWrapper::list(items, Pagination::new(total, params.page, params.page_size));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }

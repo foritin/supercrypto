@@ -385,9 +385,9 @@ export function AssetAdminList() {
         subscription_mode: values.subscription_mode,
         total_supply: values.total_supply,
         min_subscription: values.min_subscription,
-        apy_3m: values.apy_3m,
-        apy_6m: values.apy_6m,
-        apy_12m: values.apy_12m,
+        apy_3m: values.apy_3m / 100,
+        apy_6m: values.apy_6m / 100,
+        apy_12m: values.apy_12m / 100,
         ...(values.description ? { description: values.description } : {}),
         ...(values.image_url ? { image_url: values.image_url } : {}),
         ...(values.document_url ? { document_url: values.document_url } : {}),
@@ -484,9 +484,9 @@ export function AssetAdminList() {
         location: detail.location || '',
         total_supply: detail.total_supply,
         min_subscription: detail.min_subscription,
-        apy_3m: detail.apy_3m,
-        apy_6m: detail.apy_6m,
-        apy_12m: detail.apy_12m,
+        apy_3m: detail.apy_3m * 100,
+        apy_6m: detail.apy_6m * 100,
+        apy_12m: detail.apy_12m * 100,
         subscription_start_at: toLocalInput(detail.subscription_start_at),
         subscription_end_at: toLocalInput(detail.subscription_end_at),
       })
@@ -624,7 +624,7 @@ export function AssetAdminList() {
       accessorKey: 'current_price',
       header: t('admin.assets.price'),
       size: 100,
-      cell: ({ row }) => `$${row.original.current_price.toFixed(2)}`,
+      cell: ({ row }) => `$${(row.original.current_price ?? 0).toFixed(2)}`,
     },
     {
       id: 'apy',
@@ -635,7 +635,7 @@ export function AssetAdminList() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-xs">{row.original.apy_3m}%</Badge>
+                <Badge variant="outline" className="text-xs">{(row.original.apy_3m * 100).toFixed(1)}%</Badge>
               </TooltipTrigger>
               <TooltipContent>3M</TooltipContent>
             </Tooltip>
@@ -643,7 +643,7 @@ export function AssetAdminList() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-xs">{row.original.apy_6m}%</Badge>
+                <Badge variant="outline" className="text-xs">{(row.original.apy_6m * 100).toFixed(1)}%</Badge>
               </TooltipTrigger>
               <TooltipContent>6M</TooltipContent>
             </Tooltip>
@@ -651,7 +651,7 @@ export function AssetAdminList() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-xs">{row.original.apy_12m}%</Badge>
+                <Badge variant="outline" className="text-xs">{(row.original.apy_12m * 100).toFixed(1)}%</Badge>
               </TooltipTrigger>
               <TooltipContent>12M</TooltipContent>
             </Tooltip>
@@ -664,7 +664,7 @@ export function AssetAdminList() {
       header: t('admin.assets.progress'),
       size: 120,
       cell: ({ row }) => (
-        <span>{row.original.subscription_progress.toFixed(1)}%</span>
+        <span>{(row.original.subscription_progress ?? 0).toFixed(1)}%</span>
       ),
     },
     {
@@ -1298,7 +1298,7 @@ export function AssetAdminList() {
             <Form {...priceForm}>
               <form onSubmit={priceForm.handleSubmit(handlePriceUpdate)} className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  {t('admin.assets.currentPriceLabel')}: ${selectedAsset.current_price.toFixed(2)}
+                  {t('admin.assets.currentPriceLabel')}: ${(selectedAsset.current_price ?? 0).toFixed(2)}
                 </p>
 
                 <FormField

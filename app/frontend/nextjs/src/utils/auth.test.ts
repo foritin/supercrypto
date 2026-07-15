@@ -9,6 +9,7 @@ import {
   clearAuthData,
   parseJwtPayload,
   isJwtExpired,
+  getAddressFromToken,
 } from './auth'
 
 /**
@@ -100,6 +101,28 @@ describe('Auth Utils', () => {
       expect(parseJwtPayload('invalid')).toBeNull()
       expect(parseJwtPayload('a.b')).toBeNull()
       expect(parseJwtPayload('')).toBeNull()
+    })
+  })
+
+  describe('getAddressFromToken', () => {
+    it('should extract address from Rust backend JWT (sub claim)', () => {
+      // payload: {"sub":"0x90f79bf6eb2c4f870365e785982e1f101e93b906","exp":1999999999,"token_type":"access"}
+      const rustToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIweDkwZjc5YmY2ZWIyYzRmODcwMzY1ZTc4NTk4MmUxZjEwMWU5M2I5MDYiLCJleHAiOjE5OTk5OTk5OTksInRva2VuX3R5cGUiOiJhY2Nlc3MifQ.signature'
+      store['supercrypto-jwt'] = rustToken
+
+      expect(getAddressFromToken()).toBe('0x90f79bf6eb2c4f870365e785982e1f101e93b906')
+    })
+
+    it('should extract address from Python backend JWT (address claim)', () => {
+      // payload: {"address":"0xabc123","exp":1999999999,"type":"access"}
+      const pyToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZGRyZXNzIjoiMHhhYmMxMjMiLCJleHAiOjE5OTk5OTk5OTksInR5cGUiOiJhY2Nlc3MifQ.signature'
+      store['supercrypto-jwt'] = pyToken
+
+      expect(getAddressFromToken()).toBe('0xabc123')
+    })
+
+    it('should return null when no token exists', () => {
+      expect(getAddressFromToken()).toBeNull()
     })
   })
 

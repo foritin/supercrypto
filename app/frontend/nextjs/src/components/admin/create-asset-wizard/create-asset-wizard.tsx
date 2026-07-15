@@ -80,9 +80,9 @@ function WizardContent({
         total_supply: formData.total_supply,
         min_subscription: formData.min_subscription || 100,
         current_price: formData.current_price || 1,
-        apy_3m: formData.apy_3m,
-        apy_6m: formData.apy_6m,
-        apy_12m: formData.apy_12m,
+        apy_3m: formData.apy_3m / 100,
+        apy_6m: formData.apy_6m / 100,
+        apy_12m: formData.apy_12m / 100,
         ...(formData.description ? { description: formData.description } : {}),
         ...(formData.location ? { location: formData.location } : {}),
       }

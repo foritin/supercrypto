@@ -11,13 +11,14 @@ pub struct CreateAssetRequest {
     pub image_url: Option<String>,
     pub document_url: Option<String>,
     pub location: Option<String>,
-    pub total_supply: String,
-    pub min_subscription: String,
+    pub total_supply: f64,
+    pub min_subscription: f64,
+    pub current_price: Option<f64>,
     pub subscription_start_at: Option<NaiveDateTime>,
     pub subscription_end_at: Option<NaiveDateTime>,
-    pub apy_3m: String,
-    pub apy_6m: String,
-    pub apy_12m: String,
+    pub apy_3m: f64,
+    pub apy_6m: f64,
+    pub apy_12m: f64,
     pub subscription_mode: String,
     pub project: Option<String>,
     pub frame_style: Option<String>,
@@ -29,32 +30,36 @@ pub struct UpdateAssetRequest {
     pub name: Option<String>,
     pub symbol: Option<String>,
     pub description: Option<String>,
-    pub current_price: Option<String>,
+    pub current_price: Option<f64>,
     pub status: Option<String>,
 }
 
 /// 资产价格更新请求
 #[derive(Debug, Deserialize)]
 pub struct UpdateAssetPriceRequest {
-    pub price: String,
+    pub price: f64,
     pub source: Option<String>,
 }
 
 /// 绑定项目请求
 #[derive(Debug, Deserialize)]
 pub struct BindProjectRequest {
-    pub project_name: String,
-    pub contract_address: String,
-    pub contract_name: String,
-    pub is_primary: i64,
+    pub project: String,
+    pub contract_names: Vec<String>,
+    pub set_primary: Option<bool>,
 }
 
-/// KYC 审核请求
+/// 链上准入记录请求 — 对应 Python RecordAdmissionRequest
 #[derive(Debug, Deserialize)]
-pub struct KycReviewRequest {
-    pub status: String,
-    pub reject_reason: Option<String>,
-    pub reviewer_address: String,
+pub struct KycRecordAdmissionRequest {
+    pub tx_hash: String,
+}
+
+/// 链上解除准入记录请求 — 对应 Python RecordRevocationRequest
+#[derive(Debug, Deserialize)]
+pub struct KycRecordRevocationRequest {
+    pub tx_hash: String,
+    pub reason: String,
 }
 
 /// 平台统计响应

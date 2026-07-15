@@ -188,6 +188,24 @@ pub async fn delete_deployment(pool: &SqlitePool, id: i64) -> Result<(), AppErro
     Ok(())
 }
 
+/// 更新合约 ABI（按 name + network 定位）
+pub async fn update_deployment_abi(
+    pool: &SqlitePool,
+    name: &str,
+    network: &str,
+    abi_json: &str,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "UPDATE contract_deployment SET abi = ?, updated_at = CURRENT_TIMESTAMP WHERE name = ? AND network = ?",
+    )
+    .bind(abi_json)
+    .bind(name)
+    .bind(network)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 // ============================================
 // ContractConfig CRUD
 // ============================================
@@ -340,6 +358,7 @@ pub async fn upsert_registry(
     key_hash: &str,
     is_registered: bool,
     registered_address: &str,
+    contract_name: Option<&str>,
 ) -> Result<(), AppError> {
     let existing: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM provider_registry \
@@ -355,12 +374,14 @@ pub async fn upsert_registry(
         sqlx::query(
             "UPDATE provider_registry SET \
              is_registered = ?, registered_address = ?, \
+             contract_name = COALESCE(?, contract_name), \
              is_deleted = 0, deleted_at = NULL, deleted_by = NULL, \
              updated_at = CURRENT_TIMESTAMP \
              WHERE provider_address = ? AND chain_id = ? AND key = ?",
         )
         .bind(is_registered as i64)
         .bind(registered_address)
+        .bind(contract_name)
         .bind(provider_address)
         .bind(chain_id)
         .bind(key)
@@ -370,8 +391,8 @@ pub async fn upsert_registry(
         sqlx::query(
             "INSERT INTO provider_registry \
              (provider_address, chain_id, network, key, key_hash, is_registered, \
-             registered_address, is_deleted) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, 0)",
+             registered_address, is_deleted, contract_name) \
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)",
         )
         .bind(provider_address)
         .bind(chain_id)
@@ -380,6 +401,7 @@ pub async fn upsert_registry(
         .bind(key_hash)
         .bind(is_registered as i64)
         .bind(registered_address)
+        .bind(contract_name)
         .execute(pool)
         .await?;
     }

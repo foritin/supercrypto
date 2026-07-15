@@ -1,0 +1,130 @@
+# deploy_manifest.toml — Rust 后端合约部署清单
+# 启动时自动检查并导入/部署这些合约，支持去重。
+#
+# 字段说明:
+#   name            - 合约名称（与 .build/abi/{name}.json 对应）
+#   contract_type   - 功能类型: registry, kyc, governance, stablecoin, token, defi
+#   scope           - 作用域: global (公共合约) / project (项目专属)
+#   project_name    - 所属项目: common / vanke
+#   provider_key    - AddressProvider 中的 key 名称
+#   is_primary      - 是否为项目主合约
+#   deploy_order    - 部署顺序 (越小越先)
+#   dependencies    - 依赖的其他合约名 (JSON 数组字符串)
+#   description     - 描述
+#
+# 去重策略:
+#   1. 优先查 DB (contract_deployment 表，按 contract_name + network)
+#   2. 其次查 Python 部署输出 JSON (output/deployed_*.json)
+#   3. 如果都没找到，记录 WARNING 等待手动通过 /admin/contracts/deploy 部署
+
+[[contracts]]
+name = "AddressProvider"
+contract_type = "registry"
+scope = "global"
+project_name = "common"
+provider_key = "ADDRESS_PROVIDER"
+is_primary = true
+deploy_order = 0
+dependencies = "[]"
+description = "地址提供者合约 - 所有合约地址的注册中心"
+
+[[contracts]]
+name = "KYCManager"
+contract_type = "kyc"
+scope = "global"
+project_name = "common"
+provider_key = "KYC_MANAGER"
+is_primary = false
+deploy_order = 1
+dependencies = "[]"
+description = "KYC 管理合约 - 用户身份验证"
+
+[[contracts]]
+name = "MockUSDT"
+contract_type = "stablecoin"
+scope = "global"
+project_name = "common"
+provider_key = "USDT"
+is_primary = false
+deploy_order = 2
+dependencies = "[]"
+description = "USDT 稳定币 (Mock)"
+
+[[contracts]]
+name = "MockUSDC"
+contract_type = "stablecoin"
+scope = "global"
+project_name = "common"
+provider_key = "USDC"
+is_primary = false
+deploy_order = 3
+dependencies = "[]"
+description = "USDC 稳定币 (Mock)"
+
+[[contracts]]
+name = "TreasuryMultisig"
+contract_type = "governance"
+scope = "global"
+project_name = "common"
+provider_key = "TREASURY_MULTISIG"
+is_primary = false
+deploy_order = 4
+dependencies = "[]"
+description = "国库多签合约"
+
+# ============ Vanke 项目合约 ============
+
+[[contracts]]
+name = "RWATokenSTO"
+contract_type = "token"
+scope = "project"
+project_name = "vanke"
+provider_key = "VANKE_RWA_TOKEN"
+is_primary = true
+deploy_order = 10
+dependencies = '["KYCManager"]'
+description = "万科 RWA Token - 资产代币化"
+
+[[contracts]]
+name = "PlatformToken"
+contract_type = "token"
+scope = "project"
+project_name = "vanke"
+provider_key = "VANKE_PLATFORM_TOKEN"
+is_primary = false
+deploy_order = 11
+dependencies = '["KYCManager"]'
+description = "万科平台 Token - 平台激励代币"
+
+[[contracts]]
+name = "Subscription"
+contract_type = "defi"
+scope = "project"
+project_name = "vanke"
+provider_key = "VANKE_SUBSCRIPTION"
+is_primary = false
+deploy_order = 12
+dependencies = '["KYCManager","MockUSDT","RWATokenSTO"]'
+description = "万科认购合约 - 处理用户认购"
+
+[[contracts]]
+name = "Staking"
+contract_type = "defi"
+scope = "project"
+project_name = "vanke"
+provider_key = "VANKE_STAKING"
+is_primary = false
+deploy_order = 13
+dependencies = '["RWATokenSTO","PlatformToken"]'
+description = "万科质押合约 - RWA Token 质押"
+
+[[contracts]]
+name = "LiquidityMining"
+contract_type = "defi"
+scope = "project"
+project_name = "vanke"
+provider_key = "VANKE_LIQUIDITY_MINING"
+is_primary = false
+deploy_order = 14
+dependencies = '["RWATokenSTO","PlatformToken"]'
+description = "万科流动性挖矿 - 流动性激励"

@@ -112,7 +112,7 @@ export function PropertyHighlights({ asset }: PropertyHighlightsProps) {
     {
       icon: ICON_MAP.expectedIncome,
       label: t("assets.highlights.expectedIncome", "Expected Income"),
-      value: asset.apy_12m > 0 ? asset.apy_12m.toFixed(1) + "%" : "-",
+      value: asset.apy_12m > 0 ? (asset.apy_12m * 100).toFixed(1) + "%" : "-",
       highlight: true,
     },
     {

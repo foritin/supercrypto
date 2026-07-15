@@ -22,6 +22,7 @@ import {
 import { HARDHAT_RPC_URL } from '@/config/wagmi'
 import { useCurrentUser, useNativeBalance } from '@/hooks'
 import { notification } from '@/lib/notification'
+import { truncateAddress } from '@/lib/utils'
 import { devToolsService, type TokenRecipient } from '@/services/dev-tools'
 
 // EIP-1193 Provider 类型扩展
@@ -224,7 +225,7 @@ export function EthFaucet() {
               ) : (
                 recipients.map((r) => (
                   <SelectItem key={r.address} value={r.address}>
-                    {r.label}
+                    {r.label || truncateAddress(r.address)}
                   </SelectItem>
                 ))
               )}

@@ -5,7 +5,7 @@ use axum::{
 use serde::Deserialize;
 
 use crate::error::AppError;
-use crate::schemas::common::{ApiResponse, DataWrapper, Pagination};
+use crate::schemas::common::{DataWrapper, Pagination};
 use crate::state::SharedState;
 
 #[derive(Debug, Deserialize)]
@@ -29,13 +29,16 @@ pub fn routes() -> Router<SharedState> {
         .route("/api/v1/admin/transactions/audit/stats", axum::routing::get(tx_audit_stats))
         .route("/api/v1/admin/transactions/audit/pending", axum::routing::get(tx_audit_pending))
         .route("/api/v1/admin/transactions/audit/{tx_hash}", axum::routing::get(get_tx_audit))
+        // Blacklist management
+        .route("/api/v1/admin/auth/blacklist/{address}", axum::routing::get(check_blacklist))
+        .route("/api/v1/admin/auth/blacklist/{address}", axum::routing::delete(remove_blacklist))
 }
 
 /// 列出所有活跃会话（基于 account 表的 last_login_dt）
 async fn list_sessions(
     State(state): State<SharedState>,
     Query(params): Query<SessionQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let offset = (params.page - 1).max(0) * params.page_size;
     let items = sqlx::query!(
         "SELECT id, address, roles, network, last_login_dt, is_active, is_blocked, created_at
@@ -57,15 +60,64 @@ async fn list_sessions(
     }).collect();
 
     let data = DataWrapper::list(items, Pagination::new(total, params.page, params.page_size));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
+}
+
+// ============================================
+// Blacklist management
+// ============================================
+
+async fn check_blacklist(
+    State(state): State<SharedState>,
+    Path(address): Path<String>,
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
+    let addr = address.to_lowercase();
+    let row = sqlx::query!(
+        "SELECT address, is_blocked, blocked_at, blocked_by, blocked_reason FROM account WHERE address = $1",
+        addr
+    )
+    .fetch_optional(&state.db)
+    .await?;
+
+    let (is_blocked, blocked_reason) = match &row {
+        Some(r) => (r.is_blocked != 0, r.blocked_reason.clone().unwrap_or_default()),
+        None => (false, String::new()),
+    };
+
+    let data = DataWrapper::object(serde_json::json!({
+        "wallet_address": addr,
+        "is_blacklisted": is_blocked,
+        "blocked_reason": blocked_reason,
+    }));
+    Ok(Json(data))
+}
+
+async fn remove_blacklist(
+    State(state): State<SharedState>,
+    Path(address): Path<String>,
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
+    let addr = address.to_lowercase();
+
+    sqlx::query!(
+        "UPDATE account SET is_blocked = 0, blocked_at = NULL, blocked_by = NULL, blocked_reason = NULL WHERE address = $1",
+        addr
+    )
+    .execute(&state.db)
+    .await?;
+
+    let data = DataWrapper::object(serde_json::json!({
+        "wallet_address": addr,
+        "was_blacklisted": true,
+    }));
+    Ok(Json(data))
 }
 
 /// 获取指定用户的会话信息
 async fn get_user_sessions(
     State(state): State<SharedState>,
     Path(address): Path<String>,
-    Query(params): Query<SessionQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+    Query(_params): Query<SessionQuery>,
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let addr = address.to_lowercase();
     let row = sqlx::query!(
         "SELECT id, address, roles, network, last_login_dt, is_active, is_blocked, created_at
@@ -80,14 +132,14 @@ async fn get_user_sessions(
         "last_login_dt": row.last_login_dt, "is_active": row.is_active, "is_blocked": row.is_blocked,
         "created_at": row.created_at,
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 /// 撤销用户会话（标记为需要重新登录）
 async fn revoke_session(
     State(state): State<SharedState>,
     Path(address): Path<String>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let addr = address.to_lowercase();
     tracing::info!(address = %addr, "Session revoked by admin");
 
@@ -98,7 +150,7 @@ async fn revoke_session(
     ).execute(&state.db).await?;
 
     let data = DataWrapper::msg("Session revoked");
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 // ============ Transaction Audit ============
@@ -106,7 +158,7 @@ async fn revoke_session(
 async fn list_tx_audit(
     State(state): State<SharedState>,
     Query(params): Query<SessionQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let offset = (params.page - 1).max(0) * params.page_size;
     let items = sqlx::query!(
         "SELECT id, tx_hash, tx_type, from_address, to_address, amount, status, created_at
@@ -125,13 +177,13 @@ async fn list_tx_audit(
     })).collect();
 
     let data = DataWrapper::list(items, Pagination::new(total, params.page, params.page_size));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn get_tx_audit(
     State(state): State<SharedState>,
     Path(tx_hash): Path<String>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let row = sqlx::query!(
         "SELECT id, tx_hash, tx_type, from_address, to_address, amount, status, created_at
          FROM transaction_audit WHERE tx_hash = $1", tx_hash
@@ -144,12 +196,12 @@ async fn get_tx_audit(
         "from_address": row.from_address, "to_address": row.to_address,
         "value": row.amount, "status": row.status, "created_at": row.created_at,
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn tx_audit_stats(
     State(state): State<SharedState>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let total = sqlx::query_scalar!("SELECT COUNT(*) FROM transaction_audit")
         .fetch_one(&state.db).await.unwrap_or(0);
     let pending = sqlx::query_scalar!("SELECT COUNT(*) FROM transaction_audit WHERE status = 'pending'")
@@ -162,13 +214,13 @@ async fn tx_audit_stats(
     let data = DataWrapper::object(serde_json::json!({
         "total": total, "pending": pending, "confirmed": confirmed, "failed": failed,
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn tx_audit_pending(
     State(state): State<SharedState>,
     Query(params): Query<SessionQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let offset = (params.page - 1).max(0) * params.page_size;
     let items = sqlx::query!(
         "SELECT id, tx_hash, tx_type, from_address, to_address, amount, status, created_at
@@ -187,5 +239,5 @@ async fn tx_audit_pending(
     })).collect();
 
     let data = DataWrapper::list(items, Pagination::new(total, params.page, params.page_size));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }

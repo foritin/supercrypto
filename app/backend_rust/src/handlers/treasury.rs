@@ -5,7 +5,7 @@ use axum::{
 use serde::Deserialize;
 
 use crate::error::AppError;
-use crate::schemas::common::{ApiResponse, DataWrapper, Pagination};
+use crate::schemas::common::{DataWrapper, Pagination};
 use crate::state::SharedState;
 
 #[derive(Debug, Deserialize)]
@@ -34,7 +34,7 @@ pub fn routes() -> Router<SharedState> {
 async fn list_queue(
     State(state): State<SharedState>,
     Query(params): Query<ListQuery>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let offset = (params.page - 1).max(0) * params.page_size;
     let status_filter = params.status.as_deref().unwrap_or("%");
     let items = sqlx::query!(
@@ -58,13 +58,13 @@ async fn list_queue(
     })).collect();
 
     let data = DataWrapper::list(items, Pagination::new(total, params.page, params.page_size));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn get_queue_item(
     State(state): State<SharedState>,
     Path(id): Path<i64>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let row = sqlx::query!(
         "SELECT id, subscription_id, wallet_address, amount, status, created_at, updated_at
          FROM redemption_request WHERE id = $1", id
@@ -78,14 +78,14 @@ async fn get_queue_item(
         "amount": row.amount, "status": row.status,
         "created_at": row.created_at, "updated_at": row.updated_at,
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn sign_queue(
-    State(state): State<SharedState>,
+    State(_state): State<SharedState>,
     Path(id): Path<i64>,
     Json(req): Json<serde_json::Value>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let signer = req.get("signer").and_then(|v| v.as_str())
         .ok_or_else(|| AppError::BadRequest("signer required".to_string()))?;
     let signature = req.get("signature").and_then(|v| v.as_str())
@@ -96,27 +96,27 @@ async fn sign_queue(
     let data = DataWrapper::object(serde_json::json!({
         "id": id, "status": "signed", "signer": signer, "signature": signature
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn execute_queue(
     State(state): State<SharedState>,
     Path(id): Path<i64>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     sqlx::query!(
         "UPDATE redemption_request SET status = 'executed', updated_at = CURRENT_TIMESTAMP WHERE id = $1",
         id
     ).execute(&state.db).await?;
 
     let data = DataWrapper::object(serde_json::json!({"id": id, "status": "executed"}));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn reject_queue(
     State(state): State<SharedState>,
     Path(id): Path<i64>,
     Json(req): Json<serde_json::Value>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let reason = req.get("reason").and_then(|v| v.as_str()).unwrap_or("rejected");
     sqlx::query!(
         "UPDATE redemption_request SET status = 'rejected', updated_at = CURRENT_TIMESTAMP WHERE id = $1",
@@ -124,12 +124,12 @@ async fn reject_queue(
     ).execute(&state.db).await?;
 
     let data = DataWrapper::object(serde_json::json!({"id": id, "status": "rejected", "reason": reason}));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn multisig_status(
     State(state): State<SharedState>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     // 查询 TreasuryMultisig 合约地址
     let row = sqlx::query!(
         "SELECT address FROM contract_deployment WHERE name = 'TreasuryMultisig' AND network = 'hardhat' AND status = 'active'"
@@ -142,12 +142,12 @@ async fn multisig_status(
         "signers": [],
         "pending_count": 0,
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }
 
 async fn treasury_stats(
     State(state): State<SharedState>,
-) -> Result<Json<ApiResponse<DataWrapper<serde_json::Value>>>, AppError> {
+) -> Result<Json<DataWrapper<serde_json::Value>>, AppError> {
     let pending = sqlx::query_scalar!("SELECT COUNT(*) FROM redemption_request WHERE status = 'pending'")
         .fetch_one(&state.db).await.unwrap_or(0);
     let executed = sqlx::query_scalar!("SELECT COUNT(*) FROM redemption_request WHERE status = 'executed'")
@@ -161,5 +161,5 @@ async fn treasury_stats(
         "pending": pending, "executed": executed, "rejected": rejected,
         "total_amount": total_amount.to_string(),
     }));
-    Ok(Json(ApiResponse::ok(data)))
+    Ok(Json(data))
 }

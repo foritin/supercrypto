@@ -154,6 +154,13 @@ pub async fn register_to_provider(
     let key_hash = provider::compute_key_hash(&req.key_name);
     let key_hash_str = key_hash.to_string();
 
+    // Look up contract_name from config by matching provider_key
+    let configs = contract_repo::list_configs(db, None).await?;
+    let contract_name = configs
+        .iter()
+        .find(|c| c.provider_key.as_deref() == Some(&req.key_name))
+        .map(|c| c.contract_name.as_str());
+
     contract_repo::upsert_registry(
         db,
         &req.provider_address,
@@ -163,6 +170,7 @@ pub async fn register_to_provider(
         &key_hash_str,
         true,
         &req.contract_address,
+        contract_name,
     )
     .await?;
 
@@ -178,6 +186,18 @@ pub async fn sync_registry(
     let onchain_pairs =
         provider::get_all_registered_addresses(&config.chain.rpc_url, provider_address).await?;
 
+    // Build reverse map: key_hash_str -> (key_name, contract_name) from configs
+    let configs = contract_repo::list_configs(db, None).await?;
+    let hash_to_info: std::collections::HashMap<String, (&str, &str)> = configs
+        .iter()
+        .filter_map(|c| {
+            c.provider_key.as_ref().and_then(|pk| {
+                let kh = provider::compute_key_hash(pk).to_string();
+                Some((kh, (pk.as_str(), c.contract_name.as_str())))
+            })
+        })
+        .collect();
+
     let mut synced_count = 0i64;
     let mut details = Vec::new();
 
@@ -186,20 +206,28 @@ pub async fn sync_registry(
         let addr_str = addr.to_string();
         let is_zero = addr_str.eq_ignore_ascii_case(provider::ZERO_ADDRESS);
 
+        // Resolve key_name and contract_name from reverse map; fall back to key_hash_str
+        let (key_name, contract_name) = hash_to_info
+            .get(&key_hash_str)
+            .copied()
+            .unwrap_or((key_hash_str.as_str(), key_hash_str.as_str()));
+
         contract_repo::upsert_registry(
             db,
             provider_address,
             config.chain.chain_id as i64,
             &config.chain.network,
-            &key_hash_str,
+            key_name,
             &key_hash_str,
             !is_zero,
             &addr_str,
+            Some(contract_name),
         )
         .await?;
 
         synced_count += 1;
         details.push(serde_json::json!({
+            "key": key_name,
             "key_hash": key_hash_str,
             "registered_address": addr_str,
             "is_registered": !is_zero,
@@ -315,7 +343,7 @@ fn get_effective_key_hash(config: &crate::models::contract::ContractConfig, fall
 /// Prepare register: return calldata info for frontend wallet signing
 pub async fn prepare_register(
     db: &SqlitePool,
-    config: &AppConfig,
+    _config: &AppConfig,
     req: &PrepareRegisterRequest,
 ) -> Result<serde_json::Value, AppError> {
     let contract = contract_repo::get_deployment_by_name(db, &req.contract_name)
@@ -352,7 +380,7 @@ pub async fn confirm_register(
     config: &AppConfig,
     req: &ConfirmRegisterRequest,
 ) -> Result<serde_json::Value, AppError> {
-    let contract = contract_repo::get_deployment_by_name(db, &req.contract_name)
+    let _contract = contract_repo::get_deployment_by_name(db, &req.contract_name)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("contract {} not found", req.contract_name)))?;
 
@@ -385,7 +413,16 @@ pub async fn confirm_register(
         &key_hash,
         true,
         &on_chain_address,
+        Some(&req.contract_name),
     ).await?;
+
+    // Also update contract_config so list_contracts can JOIN on provider_key_hash
+    let _ = sqlx::query!(
+        "UPDATE contract_config SET provider_key = $1, provider_key_hash = $2 WHERE contract_name = $3",
+        effective_key, key_hash, req.contract_name
+    )
+    .execute(db)
+    .await;
 
     Ok(serde_json::json!({
         "status": "registered",
@@ -399,7 +436,7 @@ pub async fn confirm_register(
 /// Prepare unregister: return calldata info with zero address
 pub async fn prepare_unregister(
     db: &SqlitePool,
-    config: &AppConfig,
+    _config: &AppConfig,
     req: &PrepareUnregisterRequest,
 ) -> Result<serde_json::Value, AppError> {
     let cfg = contract_repo::get_config_by_name(db, &req.contract_name).await?;
@@ -429,7 +466,7 @@ pub async fn prepare_unregister(
 /// Confirm unregister: verify on-chain zero address, soft delete DB record
 pub async fn confirm_unregister(
     db: &SqlitePool,
-    config: &AppConfig,
+    _config: &AppConfig,
     req: &ConfirmUnregisterRequest,
 ) -> Result<serde_json::Value, AppError> {
     let cfg = contract_repo::get_config_by_name(db, &req.contract_name).await?;
@@ -445,6 +482,14 @@ pub async fn confirm_unregister(
     let deleted_by = format!("unregister_tx:{}", &req.tx_hash[..req.tx_hash.len().min(10)]);
     contract_repo::soft_delete_registry(db, &provider.address, &effective_key, &deleted_by).await?;
 
+    // Clear provider_key in contract_config
+    let _ = sqlx::query!(
+        "UPDATE contract_config SET provider_key = NULL, provider_key_hash = NULL WHERE contract_name = $1",
+        req.contract_name
+    )
+    .execute(db)
+    .await;
+
     Ok(serde_json::json!({
         "success": true,
         "contract_name": req.contract_name,
@@ -457,7 +502,7 @@ pub async fn confirm_unregister(
 /// Prepare set treasury: return calldata info for setting TREASURY key
 pub async fn prepare_set_treasury(
     db: &SqlitePool,
-    config: &AppConfig,
+    _config: &AppConfig,
     req: &PrepareSetTreasuryRequest,
 ) -> Result<serde_json::Value, AppError> {
     let treasury_contract = contract_repo::get_deployment_by_name(db, &req.treasury_contract_name)
@@ -488,7 +533,7 @@ pub async fn confirm_set_treasury(
     config: &AppConfig,
     req: &ConfirmSetTreasuryRequest,
 ) -> Result<serde_json::Value, AppError> {
-    let treasury_contract = contract_repo::get_deployment_by_name(db, &req.treasury_contract_name)
+    let _treasury_contract = contract_repo::get_deployment_by_name(db, &req.treasury_contract_name)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("contract {} not found", req.treasury_contract_name)))?;
 
@@ -515,6 +560,7 @@ pub async fn confirm_set_treasury(
         &key_hash,
         on_chain_address != provider::ZERO_ADDRESS,
         &on_chain_address,
+        Some(&req.treasury_contract_name),
     ).await?;
 
     Ok(serde_json::json!({
@@ -699,7 +745,7 @@ pub async fn update_registry_record(
 
 /// Validate contract addresses (format + on-chain existence)
 pub async fn validate_contracts(
-    db: &SqlitePool,
+    _db: &SqlitePool,
     config: &AppConfig,
     req: &ValidateContractRequest,
 ) -> Result<serde_json::Value, AppError> {
@@ -796,5 +842,243 @@ pub async fn get_contract_dependencies(
         "contract_name": name,
         "depends_on": depends_on,
         "set_functions": set_functions,
+    }))
+}
+
+/// Get contract status list (compatible with Python backend /admin/contracts/status)
+pub async fn get_contract_status(
+    db: &SqlitePool,
+    config: &AppConfig,
+) -> Result<serde_json::Value, AppError> {
+    use std::collections::HashMap;
+
+    let network = &config.chain.network;
+
+    // Load all configs, deployments, registries
+    let configs = contract_repo::list_configs(db, None).await?;
+    let (deployments, _) = contract_repo::list_deployments(db, Some(network), None, None, 1, 1000).await?;
+    let registries = contract_repo::list_registry(db, None).await?;
+
+    // Build lookup maps
+    let contract_map: HashMap<&str, &crate::models::contract::ContractDeployment> =
+        deployments.iter().map(|d| (d.name.as_str(), d)).collect();
+    // Registry lookup by key (provider_key), not by contract_name
+    let registry_by_key: HashMap<&str, &crate::models::contract::ProviderRegistry> =
+        registries.iter().map(|r| (r.key.as_str(), r)).collect();
+    // Map contract_name -> provider_key from configs (for dependency lookups)
+    let name_to_key: HashMap<&str, &str> = configs.iter()
+        .filter_map(|c| c.provider_key.as_ref().map(|pk| (c.contract_name.as_str(), pk.as_str())))
+        .collect();
+
+    // Type config lookup
+    let type_config = |ct: &str| -> serde_json::Value {
+        match ct {
+            "registry" => serde_json::json!({"label": "注册中心", "color": "purple", "icon": "📦"}),
+            "kyc" => serde_json::json!({"label": "KYC", "color": "blue", "icon": "🔐"}),
+            "governance" => serde_json::json!({"label": "治理", "color": "indigo", "icon": "⚖️"}),
+            "stablecoin" => serde_json::json!({"label": "稳定币", "color": "green", "icon": "💵"}),
+            "token" => serde_json::json!({"label": "代币", "color": "yellow", "icon": "🪙"}),
+            "defi" => serde_json::json!({"label": "DeFi", "color": "orange", "icon": "📊"}),
+            _ => serde_json::json!({"label": ct, "color": "gray", "icon": "📄"}),
+        }
+    };
+
+    // Build dep status helper
+    let build_dep_status = |deps: &Option<serde_json::Value>, registry_by_key: &HashMap<&str, &crate::models::contract::ProviderRegistry>, name_to_key: &HashMap<&str, &str>| -> Vec<serde_json::Value> {
+        let mut result = Vec::new();
+        if let Some(arr) = deps.as_ref().and_then(|d| d.as_array()) {
+            for v in arr {
+                if let Some(contract_name) = v.as_str() {
+                    // Look up by provider_key (via name_to_key map), then by contract_name as fallback
+                    let dep_reg = name_to_key.get(contract_name)
+                        .and_then(|pk| registry_by_key.get(pk))
+                        .or_else(|| registry_by_key.get(contract_name));
+                    result.push(serde_json::json!({
+                        "key": contract_name,
+                        "contract": contract_name,
+                        "registered": dep_reg.map(|r| r.is_registered == 1).unwrap_or(false),
+                        "address": dep_reg.map(|r| r.registered_address.clone()),
+                    }));
+                }
+            }
+        }
+        result
+    };
+
+    let zero_addr = "0x0000000000000000000000000000000000000000";
+
+    // Check treasury configured
+    let treasury_configured = registry_by_key.values().any(|r| {
+        r.key == "TREASURY"
+            && r.is_registered == 1
+            && !r.registered_address.eq_ignore_ascii_case(zero_addr)
+            && r.is_deleted == 0
+    });
+
+    let mut global_contracts = Vec::new();
+    let mut project_groups: HashMap<&str, Vec<serde_json::Value>> = HashMap::new();
+    let mut needs_update_count = 0i64;
+
+    for cfg in &configs {
+        let contract = contract_map.get(cfg.contract_name.as_str()).copied();
+        let db_addr = contract.map(|c| c.address.as_str());
+        // Look up registry by provider_key (falls back to contract_name for legacy data)
+        let registry = cfg.provider_key.as_deref()
+            .and_then(|pk| registry_by_key.get(pk))
+            .copied()
+            .or_else(|| registry_by_key.get(cfg.contract_name.as_str()).copied());
+
+        let chain_addr = registry
+            .filter(|r| r.is_registered == 1)
+            .map(|r| r.registered_address.as_str());
+
+        // Resolve status
+        let (status, update_inc) = if db_addr.is_none() || db_addr == Some("") {
+            ("not_deployed", 0i64)
+        } else if let (Some(chain), Some(db)) = (chain_addr, db_addr) {
+            if !chain.eq_ignore_ascii_case(db) {
+                ("mismatch", 1)
+            } else {
+                ("synced", 0)
+            }
+        } else if cfg.provider_key.is_some() && registry.is_none() {
+            ("not_registered", 0)
+        } else if registry.map(|r| r.is_registered == 0).unwrap_or(false) {
+            ("not_registered", 0)
+        } else {
+            ("synced", 0)
+        };
+        needs_update_count += update_inc;
+
+        let contract_data = serde_json::json!({
+            "id": contract.map(|c| c.id),
+            "name": cfg.contract_name,
+            "project": cfg.project_name,
+            "address": db_addr,
+            "deployed": db_addr.is_some() && db_addr != Some(""),
+            "deployed_at": contract.and_then(|c| c.created_at.map(|t| t.to_string())),
+            "registration_status": status,
+            "provider_address": chain_addr,
+            "provider_key": cfg.provider_key,
+            "dependencies": build_dep_status(&cfg.required_deps, &registry_by_key, &name_to_key),
+            "optional_dependencies": build_dep_status(&cfg.optional_deps, &registry_by_key, &name_to_key),
+            "scope": cfg.scope,
+            "contract_type": cfg.contract_type,
+            "type_config": type_config(&cfg.contract_type),
+            "description": cfg.description,
+            "last_synced": registry.and_then(|r| r.last_synced_at.map(|t| t.to_string())),
+            "is_deleted": registry.map(|r| r.is_deleted == 1).unwrap_or(false),
+            "is_primary": if cfg.is_primary == 1 { true } else { contract.map(|c| c.is_primary == 1).unwrap_or(false) },
+            "symbol": contract.map(|c| c.name.clone()),
+            "actions": serde_json::json!({
+                "can_set_primary": cfg.scope == "project" && cfg.is_primary == 0,
+                "can_unset_primary": cfg.is_primary == 1,
+                "disabled_reason": null,
+            }),
+        });
+
+        if cfg.scope == "global" {
+            global_contracts.push(contract_data);
+        } else {
+            project_groups
+                .entry(cfg.project_name.as_str())
+                .or_default()
+                .push(contract_data);
+        }
+    }
+
+    // Build project_contracts array
+    let project_configs: HashMap<&str, serde_json::Value> = [
+        ("vanke", serde_json::json!({"name": "vanke", "label": "VANKE", "color": "green"})),
+    ]
+    .into_iter()
+    .collect();
+
+    let mut project_contracts = Vec::new();
+    for (pn, contracts) in &project_groups {
+        let has_primary = contracts.iter().any(|c| {
+            c.get("is_primary").and_then(|v| v.as_bool()).unwrap_or(false)
+        });
+        let primary_contract = contracts.iter().find(|c| {
+            c.get("is_primary").and_then(|v| v.as_bool()).unwrap_or(false)
+        });
+
+        let all_registered = contracts.iter().all(|c| {
+            c.get("registration_status").and_then(|v| v.as_str()) == Some("synced")
+        });
+        let deps_all_registered = contracts.iter().all(|c| {
+            c.get("dependencies").and_then(|v| v.as_array()).map(|deps| {
+                deps.iter().all(|d| d.get("registered").and_then(|v| v.as_bool()).unwrap_or(false))
+            }).unwrap_or(true)
+        });
+
+        let readiness = if all_registered && deps_all_registered && has_primary && treasury_configured {
+            "ready"
+        } else if all_registered || has_primary {
+            "partially_ready"
+        } else {
+            "not_ready"
+        };
+
+        project_contracts.push(serde_json::json!({
+            "project": pn,
+            "config": project_configs.get(pn).cloned().unwrap_or(
+                serde_json::json!({"name": pn, "label": pn, "color": "gray"})
+            ),
+            "contracts": contracts,
+            "has_primary": has_primary,
+            "primary_contract": primary_contract,
+            "is_ready": readiness == "ready",
+            "project_readiness": readiness,
+            "readiness_details": {
+                "all_registered": all_registered,
+                "no_missing_deps": deps_all_registered,
+                "has_primary": has_primary,
+                "treasury_configured": treasury_configured,
+            },
+            "is_bound_to_asset": false,
+            "bound_asset": null,
+            "can_bind_asset": false,
+        }));
+    }
+
+    // Build contract_types map
+    let contract_types: serde_json::Value = serde_json::json!({
+        "registry": type_config("registry"),
+        "kyc": type_config("kyc"),
+        "governance": type_config("governance"),
+        "stablecoin": type_config("stablecoin"),
+        "token": type_config("token"),
+        "defi": type_config("defi"),
+    });
+
+    // Build projects list
+    let projects: Vec<serde_json::Value> = project_configs
+        .into_iter()
+        .map(|(_k, v)| v)
+        .collect();
+
+    let total = global_contracts.len() as i64
+        + project_groups.values().map(|v| v.len() as i64).sum::<i64>();
+
+    let global_count = global_contracts.len() as i64;
+    let project_count = project_groups.len() as i64;
+    let deployed = contract_map.len() as i64;
+    let registered = registry_by_key.values().filter(|r| r.is_registered == 1).count() as i64;
+
+    Ok(serde_json::json!({
+        "global_contracts": global_contracts,
+        "project_contracts": project_contracts,
+        "contract_types": contract_types,
+        "projects": projects,
+        "network": network,
+        "needs_update_count": needs_update_count,
+        "stats": {
+            "total": total,
+            "global_count": global_count,
+            "project_count": project_count,
+            "deployed": deployed,
+            "registered": registered,
+        },
     }))
 }

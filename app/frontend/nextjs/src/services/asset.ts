@@ -97,6 +97,7 @@ export interface AssetListItem {
   subscription_start_at: string | null
   subscription_end_at: string | null
   is_available: boolean
+  contract_address: string | null
 }
 
 export interface ContractBindingItem {
@@ -141,6 +142,7 @@ export interface AssetDetail {
   contract_address: string | null
   logo_url: string | null  // Logo 预签名 URL（从 AssetMedia 获取）
   frame_style: FrameStyle | null  // Logo 边框样式
+  cover_image_url: string | null  // 封面图 URL（从 AssetMedia 获取）
   status: AssetStatus
   is_available: boolean
   environment: string

@@ -28,5 +28,15 @@ pub async fn request_logging_middleware(
         "request completed"
     );
 
+    if status.is_server_error() || status.is_client_error() {
+        tracing::warn!(
+            method = %method,
+            uri = %uri,
+            status = %status,
+            duration_ms = %duration.as_millis(),
+            "request failed"
+        );
+    }
+
     response
 }

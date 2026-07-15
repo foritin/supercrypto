@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/select'
 import { useKycStatus, getKycStatusInfo } from '@/hooks/use-kyc-status'
 import { notification } from '@/lib/notification'
+import { truncateAddress } from '@/lib/utils'
 import { devToolsService, type TokenRecipient } from '@/services/dev-tools'
 import { KycStatus, kycService } from '@/services/kyc'
 import { usePlatformInfoStore } from '@/stores/platform-info-store'
@@ -119,25 +120,33 @@ export function QuickKycPanel() {
     try {
       const prepared = await kycService.quickApprove(selectedAddress)
 
-      if (prepared.on_chain_sync_status === 'synced') {
+      let kycAbi = usePlatformInfoStore.getState().getAbi('KYCManager')
+      let kycAddress = usePlatformInfoStore.getState().getAddress('KYCManager')
+      if (!kycAbi || kycAbi.length === 0 || !kycAddress) {
+        await usePlatformInfoStore.getState().refresh()
+        kycAbi = usePlatformInfoStore.getState().getAbi('KYCManager')
+        kycAddress = usePlatformInfoStore.getState().getAddress('KYCManager')
+      }
+
+      if (!kycAbi || kycAbi.length === 0 || !kycAddress) {
+        notification.error('KYC contract ABI/address not found')
+        return
+      }
+
+      // 强制检查链上状态，不依赖数据库的 on_chain_sync_status
+      const isChainVerified = await publicClient.readContract({
+        address: kycAddress as `0x${string}`,
+        abi: kycAbi,
+        functionName: 'is_verified',
+        args: [selectedAddress as `0x${string}`],
+      })
+
+      if (isChainVerified) {
         notification.success('Already verified on-chain, no wallet signature required')
         void loadRecipients()
         if (isCurrentSelected) {
           void refetchCurrentUserKyc()
         }
-        return
-      }
-
-      let kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
-      let kycAddress = usePlatformInfoStore.getState().getAddress('KYC')
-      if (!kycAbi || kycAbi.length === 0 || !kycAddress) {
-        await usePlatformInfoStore.getState().refresh()
-        kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
-        kycAddress = usePlatformInfoStore.getState().getAddress('KYC')
-      }
-
-      if (!kycAbi || kycAbi.length === 0 || !kycAddress) {
-        notification.error('KYC contract ABI/address not found')
         return
       }
 
@@ -149,8 +158,29 @@ export function QuickKycPanel() {
       })
 
       if (!isVerifier) {
-        notification.error('Current wallet is not a KYC verifier')
-        return
+        // 当前钱包不是 verifier，检查是否是 owner，如果是则自动授权
+        const owner = await publicClient.readContract({
+          address: kycAddress as `0x${string}`,
+          abi: kycAbi,
+          functionName: 'owner',
+          args: [],
+        })
+
+        const isOwner = (owner as string).toLowerCase() === currentAddress.toLowerCase()
+        if (!isOwner) {
+          notification.error('Current wallet is not a KYC verifier or owner')
+          return
+        }
+
+        notification.info('Authorizing wallet as KYC verifier...')
+        const verifierTx = await walletClient.writeContract({
+          address: kycAddress as `0x${string}`,
+          abi: kycAbi,
+          functionName: 'admin_set_verifier',
+          args: [currentAddress as `0x${string}`, true],
+        })
+        await publicClient.waitForTransactionReceipt({ hash: verifierTx })
+        notification.success('Wallet authorized as KYC verifier')
       }
 
       const countryCode = prepared.country_code || 'US'
@@ -190,12 +220,12 @@ export function QuickKycPanel() {
 
     setIsResetting(true)
     try {
-      let kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
-      let kycAddress = usePlatformInfoStore.getState().getAddress('KYC')
+      let kycAbi = usePlatformInfoStore.getState().getAbi('KYCManager')
+      let kycAddress = usePlatformInfoStore.getState().getAddress('KYCManager')
       if (!kycAbi || kycAbi.length === 0 || !kycAddress) {
         await usePlatformInfoStore.getState().refresh()
-        kycAbi = usePlatformInfoStore.getState().getAbi('KYC')
-        kycAddress = usePlatformInfoStore.getState().getAddress('KYC')
+        kycAbi = usePlatformInfoStore.getState().getAbi('KYCManager')
+        kycAddress = usePlatformInfoStore.getState().getAddress('KYCManager')
       }
 
       if (!kycAbi || kycAbi.length === 0 || !kycAddress) {
@@ -300,9 +330,10 @@ export function QuickKycPanel() {
                   const isCurrent = !!(
                     currentAddress && r.address.toLowerCase() === currentAddress.toLowerCase()
                   )
+                  const displayLabel = r.label || truncateAddress(r.address)
                   return (
                     <SelectItem key={r.address} value={r.address}>
-                      {isCurrent ? `[Current] ${r.label}` : r.label}
+                      {isCurrent ? `[Current] ${displayLabel}` : displayLabel}
                     </SelectItem>
                   )
                 })}

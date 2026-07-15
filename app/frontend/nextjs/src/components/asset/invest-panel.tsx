@@ -292,7 +292,7 @@ export function InvestPanel({
             <TooltipTrigger asChild>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium cursor-help transition-colors hover:bg-blue-500/15">
                 <Clock className="h-3.5 w-3.5" />
-                <span>{t("subscription:subscription.yield.tPlusOneBadge")}</span>
+                <span>{t("subscription.yield.tPlusOneBadge")}</span>
                 <Info className="h-3 w-3 opacity-60" />
               </div>
             </TooltipTrigger>
@@ -301,7 +301,7 @@ export function InvestPanel({
               className="max-w-[280px] bg-[#0B1426] border-white/10"
             >
               <p className="text-sm text-white/70">
-                {t("subscription:subscription.yield.tPlusOneTooltip")}
+                {t("subscription.yield.tPlusOneTooltip")}
               </p>
             </TooltipContent>
           </Tooltip>

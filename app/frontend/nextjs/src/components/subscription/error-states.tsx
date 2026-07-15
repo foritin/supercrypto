@@ -218,7 +218,7 @@ export function ErrorStatePanel({
       },
     };
     
-    return reason ? configs[reason] : configs.unknown;
+    return reason ? (configs[reason] || configs.unknown) : configs.unknown;
   }, [reason, context.errorMessage, requiredChainId, currentChainId, resolveNetworkName, t]);
   
   const Icon = config.icon;
@@ -463,6 +463,7 @@ function getNetworkName(chainId?: number): string | undefined {
     56: "BSC",
     97: "BSC Testnet",
     8453: "Base",
+    31337: "Hardhat",
   };
   return networks[chainId || 0];
 }

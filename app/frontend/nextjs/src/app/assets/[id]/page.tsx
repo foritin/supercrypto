@@ -208,7 +208,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
             <div className="lg:col-span-2">
               {/* 图片画廊 */}
               <MediaGallery
-                coverImage={asset.image_url}
+                coverImage={asset.cover_image_url ?? asset.image_url}
                 assetType={asset.asset_type}
                 {...(asset.media ? { media: asset.media } : {})}
               />
@@ -263,11 +263,11 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                         <div className="flex flex-col gap-1">
                           <span className="text-white/50 text-xs">{t("assets.financials.apy3m")}</span>
-                          <span className="text-white text-xl font-semibold">{asset.apy_3m.toFixed(1)}%</span>
+                          <span className="text-white text-xl font-semibold">{(asset.apy_3m * 100).toFixed(1)}%</span>
                         </div>
                         <div className="flex flex-col gap-1">
                           <span className="text-white/50 text-xs">{t("assets.financials.apy6m")}</span>
-                          <span className="text-white text-xl font-semibold">{asset.apy_6m.toFixed(1)}%</span>
+                          <span className="text-white text-xl font-semibold">{(asset.apy_6m * 100).toFixed(1)}%</span>
                         </div>
                         <div className="flex flex-col gap-1">
                           <span className="text-white/50 text-xs">{t("assets.financials.apy12m")}</span>

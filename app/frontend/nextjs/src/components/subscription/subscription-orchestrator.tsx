@@ -173,6 +173,7 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
     approveUSDC,
     subscribe,
     estimateNetworkFee: estimateContractNetworkFee,
+    checkTxReceipt,
     reset: resetContract,
   } = useSubscriptionContract();
   
@@ -180,12 +181,14 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
   const { 
     formatted: usdtBalance, 
     balance: usdtRaw, 
-    isLoading: usdtLoading 
+    isLoading: usdtLoading,
+    refetch: refetchUsdt,
   } = useTokenBalance(addresses?.usdt ?? undefined);
   const { 
     formatted: usdcBalance, 
     balance: usdcRaw, 
-    isLoading: usdcLoading 
+    isLoading: usdcLoading,
+    refetch: refetchUsdc,
   } = useTokenBalance(addresses?.usdc ?? undefined);
   
   // State
@@ -222,6 +225,7 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
         loading: usdtLoading,
         allowance: usdtAllowance ?? 0,
         approve: approveUSDT,
+        refetch: refetchUsdt,
       };
     }
     return {
@@ -230,8 +234,9 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
       loading: usdcLoading,
       allowance: usdcAllowance ?? 0,
       approve: approveUSDC,
+      refetch: refetchUsdc,
     };
-  }, [usdtBalance, usdtRaw, usdtLoading, usdtAllowance, usdcBalance, usdcRaw, usdcLoading, usdcAllowance, approveUSDT, approveUSDC]);
+  }, [usdtBalance, usdtRaw, usdtLoading, usdtAllowance, approveUSDT, refetchUsdt, usdcBalance, usdcRaw, usdcLoading, usdcAllowance, approveUSDC, refetchUsdc]);
   
   // Calculate if approval is needed
   const needsApproval = useCallback((amount: number, tokenType: TokenType) => {
@@ -345,11 +350,11 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
       if (apiError.response?.status === 401) {
         return { success: false, error: "jwt_expired" };
       }
-      return { success: false, ...(apiError.message ? { error: apiError.message } : {}) };
+      return { success: false, error: "backend_failed" };
     }
   }, []);
   
-  // Monitor transaction receipt
+  // Monitor transaction receipt - directly checks on-chain status
   const monitorReceipt = useCallback(async (
     txHash: string
   ): Promise<{ success: boolean; receipt?: MonitoredReceipt; error?: FailureReason }> => {
@@ -358,17 +363,17 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
       
       const checkReceipt = async () => {
         try {
-          // Check via contract service
-          const receipt = await subscriptionService.getTransactionReceipt(txHash);
+          // Check directly on-chain (not via backend DB which may be stale)
+          const receipt = await checkTxReceipt(txHash);
           
           if (receipt) {
-            if (receipt.status === "success") {
+            if (receipt.success) {
               resolve({ 
                 success: true, 
                 receipt: {
-                  ...(receipt.block_number !== undefined ? { blockNumber: receipt.block_number } : {}),
-                  gasUsed: BigInt(receipt.gas_used ?? "0"),
-                  effectiveGasPrice: BigInt(receipt.effective_gas_price ?? "0"),
+                  ...(receipt.blockNumber !== undefined ? { blockNumber: receipt.blockNumber } : {}),
+                  gasUsed: receipt.gasUsed ?? BigInt(0),
+                  effectiveGasPrice: receipt.effectiveGasPrice ?? BigInt(0),
                 }
               });
               return;
@@ -397,7 +402,7 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
       
       checkReceipt();
     });
-  }, []);
+  }, [checkTxReceipt]);
   
   // Confirm with backend
   const confirmWithBackend = useCallback(async (
@@ -464,19 +469,35 @@ export function useSubscriptionOrchestrator(): UseSubscriptionOrchestratorReturn
           setTxState("failed");
           return false;
         }
+        // Wait for the wallet to settle and refetch on-chain allowance
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+        await tokenData.refetch();
+        await new Promise((resolve) => setTimeout(resolve, 800));
       }
       
       // Step 4: Submit transaction
       setTxState("awaiting_signature");
       const txResult = await subscribe(params.amount, params.lockPeriod, params.tokenType);
       
-      if (!txResult) {
-        setFailureReason("user_rejected");
+      if (!txResult.txHash) {
+        if (txResult.rejected) {
+          setFailureReason("user_rejected");
+        } else if (txResult.error?.includes("KYC")) {
+          setFailureReason("kyc_rejected");
+        } else if (txResult.error?.includes("minimum")) {
+          setFailureReason("insufficient_balance");
+        } else if (txResult.error?.includes("Cannot invest")) {
+          setFailureReason("chain_failed");
+        } else {
+          setFailureReason("chain_failed");
+        }
+        const errorMessage = txResult.error ?? undefined;
+        setContext((prev) => ({ ...prev, errorMessage }) as TransactionContext);
         setTxState("failed");
         return false;
       }
       
-      const txHash = txResult;
+      const txHash = txResult.txHash;
       setContext(prev => ({ ...prev, txHash }));
       
       // Step 5: Broadcasting

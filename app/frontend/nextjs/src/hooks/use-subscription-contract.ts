@@ -64,6 +64,27 @@ const GAS_ESTIMATE_BUFFER_BPS = 12000n; // +20%
 const BPS_BASE = 10000n;
 const FALLBACK_GAS_LIMIT = 5_000_000n;
 const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000" as Address;
+const isUserRejected = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error);
+  const code = (error as { code?: string | number })?.code;
+  const userRejectedCodes = [4001, "ACTION_REJECTED", "USER_REJECTED"];
+  const userRejectedMessages = [
+    "user rejected",
+    "user denied",
+    "request rejected",
+    "rejected the request",
+    "transaction was rejected",
+    "user cancelled",
+    "user canceled",
+    "cancelled by user",
+    "canceled by user",
+  ];
+  const normalized = message.toLowerCase();
+  return (
+    (code !== undefined && userRejectedCodes.includes(code)) ||
+    userRejectedMessages.some((m) => normalized.includes(m))
+  );
+};
 const PROVIDER_ADDRESS_CACHE_TTL_MS = 15_000;
 const SUBSCRIBE_PRECHECK_CACHE_TTL_MS = 8_000;
 const NETWORK_FEE_CACHE_TTL_MS = 8_000;
@@ -253,10 +274,16 @@ export function useSubscriptionContract() {
           }
         }
       } catch {
-        // provider read failed, keep nulls to avoid false-positive tx attempts
+        // provider read failed, fall back to backend-provided addresses
       }
 
-      const value = { usdt, usdc, kycManager, rwaToken };
+      // Fall back to backend-provided addresses if on-chain resolution failed
+      const value = {
+        usdt: usdt || addrs.usdt,
+        usdc: usdc || addrs.usdc,
+        kycManager,
+        rwaToken,
+      };
       providerAddressesCacheRef.current = {
         subscription: subscriptionAddr,
         value,
@@ -888,7 +915,8 @@ export function useSubscriptionContract() {
         return true;
       } catch (err) {
         console.error("USDC Approve failed:", err);
-        setError((err as Error).message || "USDC Approve failed");
+        const isRejected = isUserRejected(err);
+        setError(isRejected ? "User rejected the approval" : ((err as Error).message || "USDC Approve failed"));
         setTxState("error");
         return false;
       }
@@ -976,7 +1004,8 @@ export function useSubscriptionContract() {
         return true;
       } catch (err) {
         console.error("Approve failed:", err);
-        setError((err as Error).message || "Approve failed");
+        const isRejected = isUserRejected(err);
+        setError(isRejected ? "User rejected the approval" : ((err as Error).message || "Approve failed"));
         setTxState("error");
         return false;
       }
@@ -990,16 +1019,16 @@ export function useSubscriptionContract() {
       amount: number,
       lockPeriodMonths: number,
       tokenType: "USDT" | "USDC" = "USDT"
-    ): Promise<string | null> => {
+    ): Promise<{ txHash: string | null; error: string | null; rejected: boolean }> => {
       if (isSubmitting) {
         console.warn("Subscription already in progress");
-        return null;
+        return { txHash: null, error: "Subscription already in progress", rejected: false };
       }
 
       const addrs = addressesRef.current;
       if (!walletClient || !addrs?.subscription || !publicClient || !address) {
         setError("Wallet not connected");
-        return null;
+        return { txHash: null, error: "Wallet not connected", rejected: false };
       }
 
       try {
@@ -1014,42 +1043,43 @@ export function useSubscriptionContract() {
         if (!paymentToken) {
           setError("Provider missing payment token binding (USDT/USDC). Please register provider dependencies.");
           setTxState("error");
-          return null;
+          return { txHash: null, error: "Provider missing payment token binding", rejected: false };
         }
 
         if (!resolved.rwaToken) {
           setError("Provider missing RWA token binding. Please register provider dependencies.");
           setTxState("error");
-          return null;
+          return { txHash: null, error: "Provider missing RWA token binding", rejected: false };
         }
 
         if (!resolved.kycManager) {
           setError("Provider missing KYC manager binding. Please register provider dependencies.");
           setTxState("error");
-          return null;
+          return { txHash: null, error: "Provider missing KYC manager binding", rejected: false };
         }
 
         // 链上预检：避免节点返回笼统的 "Internal error"
+        console.log("[Subscription] Checking contract precheck...");
         const { paused: isPaused, minInvestment, maxInvestment } = await getSubscribePrecheck();
 
         if (isPaused) {
           setError("Contract paused");
           setTxState("error");
-          return null;
+          return { txHash: null, error: "Contract paused", rejected: false };
         }
 
         if (amountBigInt < minInvestment) {
           const minHuman = parseUSDTAmount(minInvestment).toFixed(2);
           setError(`Below on-chain minimum investment: ${minHuman}`);
           setTxState("error");
-          return null;
+          return { txHash: null, error: `Below on-chain minimum investment: ${minHuman}`, rejected: false };
         }
 
         if (maxInvestment > 0n && amountBigInt > maxInvestment) {
           const maxHuman = parseUSDTAmount(maxInvestment).toFixed(2);
           setError(`Exceeds on-chain maximum investment: ${maxHuman}`);
           setTxState("error");
-          return null;
+          return { txHash: null, error: `Exceeds on-chain maximum investment: ${maxHuman}`, rejected: false };
         }
 
         const kycAbi = parseAbi([
@@ -1058,6 +1088,7 @@ export function useSubscriptionContract() {
           "function can_invest(address,uint256) view returns (bool)",
         ]);
 
+        console.log("[Subscription] Checking KYC status...");
         const [verified, requireAccredited, accredited, canInvest] = await Promise.all([
           publicClient.readContract({
             address: resolved.kycManager,
@@ -1083,20 +1114,21 @@ export function useSubscriptionContract() {
         if (!verified) {
           setError("KYC verification required");
           setTxState("error");
-          return null;
+          return { txHash: null, error: "KYC verification required", rejected: false };
         }
         if (requireAccredited && !accredited) {
           setError("Accredited investor required");
           setTxState("error");
-          return null;
+          return { txHash: null, error: "Accredited investor required", rejected: false };
         }
 
         if (!canInvest) {
           setError("Cannot invest");
           setTxState("error");
-          return null;
+          return { txHash: null, error: "Cannot invest", rejected: false };
         }
 
+        console.log("[Subscription] Estimating gas...");
         const subscribeGasEstimate = await publicClient
           .estimateContractGas({
             account: address,
@@ -1105,13 +1137,17 @@ export function useSubscriptionContract() {
             functionName: "subscribe",
             args: [amountBigInt, lockPeriodSeconds, paymentToken],
           })
-          .catch(() => FALLBACK_GAS_LIMIT);
+          .catch((err) => {
+            console.warn("[Subscription] Gas estimation failed, using fallback:", err);
+            return FALLBACK_GAS_LIMIT;
+          });
 
         const subscribeGasBuffered =
           (subscribeGasEstimate * GAS_ESTIMATE_BUFFER_BPS) / BPS_BASE;
         const subscribeGasLimit =
           subscribeGasBuffered > RPC_GAS_CAP ? RPC_GAS_CAP : subscribeGasBuffered;
 
+        console.log("[Subscription] Opening wallet for subscribe...");
         const hash = await walletClient.writeContract({
           address: addrs.subscription,
           abi: parseAbi(SUBSCRIPTION_ABI),
@@ -1123,7 +1159,7 @@ export function useSubscriptionContract() {
         if (submittedTxHashes.current.has(hash)) {
           console.warn("Transaction already submitted:", hash);
           setTxState("success");
-          return hash;
+          return { txHash: hash, error: null, rejected: false };
         }
 
         submittedTxHashes.current.add(hash);
@@ -1144,6 +1180,18 @@ export function useSubscriptionContract() {
 
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
+        // Check on-chain receipt status
+        if (receipt.status !== "success") {
+          transactionAuditService.updateStatus(hash, "failed", {
+            block_number: Number(receipt.blockNumber),
+            gas_used: Number(receipt.gasUsed),
+            effective_gas_price: receipt.effectiveGasPrice?.toString(),
+          });
+          setError("Transaction failed on-chain");
+          setTxState("error");
+          return { txHash: hash, error: "Transaction failed on-chain", rejected: false };
+        }
+
         transactionAuditService.updateStatus(hash, "confirmed", {
           block_number: Number(receipt.blockNumber),
           gas_used: Number(receipt.gasUsed),
@@ -1155,17 +1203,48 @@ export function useSubscriptionContract() {
         userDataFetchedForRef.current = null;
         await fetchUserData();
 
-        return hash;
+        return { txHash: hash, error: null, rejected: false };
       } catch (err) {
         console.error("Subscribe failed:", err);
-        setError((err as Error).message || "Subscribe failed");
+        const isRejected = isUserRejected(err);
+        const message = isRejected ? "User rejected the subscription" : ((err as Error).message || "Subscribe failed");
+        setError(message);
         setTxState("error");
-        return null;
+        return { txHash: null, error: message, rejected: isRejected };
       } finally {
         setIsSubmitting(false);
       }
     },
     [walletClient, publicClient, fetchUserData, isSubmitting, address, chainId, resolveProviderAddresses, onChainParams, getSubscribePrecheck]
+  );
+
+  // 直接查询链上交易回执（不依赖后端数据库）
+  const checkTxReceipt = useCallback(
+    async (
+      txHash: string
+    ): Promise<{
+      success: boolean;
+      blockNumber?: number;
+      gasUsed?: bigint;
+      effectiveGasPrice?: bigint;
+    } | null> => {
+      if (!publicClient) return null;
+      try {
+        const receipt = await publicClient.getTransactionReceipt({
+          hash: txHash as `0x${string}`,
+        });
+        if (!receipt) return null;
+        return {
+          success: receipt.status === "success",
+          blockNumber: Number(receipt.blockNumber),
+          gasUsed: receipt.gasUsed,
+          effectiveGasPrice: receipt.effectiveGasPrice ?? undefined,
+        };
+      } catch {
+        return null;
+      }
+    },
+    [publicClient]
   );
 
   // 执行赎回
@@ -1272,6 +1351,7 @@ export function useSubscriptionContract() {
     subscribe,
     redeem,
     estimateNetworkFee,
+    checkTxReceipt,
     reset,
 
     isConnected,

@@ -636,7 +636,7 @@ export function MockTokenMint() {
               ) : (
                 recipients?.map((r) => (
                   <SelectItem key={r.address} value={r.address}>
-                    {r.label}
+                    {r.label || truncateAddress(r.address)}
                   </SelectItem>
                 ))
               )}

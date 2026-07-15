@@ -1,0 +1,17 @@
+# Rust build output
+target/
+
+# sqlx compile-time artifacts (recreated on each build)
+_prepare.db
+_sqlx_prepare.db
+data/
+
+# Temp output files
+stdout.txt
+stderr.txt
+stdout1.txt
+stdout2.txt
+
+# Misc
+_cargo_check_output.txt
+_error.rs.bak

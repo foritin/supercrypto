@@ -1,3 +1,4 @@
+pub mod deploy_on_startup;
 pub mod subscription_reconcile;
 
 use std::sync::Arc;

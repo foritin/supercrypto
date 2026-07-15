@@ -5,7 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  qr@0.6.0: 150a533ad6337f2803d69eab891a98942126cff025ecad71750c6bad99277212
+  qr@0.6.0:
+    hash: 150a533ad6337f2803d69eab891a98942126cff025ecad71750c6bad99277212
+    path: patches/qr@0.6.0.patch
 
 importers:
 
