@@ -1,0 +1,118 @@
+# SuperCrypto 后端配置模板
+# 复制为 config.dev.yaml（本地开发）或 config.prod.yaml 后按环境填写；config.*.yaml 已被 .gitignore 忽略，切勿提交。
+# 下面的密钥、口令字段全部是占位值，请替换为你自己生成的。
+
+# SuperCrypto 开发环境配置文件
+# 使用 YAML 格式，不需要 POLY_ 前缀
+
+# 应用基础配置
+environment: "dev"
+network: "hardhat"
+debug: true
+app_name: "SuperCrypto"
+jwt_secret: "change-me-jwt-secret-at-least-32-bytes-long"
+access_token_expire_minutes: 120
+refresh_token_expire_minutes: 20160
+backdoor: ""
+encryption_key: ""
+# 生成：python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+
+chain:
+  name: "Hardhat Local"
+  network: "hardhat"
+  chain_id: 31337
+  rpc_url: "http://127.0.0.1:8545"
+
+# 数据库配置
+db:
+  backend: "postgresql"
+
+postgresql:
+  host: "127.0.0.1"
+  port: 5432
+  user: "postgres"
+  models: "src.models"
+  password: "postgres"
+  database: "rwa"
+  pool_size: 20
+  echo: true
+
+# Redis 配置
+redis:
+  host: "127.0.0.1"
+  port: 6379
+  db: 0
+  password: ""
+
+# RustFS 对象存储配置
+rustfs:
+  access: ""
+  secret: ""
+  endpoint: ""
+  version: ""
+  bucket: ""
+
+# AI 服务商配置
+ai_providers:
+  openai:
+    api_key: ""
+    base_url: "https://api.openai.com/v1"
+    model: "gpt-4"
+
+  doubao:
+    api_key: ""
+    base_url: "https://ark.cn-beijing.volces.com/api/v3"
+    model: ""
+
+  deepseek:
+    api_key: ""
+    base_url: "https://api.deepseek.com/v1"
+    model: "deepseek-chat"
+
+  qwen:
+    api_key: ""
+    base_url: "https://dashscope.aliyuncs.com/api/v1"
+    model: "qwen-plus"
+
+  claude:
+    api_key: ""
+    base_url: "https://api.anthropic.com/v1"
+    model: "claude-3-opus-20240229"
+
+  gemini:
+    api_key: ""
+    base_url: "https://generativelanguage.googleapis.com/v1"
+    model: "gemini-pro"
+
+# Aspose 配置
+aspose:
+  license_path: ".aspose_license.xml"
+
+# 加密货币相关配置
+crypto:
+  mainnet_url: "http://127.0.0.1:8545"
+# 测试网："https://sepolia-rollup.arbitrum.io/rpc"
+# 主网："https://mainnet.arbitrum.io/rpc"
+
+# MinIO 对象存储配置 (Story 2.6)
+minio:
+  endpoint: "127.0.0.1:9000"
+  access_key: "your-minio-access-key"
+  secret_key: "your-minio-secret-key"
+  bucket: "dev"
+  secure: false
+  redirect: "http://127.0.0.1:9000"
+
+# KYC 配置 (ADR-2: 配置驱动策略)
+kyc:
+  provider: "internal" # internal / sumsub / jumio / onfido
+  max_file_size_mb: 10 # 最大上传文件大小
+  review_deadline_hours: 48 # 审核超时提醒 (小时)
+  # 第三方服务配置 (预留)
+  sumsub:
+    api_key: ""
+    webhook_secret: ""
+
+# 注意: 项目合约配置已统一到 scripts/deploy/*/config.py
+# UI 通过 API 从数据库获取合约配置，不再从此文件读取

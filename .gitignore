@@ -45,3 +45,19 @@ logs/
 
 .research
 .reference
+
+# ---- 本地配置与运行产物（切勿提交；config.example.yaml 为模板）----
+app/backend/config.*.yaml
+!app/backend/config.example.yaml
+app/backend_rust/config/*.yaml
+app/backend/output/
+app/backend/src/output/
+app/backend/logs/
+app/backend/db.sqlite
+*.egg-info/
+app/frontend/nextjs/storybook-static/
+**/.next/
+**/test-results/
+**/playwright-report/
+.hypothesis/
+.reasonix/
