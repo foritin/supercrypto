@@ -99,7 +99,11 @@ uv pip install -e ".[dev]"
 
 ### 配置
 
-编辑 `config.dev.yaml`，配置数据库和 Redis 连接：
+复制模板并编辑 `config.dev.yaml`（该文件已忽略，不会入库），配置数据库和 Redis 连接：
+
+```bash
+cp config.example.yaml config.dev.yaml
+```
 
 ```yaml
 environment: dev

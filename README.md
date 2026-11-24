@@ -35,7 +35,7 @@
 
 **合约**: `TreasuryMultisig.vy` - Vyper 0.4+ 实现，支持重入防护和权限控制
 
-**快速开始**: 查看 [部署指南](docs/deployment/treasury-deployment.md) | [用户指南](docs/user-guide/treasury-redemption.md) | [管理员指南](docs/admin-guide/treasury-management.md)
+**接口规范**: [`app/backend/openapi-treasury.yaml`](app/backend/openapi-treasury.yaml) · **服务实现**: `app/backend/src/services/treasury_service.py` · **管理 API**: `app/backend/src/api/v1/admin/treasury.py` · **合约测试**: `hardhat/test/TreasuryMultisig.test.js`
 
 ### 收益机制
 
@@ -129,29 +129,9 @@ SuperCrypto/
 │           │   ├── styles/     # CSS 样式
 │           │   └── __tests__/  # 测试文件
 │           └── e2e/            # E2E 测试 (Playwright)
-├── docs/                       # 项目文档
-│   ├── deployment/             # 部署文档
-│   │   └── treasury-deployment.md
-│   ├── user-guide/             # 用户指南
-│   │   └── treasury-redemption.md
-│   ├── admin-guide/            # 管理员指南
-│   │   └── treasury-management.md
-│   ├── api/                    # API 文档
-│   │   └── openapi-treasury.yaml
-│   └── runbooks/               # 运维手册
-│       ├── treasury-emergency-response.md
-│       ├── treasury-monitoring.md
-│       └── treasury-maintenance.md
-├── hardhat/                    # Hardhat 部署工具
-│   ├── contracts/              # 部署合约源码
-│   ├── scripts/                # 部署脚本
-│   │   ├── deploy_treasury_multisig.py
-│   │   ├── verify_contracts.py
-│   │   └── fund_treasury.py
-│   ├── abi/                    # 合约 ABI
-│   └── tests/                  # 合约测试
-└── .kiro/
-    └── specs/                  # Spec 文件
+└── hardhat/                    # Hardhat 合约测试
+    ├── contracts/common/       # 被测合约源码 (TreasuryMultisig.vy)
+    └── test/                   # 合约测试 (需自行安装 hardhat + vyper 插件)
 ```
 
 ---
@@ -178,35 +158,11 @@ npm run dev
 
 详细指南请参阅 [前端 README](app/frontend/nextjs/README.md)。
 
-### 国库多签合约部署
+### 国库多签合约
 
-```bash
-# 1. 配置环境变量
-export PRIVATE_KEY="your-private-key"
-export RPC_URL="https://rpc.sepolia.org"
+合约源码：`app/backend/contracts/common/TreasuryMultisig.vy`（Vyper 0.4+）。编译/部署使用 Ape Framework，工程与网络配置见 `app/backend/ape-config.yaml`；部署脚本统一放在 `app/backend/scripts/deploy/`，并按项目在 `app/backend/scripts/deploy/projects/<name>/config.py` 中配置签名者与阈值。
 
-# 2. 部署合约
-cd hardhat/scripts
-python deploy_treasury_multisig.py \
-  --network sepolia \
-  --signers 0xSigner1... 0xSigner2... 0xSigner3... \
-  --threshold 2 \
-  --address-provider 0xAddressProvider...
-
-# 3. 验证合约
-python verify_contracts.py \
-  --network sepolia \
-  --address 0xDeployedContract...
-
-# 4. 存入资金
-python fund_treasury.py \
-  --network sepolia \
-  --treasury 0xDeployedContract... \
-  --token USDT \
-  --amount 100000
-```
-
-详细指南请参阅 [部署指南](docs/deployment/treasury-deployment.md)。
+部署所需的私钥、RPC、签名者地址全部通过环境变量或 `app/backend/config.*.yaml`（已忽略，不入库）提供，模板见 `app/backend/config.example.yaml`。
 
 ---
 
@@ -223,16 +179,19 @@ python fund_treasury.py \
 ### 国库多签 (Treasury Multisig)
 
 | 文档 | 说明 | 目标读者 |
-|------|------|----------|
-| [部署指南](docs/deployment/treasury-deployment.md) | 合约部署、环境配置、验证步骤 | 运维/开发 |
-| [用户指南](docs/user-guide/treasury-redemption.md) | 赎回流程、状态追踪、FAQ | 终端用户 |
-| [管理员指南](docs/admin-guide/treasury-management.md) | 多签配置、审批流程、故障排除 | 管理员/签名者 |
-| [API 文档](docs/api/openapi-treasury.yaml) | OpenAPI 规范、接口定义 | 开发者 |
+| [OpenAPI 规范](app/backend/openapi-treasury.yaml) | 国库多签接口定义 | 开发者 |
+| [treasury_service.py](app/backend/src/services/treasury_service.py) | 赎回队列、多签审批、执行转账 | 开发 |
+| [admin/treasury.py](app/backend/src/api/v1/admin/treasury.py) | 管理端 API（配置、审批、紧急操作） | 开发 |
+| [test_treasury_e2e.py](app/backend/src/tests/test_treasury_e2e.py) | 端到端测试 | 开发 / 测试 |
 
-### 运维手册 (Runbooks)
+---
 
-| 文档 | 说明 |
-|------|------|
-| [紧急响应手册](docs/runbooks/treasury-emergency-response.md) | 合约暂停、紧急提款、密钥泄露应对 |
-| [监控手册](docs/runbooks/treasury-monitoring.md) | 监控指标、告警规则、日常检查 |
-| [维护手册](docs/runbooks/treasury-maintenance.md) | 定期维护、备份恢复、升级迁移 |
+## 依赖说明
+
+- 后端依赖的 `falib` 来自独立仓库 [foritin/falib](https://github.com/foritin/falib)，`app/backend/pyproject.toml` 以 Git URL（默认 SSH）引用。没有该仓库访问权限时，请先 fork 并把 `pyproject.toml` 中的 URL 改成你自己的副本，再重新 `uv lock`。
+- 前端环境变量模板：`app/frontend/.env.example`；后端配置模板：`app/backend/config.example.yaml`（复制为 `config.dev.yaml` / `config.prod.yaml` 后再修改，这两个文件已忽略）。
+- 第三方模型权重 `app/frontend/nextjs/public/models/*.bin`（TensorFlow.js）与视频素材 `public/*.mp4` 的版权归各自作者，再分发前请确认其许可。
+
+## License
+
+[MIT](LICENSE) © 2026 foritin

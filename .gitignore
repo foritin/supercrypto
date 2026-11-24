@@ -10,14 +10,11 @@
 __pycache__
 
 node_modules/
-demo
+/demo
 .claude
 .cursor
 .vscode
 .playwright-mcp
-package.json
-
-package-lock.json
 
 *.log
 *.pid
@@ -30,16 +27,15 @@ bmad-custom-src
 bmad-custom-modules-src
 
 # .kiro
-.github
 _bmad
 _bmad-output
 .shared
 .trae
 .shared
-.github
+.github/agents/
 .kilocodemodes
-docs
-stories
+/docs
+/stories
 
 logs/
 
