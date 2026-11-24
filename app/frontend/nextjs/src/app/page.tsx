@@ -53,9 +53,9 @@ export default function HomePage() {
       {/* Phoenix Prototype: 全局噪点纹理 */}
       <div className="noise-overlay" />
 
-      {/* Hero Section with Video/Static Background */}
+      {/* Hero Section */}
       <section className="hero-section">
-        {/* 背景 - 移动端使用静态图片，桌面端使用视频 */}
+        {/* 背景 - 深色渐变 + 装饰性网格 */}
         <div className="hero-video-container">
           {/* 背景: 深色渐变 */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#0A0F1A] via-[#0d1320] to-[#0A0F1A]" />
@@ -70,16 +70,7 @@ export default function HomePage() {
             }}
           />
           
-          {/* 桌面端: 视频背景 */}
-          <video
-            className="hero-video hidden md:block opacity-65"
-            autoPlay
-            muted
-            loop
-            playsInline
-          >
-            <source src="/1826904-hd_1920_1080_24fps.mp4" type="video/mp4" />
-          </video>
+          {/* 桌面端/移动端共用：深色渐变 + 装饰性网格背景（原视频素材已移除） */}
         </div>
 
         {/* 背景遮罩层 */}
